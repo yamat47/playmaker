@@ -8,7 +8,7 @@ import {
 	Line,
 	Shape,
 } from "react-konva";
-import { useState } from "react";
+import React, { useState } from "react";
 import { PlayerNode } from "./components/PlayerNode";
 
 type Player = {
@@ -327,15 +327,18 @@ function App() {
 							}
 
 							return (
-								<>
+								<React.Fragment key={arrow.id}>
 									<Shape
 										sceneFunc={(ctx, shape) => {
 											ctx.beginPath();
 											ctx.moveTo(fromX, fromY);
 											ctx.bezierCurveTo(
-												cpX, cpY,
-												cpX, cpY,
-												curveEndX, curveEndY,
+												cpX,
+												cpY,
+												cpX,
+												cpY,
+												curveEndX,
+												curveEndY,
 											);
 											ctx.strokeShape(shape);
 										}}
@@ -350,7 +353,7 @@ function App() {
 									{isTerminal && arrowHeadProps && (
 										<ArrowHead {...arrowHeadProps} />
 									)}
-								</>
+								</React.Fragment>
 							);
 						}
 
@@ -503,7 +506,9 @@ function App() {
 									const newCpY = pointer.y - fromY;
 									setElements((elements) =>
 										elements.map((el) =>
-											el.id === arrow.id && el.type === "arrow" && el.kind === "curve"
+											el.id === arrow.id &&
+											el.type === "arrow" &&
+											el.kind === "curve"
 												? {
 														...el,
 														controlPoint: { x: newCpX, y: newCpY },

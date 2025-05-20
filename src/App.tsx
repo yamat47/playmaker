@@ -1,44 +1,50 @@
 import type { KonvaEventObject } from "konva/lib/Node";
-import { Stage, Layer, Arrow, Group, Circle, Line } from "react-konva";
+import {
+	Stage,
+	Layer,
+	Arrow as KonvaArrow,
+	Group,
+	Circle,
+	Line,
+} from "react-konva";
 import { useState } from "react";
 import { PlayerNode } from "./components/PlayerNode";
 
-type GraphNode =
-	| {
-			id: string;
-			type: "player";
-			position: { x: number; y: number };
-			label: string;
-	  }
-	| {
-			id: string;
-			type: "arrow";
-			parentId: string;
-			relativeToParent: { x: number; y: number };
-	  };
+type Player = {
+	id: string;
+	type: "player";
+	position: { x: number; y: number };
+	label: string;
+};
+
+type Arrow = {
+	id: string;
+	type: "arrow";
+	kind: "straight";
+	parentId: string;
+	relativeToParent: { x: number; y: number };
+};
 
 type Mode = "add" | "normal";
 
 function App() {
-	const [nodes, setNodes] = useState<GraphNode[]>([
+	const [elements, setElements] = useState<(Player | Arrow)[]>([
 		{ id: "X", type: "player", position: { x: 100, y: 100 }, label: "X" },
 		{ id: "Z", type: "player", position: { x: 300, y: 100 }, label: "Z" },
 	]);
 	const [mode, setMode] = useState<Mode>("normal");
 	const [nextId, setNextId] = useState(1);
-	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-
-	const players = nodes.filter(
-		(n): n is Extract<GraphNode, { type: "player" }> => n.type === "player",
-	);
-	const arrows = nodes.filter(
-		(n): n is Extract<GraphNode, { type: "arrow" }> => n.type === "arrow",
+	const [selectedElementId, setSelectedElementId] = useState<string | null>(
+		null,
 	);
 
-	const handleGroupDragMove = (id: string, x: number, y: number) => {
-		setNodes((nodes) =>
-			nodes.map((n) =>
-				n.type === "player" && n.id === id ? { ...n, position: { x, y } } : n,
+	const players = elements.filter((e): e is Player => e.type === "player");
+	const arrows = elements.filter((e): e is Arrow => e.type === "arrow");
+
+	const handlePlayerDragMove = (id: string, x: number, y: number) => {
+		setElements((elements) =>
+			elements.map((e) =>
+				e.type === "player" && e.id === id ? { ...e, position: { x, y } } : e,
 			),
 		);
 	};
@@ -51,8 +57,8 @@ function App() {
 
 		if (mode === "add") {
 			const id = `P${nextId}`;
-			setNodes((nodes) => [
-				...nodes,
+			setElements((elements) => [
+				...elements,
 				{
 					id,
 					type: "player",
@@ -62,71 +68,71 @@ function App() {
 			]);
 			setNextId((n) => n + 1);
 		} else {
-			setSelectedNodeId(null);
+			setSelectedElementId(null);
 		}
 	};
 
 	const handlePlayerClick = (id: string) => {
 		if (mode === "add") return;
-		setSelectedNodeId(id);
+		setSelectedElementId(id);
 	};
 
 	const handleArrowClick = (id: string) => {
-		setSelectedNodeId(id);
+		setSelectedElementId(id);
 	};
 
-	const handleDeleteNode = () => {
+	const handleDeleteElement = () => {
 		const collectDescendantIds = (
 			targetId: string,
-			nodes: GraphNode[],
+			elements: (Player | Arrow)[],
 		): string[] => {
-			const directChildren = nodes.filter(
-				(n) => "parentId" in n && n.parentId === targetId,
+			const directChildren = elements.filter(
+				(e) => "parentId" in e && e.parentId === targetId,
 			);
 			let allIds: string[] = [];
 			for (const child of directChildren) {
 				allIds.push(child.id);
-				allIds = allIds.concat(collectDescendantIds(child.id, nodes));
+				allIds = allIds.concat(collectDescendantIds(child.id, elements));
 			}
 			return allIds;
 		};
 
-		if (!selectedNodeId) return;
-		const node = nodes.find((n) => n.id === selectedNodeId);
-		if (!node) return;
+		if (!selectedElementId) return;
+		const element = elements.find((e) => e.id === selectedElementId);
+		if (!element) return;
 
 		const idsToDelete = [
-			selectedNodeId,
-			...collectDescendantIds(selectedNodeId, nodes),
+			selectedElementId,
+			...collectDescendantIds(selectedElementId, elements),
 		];
 
-		setNodes((nodes) => nodes.filter((n) => !idsToDelete.includes(n.id)));
-		setSelectedNodeId(null);
+		setElements((elements) =>
+			elements.filter((e) => !idsToDelete.includes(e.id)),
+		);
+		setSelectedElementId(null);
 	};
 
-	const handleAddArrow = () => {
-		if (!selectedNodeId) return;
-		const selectedNode = nodes.find((n) => n.id === selectedNodeId);
-		if (!selectedNode) return;
-		const parentId = selectedNode.id;
+	const handleAddStraight = () => {
+		if (!selectedElementId) return;
+		const selected = elements.find((e) => e.id === selectedElementId);
+		if (!selected) return;
+		const parentId = selected.id;
 		const arrowId = `A${Date.now()}`;
-		setNodes((nodes) => [
-			...nodes,
+		setElements((elements) => [
+			...elements,
 			{
 				id: arrowId,
 				type: "arrow",
+				kind: "straight",
 				parentId,
-				// TODO: manually set the relativeToParent
 				relativeToParent: { x: 80, y: 0 },
 			},
 		]);
-		setSelectedNodeId(arrowId);
+		setSelectedElementId(arrowId);
 	};
 
-	const getArrowEnd = (
-		arrowNode: Extract<GraphNode, { type: "arrow" }>,
-	): { x: number; y: number } => {
-		const parent = nodes.find((n) => n.id === arrowNode.parentId);
+	const getArrowEnd = (arrow: Arrow): { x: number; y: number } => {
+		const parent = elements.find((e) => e.id === arrow.parentId);
 
 		let x = 0;
 		let y = 0;
@@ -134,24 +140,23 @@ function App() {
 		if (!parent) return { x, y };
 
 		if (parent.type === "player") {
-			x = parent.position.x + arrowNode.relativeToParent.x;
-			y = parent.position.y + arrowNode.relativeToParent.y;
+			x = parent.position.x + arrow.relativeToParent.x;
+			y = parent.position.y + arrow.relativeToParent.y;
 		} else {
-			const p = getArrowEnd(parent);
-
-			x = p.x + arrowNode.relativeToParent.x;
-			y = p.y + arrowNode.relativeToParent.y;
+			const p = getArrowEnd(parent as Arrow);
+			x = p.x + arrow.relativeToParent.x;
+			y = p.y + arrow.relativeToParent.y;
 		}
 
 		return { x, y };
 	};
 
-	const collectAncestorArrowIds = (nodeId: string): string[] => {
+	const collectAncestorArrowIds = (elementId: string): string[] => {
 		let result: string[] = [];
-		const node = nodes.find((n) => n.id === nodeId);
+		const element = elements.find((e) => e.id === elementId);
 
-		if (node && "parentId" in node) {
-			const parent = nodes.find((n) => n.id === node.parentId);
+		if (element && "parentId" in element) {
+			const parent = elements.find((e) => e.id === element.parentId);
 			if (parent && parent.type === "arrow") {
 				result = [parent.id, ...collectAncestorArrowIds(parent.id)];
 			} else if (parent) {
@@ -162,9 +167,9 @@ function App() {
 		return result;
 	};
 
-	const collectDescendantArrowIds = (nodeId: string): string[] => {
-		const directChildren = nodes.filter(
-			(n) => n.type === "arrow" && "parentId" in n && n.parentId === nodeId,
+	const collectDescendantArrowIds = (elementId: string): string[] => {
+		const directChildren = elements.filter(
+			(e) => e.type === "arrow" && "parentId" in e && e.parentId === elementId,
 		);
 		let allIds: string[] = [];
 		for (const child of directChildren) {
@@ -198,22 +203,22 @@ function App() {
 				<button
 					type="button"
 					style={{ marginLeft: 16 }}
-					onClick={handleDeleteNode}
-					disabled={!selectedNodeId}
+					onClick={handleDeleteElement}
+					disabled={!selectedElementId}
 				>
 					{(() => {
-						const node = nodes.find((n) => n.id === selectedNodeId);
-						if (!node) return "削除";
-						return node.type === "player" ? "選手削除" : "矢印削除";
+						const element = elements.find((e) => e.id === selectedElementId);
+						if (!element) return "削除";
+						return element.type === "player" ? "選手削除" : "矢印削除";
 					})()}
 				</button>
 				<button
 					type="button"
 					style={{ marginLeft: 16 }}
-					onClick={handleAddArrow}
-					disabled={!selectedNodeId}
+					onClick={handleAddStraight}
+					disabled={!selectedElementId}
 				>
-					矢印追加
+					直線追加
 				</button>
 			</div>
 			<Stage
@@ -223,37 +228,37 @@ function App() {
 				onClick={handleStageClick}
 			>
 				<Layer>
-					{/* まずArrow/Lineのみ描画 */}
+					{/* 矢印（直線のみ）描画 */}
 					{arrows.map((arrow) => {
 						let fromX = 0;
 						let fromY = 0;
-						const parent = nodes.find((n) => n.id === arrow.parentId);
+						const parent = elements.find((e) => e.id === arrow.parentId);
 						if (parent?.type === "player") {
 							fromX = parent.position.x;
 							fromY = parent.position.y;
 						} else if (parent?.type === "arrow") {
-							const p = getArrowEnd(parent);
+							const p = getArrowEnd(parent as Arrow);
 							fromX = p.x;
 							fromY = p.y;
 						}
 						const toX = fromX + arrow.relativeToParent.x;
 						const toY = fromY + arrow.relativeToParent.y;
 
-						const isTerminal = !nodes.some(
-							(n) =>
-								n.type === "arrow" &&
-								"parentId" in n &&
-								n.parentId === arrow.id,
+						const isTerminal = !elements.some(
+							(e) =>
+								e.type === "arrow" &&
+								"parentId" in e &&
+								e.parentId === arrow.id,
 						);
 
 						return isTerminal ? (
-							<Arrow
+							<KonvaArrow
 								key={arrow.id}
 								points={[fromX, fromY, toX, toY]}
 								pointerLength={16}
 								pointerWidth={16}
-								fill={selectedNodeId === arrow.id ? "#3498db" : "#888"}
-								stroke={selectedNodeId === arrow.id ? "#3498db" : "#888"}
+								fill={selectedElementId === arrow.id ? "#3498db" : "#888"}
+								stroke={selectedElementId === arrow.id ? "#3498db" : "#888"}
 								strokeWidth={4}
 								onClick={(e) => {
 									e.cancelBubble = true;
@@ -264,7 +269,7 @@ function App() {
 							<Line
 								key={arrow.id}
 								points={[fromX, fromY, toX, toY]}
-								stroke={selectedNodeId === arrow.id ? "#3498db" : "#888"}
+								stroke={selectedElementId === arrow.id ? "#3498db" : "#888"}
 								strokeWidth={4}
 								onClick={(e) => {
 									e.cancelBubble = true;
@@ -273,16 +278,16 @@ function App() {
 							/>
 						);
 					})}
-					{/* 次にCircleのみ描画 */}
+					{/* 終端Circle描画（直線のみ） */}
 					{arrows.map((arrow) => {
 						let fromX = 0;
 						let fromY = 0;
-						const parent = nodes.find((n) => n.id === arrow.parentId);
+						const parent = elements.find((e) => e.id === arrow.parentId);
 						if (parent?.type === "player") {
 							fromX = parent.position.x;
 							fromY = parent.position.y;
 						} else if (parent?.type === "arrow") {
-							const p = getArrowEnd(parent);
+							const p = getArrowEnd(parent as Arrow);
 							fromX = p.x;
 							fromY = p.y;
 						}
@@ -292,25 +297,26 @@ function App() {
 						const circleRadius = 8;
 
 						let showCircle = false;
-						if (selectedNodeId) {
-							const ancestorIds = collectAncestorArrowIds(selectedNodeId);
-							const descendantIds = collectDescendantArrowIds(selectedNodeId);
+						if (selectedElementId) {
+							const ancestorIds = collectAncestorArrowIds(selectedElementId);
+							const descendantIds =
+								collectDescendantArrowIds(selectedElementId);
 							showCircle =
-								selectedNodeId === arrow.id ||
+								selectedElementId === arrow.id ||
 								ancestorIds.includes(arrow.id) ||
 								descendantIds.includes(arrow.id);
 						}
 
-						const isTerminal = !nodes.some(
-							(n) =>
-								n.type === "arrow" &&
-								"parentId" in n &&
-								n.parentId === arrow.id,
+						const isTerminal = !elements.some(
+							(e) =>
+								e.type === "arrow" &&
+								"parentId" in e &&
+								e.parentId === arrow.id,
 						);
 
 						return (
 							<Circle
-								key={arrow.id}
+								key={`${arrow.id}-end`}
 								x={toX}
 								y={toY}
 								radius={circleRadius}
@@ -325,14 +331,14 @@ function App() {
 									if (!pointer) return;
 									const newRelX = pointer.x - fromX;
 									const newRelY = pointer.y - fromY;
-									setNodes((nodes) =>
-										nodes.map((n) =>
-											n.id === arrow.id && n.type === "arrow"
+									setElements((elements) =>
+										elements.map((el) =>
+											el.id === arrow.id && el.type === "arrow"
 												? {
-														...n,
+														...el,
 														relativeToParent: { x: newRelX, y: newRelY },
 													}
-												: n,
+												: el,
 										),
 									);
 								}}
@@ -357,7 +363,7 @@ function App() {
 							draggable={mode !== "add"}
 							onDragMove={(e) => {
 								const { x, y } = e.target.position();
-								handleGroupDragMove(player.id, x, y);
+								handlePlayerDragMove(player.id, x, y);
 							}}
 							onClick={(e) => {
 								e.cancelBubble = true;
@@ -368,7 +374,7 @@ function App() {
 								{...player}
 								x={0}
 								y={0}
-								isSelected={selectedNodeId === player.id}
+								isSelected={selectedElementId === player.id}
 							/>
 						</Group>
 					))}

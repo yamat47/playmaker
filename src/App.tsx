@@ -1,35 +1,41 @@
+import { Stage, Layer } from "react-konva";
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
+import { PlayerNode } from "./components/PlayerNode";
+
+type Player = {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+};
 
 function App() {
-	const [count, setCount] = useState(0);
+  const [players, setPlayers] = useState<Player[]>([
+    { id: "X", x: 100, y: 100, label: "X" },
+    { id: "Z", x: 300, y: 100, label: "Z" }
+  ]);
 
-	return (
-		<>
-			<div>
-				<a href="https://vite.dev" target="_blank" rel="noopener noreferrer">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank" rel="noopener noreferrer">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-			</div>
-			<h1>Vite + React</h1>
-			<div className="card">
-				<button type="button" onClick={() => setCount((count) => count + 1)}>
-					count is {count}
-				</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<p className="read-the-docs">
-				Click on the Vite and React logos to learn more
-			</p>
-		</>
-	);
+  const handleDragMove = (id: string, x: number, y: number) => {
+    setPlayers(players =>
+      players.map(p =>
+        p.id === id ? { ...p, x, y } : p
+      )
+    );
+  };
+
+  return (
+    <Stage width={800} height={600} style={{ background: "#f3f3f3" }}>
+      <Layer>
+        {players.map(player => (
+          <PlayerNode
+            key={player.id}
+            {...player}
+            onDragMove={handleDragMove}
+          />
+        ))}
+      </Layer>
+    </Stage>
+  );
 }
 
 export default App;

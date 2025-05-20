@@ -9,9 +9,18 @@ type Props = {
 	label: string;
 	onDragMove: (id: string, x: number, y: number) => void;
 	onClick?: (e: KonvaEventObject<MouseEvent>) => void;
+	isSelected?: boolean;
 };
 
-export const PlayerNode = ({ id, x, y, label, onDragMove, onClick }: Props) => {
+export const PlayerNode = ({
+	id,
+	x,
+	y,
+	label,
+	onDragMove,
+	onClick,
+	isSelected = false,
+}: Props) => {
 	const [isDragging, setDragging] = useState(false);
 
 	return (
@@ -27,9 +36,11 @@ export const PlayerNode = ({ id, x, y, label, onDragMove, onClick }: Props) => {
 			onClick={onClick}
 		>
 			<Circle
-				radius={20}
+				radius={22}
 				fill={isDragging ? "#2ecc71" : "#e74c3c"}
-				shadowBlur={5}
+				stroke={isSelected ? "#3498db" : "#222"}
+				strokeWidth={isSelected ? 6 : 2}
+				shadowBlur={isSelected ? 15 : 5}
 			/>
 			<Text
 				text={label}
@@ -39,8 +50,8 @@ export const PlayerNode = ({ id, x, y, label, onDragMove, onClick }: Props) => {
 				height={40}
 				align="center"
 				verticalAlign="middle"
-				offsetX={20}
-				offsetY={10}
+				offsetX={22}
+				offsetY={12}
 			/>
 		</Group>
 	);

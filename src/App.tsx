@@ -10,52 +10,77 @@ type Player = {
 	label: string;
 };
 
-type Mode = "add" | "move" | "delete";
+type Mode = "add" | "normal";
 
 function App() {
 	const [players, setPlayers] = useState<Player[]>([
 		{ id: "X", x: 100, y: 100, label: "X" },
 		{ id: "Z", x: 300, y: 100, label: "Z" },
 	]);
-	const [mode, setMode] = useState<Mode>("move");
+	const [mode, setMode] = useState<Mode>("normal");
 	const [nextId, setNextId] = useState(1);
+	const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
 
 	const handleDragMove = (id: string, x: number, y: number) => {
-		if (mode !== "move") return;
 		setPlayers((players) =>
 			players.map((p) => (p.id === id ? { ...p, x, y } : p)),
 		);
 	};
 
 	const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
-		if (mode !== "add") return;
 		const stage = e.target.getStage();
 
 		if (!stage) return;
 
 		const pointerPosition = stage.getPointerPosition();
+
 		if (!pointerPosition) return;
-		const id = `P${nextId}`;
-		setPlayers((players) => [
-			...players,
-			{
-				id,
-				x: pointerPosition.x,
-				y: pointerPosition.y,
-				label: id,
-			},
-		]);
-		setNextId((n) => n + 1);
+
+		if (mode === "add") {
+			const id = `P${nextId}`;
+			setPlayers((players) => [
+				...players,
+				{
+					id,
+					x: pointerPosition.x,
+					y: pointerPosition.y,
+					label: id,
+				},
+			]);
+			setNextId((n) => n + 1);
+		} else {
+			setSelectedPlayerId(null);
+		}
 	};
 
 	const handlePlayerClick = (id: string) => {
-		if (mode !== "delete") return;
-		setPlayers((players) => players.filter((p) => p.id !== id));
+		console.log("Player clicked:", id);
+		if (mode === "add") return;
+
+		setSelectedPlayerId(id);
+	};
+
+	const handleDeletePlayer = () => {
+		if (!selectedPlayerId) return;
+
+		setPlayers((players) =>
+			players.filter((player) => player.id !== selectedPlayerId),
+		);
+		setSelectedPlayerId(null);
 	};
 
 	return (
 		<div>
 			<div style={{ marginBottom: 8 }}>
+				<label>
+					<input
+						type="radio"
+						value="normal"
+						checked={mode === "normal"}
+						onChange={() => setMode("normal")}
+					/>
+					通常モード
+				</label>
 				<label>
 					<input
 						type="radio"
@@ -65,24 +90,14 @@ function App() {
 					/>
 					選手追加モード
 				</label>
-				<label style={{ marginLeft: 16 }}>
-					<input
-						type="radio"
-						value="move"
-						checked={mode === "move"}
-						onChange={() => setMode("move")}
-					/>
-					選手移動モード
-				</label>
-				<label style={{ marginLeft: 16 }}>
-					<input
-						type="radio"
-						value="delete"
-						checked={mode === "delete"}
-						onChange={() => setMode("delete")}
-					/>
-					選手削除モード
-				</label>
+				<button
+					type="button"
+					style={{ marginLeft: 16 }}
+					onClick={handleDeletePlayer}
+					disabled={!selectedPlayerId}
+				>
+					選手削除
+				</button>
 			</div>
 			<Stage
 				width={800}
@@ -96,7 +111,11 @@ function App() {
 							key={player.id}
 							{...player}
 							onDragMove={handleDragMove}
-							onClick={() => handlePlayerClick(player.id)}
+							onClick={(e) => {
+								e.cancelBubble = true;
+								handlePlayerClick(player.id);
+							}}
+							isSelected={selectedPlayerId === player.id}
 						/>
 					))}
 				</Layer>

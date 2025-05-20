@@ -1,62 +1,54 @@
-# Playmaker
+# React + TypeScript + Vite
 
-Playmaker is a simple web-based tool for drawing American football plays.  
-It uses HTML, CSS, and pure JavaScript to render a football field and player positions.  
-This repository provides the foundation for building play diagrams and is designed to be extended or embedded as a view component.  
-Data persistence and advanced features should be implemented in separate repositories.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Features
+Currently, two official plugins are available:
 
-- Renders an American football field in the browser
-- Displays player positions as draggable circles (future extension)
-- Pure HTML, CSS, and JavaScript (no frontend frameworks)
-- Simple Node.js server for local development
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Getting Started
+## Expanding the ESLint configuration
 
-### Prerequisites
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-- [Node.js](https://nodejs.org/) (v14 or later recommended)
-- [npm](https://www.npmjs.com/)
-
-### Installation
-
-1. Clone this repository:
-
-   ```sh
-   git clone https://github.com/yamat47/playmaker.git
-   cd playmaker
-   ```
-
-2. Install dependencies:
-
-   ```sh
-   npm install
-   ```
-
-### Running the Demo
-
-Start the local server:
-
-```sh
-node server.js
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-Open your browser and navigate to [http://localhost:3000](http://localhost:3000).
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-You should see a football field with several player circles rendered.
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-## Project Structure
-
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
 ```
-/playmaker
-  ├── index.html      # Main HTML file
-  ├── style.css       # Styles for field and players
-  ├── main.js         # JavaScript for rendering players
-  ├── server.js       # Express server for static files
-  └── package.json    # Project dependencies
-```
-
-## License
-
-MIT License

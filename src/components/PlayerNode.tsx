@@ -18,7 +18,6 @@ export const PlayerNode = ({ x, y, label, isSelected = false }: Props) => {
 				fill={"#e74c3c"}
 				stroke={isSelected ? "#3498db" : "#222"}
 				strokeWidth={isSelected ? 6 : 2}
-				shadowBlur={isSelected ? 15 : 5}
 			/>
 			<Text
 				x={x - 22}

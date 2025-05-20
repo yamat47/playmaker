@@ -1,5 +1,5 @@
 import type { KonvaEventObject } from "konva/lib/Node";
-import { Stage, Layer, Arrow, Group } from "react-konva";
+import { Stage, Layer, Arrow, Group, Circle, Line } from "react-konva";
 import { useState } from "react";
 import { PlayerNode } from "./components/PlayerNode";
 
@@ -146,6 +146,34 @@ function App() {
 		return { x, y };
 	};
 
+	const collectAncestorArrowIds = (nodeId: string): string[] => {
+		let result: string[] = [];
+		const node = nodes.find((n) => n.id === nodeId);
+
+		if (node && "parentId" in node) {
+			const parent = nodes.find((n) => n.id === node.parentId);
+			if (parent && parent.type === "arrow") {
+				result = [parent.id, ...collectAncestorArrowIds(parent.id)];
+			} else if (parent) {
+				result = collectAncestorArrowIds(parent.id);
+			}
+		}
+
+		return result;
+	};
+
+	const collectDescendantArrowIds = (nodeId: string): string[] => {
+		const directChildren = nodes.filter(
+			(n) => n.type === "arrow" && "parentId" in n && n.parentId === nodeId,
+		);
+		let allIds: string[] = [];
+		for (const child of directChildren) {
+			allIds.push(child.id);
+			allIds = allIds.concat(collectDescendantArrowIds(child.id));
+		}
+		return allIds;
+	};
+
 	return (
 		<div>
 			<div style={{ marginBottom: 8 }}>
@@ -195,6 +223,7 @@ function App() {
 				onClick={handleStageClick}
 			>
 				<Layer>
+					{/* まずArrow/Lineのみ描画 */}
 					{arrows.map((arrow) => {
 						let fromX = 0;
 						let fromY = 0;
@@ -209,7 +238,15 @@ function App() {
 						}
 						const toX = fromX + arrow.relativeToParent.x;
 						const toY = fromY + arrow.relativeToParent.y;
-						return (
+
+						const isTerminal = !nodes.some(
+							(n) =>
+								n.type === "arrow" &&
+								"parentId" in n &&
+								n.parentId === arrow.id,
+						);
+
+						return isTerminal ? (
 							<Arrow
 								key={arrow.id}
 								points={[fromX, fromY, toX, toY]}
@@ -222,6 +259,93 @@ function App() {
 									e.cancelBubble = true;
 									handleArrowClick(arrow.id);
 								}}
+							/>
+						) : (
+							<Line
+								key={arrow.id}
+								points={[fromX, fromY, toX, toY]}
+								stroke={selectedNodeId === arrow.id ? "#3498db" : "#888"}
+								strokeWidth={4}
+								onClick={(e) => {
+									e.cancelBubble = true;
+									handleArrowClick(arrow.id);
+								}}
+							/>
+						);
+					})}
+					{/* 次にCircleのみ描画 */}
+					{arrows.map((arrow) => {
+						let fromX = 0;
+						let fromY = 0;
+						const parent = nodes.find((n) => n.id === arrow.parentId);
+						if (parent?.type === "player") {
+							fromX = parent.position.x;
+							fromY = parent.position.y;
+						} else if (parent?.type === "arrow") {
+							const p = getArrowEnd(parent);
+							fromX = p.x;
+							fromY = p.y;
+						}
+						const toX = fromX + arrow.relativeToParent.x;
+						const toY = fromY + arrow.relativeToParent.y;
+
+						const circleRadius = 8;
+
+						let showCircle = false;
+						if (selectedNodeId) {
+							const ancestorIds = collectAncestorArrowIds(selectedNodeId);
+							const descendantIds = collectDescendantArrowIds(selectedNodeId);
+							showCircle =
+								selectedNodeId === arrow.id ||
+								ancestorIds.includes(arrow.id) ||
+								descendantIds.includes(arrow.id);
+						}
+
+						const isTerminal = !nodes.some(
+							(n) =>
+								n.type === "arrow" &&
+								"parentId" in n &&
+								n.parentId === arrow.id,
+						);
+
+						return (
+							<Circle
+								key={arrow.id}
+								x={toX}
+								y={toY}
+								radius={circleRadius}
+								draggable
+								onMouseDown={(e) => {
+									e.cancelBubble = true;
+								}}
+								onDragMove={(e) => {
+									const stage = e.target.getStage();
+									if (!stage) return;
+									const pointer = stage.getPointerPosition();
+									if (!pointer) return;
+									const newRelX = pointer.x - fromX;
+									const newRelY = pointer.y - fromY;
+									setNodes((nodes) =>
+										nodes.map((n) =>
+											n.id === arrow.id && n.type === "arrow"
+												? {
+														...n,
+														relativeToParent: { x: newRelX, y: newRelY },
+													}
+												: n,
+										),
+									);
+								}}
+								onClick={(e) => {
+									e.cancelBubble = true;
+									handleArrowClick(arrow.id);
+								}}
+								visible={showCircle}
+								cursor="pointer"
+								stroke={isTerminal ? "transparent" : "#3498db"}
+								strokeWidth={2}
+								fill={isTerminal ? "transparent" : "#fff"}
+								listening={true}
 							/>
 						);
 					})}

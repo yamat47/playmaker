@@ -8,14 +8,14 @@ import {
 	Line,
 	Shape,
 } from "react-konva";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { PlayerNode } from "./components/PlayerNode";
 
 type Player = {
-	id: string;
-	type: "player";
-	position: { x: number; y: number };
-	label: string;
+  id: string;
+  type: "player";
+  position: { x: number; y: number };
+  label: string;
 };
 
 type StraightArrow = {
@@ -40,12 +40,26 @@ type Arrow = StraightArrow | CurveArrow;
 type Mode = "add" | "normal";
 
 function App() {
-	const [elements, setElements] = useState<(Player | Arrow)[]>([
-		{ id: "X", type: "player", position: { x: 100, y: 100 }, label: "X" },
-		{ id: "Z", type: "player", position: { x: 300, y: 100 }, label: "Z" },
-	]);
-	const [mode, setMode] = useState<Mode>("normal");
-	const [nextId, setNextId] = useState(1);
+
+  const [elements, setElements] = useState<(Player | Arrow)[]>([]);
+  const [mode, setMode] = useState<Mode>("normal");
+  const [nextId, setNextId] = useState(1);
+
+  // 初期選手データをRails APIから取得
+  useEffect(() => {
+	fetch("/api/players")
+	  .then((res) => res.json())
+	  .then((players: Player[]) => {
+		setElements(players);
+		// nextIdを既存IDから決定
+		const maxNum = players
+		  .map((p) => p.id)
+		  .filter((id) => /^P(\d+)$/.test(id))
+		  .map((id) => parseInt(id.replace("P", ""), 10))
+		  .reduce((a, b) => Math.max(a, b), 0);
+		setNextId(maxNum + 1);
+	  });
+  }, []);
 	const [selectedElementId, setSelectedElementId] = useState<string | null>(
 		null,
 	);

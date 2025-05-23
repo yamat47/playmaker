@@ -556,8 +556,6 @@ function App() {
 }
 
 function ArrowHead({
-	from,
-	cp,
 	to,
 	headBase,
 	color,
@@ -576,7 +574,6 @@ function ArrowHead({
 	const angle = Math.atan2(dy, dx);
 
 	const len = 16;
-	const width = 16;
 	const tip = { x: to.x, y: to.y };
 	const left = {
 		x: to.x - len * Math.cos(angle - Math.PI / 7),

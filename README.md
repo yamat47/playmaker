@@ -1,42 +1,24 @@
+# README
 
-# Playmaker
+This README would normally document whatever steps are necessary to get the
+application up and running.
 
-## Development Environment Setup
+Things you may want to cover:
 
-### Requirements
+* Ruby version
 
-- Node.js (Recommended: Latest LTS version)
-- pnpm (Recommended: v8 or later)
+* System dependencies
 
-### Setup Steps
+* Configuration
 
-1. Install dependencies
+* Database creation
 
-   ```sh
-   pnpm install
-   ```
+* Database initialization
 
-2. Start the development server
+* How to run the test suite
 
-   ```sh
-   pnpm dev
-   ```
+* Services (job queues, cache servers, search engines, etc.)
 
-   Open your browser and access `http://localhost:5173` (or the URL shown in the terminal).
+* Deployment instructions
 
-3. Linting and Formatting
-
-   - Lint: `pnpm lint`
-   - Format: `pnpm format`
-
-4. Production build
-
-   ```sh
-   pnpm build
-   ```
-
-5. Preview the production build
-
-   ```sh
-   pnpm preview
-   ```
+* ...

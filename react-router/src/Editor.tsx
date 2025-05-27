@@ -13,10 +13,10 @@ import { Button } from "@/components/ui/button";
 import { PlayerNode } from "@/components/PlayerNode";
 
 type Player = {
-  id: string;
-  type: "player";
-  position: { x: number; y: number };
-  label: string;
+	id: string;
+	type: "player";
+	position: { x: number; y: number };
+	label: string;
 };
 
 type StraightArrow = {
@@ -41,26 +41,25 @@ type Arrow = StraightArrow | CurveArrow;
 type Mode = "add" | "normal";
 
 function App() {
+	const [elements, setElements] = useState<(Player | Arrow)[]>([]);
+	const [mode, setMode] = useState<Mode>("normal");
+	const [nextId, setNextId] = useState(1);
 
-  const [elements, setElements] = useState<(Player | Arrow)[]>([]);
-  const [mode, setMode] = useState<Mode>("normal");
-  const [nextId, setNextId] = useState(1);
-
-  // 初期選手データをRails APIから取得
-  useEffect(() => {
-	fetch("/api/players")
-	  .then((res) => res.json())
-	  .then((players: Player[]) => {
-		setElements(players);
-		// nextIdを既存IDから決定
-		const maxNum = players
-		  .map((p) => p.id)
-		  .filter((id) => /^P(\d+)$/.test(id))
-		  .map((id) => parseInt(id.replace("P", ""), 10))
-		  .reduce((a, b) => Math.max(a, b), 0);
-		setNextId(maxNum + 1);
-	  });
-  }, []);
+	// 初期選手データをRails APIから取得
+	useEffect(() => {
+		fetch("/api/players")
+			.then((res) => res.json())
+			.then((players: Player[]) => {
+				setElements(players);
+				// nextIdを既存IDから決定
+				const maxNum = players
+					.map((p) => p.id)
+					.filter((id) => /^P(\d+)$/.test(id))
+					.map((id) => Number.parseInt(id.replace("P", ""), 10))
+					.reduce((a, b) => Math.max(a, b), 0);
+				setNextId(maxNum + 1);
+			});
+	}, []);
 	const [selectedElementId, setSelectedElementId] = useState<string | null>(
 		null,
 	);
@@ -247,34 +246,34 @@ function App() {
 					/>
 					選手追加モード
 				</label>
-			   <Button
-				   className="ml-4"
-				   onClick={handleDeleteElement}
-				   disabled={!selectedElementId}
-				   variant="destructive"
-			   >
-				   {(() => {
-					   const element = elements.find((e) => e.id === selectedElementId);
-					   if (!element) return "削除";
-					   return element.type === "player" ? "選手削除" : "矢印削除";
-				   })()}
-			   </Button>
-			   <Button
-				   className="ml-4"
-				   onClick={handleAddStraight}
-				   disabled={!selectedElementId}
-				   variant="secondary"
-			   >
-				   直線追加
-			   </Button>
-			   <Button
-				   className="ml-2"
-				   onClick={handleAddCurve}
-				   disabled={!selectedElementId}
-				   variant="secondary"
-			   >
-				   曲線追加
-			   </Button>
+				<Button
+					className="ml-4"
+					onClick={handleDeleteElement}
+					disabled={!selectedElementId}
+					variant="destructive"
+				>
+					{(() => {
+						const element = elements.find((e) => e.id === selectedElementId);
+						if (!element) return "削除";
+						return element.type === "player" ? "選手削除" : "矢印削除";
+					})()}
+				</Button>
+				<Button
+					className="ml-4"
+					onClick={handleAddStraight}
+					disabled={!selectedElementId}
+					variant="secondary"
+				>
+					直線追加
+				</Button>
+				<Button
+					className="ml-2"
+					onClick={handleAddCurve}
+					disabled={!selectedElementId}
+					variant="secondary"
+				>
+					曲線追加
+				</Button>
 			</div>
 			<Stage
 				width={800}

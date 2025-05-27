@@ -1,12 +1,29 @@
 version: 2
 updates:
-- package-ecosystem: bundler
-  directory: "/"
-  schedule:
-    interval: daily
-  open-pull-requests-limit: 10
-- package-ecosystem: github-actions
-  directory: "/"
-  schedule:
-    interval: daily
-  open-pull-requests-limit: 10
+  - package-ecosystem: bundler
+    directory: "/rails"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    groups:
+      gems:
+        patterns:
+          - "*"
+  - package-ecosystem: pnpm
+    directory: "/react-router"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    groups:
+      pnpm-packages:
+        patterns:
+          - "*"
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns:
+          - "*"

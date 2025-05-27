@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -6,50 +7,64 @@ on:
     branches: [ main ]
 
 jobs:
-  scan_ruby:
+  build_rails:
     runs-on: ubuntu-latest
 
+    name: Build Rails
+
+    defaults:
+      run:
+        working-directory: ./rails
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: .ruby-version
+          working-directory: ./rails
           bundler-cache: true
 
-      - name: Scan for common Rails security vulnerabilities using static analysis
-        run: bin/brakeman --no-pager
+      - name: Run Brakeman
+        run: bundle exec brakeman
 
-  scan_js:
-    runs-on: ubuntu-latest
+      - name: Run RuboCop
+        run: bundle exec rubocop
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: .ruby-version
-          bundler-cache: true
-
-      - name: Scan for security vulnerabilities in JavaScript dependencies
+      - name: Run Importmap audit
         run: bin/importmap audit
 
-  lint:
+  build_react-router:
     runs-on: ubuntu-latest
+
+    name: Build React Router
+
+    defaults:
+      run:
+        working-directory: ./react-router
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+      - uses: pnpm/action-setup@v4
         with:
-          ruby-version: .ruby-version
-          bundler-cache: true
+          version: 10
 
-      - name: Lint code for consistent style
-        run: bin/rubocop -f github
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: ./react-router/pnpm-lock.yaml
 
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Lint
+        run: pnpm lint
+
+      - name: Run Typecheck
+        run: pnpm tsc --noEmit
+
+      - name: Run Build
+        run: pnpm build

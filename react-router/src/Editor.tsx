@@ -9,7 +9,8 @@ import {
 	Shape,
 } from "react-konva";
 import React, { useEffect, useState } from "react";
-import { PlayerNode } from "./components/PlayerNode";
+import { Button } from "@/components/ui/button";
+import { PlayerNode } from "@/components/PlayerNode";
 
 type Player = {
   id: string;
@@ -246,34 +247,34 @@ function App() {
 					/>
 					選手追加モード
 				</label>
-				<button
-					type="button"
-					style={{ marginLeft: 16 }}
-					onClick={handleDeleteElement}
-					disabled={!selectedElementId}
-				>
-					{(() => {
-						const element = elements.find((e) => e.id === selectedElementId);
-						if (!element) return "削除";
-						return element.type === "player" ? "選手削除" : "矢印削除";
-					})()}
-				</button>
-				<button
-					type="button"
-					style={{ marginLeft: 16 }}
-					onClick={handleAddStraight}
-					disabled={!selectedElementId}
-				>
-					直線追加
-				</button>
-				<button
-					type="button"
-					style={{ marginLeft: 8 }}
-					onClick={handleAddCurve}
-					disabled={!selectedElementId}
-				>
-					曲線追加
-				</button>
+			   <Button
+				   className="ml-4"
+				   onClick={handleDeleteElement}
+				   disabled={!selectedElementId}
+				   variant="destructive"
+			   >
+				   {(() => {
+					   const element = elements.find((e) => e.id === selectedElementId);
+					   if (!element) return "削除";
+					   return element.type === "player" ? "選手削除" : "矢印削除";
+				   })()}
+			   </Button>
+			   <Button
+				   className="ml-4"
+				   onClick={handleAddStraight}
+				   disabled={!selectedElementId}
+				   variant="secondary"
+			   >
+				   直線追加
+			   </Button>
+			   <Button
+				   className="ml-2"
+				   onClick={handleAddCurve}
+				   disabled={!selectedElementId}
+				   variant="secondary"
+			   >
+				   曲線追加
+			   </Button>
 			</div>
 			<Stage
 				width={800}

@@ -38,12 +38,17 @@ type CurveArrow = {
 
 type Arrow = StraightArrow | CurveArrow;
 
-type Mode = "add" | "normal";
+type Mode = "add-player" | "add-straight" | "add-curve" | "normal";
 
 function App() {
+	// 線追加確定処理・プレビュー用状態は不要
 	const [elements, setElements] = useState<(Player | Arrow)[]>([]);
 	const [mode, setMode] = useState<Mode>("normal");
 	const [nextId, setNextId] = useState(1);
+	// 線追加モード用の状態は不要
+	const [arrowStartPlayerId, setArrowStartPlayerId] = useState<string | null>(
+		null,
+	);
 
 	// 初期選手データをRails APIから取得
 	useEffect(() => {
@@ -81,7 +86,7 @@ function App() {
 		const pointerPosition = stage.getPointerPosition();
 		if (!pointerPosition) return;
 
-		if (mode === "add") {
+		if (mode === "add-player") {
 			const id = `P${nextId}`;
 			setElements((elements) => [
 				...elements,
@@ -93,17 +98,79 @@ function App() {
 				},
 			]);
 			setNextId((n) => n + 1);
+		} else if (
+			(mode === "add-straight" || mode === "add-curve") &&
+			arrowStartPlayerId
+		) {
+			// 始点が選手か線かで座標を取得
+			let start: { x: number; y: number };
+			const player = players.find((p) => p.id === arrowStartPlayerId);
+			if (player) {
+				start = player.position;
+			} else {
+				const arrow = arrows.find((a) => a.id === arrowStartPlayerId);
+				if (!arrow) return;
+				start = getArrowEnd(arrow);
+			}
+			const pt = { x: pointerPosition.x, y: pointerPosition.y };
+			const relativeToParent = { x: pt.x - start.x, y: pt.y - start.y };
+			const id = `A${Date.now()}`;
+			if (mode === "add-straight") {
+				setElements((elements) => [
+					...elements,
+					{
+						id,
+						type: "arrow",
+						kind: "straight",
+						parentId: arrowStartPlayerId,
+						relativeToParent,
+					},
+				]);
+				setArrowStartPlayerId(id);
+			} else if (mode === "add-curve") {
+				// 制御点は中間点
+				const control = {
+					x: (pt.x + start.x) / 2,
+					y: (pt.y + start.y) / 2,
+				};
+				setElements((elements) => [
+					...elements,
+					{
+						id,
+						type: "arrow",
+						kind: "curve",
+						parentId: arrowStartPlayerId,
+						relativeToParent,
+						controlPoint: control,
+					},
+				]);
+				// 曲線は一度追加したら通常モード（選択状態）に戻す
+				setMode("normal");
+				setSelectedElementId(id);
+				setArrowStartPlayerId(null);
+			}
 		} else {
 			setSelectedElementId(null);
 		}
 	};
 
 	const handlePlayerClick = (id: string) => {
-		if (mode === "add") return;
+		if (
+			mode === "add-player" ||
+			mode === "add-straight" ||
+			mode === "add-curve"
+		)
+			return;
 		setSelectedElementId(id);
 	};
 
 	const handleArrowClick = (id: string) => {
+		if (
+			mode === "add-player" ||
+			mode === "add-straight" ||
+			mode === "add-curve"
+		)
+			return;
 		setSelectedElementId(id);
 	};
 
@@ -136,45 +203,6 @@ function App() {
 			elements.filter((e) => !idsToDelete.includes(e.id)),
 		);
 		setSelectedElementId(null);
-	};
-
-	const handleAddStraight = () => {
-		if (!selectedElementId) return;
-		const selected = elements.find((e) => e.id === selectedElementId);
-		if (!selected) return;
-		const parentId = selected.id;
-		const arrowId = `A${Date.now()}`;
-		setElements((elements) => [
-			...elements,
-			{
-				id: arrowId,
-				type: "arrow",
-				kind: "straight",
-				parentId,
-				relativeToParent: { x: 80, y: 0 },
-			} as StraightArrow,
-		]);
-		setSelectedElementId(arrowId);
-	};
-
-	const handleAddCurve = () => {
-		if (!selectedElementId) return;
-		const selected = elements.find((e) => e.id === selectedElementId);
-		if (!selected) return;
-		const parentId = selected.id;
-		const arrowId = `A${Date.now()}`;
-		setElements((elements) => [
-			...elements,
-			{
-				id: arrowId,
-				type: "arrow",
-				kind: "curve",
-				parentId,
-				relativeToParent: { x: 80, y: 0 },
-				controlPoint: { x: 40, y: -40 },
-			} as CurveArrow,
-		]);
-		setSelectedElementId(arrowId);
 	};
 
 	const getArrowEnd = (arrow: Arrow): { x: number; y: number } => {
@@ -240,12 +268,38 @@ function App() {
 				<label>
 					<input
 						type="radio"
-						value="add"
-						checked={mode === "add"}
-						onChange={() => setMode("add")}
+						value="add-player"
+						checked={mode === "add-player"}
+						onChange={() => setMode("add-player")}
 					/>
-					選手追加モード
+					選手追加
 				</label>
+				<Button
+					className="ml-2"
+					onClick={() => {
+						if (selectedElementId) {
+							setMode("add-straight");
+							setArrowStartPlayerId(selectedElementId);
+						}
+					}}
+					disabled={!selectedElementId}
+					variant={mode === "add-straight" ? "secondary" : "outline"}
+				>
+					選択中から直線を引く
+				</Button>
+				<Button
+					className="ml-2"
+					onClick={() => {
+						if (selectedElementId) {
+							setMode("add-curve");
+							setArrowStartPlayerId(selectedElementId);
+						}
+					}}
+					disabled={!selectedElementId}
+					variant={mode === "add-curve" ? "secondary" : "outline"}
+				>
+					選択中から曲線を引く
+				</Button>
 				<Button
 					className="ml-4"
 					onClick={handleDeleteElement}
@@ -258,22 +312,6 @@ function App() {
 						return element.type === "player" ? "選手削除" : "矢印削除";
 					})()}
 				</Button>
-				<Button
-					className="ml-4"
-					onClick={handleAddStraight}
-					disabled={!selectedElementId}
-					variant="secondary"
-				>
-					直線追加
-				</Button>
-				<Button
-					className="ml-2"
-					onClick={handleAddCurve}
-					disabled={!selectedElementId}
-					variant="secondary"
-				>
-					曲線追加
-				</Button>
 			</div>
 			<Stage
 				width={800}
@@ -282,6 +320,8 @@ function App() {
 				onClick={handleStageClick}
 			>
 				<Layer>
+					{/* 追加中の線プレビュー */}
+
 					{arrows.map((arrow) => {
 						let fromX = 0;
 						let fromY = 0;
@@ -545,7 +585,7 @@ function App() {
 							key={player.id}
 							x={player.position.x}
 							y={player.position.y}
-							draggable={mode !== "add"}
+							draggable={mode !== "add-player"}
 							onDragMove={(e) => {
 								const { x, y } = e.target.position();
 								handlePlayerDragMove(player.id, x, y);

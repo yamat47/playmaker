@@ -253,72 +253,104 @@ function App() {
 		return allIds;
 	};
 
+	const selectedElement = elements.find((e) => e.id === selectedElementId);
+	const selectedPlayer = selectedElement?.type === "player" ? selectedElement : null;
+
 	return (
-		<div>
-			<div style={{ marginBottom: 8 }}>
-				<label>
-					<input
-						type="radio"
-						value="normal"
-						checked={mode === "normal"}
-						onChange={() => setMode("normal")}
-					/>
-					通常モード
-				</label>
-				<label>
-					<input
-						type="radio"
-						value="add-player"
-						checked={mode === "add-player"}
-						onChange={() => setMode("add-player")}
-					/>
-					選手追加
-				</label>
-				<Button
-					className="ml-2"
-					onClick={() => {
-						if (selectedElementId) {
-							setMode("add-straight");
-							setArrowStartPlayerId(selectedElementId);
-						}
-					}}
-					disabled={!selectedElementId}
-					variant={mode === "add-straight" ? "secondary" : "outline"}
-				>
-					選択中から直線を引く
-				</Button>
-				<Button
-					className="ml-2"
-					onClick={() => {
-						if (selectedElementId) {
-							setMode("add-curve");
-							setArrowStartPlayerId(selectedElementId);
-						}
-					}}
-					disabled={!selectedElementId}
-					variant={mode === "add-curve" ? "secondary" : "outline"}
-				>
-					選択中から曲線を引く
-				</Button>
-				<Button
-					className="ml-4"
-					onClick={handleDeleteElement}
-					disabled={!selectedElementId}
-					variant="destructive"
-				>
-					{(() => {
-						const element = elements.find((e) => e.id === selectedElementId);
-						if (!element) return "削除";
-						return element.type === "player" ? "選手削除" : "矢印削除";
-					})()}
-				</Button>
+		<div className="flex h-screen bg-gray-50">
+			{/* 左カラム: 選手の追加・移動操作 */}
+			<div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto flex-shrink-0">
+				<h2 className="text-lg font-semibold mb-4">操作パネル</h2>
+				
+				<div className="space-y-4">
+					<div>
+						<h3 className="text-sm font-medium mb-2">モード選択</h3>
+						<div className="space-y-2">
+							<label className="flex items-center">
+								<input
+									type="radio"
+									value="normal"
+									checked={mode === "normal"}
+									onChange={() => setMode("normal")}
+									className="mr-2"
+								/>
+								通常モード
+							</label>
+							<label className="flex items-center">
+								<input
+									type="radio"
+									value="add-player"
+									checked={mode === "add-player"}
+									onChange={() => setMode("add-player")}
+									className="mr-2"
+								/>
+								選手追加
+							</label>
+						</div>
+					</div>
+
+					<div>
+						<h3 className="text-sm font-medium mb-2">矢印操作</h3>
+						<div className="space-y-2">
+							<Button
+								className="w-full"
+								onClick={() => {
+									if (selectedElementId) {
+										setMode("add-straight");
+										setArrowStartPlayerId(selectedElementId);
+									}
+								}}
+								disabled={!selectedElementId}
+								variant={mode === "add-straight" ? "secondary" : "outline"}
+								size="sm"
+							>
+								選択中から直線を引く
+							</Button>
+							<Button
+								className="w-full"
+								onClick={() => {
+									if (selectedElementId) {
+										setMode("add-curve");
+										setArrowStartPlayerId(selectedElementId);
+									}
+								}}
+								disabled={!selectedElementId}
+								variant={mode === "add-curve" ? "secondary" : "outline"}
+								size="sm"
+							>
+								選択中から曲線を引く
+							</Button>
+						</div>
+					</div>
+
+					<div>
+						<h3 className="text-sm font-medium mb-2">削除</h3>
+						<Button
+							className="w-full"
+							onClick={handleDeleteElement}
+							disabled={!selectedElementId}
+							variant="destructive"
+							size="sm"
+						>
+							{(() => {
+								const element = elements.find((e) => e.id === selectedElementId);
+								if (!element) return "削除";
+								return element.type === "player" ? "選手削除" : "矢印削除";
+							})()}
+						</Button>
+					</div>
+				</div>
 			</div>
-			<Stage
-				width={800}
-				height={600}
-				style={{ background: "#f3f3f3" }}
-				onClick={handleStageClick}
-			>
+
+			{/* 中央カラム: フィールド */}
+			<div className="flex-1 flex items-center justify-center p-4 min-w-0">
+				<div className="bg-white rounded-lg shadow-lg">
+					<Stage
+						width={900}
+						height={650}
+						style={{ background: "#f3f3f3" }}
+						onClick={handleStageClick}
+					>
 				<Layer>
 					{/* 追加中の線プレビュー */}
 
@@ -605,6 +637,33 @@ function App() {
 					))}
 				</Layer>
 			</Stage>
+				</div>
+			</div>
+
+			{/* 右カラム: 選択中の選手情報 */}
+			<div className="w-64 bg-white border-l border-gray-200 p-4 flex-shrink-0">
+				{selectedPlayer && (
+					<>
+						<h2 className="text-lg font-semibold mb-4">選手情報</h2>
+						<div className="space-y-3">
+							<div>
+								<label className="text-sm font-medium text-gray-700">ID</label>
+								<p className="text-lg">{selectedPlayer.id}</p>
+							</div>
+							<div>
+								<label className="text-sm font-medium text-gray-700">ラベル</label>
+								<p className="text-lg">{selectedPlayer.label}</p>
+							</div>
+							<div>
+								<label className="text-sm font-medium text-gray-700">位置</label>
+								<p className="text-lg">
+									X: {Math.round(selectedPlayer.position.x)}, Y: {Math.round(selectedPlayer.position.y)}
+								</p>
+							</div>
+						</div>
+					</>
+				)}
+			</div>
 		</div>
 	);
 }

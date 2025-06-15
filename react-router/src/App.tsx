@@ -1,5 +1,6 @@
 import { Routes, Route, Link } from "react-router-dom";
 import { Suspense, lazy } from "react";
+import "./App.css";
 
 const Editor = lazy(() => import("./Editor"));
 const About = lazy(() => import("./About"));

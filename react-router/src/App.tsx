@@ -13,7 +13,9 @@ function App() {
 				<nav className="flex h-full items-center px-6 gap-6">
 					<div className="flex items-center gap-2">
 						<div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-							<span className="text-primary-foreground font-bold text-sm">P</span>
+							<span className="text-primary-foreground font-bold text-sm">
+								P
+							</span>
 						</div>
 						<span className="font-semibold text-lg">Football Playmaker</span>
 					</div>
@@ -37,7 +39,13 @@ function App() {
 				</nav>
 			</header>
 			<main className="flex-1 overflow-hidden">
-				<Suspense fallback={<div className="flex items-center justify-center h-full"><div className="text-muted-foreground">Loading...</div></div>}>
+				<Suspense
+					fallback={
+						<div className="flex items-center justify-center h-full">
+							<div className="text-muted-foreground">Loading...</div>
+						</div>
+					}
+				>
 					<Routes>
 						<Route path="/" element={<Editor />} />
 						<Route path="/about" element={<About />} />

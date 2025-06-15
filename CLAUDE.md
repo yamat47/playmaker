@@ -67,6 +67,29 @@ pnpm typecheck             # Run TypeScript type checking
 - `/react-router/src/Editor.tsx` - Main canvas editor component
 - `/react-router/vite.config.ts` - Proxy configuration for API
 
+## CI Checks
+
+To ensure your changes will pass CI, run the following commands:
+
+### Rails CI Checks (from project root)
+```bash
+cd rails && bundle exec rubocop    # Ruby linting
+cd rails && bundle exec brakeman   # Security analysis
+```
+
+### React CI Checks (from project root)
+```bash
+cd react-router && pnpm lint       # Biome linting
+cd react-router && pnpm typecheck  # TypeScript type checking
+cd react-router && pnpm format     # Biome formatting check
+```
+
+### Run All CI Checks
+```bash
+# From project root
+cd rails && bundle exec rubocop && bundle exec brakeman && cd ../react-router && pnpm lint && pnpm typecheck && pnpm format
+```
+
 ## Important Notes
 
 ### File Creation

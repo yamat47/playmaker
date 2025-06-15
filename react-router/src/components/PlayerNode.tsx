@@ -20,15 +20,17 @@ export const PlayerNode = ({ x, y, label, isSelected = false }: Props) => {
 					opacity={0.6}
 				/>
 			)}
-			
+
 			{/* 外側のボーダー */}
 			<Circle
 				radius={22}
 				fill="var(--sidebar)"
-				stroke={isSelected ? "var(--player-border-selected)" : "var(--player-border)"}
+				stroke={
+					isSelected ? "var(--player-border-selected)" : "var(--player-border)"
+				}
 				strokeWidth={2}
 			/>
-			
+
 			{/* 内側のメインサークル */}
 			<Circle
 				radius={18}
@@ -38,7 +40,7 @@ export const PlayerNode = ({ x, y, label, isSelected = false }: Props) => {
 				shadowOpacity={0.4}
 				shadowOffsetY={2}
 			/>
-			
+
 			{/* プレイヤー番号 */}
 			<Text
 				text={label}

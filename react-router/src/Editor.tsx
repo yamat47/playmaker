@@ -13,10 +13,16 @@ import { Button } from "@/components/ui/button";
 import { PlayerNode } from "@/components/PlayerNode";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { Layers, Move, TrendingUp, Trash2, User, MapPin } from "lucide-react";
+import { Layers, Move, TrendingUp, Trash2, User } from "lucide-react";
 
 type Player = {
 	id: string;
@@ -260,7 +266,8 @@ function App() {
 	};
 
 	const selectedElement = elements.find((e) => e.id === selectedElementId);
-	const selectedPlayer = selectedElement?.type === "player" ? selectedElement : null;
+	const selectedPlayer =
+		selectedElement?.type === "player" ? selectedElement : null;
 
 	return (
 		<div className="flex h-full bg-background">
@@ -277,20 +284,31 @@ function App() {
 					<Card>
 						<CardHeader className="pb-3">
 							<CardTitle className="text-sm">モード</CardTitle>
-							<CardDescription className="text-xs">編集モードを選択</CardDescription>
+							<CardDescription className="text-xs">
+								編集モードを選択
+							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<RadioGroup value={mode} onValueChange={(value) => setMode(value as Mode)}>
+							<RadioGroup
+								value={mode}
+								onValueChange={(value) => setMode(value as Mode)}
+							>
 								<div className="flex items-center space-x-2">
 									<RadioGroupItem value="normal" id="normal" />
-									<Label htmlFor="normal" className="text-sm font-normal cursor-pointer flex items-center gap-2">
+									<Label
+										htmlFor="normal"
+										className="text-sm font-normal cursor-pointer flex items-center gap-2"
+									>
 										<Move className="w-4 h-4" />
 										選択・移動
 									</Label>
 								</div>
 								<div className="flex items-center space-x-2">
 									<RadioGroupItem value="add-player" id="add-player" />
-									<Label htmlFor="add-player" className="text-sm font-normal cursor-pointer flex items-center gap-2">
+									<Label
+										htmlFor="add-player"
+										className="text-sm font-normal cursor-pointer flex items-center gap-2"
+									>
 										<User className="w-4 h-4" />
 										選手追加
 									</Label>
@@ -302,7 +320,9 @@ function App() {
 					<Card>
 						<CardHeader className="pb-3">
 							<CardTitle className="text-sm">矢印</CardTitle>
-							<CardDescription className="text-xs">選手間の動きを表現</CardDescription>
+							<CardDescription className="text-xs">
+								選手間の動きを表現
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-2">
 							<Button
@@ -332,7 +352,15 @@ function App() {
 								variant={mode === "add-curve" ? "secondary" : "outline"}
 								size="sm"
 							>
-								<svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<svg
+									className="w-4 h-4 mr-2"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									aria-label="曲線アイコン"
+								>
+									<title>曲線アイコン</title>
 									<path d="M5 12s2.545-5 7-5c4.454 0 7 5 7 5s-2.546 5-7 5c-4.455 0-7-5-7-5z" />
 								</svg>
 								曲線を引く
@@ -363,14 +391,18 @@ function App() {
 			<div className="flex-1 flex flex-col bg-background">
 				{/* トップバー */}
 				<div className="h-12 bg-card border-b flex items-center px-4 gap-4">
-					<span className="text-sm font-medium text-muted-foreground">プレイエディター</span>
+					<span className="text-sm font-medium text-muted-foreground">
+						プレイエディター
+					</span>
 					<Separator orientation="vertical" className="h-6" />
 					<div className="flex items-center gap-2">
-						<span className="text-xs text-muted-foreground">フィールドサイズ:</span>
+						<span className="text-xs text-muted-foreground">
+							フィールドサイズ:
+						</span>
 						<span className="text-xs font-mono">900 x 650</span>
 					</div>
 				</div>
-				
+
 				{/* キャンバスエリア */}
 				<div className="flex-1 flex items-center justify-center p-8 overflow-hidden">
 					<div className="relative">
@@ -382,79 +414,200 @@ function App() {
 								height="650"
 								className="absolute rounded"
 								style={{ pointerEvents: "none" }}
+								aria-label="アメリカンフットボールフィールド"
 							>
+								<title>アメリカンフットボールフィールド</title>
 								{/* フィールドの背景 */}
-								<rect x="0" y="0" width="900" height="650" fill="var(--field-green)" rx="4" />
-								
+								<rect
+									x="0"
+									y="0"
+									width="900"
+									height="650"
+									fill="var(--field-green)"
+									rx="4"
+								/>
+
 								{/* エンドゾーン */}
-								<rect x="0" y="0" width="90" height="650" fill="var(--field-green-dark)" />
-								<rect x="810" y="0" width="90" height="650" fill="var(--field-green-dark)" />
-								
+								<rect
+									x="0"
+									y="0"
+									width="90"
+									height="650"
+									fill="var(--field-green-dark)"
+								/>
+								<rect
+									x="810"
+									y="0"
+									width="90"
+									height="650"
+									fill="var(--field-green-dark)"
+								/>
+
 								{/* フィールド外枠 */}
-								<rect x="0" y="0" width="900" height="650" fill="none" stroke="var(--field-line)" strokeWidth="4" rx="2" />
-								
+								<rect
+									x="0"
+									y="0"
+									width="900"
+									height="650"
+									fill="none"
+									stroke="var(--field-line)"
+									strokeWidth="4"
+									rx="2"
+								/>
+
 								{/* ヤードライン（10ヤードごと） */}
 								{[90, 180, 270, 360, 450, 540, 630, 720, 810].map((x, i) => (
-									<g key={i}>
-										<line x1={x} y1="0" x2={x} y2="650" stroke="var(--field-line)" strokeWidth="3" />
+									<g key={`yard-${x}`}>
+										<line
+											x1={x}
+											y1="0"
+											x2={x}
+											y2="650"
+											stroke="var(--field-line)"
+											strokeWidth="3"
+										/>
 										{/* ヤード数表示 */}
 										{i < 4 && (
 											<>
-												<text x={x + 45} y="30" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
+												<text
+													x={x + 45}
+													y="30"
+													fill="var(--field-line)"
+													fontSize="24"
+													fontWeight="bold"
+													textAnchor="middle"
+												>
 													{(i + 1) * 10}
 												</text>
-												<text x={x + 45} y="630" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
+												<text
+													x={x + 45}
+													y="630"
+													fill="var(--field-line)"
+													fontSize="24"
+													fontWeight="bold"
+													textAnchor="middle"
+												>
 													{(i + 1) * 10}
 												</text>
 											</>
 										)}
 										{i === 4 && (
 											<>
-												<text x={x} y="30" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
+												<text
+													x={x}
+													y="30"
+													fill="var(--field-line)"
+													fontSize="24"
+													fontWeight="bold"
+													textAnchor="middle"
+												>
 													50
 												</text>
-												<text x={x} y="630" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
+												<text
+													x={x}
+													y="630"
+													fill="var(--field-line)"
+													fontSize="24"
+													fontWeight="bold"
+													textAnchor="middle"
+												>
 													50
 												</text>
 											</>
 										)}
 										{i > 4 && (
 											<>
-												<text x={x - 45} y="30" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
+												<text
+													x={x - 45}
+													y="30"
+													fill="var(--field-line)"
+													fontSize="24"
+													fontWeight="bold"
+													textAnchor="middle"
+												>
 													{(9 - i) * 10}
 												</text>
-												<text x={x - 45} y="630" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
+												<text
+													x={x - 45}
+													y="630"
+													fill="var(--field-line)"
+													fontSize="24"
+													fontWeight="bold"
+													textAnchor="middle"
+												>
 													{(9 - i) * 10}
 												</text>
 											</>
 										)}
 									</g>
 								))}
-								
+
 								{/* 5ヤードライン（薄い線） */}
-								{[45, 135, 225, 315, 405, 495, 585, 675, 765, 855].map((x, i) => (
-									<line key={i} x1={x} y1="0" x2={x} y2="650" stroke="var(--field-marking)" strokeWidth="1" strokeOpacity="0.4" />
+								{[45, 135, 225, 315, 405, 495, 585, 675, 765, 855].map((x) => (
+									<line
+										key={`5yard-${x}`}
+										x1={x}
+										y1="0"
+										x2={x}
+										y2="650"
+										stroke="var(--field-marking)"
+										strokeWidth="1"
+										strokeOpacity="0.4"
+									/>
 								))}
-								
+
 								{/* ハッシュマーク */}
-								{[45, 90, 135, 180, 225, 270, 315, 360, 405, 450, 495, 540, 585, 630, 675, 720, 765, 810, 855].map((x, i) => (
-									<g key={i}>
+								{[
+									45, 90, 135, 180, 225, 270, 315, 360, 405, 450, 495, 540, 585,
+									630, 675, 720, 765, 810, 855,
+								].map((x) => (
+									<g key={`hash-${x}`}>
 										{/* 上部ハッシュマーク */}
-										<line x1={x} y1="216" x2={x} y2="226" stroke="var(--field-marking)" strokeWidth="2" />
+										<line
+											x1={x}
+											y1="216"
+											x2={x}
+											y2="226"
+											stroke="var(--field-marking)"
+											strokeWidth="2"
+										/>
 										{/* 下部ハッシュマーク */}
-										<line x1={x} y1="424" x2={x} y2="434" stroke="var(--field-marking)" strokeWidth="2" />
+										<line
+											x1={x}
+											y1="424"
+											x2={x}
+											y2="434"
+											stroke="var(--field-marking)"
+											strokeWidth="2"
+										/>
 									</g>
 								))}
-								
+
 								{/* エンドゾーンのテキスト */}
-								<text x="45" y="325" fill="var(--field-marking)" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(-90 45 325)">
+								<text
+									x="45"
+									y="325"
+									fill="var(--field-marking)"
+									fontSize="32"
+									fontWeight="bold"
+									textAnchor="middle"
+									transform="rotate(-90 45 325)"
+								>
 									END ZONE
 								</text>
-								<text x="855" y="325" fill="var(--field-marking)" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(90 855 325)">
+								<text
+									x="855"
+									y="325"
+									fill="var(--field-marking)"
+									fontSize="32"
+									fontWeight="bold"
+									textAnchor="middle"
+									transform="rotate(90 855 325)"
+								>
 									END ZONE
 								</text>
 							</svg>
-							
+
 							{/* Konva Stage */}
 							<Stage
 								width={900}
@@ -462,292 +615,324 @@ function App() {
 								style={{ borderRadius: "4px" }}
 								onClick={handleStageClick}
 							>
-				<Layer>
-					{/* 追加中の線プレビュー */}
+								<Layer>
+									{/* 追加中の線プレビュー */}
 
-					{arrows.map((arrow) => {
-						let fromX = 0;
-						let fromY = 0;
-						const parent = elements.find((e) => e.id === arrow.parentId);
-						if (parent?.type === "player") {
-							fromX = parent.position.x;
-							fromY = parent.position.y;
-						} else if (parent?.type === "arrow") {
-							const p = getArrowEnd(parent as Arrow);
-							fromX = p.x;
-							fromY = p.y;
-						}
-						const toX = fromX + arrow.relativeToParent.x;
-						const toY = fromY + arrow.relativeToParent.y;
+									{arrows.map((arrow) => {
+										let fromX = 0;
+										let fromY = 0;
+										const parent = elements.find(
+											(e) => e.id === arrow.parentId,
+										);
+										if (parent?.type === "player") {
+											fromX = parent.position.x;
+											fromY = parent.position.y;
+										} else if (parent?.type === "arrow") {
+											const p = getArrowEnd(parent as Arrow);
+											fromX = p.x;
+											fromY = p.y;
+										}
+										const toX = fromX + arrow.relativeToParent.x;
+										const toY = fromY + arrow.relativeToParent.y;
 
-						const isTerminal = !elements.some(
-							(e) =>
-								e.type === "arrow" &&
-								"parentId" in e &&
-								e.parentId === arrow.id,
-						);
+										const isTerminal = !elements.some(
+											(e) =>
+												e.type === "arrow" &&
+												"parentId" in e &&
+												e.parentId === arrow.id,
+										);
 
-						if (arrow.kind === "curve") {
-							const cpX = fromX + arrow.controlPoint.x;
-							const cpY = fromY + arrow.controlPoint.y;
+										if (arrow.kind === "curve") {
+											const cpX = fromX + arrow.controlPoint.x;
+											const cpY = fromY + arrow.controlPoint.y;
 
-							const isTerminal = !elements.some(
-								(e) =>
-									e.type === "arrow" &&
-									"parentId" in e &&
-									e.parentId === arrow.id,
-							);
-
-							let curveEndX = toX;
-							let curveEndY = toY;
-							let arrowHeadProps = null;
-
-							if (isTerminal) {
-								const arrowHeadLength = 16;
-								const dx = 2 * (toX - cpX);
-								const dy = 2 * (toY - cpY);
-								const angle = Math.atan2(dy, dx);
-								const offset = arrowHeadLength * 0.7;
-								curveEndX = toX - offset * Math.cos(angle);
-								curveEndY = toY - offset * Math.sin(angle);
-								arrowHeadProps = {
-									from: { x: fromX, y: fromY },
-									cp: { x: cpX, y: cpY },
-									to: { x: toX, y: toY },
-									headBase: { x: curveEndX, y: curveEndY },
-									color: selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)",
-									onClick: (e: KonvaEventObject<MouseEvent>) => {
-										e.cancelBubble = true;
-										handleArrowClick(arrow.id);
-									},
-								};
-							}
-
-							return (
-								<React.Fragment key={arrow.id}>
-									<Shape
-										sceneFunc={(ctx, shape) => {
-											ctx.beginPath();
-											ctx.moveTo(fromX, fromY);
-											ctx.bezierCurveTo(
-												cpX,
-												cpY,
-												cpX,
-												cpY,
-												curveEndX,
-												curveEndY,
+											const isTerminal = !elements.some(
+												(e) =>
+													e.type === "arrow" &&
+													"parentId" in e &&
+													e.parentId === arrow.id,
 											);
-											ctx.strokeShape(shape);
-										}}
-										stroke={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
-										strokeWidth={4}
-										hitStrokeWidth={20}
-										onClick={(e) => {
-											e.cancelBubble = true;
-											handleArrowClick(arrow.id);
-										}}
-									/>
-									{isTerminal && arrowHeadProps && (
-										<ArrowHead {...arrowHeadProps} />
-									)}
-								</React.Fragment>
-							);
-						}
 
-						return isTerminal ? (
-							<KonvaArrow
-								key={arrow.id}
-								points={[fromX, fromY, toX, toY]}
-								pointerLength={16}
-								pointerWidth={16}
-								fill={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
-								stroke={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
-								strokeWidth={4}
-								onClick={(e) => {
-									e.cancelBubble = true;
-									handleArrowClick(arrow.id);
-								}}
-							/>
-						) : (
-							<Line
-								key={arrow.id}
-								points={[fromX, fromY, toX, toY]}
-								stroke={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
-								strokeWidth={4}
-								onClick={(e) => {
-									e.cancelBubble = true;
-									handleArrowClick(arrow.id);
-								}}
-							/>
-						);
-					})}
-					{arrows.map((arrow) => {
-						let fromX = 0;
-						let fromY = 0;
-						const parent = elements.find((e) => e.id === arrow.parentId);
-						if (parent?.type === "player") {
-							fromX = parent.position.x;
-							fromY = parent.position.y;
-						} else if (parent?.type === "arrow") {
-							const p = getArrowEnd(parent as Arrow);
-							fromX = p.x;
-							fromY = p.y;
-						}
-						const toX = fromX + arrow.relativeToParent.x;
-						const toY = fromY + arrow.relativeToParent.y;
+											let curveEndX = toX;
+											let curveEndY = toY;
+											let arrowHeadProps = null;
 
-						const circleRadius = 8;
+											if (isTerminal) {
+												const arrowHeadLength = 16;
+												const dx = 2 * (toX - cpX);
+												const dy = 2 * (toY - cpY);
+												const angle = Math.atan2(dy, dx);
+												const offset = arrowHeadLength * 0.7;
+												curveEndX = toX - offset * Math.cos(angle);
+												curveEndY = toY - offset * Math.sin(angle);
+												arrowHeadProps = {
+													from: { x: fromX, y: fromY },
+													cp: { x: cpX, y: cpY },
+													to: { x: toX, y: toY },
+													headBase: { x: curveEndX, y: curveEndY },
+													color:
+														selectedElementId === arrow.id
+															? "var(--arrow-selected)"
+															: "var(--arrow-color)",
+													onClick: (e: KonvaEventObject<MouseEvent>) => {
+														e.cancelBubble = true;
+														handleArrowClick(arrow.id);
+													},
+												};
+											}
 
-						let showCircle = false;
-						if (selectedElementId) {
-							const ancestorIds = collectAncestorArrowIds(selectedElementId);
-							const descendantIds =
-								collectDescendantArrowIds(selectedElementId);
-							showCircle =
-								selectedElementId === arrow.id ||
-								ancestorIds.includes(arrow.id) ||
-								descendantIds.includes(arrow.id);
-						}
+											return (
+												<React.Fragment key={arrow.id}>
+													<Shape
+														sceneFunc={(ctx, shape) => {
+															ctx.beginPath();
+															ctx.moveTo(fromX, fromY);
+															ctx.bezierCurveTo(
+																cpX,
+																cpY,
+																cpX,
+																cpY,
+																curveEndX,
+																curveEndY,
+															);
+															ctx.strokeShape(shape);
+														}}
+														stroke={
+															selectedElementId === arrow.id
+																? "var(--arrow-selected)"
+																: "var(--arrow-color)"
+														}
+														strokeWidth={4}
+														hitStrokeWidth={20}
+														onClick={(e) => {
+															e.cancelBubble = true;
+															handleArrowClick(arrow.id);
+														}}
+													/>
+													{isTerminal && arrowHeadProps && (
+														<ArrowHead {...arrowHeadProps} />
+													)}
+												</React.Fragment>
+											);
+										}
 
-						const isTerminal = !elements.some(
-							(e) =>
-								e.type === "arrow" &&
-								"parentId" in e &&
-								e.parentId === arrow.id,
-						);
+										return isTerminal ? (
+											<KonvaArrow
+												key={arrow.id}
+												points={[fromX, fromY, toX, toY]}
+												pointerLength={16}
+												pointerWidth={16}
+												fill={
+													selectedElementId === arrow.id
+														? "var(--arrow-selected)"
+														: "var(--arrow-color)"
+												}
+												stroke={
+													selectedElementId === arrow.id
+														? "var(--arrow-selected)"
+														: "var(--arrow-color)"
+												}
+												strokeWidth={4}
+												onClick={(e) => {
+													e.cancelBubble = true;
+													handleArrowClick(arrow.id);
+												}}
+											/>
+										) : (
+											<Line
+												key={arrow.id}
+												points={[fromX, fromY, toX, toY]}
+												stroke={
+													selectedElementId === arrow.id
+														? "var(--arrow-selected)"
+														: "var(--arrow-color)"
+												}
+												strokeWidth={4}
+												onClick={(e) => {
+													e.cancelBubble = true;
+													handleArrowClick(arrow.id);
+												}}
+											/>
+										);
+									})}
+									{arrows.map((arrow) => {
+										let fromX = 0;
+										let fromY = 0;
+										const parent = elements.find(
+											(e) => e.id === arrow.parentId,
+										);
+										if (parent?.type === "player") {
+											fromX = parent.position.x;
+											fromY = parent.position.y;
+										} else if (parent?.type === "arrow") {
+											const p = getArrowEnd(parent as Arrow);
+											fromX = p.x;
+											fromY = p.y;
+										}
+										const toX = fromX + arrow.relativeToParent.x;
+										const toY = fromY + arrow.relativeToParent.y;
 
-						return (
-							<Circle
-								key={`${arrow.id}-end`}
-								x={toX}
-								y={toY}
-								radius={circleRadius}
-								draggable
-								onMouseDown={(e) => {
-									e.cancelBubble = true;
-								}}
-								onDragMove={(e) => {
-									const stage = e.target.getStage();
-									if (!stage) return;
-									const pointer = stage.getPointerPosition();
-									if (!pointer) return;
-									const newRelX = pointer.x - fromX;
-									const newRelY = pointer.y - fromY;
-									setElements((elements) =>
-										elements.map((el) =>
-											el.id === arrow.id && el.type === "arrow"
-												? {
-														...el,
-														relativeToParent: { x: newRelX, y: newRelY },
-													}
-												: el,
-										),
-									);
-								}}
-								onClick={(e) => {
-									e.cancelBubble = true;
-									handleArrowClick(arrow.id);
-								}}
-								visible={showCircle}
-								cursor="pointer"
-								stroke={isTerminal ? "transparent" : "var(--arrow-selected)"}
-								strokeWidth={2}
-								fill={isTerminal ? "transparent" : "#fff"}
-								listening={true}
-							/>
-						);
-					})}
-					{arrows.map((arrow) => {
-						if (arrow.kind !== "curve") return null;
-						let fromX = 0;
-						let fromY = 0;
-						const parent = elements.find((e) => e.id === arrow.parentId);
-						if (parent?.type === "player") {
-							fromX = parent.position.x;
-							fromY = parent.position.y;
-						} else if (parent?.type === "arrow") {
-							const p = getArrowEnd(parent as Arrow);
-							fromX = p.x;
-							fromY = p.y;
-						}
-						const cpX = fromX + arrow.controlPoint.x;
-						const cpY = fromY + arrow.controlPoint.y;
+										const circleRadius = 8;
 
-						let showCircle = false;
-						if (selectedElementId) {
-							const ancestorIds = collectAncestorArrowIds(selectedElementId);
-							const descendantIds =
-								collectDescendantArrowIds(selectedElementId);
-							showCircle =
-								selectedElementId === arrow.id ||
-								ancestorIds.includes(arrow.id) ||
-								descendantIds.includes(arrow.id);
-						}
+										let showCircle = false;
+										if (selectedElementId) {
+											const ancestorIds =
+												collectAncestorArrowIds(selectedElementId);
+											const descendantIds =
+												collectDescendantArrowIds(selectedElementId);
+											showCircle =
+												selectedElementId === arrow.id ||
+												ancestorIds.includes(arrow.id) ||
+												descendantIds.includes(arrow.id);
+										}
 
-						return (
-							<Circle
-								key={`${arrow.id}-cp`}
-								x={cpX}
-								y={cpY}
-								radius={7}
-								draggable
-								onMouseDown={(e) => {
-									e.cancelBubble = true;
-								}}
-								onDragMove={(e) => {
-									const stage = e.target.getStage();
-									if (!stage) return;
-									const pointer = stage.getPointerPosition();
-									if (!pointer) return;
-									const newCpX = pointer.x - fromX;
-									const newCpY = pointer.y - fromY;
-									setElements((elements) =>
-										elements.map((el) =>
-											el.id === arrow.id &&
-											el.type === "arrow" &&
-											el.kind === "curve"
-												? {
-														...el,
-														controlPoint: { x: newCpX, y: newCpY },
-													}
-												: el,
-										),
-									);
-								}}
-								visible={showCircle}
-								cursor="pointer"
-								stroke="var(--accent-foreground)"
-								strokeWidth={2}
-								fill="#fff"
-								listening={true}
-							/>
-						);
-					})}
-					{players.map((player) => (
-						<Group
-							key={player.id}
-							x={player.position.x}
-							y={player.position.y}
-							draggable={mode !== "add-player"}
-							onDragMove={(e) => {
-								const { x, y } = e.target.position();
-								handlePlayerDragMove(player.id, x, y);
-							}}
-							onClick={(e) => {
-								e.cancelBubble = true;
-								handlePlayerClick(player.id);
-							}}
-						>
-							<PlayerNode
-								{...player}
-								x={0}
-								y={0}
-								isSelected={selectedElementId === player.id}
-							/>
-						</Group>
-					))}
-				</Layer>
-			</Stage>
+										const isTerminal = !elements.some(
+											(e) =>
+												e.type === "arrow" &&
+												"parentId" in e &&
+												e.parentId === arrow.id,
+										);
+
+										return (
+											<Circle
+												key={`${arrow.id}-end`}
+												x={toX}
+												y={toY}
+												radius={circleRadius}
+												draggable
+												onMouseDown={(e) => {
+													e.cancelBubble = true;
+												}}
+												onDragMove={(e) => {
+													const stage = e.target.getStage();
+													if (!stage) return;
+													const pointer = stage.getPointerPosition();
+													if (!pointer) return;
+													const newRelX = pointer.x - fromX;
+													const newRelY = pointer.y - fromY;
+													setElements((elements) =>
+														elements.map((el) =>
+															el.id === arrow.id && el.type === "arrow"
+																? {
+																		...el,
+																		relativeToParent: {
+																			x: newRelX,
+																			y: newRelY,
+																		},
+																	}
+																: el,
+														),
+													);
+												}}
+												onClick={(e) => {
+													e.cancelBubble = true;
+													handleArrowClick(arrow.id);
+												}}
+												visible={showCircle}
+												cursor="pointer"
+												stroke={
+													isTerminal ? "transparent" : "var(--arrow-selected)"
+												}
+												strokeWidth={2}
+												fill={isTerminal ? "transparent" : "#fff"}
+												listening={true}
+											/>
+										);
+									})}
+									{arrows.map((arrow) => {
+										if (arrow.kind !== "curve") return null;
+										let fromX = 0;
+										let fromY = 0;
+										const parent = elements.find(
+											(e) => e.id === arrow.parentId,
+										);
+										if (parent?.type === "player") {
+											fromX = parent.position.x;
+											fromY = parent.position.y;
+										} else if (parent?.type === "arrow") {
+											const p = getArrowEnd(parent as Arrow);
+											fromX = p.x;
+											fromY = p.y;
+										}
+										const cpX = fromX + arrow.controlPoint.x;
+										const cpY = fromY + arrow.controlPoint.y;
+
+										let showCircle = false;
+										if (selectedElementId) {
+											const ancestorIds =
+												collectAncestorArrowIds(selectedElementId);
+											const descendantIds =
+												collectDescendantArrowIds(selectedElementId);
+											showCircle =
+												selectedElementId === arrow.id ||
+												ancestorIds.includes(arrow.id) ||
+												descendantIds.includes(arrow.id);
+										}
+
+										return (
+											<Circle
+												key={`${arrow.id}-cp`}
+												x={cpX}
+												y={cpY}
+												radius={7}
+												draggable
+												onMouseDown={(e) => {
+													e.cancelBubble = true;
+												}}
+												onDragMove={(e) => {
+													const stage = e.target.getStage();
+													if (!stage) return;
+													const pointer = stage.getPointerPosition();
+													if (!pointer) return;
+													const newCpX = pointer.x - fromX;
+													const newCpY = pointer.y - fromY;
+													setElements((elements) =>
+														elements.map((el) =>
+															el.id === arrow.id &&
+															el.type === "arrow" &&
+															el.kind === "curve"
+																? {
+																		...el,
+																		controlPoint: { x: newCpX, y: newCpY },
+																	}
+																: el,
+														),
+													);
+												}}
+												visible={showCircle}
+												cursor="pointer"
+												stroke="var(--accent-foreground)"
+												strokeWidth={2}
+												fill="#fff"
+												listening={true}
+											/>
+										);
+									})}
+									{players.map((player) => (
+										<Group
+											key={player.id}
+											x={player.position.x}
+											y={player.position.y}
+											draggable={mode !== "add-player"}
+											onDragMove={(e) => {
+												const { x, y } = e.target.position();
+												handlePlayerDragMove(player.id, x, y);
+											}}
+											onClick={(e) => {
+												e.cancelBubble = true;
+												handlePlayerClick(player.id);
+											}}
+										>
+											<PlayerNode
+												{...player}
+												x={0}
+												y={0}
+												isSelected={selectedElementId === player.id}
+											/>
+										</Group>
+									))}
+								</Layer>
+							</Stage>
 						</div>
 					</div>
 				</div>
@@ -761,7 +946,7 @@ function App() {
 						<div className="h-12 border-b px-4 flex items-center">
 							<h3 className="text-sm font-medium">プロパティ</h3>
 						</div>
-						
+
 						{/* コンテンツ */}
 						<div className="flex-1 p-4 space-y-6 overflow-y-auto custom-scrollbar">
 							<div className="space-y-4">
@@ -770,18 +955,26 @@ function App() {
 										{selectedPlayer.label}
 									</div>
 									<div>
-										<p className="text-sm font-medium">選手 {selectedPlayer.id}</p>
-										<p className="text-xs text-muted-foreground">オフェンスチーム</p>
+										<p className="text-sm font-medium">
+											選手 {selectedPlayer.id}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											オフェンスチーム
+										</p>
 									</div>
 								</div>
-								
+
 								<Separator />
-								
+
 								<div className="space-y-3">
-									<h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">基本情報</h4>
+									<h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+										基本情報
+									</h4>
 									<div className="space-y-3">
 										<div>
-											<Label htmlFor="player-name" className="text-xs">名前</Label>
+											<Label htmlFor="player-name" className="text-xs">
+												名前
+											</Label>
 											<Input
 												id="player-name"
 												value={selectedPlayer.label}
@@ -790,7 +983,9 @@ function App() {
 											/>
 										</div>
 										<div>
-											<Label htmlFor="player-role" className="text-xs">ポジション</Label>
+											<Label htmlFor="player-role" className="text-xs">
+												ポジション
+											</Label>
 											<select
 												id="player-role"
 												className="w-full h-8 mt-1 px-3 rounded-md border bg-background text-sm"
@@ -816,14 +1011,18 @@ function App() {
 										</div>
 									</div>
 								</div>
-								
+
 								<Separator />
-								
+
 								<div className="space-y-3">
-									<h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">位置情報</h4>
+									<h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+										位置情報
+									</h4>
 									<div className="grid grid-cols-2 gap-3">
 										<div>
-											<Label htmlFor="pos-x" className="text-xs">X座標</Label>
+											<Label htmlFor="pos-x" className="text-xs">
+												X座標
+											</Label>
 											<div className="flex items-center gap-2 mt-1">
 												<Input
 													id="pos-x"
@@ -832,11 +1031,15 @@ function App() {
 													className="h-8"
 													readOnly
 												/>
-												<span className="text-xs text-muted-foreground">px</span>
+												<span className="text-xs text-muted-foreground">
+													px
+												</span>
 											</div>
 										</div>
 										<div>
-											<Label htmlFor="pos-y" className="text-xs">Y座標</Label>
+											<Label htmlFor="pos-y" className="text-xs">
+												Y座標
+											</Label>
 											<div className="flex items-center gap-2 mt-1">
 												<Input
 													id="pos-y"
@@ -845,7 +1048,9 @@ function App() {
 													className="h-8"
 													readOnly
 												/>
-												<span className="text-xs text-muted-foreground">px</span>
+												<span className="text-xs text-muted-foreground">
+													px
+												</span>
 											</div>
 										</div>
 									</div>

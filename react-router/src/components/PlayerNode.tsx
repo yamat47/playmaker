@@ -1,4 +1,4 @@
-import { Circle, Text } from "react-konva";
+import { Circle, Text, Group, Ring } from "react-konva";
 
 type Props = {
 	id: string;
@@ -10,28 +10,50 @@ type Props = {
 
 export const PlayerNode = ({ x, y, label, isSelected = false }: Props) => {
 	return (
-		<>
+		<Group x={x} y={y}>
+			{/* 選択時のハイライトリング */}
+			{isSelected && (
+				<Ring
+					innerRadius={24}
+					outerRadius={28}
+					fill="var(--player-border-selected)"
+					opacity={0.6}
+				/>
+			)}
+
+			{/* 外側のボーダー */}
 			<Circle
-				x={x}
-				y={y}
 				radius={22}
-				fill={"#e74c3c"}
-				stroke={isSelected ? "#3498db" : "#222"}
-				strokeWidth={isSelected ? 6 : 2}
+				fill="var(--sidebar)"
+				stroke={
+					isSelected ? "var(--player-border-selected)" : "var(--player-border)"
+				}
+				strokeWidth={2}
 			/>
+
+			{/* 内側のメインサークル */}
+			<Circle
+				radius={18}
+				fill="var(--player-bg)"
+				shadowColor="black"
+				shadowBlur={8}
+				shadowOpacity={0.4}
+				shadowOffsetY={2}
+			/>
+
+			{/* プレイヤー番号 */}
 			<Text
-				x={x - 22}
-				y={y - 12}
 				text={label}
-				fontSize={18}
-				fill="#fff"
+				fontSize={14}
+				fontStyle="bold"
+				fill="var(--player-text)"
 				width={40}
 				height={40}
 				align="center"
 				verticalAlign="middle"
-				offsetX={0}
-				offsetY={0}
+				offsetX={20}
+				offsetY={20}
 			/>
-		</>
+		</Group>
 	);
 };

@@ -16,7 +16,7 @@ export const PlayerNode = ({ x, y, label, isSelected = false }: Props) => {
 				<Ring
 					innerRadius={24}
 					outerRadius={28}
-					fill="#22c55e"
+					fill="var(--player-border-selected)"
 					opacity={0.6}
 				/>
 			)}
@@ -24,15 +24,15 @@ export const PlayerNode = ({ x, y, label, isSelected = false }: Props) => {
 			{/* 外側のボーダー */}
 			<Circle
 				radius={22}
-				fill="#0f172a"
-				stroke={isSelected ? "#22c55e" : "#334155"}
+				fill="var(--sidebar)"
+				stroke={isSelected ? "var(--player-border-selected)" : "var(--player-border)"}
 				strokeWidth={2}
 			/>
 			
 			{/* 内側のメインサークル */}
 			<Circle
 				radius={18}
-				fill="#1e293b"
+				fill="var(--player-bg)"
 				shadowColor="black"
 				shadowBlur={8}
 				shadowOpacity={0.4}
@@ -44,7 +44,7 @@ export const PlayerNode = ({ x, y, label, isSelected = false }: Props) => {
 				text={label}
 				fontSize={14}
 				fontStyle="bold"
-				fill="#f1f5f9"
+				fill="var(--player-text)"
 				width={40}
 				height={40}
 				align="center"

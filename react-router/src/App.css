@@ -77,38 +77,65 @@
 }
 
 :root {
+	/* 基本設定 */
 	--radius: 0.375rem;
-	--background: oklch(0.17 0 0);
-	--foreground: oklch(0.95 0 0);
-	--card: oklch(0.21 0 0);
-	--card-foreground: oklch(0.95 0 0);
-	--popover: oklch(0.21 0 0);
-	--popover-foreground: oklch(0.95 0 0);
-	--primary: oklch(0.571 0.184 142.495);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.25 0 0);
-	--secondary-foreground: oklch(0.95 0 0);
-	--muted: oklch(0.25 0 0);
-	--muted-foreground: oklch(0.65 0 0);
-	--accent: oklch(0.571 0.184 142.495 / 20%);
-	--accent-foreground: oklch(0.571 0.184 142.495);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.30 0 0);
-	--input: oklch(0.25 0 0);
-	--ring: oklch(0.571 0.184 142.495);
+	
+	/* メインカラー */
+	--background: #0a0a0a;                  /* ダークグレー背景 */
+	--foreground: #fafafa;                  /* ライトグレーテキスト */
+	--card: #171717;                        /* カード背景 */
+	--card-foreground: #fafafa;             /* カードテキスト */
+	
+	/* UIコンポーネント */
+	--popover: #171717;
+	--popover-foreground: #fafafa;
+	--primary: #fafafa;                     /* 白（メインアクション） */
+	--primary-foreground: #0a0a0a;
+	--secondary: #262626;                   /* ダークグレー */
+	--secondary-foreground: #fafafa;
+	--muted: #262626;                       /* ダークグレー */
+	--muted-foreground: #a3a3a3;            /* ミディアムグレーテキスト */
+	--accent: #262626;
+	--accent-foreground: #fafafa;
+	--destructive: #dc2626;                 /* 赤（削除ボタン用） */
+	
+	/* ボーダーと入力 */
+	--border: #262626;
+	--input: #171717;
+	--ring: #404040;
+	
+	/* チャートカラー */
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.15 0 0);
-	--sidebar-foreground: oklch(0.95 0 0);
-	--sidebar-primary: oklch(0.571 0.184 142.495);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.25 0 0);
-	--sidebar-accent-foreground: oklch(0.95 0 0);
-	--sidebar-border: oklch(0.30 0 0);
-	--sidebar-ring: oklch(0.571 0.184 142.495);
+	
+	/* サイドバー */
+	--sidebar: #0a0a0a;
+	--sidebar-foreground: #fafafa;
+	--sidebar-primary: #fafafa;
+	--sidebar-primary-foreground: #0a0a0a;
+	--sidebar-accent: #262626;
+	--sidebar-accent-foreground: #fafafa;
+	--sidebar-border: #262626;
+	--sidebar-ring: #404040;
+	
+	/* アメフトフィールド用カラー */
+	--field-green: #14532d;                 /* ダークグリーン */
+	--field-green-dark: #052e16;            /* エンドゾーン */
+	--field-line: rgba(255, 255, 255, 0.9); /* 白ライン */
+	--field-marking: rgba(255, 255, 255, 0.7); /* マーキング */
+	
+	/* プレイヤーノード用カラー */
+	--player-bg: #262626;                   /* プレイヤー背景 */
+	--player-border: #404040;               /* プレイヤーボーダー */
+	--player-border-selected: #fafafa;      /* 選択時のボーダー */
+	--player-text: #fafafa;                 /* プレイヤーテキスト */
+	
+	/* 矢印用カラー */
+	--arrow-color: #a3a3a3;                 /* 通常の矢印 */
+	--arrow-selected: #fafafa;              /* 選択時の矢印 */
 }
 
 /* ダークモードはデフォルトで適用されるので、.darkクラスは不要 */

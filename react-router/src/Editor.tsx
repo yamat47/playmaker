@@ -314,7 +314,7 @@ function App() {
 									}
 								}}
 								disabled={!selectedElementId}
-								variant={mode === "add-straight" ? "default" : "outline"}
+								variant={mode === "add-straight" ? "secondary" : "outline"}
 								size="sm"
 							>
 								<TrendingUp className="w-4 h-4 mr-2" />
@@ -329,7 +329,7 @@ function App() {
 									}
 								}}
 								disabled={!selectedElementId}
-								variant={mode === "add-curve" ? "default" : "outline"}
+								variant={mode === "add-curve" ? "secondary" : "outline"}
 								size="sm"
 							>
 								<svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -384,46 +384,46 @@ function App() {
 								style={{ pointerEvents: "none" }}
 							>
 								{/* フィールドの背景 */}
-								<rect x="0" y="0" width="900" height="650" fill="#1e7e34" rx="4" />
+								<rect x="0" y="0" width="900" height="650" fill="var(--field-green)" rx="4" />
 								
 								{/* エンドゾーン */}
-								<rect x="0" y="0" width="90" height="650" fill="#0d5a1f" />
-								<rect x="810" y="0" width="90" height="650" fill="#0d5a1f" />
+								<rect x="0" y="0" width="90" height="650" fill="var(--field-green-dark)" />
+								<rect x="810" y="0" width="90" height="650" fill="var(--field-green-dark)" />
 								
 								{/* フィールド外枠 */}
-								<rect x="0" y="0" width="900" height="650" fill="none" stroke="white" strokeWidth="4" strokeOpacity="0.9" rx="2" />
+								<rect x="0" y="0" width="900" height="650" fill="none" stroke="var(--field-line)" strokeWidth="4" rx="2" />
 								
 								{/* ヤードライン（10ヤードごと） */}
 								{[90, 180, 270, 360, 450, 540, 630, 720, 810].map((x, i) => (
 									<g key={i}>
-										<line x1={x} y1="0" x2={x} y2="650" stroke="white" strokeWidth="3" strokeOpacity="0.8" />
+										<line x1={x} y1="0" x2={x} y2="650" stroke="var(--field-line)" strokeWidth="3" />
 										{/* ヤード数表示 */}
 										{i < 4 && (
 											<>
-												<text x={x + 45} y="30" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+												<text x={x + 45} y="30" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
 													{(i + 1) * 10}
 												</text>
-												<text x={x + 45} y="630" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+												<text x={x + 45} y="630" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
 													{(i + 1) * 10}
 												</text>
 											</>
 										)}
 										{i === 4 && (
 											<>
-												<text x={x} y="30" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+												<text x={x} y="30" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
 													50
 												</text>
-												<text x={x} y="630" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+												<text x={x} y="630" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
 													50
 												</text>
 											</>
 										)}
 										{i > 4 && (
 											<>
-												<text x={x - 45} y="30" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+												<text x={x - 45} y="30" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
 													{(9 - i) * 10}
 												</text>
-												<text x={x - 45} y="630" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+												<text x={x - 45} y="630" fill="var(--field-line)" fontSize="24" fontWeight="bold" textAnchor="middle">
 													{(9 - i) * 10}
 												</text>
 											</>
@@ -433,24 +433,24 @@ function App() {
 								
 								{/* 5ヤードライン（薄い線） */}
 								{[45, 135, 225, 315, 405, 495, 585, 675, 765, 855].map((x, i) => (
-									<line key={i} x1={x} y1="0" x2={x} y2="650" stroke="white" strokeWidth="1" strokeOpacity="0.4" />
+									<line key={i} x1={x} y1="0" x2={x} y2="650" stroke="var(--field-marking)" strokeWidth="1" strokeOpacity="0.4" />
 								))}
 								
 								{/* ハッシュマーク */}
 								{[45, 90, 135, 180, 225, 270, 315, 360, 405, 450, 495, 540, 585, 630, 675, 720, 765, 810, 855].map((x, i) => (
 									<g key={i}>
 										{/* 上部ハッシュマーク */}
-										<line x1={x} y1="216" x2={x} y2="226" stroke="white" strokeWidth="2" strokeOpacity="0.7" />
+										<line x1={x} y1="216" x2={x} y2="226" stroke="var(--field-marking)" strokeWidth="2" />
 										{/* 下部ハッシュマーク */}
-										<line x1={x} y1="424" x2={x} y2="434" stroke="white" strokeWidth="2" strokeOpacity="0.7" />
+										<line x1={x} y1="424" x2={x} y2="434" stroke="var(--field-marking)" strokeWidth="2" />
 									</g>
 								))}
 								
 								{/* エンドゾーンのテキスト */}
-								<text x="45" y="325" fill="white" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(-90 45 325)" opacity="0.6">
+								<text x="45" y="325" fill="var(--field-marking)" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(-90 45 325)">
 									END ZONE
 								</text>
-								<text x="855" y="325" fill="white" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(90 855 325)" opacity="0.6">
+								<text x="855" y="325" fill="var(--field-marking)" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(90 855 325)">
 									END ZONE
 								</text>
 							</svg>
@@ -515,7 +515,7 @@ function App() {
 									cp: { x: cpX, y: cpY },
 									to: { x: toX, y: toY },
 									headBase: { x: curveEndX, y: curveEndY },
-									color: selectedElementId === arrow.id ? "#3498db" : "#888",
+									color: selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)",
 									onClick: (e: KonvaEventObject<MouseEvent>) => {
 										e.cancelBubble = true;
 										handleArrowClick(arrow.id);
@@ -539,7 +539,7 @@ function App() {
 											);
 											ctx.strokeShape(shape);
 										}}
-										stroke={selectedElementId === arrow.id ? "#3498db" : "#888"}
+										stroke={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
 										strokeWidth={4}
 										hitStrokeWidth={20}
 										onClick={(e) => {
@@ -560,8 +560,8 @@ function App() {
 								points={[fromX, fromY, toX, toY]}
 								pointerLength={16}
 								pointerWidth={16}
-								fill={selectedElementId === arrow.id ? "#3498db" : "#888"}
-								stroke={selectedElementId === arrow.id ? "#3498db" : "#888"}
+								fill={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
+								stroke={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
 								strokeWidth={4}
 								onClick={(e) => {
 									e.cancelBubble = true;
@@ -572,7 +572,7 @@ function App() {
 							<Line
 								key={arrow.id}
 								points={[fromX, fromY, toX, toY]}
-								stroke={selectedElementId === arrow.id ? "#3498db" : "#888"}
+								stroke={selectedElementId === arrow.id ? "var(--arrow-selected)" : "var(--arrow-color)"}
 								strokeWidth={4}
 								onClick={(e) => {
 									e.cancelBubble = true;
@@ -650,7 +650,7 @@ function App() {
 								}}
 								visible={showCircle}
 								cursor="pointer"
-								stroke={isTerminal ? "transparent" : "#3498db"}
+								stroke={isTerminal ? "transparent" : "var(--arrow-selected)"}
 								strokeWidth={2}
 								fill={isTerminal ? "transparent" : "#fff"}
 								listening={true}
@@ -716,7 +716,7 @@ function App() {
 								}}
 								visible={showCircle}
 								cursor="pointer"
-								stroke="#e67e22"
+								stroke="var(--accent-foreground)"
 								strokeWidth={2}
 								fill="#fff"
 								listening={true}

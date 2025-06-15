@@ -15,7 +15,7 @@ function App() {
 						<div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
 							<span className="text-primary-foreground font-bold text-sm">P</span>
 						</div>
-						<span className="font-semibold text-lg">Playmaker</span>
+						<span className="font-semibold text-lg">Football Playmaker</span>
 					</div>
 					<div className="h-8 w-px bg-border" />
 					<div className="flex gap-1">

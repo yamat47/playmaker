@@ -360,16 +360,108 @@ function App() {
 			</div>
 
 			{/* 中央カラム: フィールド */}
-			<div className="flex-1 flex items-center justify-center p-6 min-w-0 bg-muted/30">
-				<div className="bg-card rounded-xl shadow-xl border overflow-hidden">
-					<div className="bg-gradient-to-b from-green-50/50 to-green-100/50 dark:from-green-950/20 dark:to-green-900/20 p-1">
-						<Stage
-							width={900}
-							height={650}
-							style={{ background: "#ffffff", borderRadius: "8px" }}
-							onClick={handleStageClick}
-							className="shadow-inner"
-						>
+			<div className="flex-1 flex flex-col bg-background">
+				{/* トップバー */}
+				<div className="h-12 bg-card border-b flex items-center px-4 gap-4">
+					<span className="text-sm font-medium text-muted-foreground">プレイエディター</span>
+					<Separator orientation="vertical" className="h-6" />
+					<div className="flex items-center gap-2">
+						<span className="text-xs text-muted-foreground">フィールドサイズ:</span>
+						<span className="text-xs font-mono">900 x 650</span>
+					</div>
+				</div>
+				
+				{/* キャンバスエリア */}
+				<div className="flex-1 flex items-center justify-center p-8 overflow-hidden">
+					<div className="relative">
+						{/* フィールドコンテナ */}
+						<div className="bg-gradient-to-b from-green-800 to-green-900 p-4 rounded-lg shadow-2xl">
+							{/* フィールドマーキング */}
+							<svg
+								width="900"
+								height="650"
+								className="absolute rounded"
+								style={{ pointerEvents: "none" }}
+							>
+								{/* フィールドの背景 */}
+								<rect x="0" y="0" width="900" height="650" fill="#1e7e34" rx="4" />
+								
+								{/* エンドゾーン */}
+								<rect x="0" y="0" width="90" height="650" fill="#0d5a1f" />
+								<rect x="810" y="0" width="90" height="650" fill="#0d5a1f" />
+								
+								{/* フィールド外枠 */}
+								<rect x="0" y="0" width="900" height="650" fill="none" stroke="white" strokeWidth="4" strokeOpacity="0.9" rx="2" />
+								
+								{/* ヤードライン（10ヤードごと） */}
+								{[90, 180, 270, 360, 450, 540, 630, 720, 810].map((x, i) => (
+									<g key={i}>
+										<line x1={x} y1="0" x2={x} y2="650" stroke="white" strokeWidth="3" strokeOpacity="0.8" />
+										{/* ヤード数表示 */}
+										{i < 4 && (
+											<>
+												<text x={x + 45} y="30" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+													{(i + 1) * 10}
+												</text>
+												<text x={x + 45} y="630" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+													{(i + 1) * 10}
+												</text>
+											</>
+										)}
+										{i === 4 && (
+											<>
+												<text x={x} y="30" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+													50
+												</text>
+												<text x={x} y="630" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+													50
+												</text>
+											</>
+										)}
+										{i > 4 && (
+											<>
+												<text x={x - 45} y="30" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+													{(9 - i) * 10}
+												</text>
+												<text x={x - 45} y="630" fill="white" fontSize="24" fontWeight="bold" textAnchor="middle" opacity="0.8">
+													{(9 - i) * 10}
+												</text>
+											</>
+										)}
+									</g>
+								))}
+								
+								{/* 5ヤードライン（薄い線） */}
+								{[45, 135, 225, 315, 405, 495, 585, 675, 765, 855].map((x, i) => (
+									<line key={i} x1={x} y1="0" x2={x} y2="650" stroke="white" strokeWidth="1" strokeOpacity="0.4" />
+								))}
+								
+								{/* ハッシュマーク */}
+								{[45, 90, 135, 180, 225, 270, 315, 360, 405, 450, 495, 540, 585, 630, 675, 720, 765, 810, 855].map((x, i) => (
+									<g key={i}>
+										{/* 上部ハッシュマーク */}
+										<line x1={x} y1="216" x2={x} y2="226" stroke="white" strokeWidth="2" strokeOpacity="0.7" />
+										{/* 下部ハッシュマーク */}
+										<line x1={x} y1="424" x2={x} y2="434" stroke="white" strokeWidth="2" strokeOpacity="0.7" />
+									</g>
+								))}
+								
+								{/* エンドゾーンのテキスト */}
+								<text x="45" y="325" fill="white" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(-90 45 325)" opacity="0.6">
+									END ZONE
+								</text>
+								<text x="855" y="325" fill="white" fontSize="32" fontWeight="bold" textAnchor="middle" transform="rotate(90 855 325)" opacity="0.6">
+									END ZONE
+								</text>
+							</svg>
+							
+							{/* Konva Stage */}
+							<Stage
+								width={900}
+								height={650}
+								style={{ borderRadius: "4px" }}
+								onClick={handleStageClick}
+							>
 				<Layer>
 					{/* 追加中の線プレビュー */}
 
@@ -656,74 +748,121 @@ function App() {
 					))}
 				</Layer>
 			</Stage>
+						</div>
 					</div>
 				</div>
 			</div>
 
-			{/* 右カラム: 選択中の選手情報 */}
-			<div className="w-64 bg-card border-l p-4 flex-shrink-0 custom-scrollbar overflow-y-auto">
-				{selectedPlayer && (
-					<div className="space-y-6">
-						<div>
-							<h2 className="text-lg font-semibold flex items-center gap-2">
-								<User className="w-5 h-5" />
-								選手情報
-							</h2>
+			{/* 右カラム: プロパティパネル */}
+			<div className="w-80 bg-card border-l flex-shrink-0">
+				{selectedPlayer ? (
+					<div className="h-full flex flex-col">
+						{/* ヘッダー */}
+						<div className="h-12 border-b px-4 flex items-center">
+							<h3 className="text-sm font-medium">プロパティ</h3>
 						</div>
-
-						<Card>
-							<CardContent className="pt-6 space-y-4">
-								<div className="space-y-2">
-									<Label htmlFor="player-id" className="text-xs text-muted-foreground">ID</Label>
-									<Input
-										id="player-id"
-										value={selectedPlayer.id}
-										readOnly
-										className="h-8 text-sm"
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="player-label" className="text-xs text-muted-foreground">ラベル</Label>
-									<Input
-										id="player-label"
-										value={selectedPlayer.label}
-										readOnly
-										className="h-8 text-sm"
-									/>
-								</div>
-							</CardContent>
-						</Card>
-
-						<Card>
-							<CardHeader className="pb-3">
-								<CardTitle className="text-sm flex items-center gap-2">
-									<MapPin className="w-4 h-4" />
-									位置
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								<div className="grid grid-cols-2 gap-3">
-									<div className="space-y-2">
-										<Label htmlFor="pos-x" className="text-xs text-muted-foreground">X座標</Label>
-										<Input
-											id="pos-x"
-											value={Math.round(selectedPlayer.position.x)}
-											readOnly
-											className="h-8 text-sm"
-										/>
+						
+						{/* コンテンツ */}
+						<div className="flex-1 p-4 space-y-6 overflow-y-auto custom-scrollbar">
+							<div className="space-y-4">
+								<div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+									<div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold">
+										{selectedPlayer.label}
 									</div>
-									<div className="space-y-2">
-										<Label htmlFor="pos-y" className="text-xs text-muted-foreground">Y座標</Label>
-										<Input
-											id="pos-y"
-											value={Math.round(selectedPlayer.position.y)}
-											readOnly
-											className="h-8 text-sm"
-										/>
+									<div>
+										<p className="text-sm font-medium">選手 {selectedPlayer.id}</p>
+										<p className="text-xs text-muted-foreground">オフェンスチーム</p>
 									</div>
 								</div>
-							</CardContent>
-						</Card>
+								
+								<Separator />
+								
+								<div className="space-y-3">
+									<h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">基本情報</h4>
+									<div className="space-y-3">
+										<div>
+											<Label htmlFor="player-name" className="text-xs">名前</Label>
+											<Input
+												id="player-name"
+												value={selectedPlayer.label}
+												className="h-8 mt-1"
+												readOnly
+											/>
+										</div>
+										<div>
+											<Label htmlFor="player-role" className="text-xs">ポジション</Label>
+											<select
+												id="player-role"
+												className="w-full h-8 mt-1 px-3 rounded-md border bg-background text-sm"
+											>
+												<optgroup label="オフェンス">
+													<option>QB - クォーターバック</option>
+													<option>RB - ランニングバック</option>
+													<option>FB - フルバック</option>
+													<option>WR - ワイドレシーバー</option>
+													<option>TE - タイトエンド</option>
+													<option>C - センター</option>
+													<option>G - ガード</option>
+													<option>T - タックル</option>
+												</optgroup>
+												<optgroup label="ディフェンス">
+													<option>DE - ディフェンシブエンド</option>
+													<option>DT - ディフェンシブタックル</option>
+													<option>LB - ラインバッカー</option>
+													<option>CB - コーナーバック</option>
+													<option>S - セーフティ</option>
+												</optgroup>
+											</select>
+										</div>
+									</div>
+								</div>
+								
+								<Separator />
+								
+								<div className="space-y-3">
+									<h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">位置情報</h4>
+									<div className="grid grid-cols-2 gap-3">
+										<div>
+											<Label htmlFor="pos-x" className="text-xs">X座標</Label>
+											<div className="flex items-center gap-2 mt-1">
+												<Input
+													id="pos-x"
+													type="number"
+													value={Math.round(selectedPlayer.position.x)}
+													className="h-8"
+													readOnly
+												/>
+												<span className="text-xs text-muted-foreground">px</span>
+											</div>
+										</div>
+										<div>
+											<Label htmlFor="pos-y" className="text-xs">Y座標</Label>
+											<div className="flex items-center gap-2 mt-1">
+												<Input
+													id="pos-y"
+													type="number"
+													value={Math.round(selectedPlayer.position.y)}
+													className="h-8"
+													readOnly
+												/>
+												<span className="text-xs text-muted-foreground">px</span>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				) : (
+					<div className="h-full flex flex-col">
+						<div className="h-12 border-b px-4 flex items-center">
+							<h3 className="text-sm font-medium">プロパティ</h3>
+						</div>
+						<div className="flex-1 flex items-center justify-center p-8">
+							<p className="text-sm text-muted-foreground text-center">
+								選手または矢印を選択してください
+							</p>
+						</div>
 					</div>
 				)}
 			</div>

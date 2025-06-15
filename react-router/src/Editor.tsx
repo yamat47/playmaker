@@ -11,6 +11,12 @@ import {
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlayerNode } from "@/components/PlayerNode";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Layers, Move, TrendingUp, Trash2, User, MapPin } from "lucide-react";
 
 type Player = {
 	id: string;
@@ -257,43 +263,50 @@ function App() {
 	const selectedPlayer = selectedElement?.type === "player" ? selectedElement : null;
 
 	return (
-		<div className="flex h-screen bg-gray-50">
+		<div className="flex h-full bg-background">
 			{/* 左カラム: 選手の追加・移動操作 */}
-			<div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto flex-shrink-0">
-				<h2 className="text-lg font-semibold mb-4">操作パネル</h2>
-				
-				<div className="space-y-4">
+			<div className="w-64 bg-card border-r p-4 overflow-y-auto flex-shrink-0 custom-scrollbar">
+				<div className="space-y-6">
 					<div>
-						<h3 className="text-sm font-medium mb-2">モード選択</h3>
-						<div className="space-y-2">
-							<label className="flex items-center">
-								<input
-									type="radio"
-									value="normal"
-									checked={mode === "normal"}
-									onChange={() => setMode("normal")}
-									className="mr-2"
-								/>
-								通常モード
-							</label>
-							<label className="flex items-center">
-								<input
-									type="radio"
-									value="add-player"
-									checked={mode === "add-player"}
-									onChange={() => setMode("add-player")}
-									className="mr-2"
-								/>
-								選手追加
-							</label>
-						</div>
+						<h2 className="text-lg font-semibold flex items-center gap-2">
+							<Layers className="w-5 h-5" />
+							ツール
+						</h2>
 					</div>
 
-					<div>
-						<h3 className="text-sm font-medium mb-2">矢印操作</h3>
-						<div className="space-y-2">
+					<Card>
+						<CardHeader className="pb-3">
+							<CardTitle className="text-sm">モード</CardTitle>
+							<CardDescription className="text-xs">編集モードを選択</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<RadioGroup value={mode} onValueChange={(value) => setMode(value as Mode)}>
+								<div className="flex items-center space-x-2">
+									<RadioGroupItem value="normal" id="normal" />
+									<Label htmlFor="normal" className="text-sm font-normal cursor-pointer flex items-center gap-2">
+										<Move className="w-4 h-4" />
+										選択・移動
+									</Label>
+								</div>
+								<div className="flex items-center space-x-2">
+									<RadioGroupItem value="add-player" id="add-player" />
+									<Label htmlFor="add-player" className="text-sm font-normal cursor-pointer flex items-center gap-2">
+										<User className="w-4 h-4" />
+										選手追加
+									</Label>
+								</div>
+							</RadioGroup>
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader className="pb-3">
+							<CardTitle className="text-sm">矢印</CardTitle>
+							<CardDescription className="text-xs">選手間の動きを表現</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-2">
 							<Button
-								className="w-full"
+								className="w-full justify-start"
 								onClick={() => {
 									if (selectedElementId) {
 										setMode("add-straight");
@@ -301,13 +314,14 @@ function App() {
 									}
 								}}
 								disabled={!selectedElementId}
-								variant={mode === "add-straight" ? "secondary" : "outline"}
+								variant={mode === "add-straight" ? "default" : "outline"}
 								size="sm"
 							>
-								選択中から直線を引く
+								<TrendingUp className="w-4 h-4 mr-2" />
+								直線を引く
 							</Button>
 							<Button
-								className="w-full"
+								className="w-full justify-start"
 								onClick={() => {
 									if (selectedElementId) {
 										setMode("add-curve");
@@ -315,42 +329,47 @@ function App() {
 									}
 								}}
 								disabled={!selectedElementId}
-								variant={mode === "add-curve" ? "secondary" : "outline"}
+								variant={mode === "add-curve" ? "default" : "outline"}
 								size="sm"
 							>
-								選択中から曲線を引く
+								<svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<path d="M5 12s2.545-5 7-5c4.454 0 7 5 7 5s-2.546 5-7 5c-4.455 0-7-5-7-5z" />
+								</svg>
+								曲線を引く
 							</Button>
-						</div>
-					</div>
+						</CardContent>
+					</Card>
 
-					<div>
-						<h3 className="text-sm font-medium mb-2">削除</h3>
-						<Button
-							className="w-full"
-							onClick={handleDeleteElement}
-							disabled={!selectedElementId}
-							variant="destructive"
-							size="sm"
-						>
-							{(() => {
-								const element = elements.find((e) => e.id === selectedElementId);
-								if (!element) return "削除";
-								return element.type === "player" ? "選手削除" : "矢印削除";
-							})()}
-						</Button>
-					</div>
+					<Separator />
+
+					<Button
+						className="w-full justify-start"
+						onClick={handleDeleteElement}
+						disabled={!selectedElementId}
+						variant="destructive"
+						size="sm"
+					>
+						<Trash2 className="w-4 h-4 mr-2" />
+						{(() => {
+							const element = elements.find((e) => e.id === selectedElementId);
+							if (!element) return "削除";
+							return element.type === "player" ? "選手を削除" : "矢印を削除";
+						})()}
+					</Button>
 				</div>
 			</div>
 
 			{/* 中央カラム: フィールド */}
-			<div className="flex-1 flex items-center justify-center p-4 min-w-0">
-				<div className="bg-white rounded-lg shadow-lg">
-					<Stage
-						width={900}
-						height={650}
-						style={{ background: "#f3f3f3" }}
-						onClick={handleStageClick}
-					>
+			<div className="flex-1 flex items-center justify-center p-6 min-w-0 bg-muted/30">
+				<div className="bg-card rounded-xl shadow-xl border overflow-hidden">
+					<div className="bg-gradient-to-b from-green-50/50 to-green-100/50 dark:from-green-950/20 dark:to-green-900/20 p-1">
+						<Stage
+							width={900}
+							height={650}
+							style={{ background: "#ffffff", borderRadius: "8px" }}
+							onClick={handleStageClick}
+							className="shadow-inner"
+						>
 				<Layer>
 					{/* 追加中の線プレビュー */}
 
@@ -637,31 +656,75 @@ function App() {
 					))}
 				</Layer>
 			</Stage>
+					</div>
 				</div>
 			</div>
 
 			{/* 右カラム: 選択中の選手情報 */}
-			<div className="w-64 bg-white border-l border-gray-200 p-4 flex-shrink-0">
+			<div className="w-64 bg-card border-l p-4 flex-shrink-0 custom-scrollbar overflow-y-auto">
 				{selectedPlayer && (
-					<>
-						<h2 className="text-lg font-semibold mb-4">選手情報</h2>
-						<div className="space-y-3">
-							<div>
-								<label className="text-sm font-medium text-gray-700">ID</label>
-								<p className="text-lg">{selectedPlayer.id}</p>
-							</div>
-							<div>
-								<label className="text-sm font-medium text-gray-700">ラベル</label>
-								<p className="text-lg">{selectedPlayer.label}</p>
-							</div>
-							<div>
-								<label className="text-sm font-medium text-gray-700">位置</label>
-								<p className="text-lg">
-									X: {Math.round(selectedPlayer.position.x)}, Y: {Math.round(selectedPlayer.position.y)}
-								</p>
-							</div>
+					<div className="space-y-6">
+						<div>
+							<h2 className="text-lg font-semibold flex items-center gap-2">
+								<User className="w-5 h-5" />
+								選手情報
+							</h2>
 						</div>
-					</>
+
+						<Card>
+							<CardContent className="pt-6 space-y-4">
+								<div className="space-y-2">
+									<Label htmlFor="player-id" className="text-xs text-muted-foreground">ID</Label>
+									<Input
+										id="player-id"
+										value={selectedPlayer.id}
+										readOnly
+										className="h-8 text-sm"
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="player-label" className="text-xs text-muted-foreground">ラベル</Label>
+									<Input
+										id="player-label"
+										value={selectedPlayer.label}
+										readOnly
+										className="h-8 text-sm"
+									/>
+								</div>
+							</CardContent>
+						</Card>
+
+						<Card>
+							<CardHeader className="pb-3">
+								<CardTitle className="text-sm flex items-center gap-2">
+									<MapPin className="w-4 h-4" />
+									位置
+								</CardTitle>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								<div className="grid grid-cols-2 gap-3">
+									<div className="space-y-2">
+										<Label htmlFor="pos-x" className="text-xs text-muted-foreground">X座標</Label>
+										<Input
+											id="pos-x"
+											value={Math.round(selectedPlayer.position.x)}
+											readOnly
+											className="h-8 text-sm"
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="pos-y" className="text-xs text-muted-foreground">Y座標</Label>
+										<Input
+											id="pos-y"
+											value={Math.round(selectedPlayer.position.y)}
+											readOnly
+											className="h-8 text-sm"
+										/>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					</div>
 				)}
 			</div>
 		</div>

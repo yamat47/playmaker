@@ -4,46 +4,38 @@
 @custom-variant dark (&:is(.dark *));
 
 #root {
-	max-width: 1280px;
-	margin: 0 auto;
-	padding: 2rem;
-	text-align: center;
+	height: 100vh;
+	width: 100vw;
+	overflow: hidden;
 }
 
-.logo {
-	height: 6em;
-	padding: 1.5em;
-	will-change: filter;
-	transition: filter 300ms;
-}
-.logo:hover {
-	filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-	filter: drop-shadow(0 0 2em #61dafbaa);
+/* Custom scrollbar styles */
+.custom-scrollbar::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
 }
 
-@keyframes logo-spin {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
+.custom-scrollbar::-webkit-scrollbar-track {
+	background: transparent;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-	a:nth-of-type(2) .logo {
-		animation: logo-spin infinite 20s linear;
-	}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+	background-color: oklch(0 0 0 / 10%);
+	border-radius: 4px;
+	transition: background-color 0.2s;
 }
 
-.card {
-	padding: 2em;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: oklch(0 0 0 / 20%);
 }
 
-.read-the-docs {
-	color: #888;
+/* Dark mode scrollbar */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+	background-color: oklch(1 0 0 / 10%);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: oklch(1 0 0 / 20%);
 }
 
 @theme inline {
@@ -92,18 +84,18 @@
 	--card-foreground: oklch(0.145 0 0);
 	--popover: oklch(1 0 0);
 	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
+	--primary: oklch(0.488 0.243 264.376);
 	--primary-foreground: oklch(0.985 0 0);
 	--secondary: oklch(0.97 0 0);
 	--secondary-foreground: oklch(0.205 0 0);
 	--muted: oklch(0.97 0 0);
 	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
+	--accent: oklch(0.488 0.243 264.376 / 10%);
+	--accent-foreground: oklch(0.488 0.243 264.376);
 	--destructive: oklch(0.577 0.245 27.325);
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
+	--ring: oklch(0.488 0.243 264.376);
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);

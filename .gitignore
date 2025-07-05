@@ -72,3 +72,6 @@ Thumbs.db
 .yarnrc.yml
 .yarn-integrity
 .pnp.*
+
+# MCP
+.mcp.json

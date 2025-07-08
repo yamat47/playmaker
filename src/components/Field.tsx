@@ -82,6 +82,7 @@ const Field = ({
   } | null>(null);
   const [draggingPoint, setDraggingPoint] = useState<boolean>(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [lastClickTime, setLastClickTime] = useState(0);
 
   // Initialize players on first render
   useEffect(() => {
@@ -506,27 +507,40 @@ const Field = ({
     const playerRadius = footToPixel * 1.5;
 
     if (isDrawingMode && drawingLine) {
-      // Add point to current line
-      // 最小移動距離のチェック（10ピクセル）
-      const MIN_DISTANCE = 10;
-      let shouldAddPoint = true;
+      // ダブルクリックの検出（300ms以内）
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastClickTime;
 
-      if (drawingLine.points.length > 0) {
-        const lastPoint = drawingLine.points[drawingLine.points.length - 1];
-        const distance = Math.sqrt(
-          (x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2,
-        );
-        if (distance < MIN_DISTANCE) {
-          shouldAddPoint = false;
+      if (timeDiff < 300 && drawingLine.points.length > 0) {
+        // ダブルクリックで描画終了
+        setLines([...lines, drawingLine]);
+        setIsDrawingMode(false);
+        setDrawingLine(null);
+      } else {
+        // 通常のクリックでポイント追加
+        // 最小移動距離のチェック（10ピクセル）
+        const MIN_DISTANCE = 10;
+        let shouldAddPoint = true;
+
+        if (drawingLine.points.length > 0) {
+          const lastPoint = drawingLine.points[drawingLine.points.length - 1];
+          const distance = Math.sqrt(
+            (x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2,
+          );
+          if (distance < MIN_DISTANCE) {
+            shouldAddPoint = false;
+          }
+        }
+
+        if (shouldAddPoint) {
+          setDrawingLine({
+            ...drawingLine,
+            points: [...drawingLine.points, { x, y }],
+          });
         }
       }
 
-      if (shouldAddPoint) {
-        setDrawingLine({
-          ...drawingLine,
-          points: [...drawingLine.points, { x, y }],
-        });
-      }
+      setLastClickTime(currentTime);
     } else if (currentTool === 'player') {
       // プレイヤー追加モード
       const newPlayer: Player = {

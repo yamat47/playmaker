@@ -507,10 +507,26 @@ const Field = ({
 
     if (isDrawingMode && drawingLine) {
       // Add point to current line
-      setDrawingLine({
-        ...drawingLine,
-        points: [...drawingLine.points, { x, y }],
-      });
+      // 最小移動距離のチェック（10ピクセル）
+      const MIN_DISTANCE = 10;
+      let shouldAddPoint = true;
+
+      if (drawingLine.points.length > 0) {
+        const lastPoint = drawingLine.points[drawingLine.points.length - 1];
+        const distance = Math.sqrt(
+          (x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2,
+        );
+        if (distance < MIN_DISTANCE) {
+          shouldAddPoint = false;
+        }
+      }
+
+      if (shouldAddPoint) {
+        setDrawingLine({
+          ...drawingLine,
+          points: [...drawingLine.points, { x, y }],
+        });
+      }
     } else if (currentTool === 'player') {
       // プレイヤー追加モード
       const newPlayer: Player = {

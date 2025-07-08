@@ -12,12 +12,60 @@ interface Player {
   team: 'offense' | 'defense';
 }
 
-const Field = ({ width = 800, height = 600 }: FieldProps) => {
+interface Line {
+  id: string;
+  playerId: string;
+  points: { x: number; y: number }[];
+}
+
+// Helper function to check if a point is near a line segment
+const pointToLineDistance = (px: number, py: number, x1: number, y1: number, x2: number, y2: number): number => {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+  
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+  let param = -1;
+  
+  if (lenSq !== 0) {
+    param = dot / lenSq;
+  }
+  
+  let xx, yy;
+  
+  if (param < 0) {
+    xx = x1;
+    yy = y1;
+  } else if (param > 1) {
+    xx = x2;
+    yy = y2;
+  } else {
+    xx = x1 + param * C;
+    yy = y1 + param * D;
+  }
+  
+  const dx = px - xx;
+  const dy = py - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+const Field = ({ width = 1200, height = 600 }: FieldProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [draggingPlayer, setDraggingPlayer] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hoveredPlayer, setHoveredPlayer] = useState<string | null>(null);
+  const [lines, setLines] = useState<Line[]>([]);
+  const [drawingLine, setDrawingLine] = useState<Line | null>(null);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [draggingLine, setDraggingLine] = useState<string | null>(null);
+  const [lineDragOffset, setLineDragOffset] = useState({ x: 0, y: 0 });
+  const [selectedPoint, setSelectedPoint] = useState<{ lineId: string; pointIndex: number } | null>(null);
+  const [draggingPoint, setDraggingPoint] = useState<boolean>(false);
 
   // Initialize players on first render
   useEffect(() => {
@@ -283,6 +331,102 @@ const Field = ({ width = 800, height = 600 }: FieldProps) => {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = inchToPixel * 4;
 
+    // ラインを描画
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    
+    // 完成したライン
+    lines.forEach(line => {
+      if (line.points.length > 0) {
+        const player = players.find(p => p.id === line.playerId);
+        if (!player) return;
+        
+        // 選択されているラインは別のスタイルで描画
+        if (line.id === selectedLineId) {
+          ctx.strokeStyle = '#4338ca'; // 濃い青紫
+          ctx.lineWidth = 4;
+        } else {
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3;
+        }
+        
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        
+        line.points.forEach((point) => {
+          ctx.lineTo(point.x, point.y);
+        });
+        
+        ctx.stroke();
+        
+        // 最後のセグメントに矢印を描画
+        if (line.points.length > 0) {
+          const lastPoint = line.points[line.points.length - 1];
+          const prevPoint = line.points.length > 1 
+            ? line.points[line.points.length - 2] 
+            : player;
+          
+          const angle = Math.atan2(lastPoint.y - prevPoint.y, lastPoint.x - prevPoint.x);
+          const arrowLength = 15;
+          const arrowAngle = Math.PI / 6;
+          
+          // 矢印の先端を描画
+          ctx.beginPath();
+          ctx.moveTo(lastPoint.x, lastPoint.y);
+          ctx.lineTo(
+            lastPoint.x - arrowLength * Math.cos(angle - arrowAngle),
+            lastPoint.y - arrowLength * Math.sin(angle - arrowAngle)
+          );
+          ctx.moveTo(lastPoint.x, lastPoint.y);
+          ctx.lineTo(
+            lastPoint.x - arrowLength * Math.cos(angle + arrowAngle),
+            lastPoint.y - arrowLength * Math.sin(angle + arrowAngle)
+          );
+          ctx.stroke();
+        }
+        
+        // 選択されたラインの場合、ポイントを表示
+        if (line.id === selectedLineId) {
+          ctx.fillStyle = '#4338ca';
+          line.points.forEach((point, index) => {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 選択されたポイントはさらに強調
+            if (selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index) {
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          });
+        }
+      }
+    });
+    
+    // 描画中のライン
+    if (drawingLine) {
+      const player = players.find(p => p.id === drawingLine.playerId);
+      if (player) {
+        ctx.strokeStyle = '#666666';
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        
+        drawingLine.points.forEach(point => {
+          ctx.lineTo(point.x, point.y);
+        });
+        
+        // マウス位置までのプレビューライン
+        if (isDrawingMode) {
+          ctx.lineTo(mousePosition.x, mousePosition.y);
+        }
+        
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+    
     // 選手を描画
     const playerRadius = footToPixel * 1.5; // 1.5フィート（約45cm）
     
@@ -299,9 +443,9 @@ const Field = ({ width = 800, height = 600 }: FieldProps) => {
       ctx.arc(player.x, player.y, playerRadius, 0, Math.PI * 2);
       ctx.fill();
     });
-  }, [width, height, players]);
+  }, [width, height, players, lines, drawingLine, isDrawingMode, mousePosition, selectedLineId, selectedPoint]);
 
-  // Mouse event handlers for drag and drop
+  // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -316,13 +460,93 @@ const Field = ({ width = 800, height = 600 }: FieldProps) => {
     const footToPixel = yardWidth / 3;
     const playerRadius = footToPixel * 1.5;
     
-    // Check if click is on a player
-    for (const player of players) {
-      const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-      if (distance <= playerRadius) {
-        setDraggingPlayer(player.id);
-        setDragOffset({ x: x - player.x, y: y - player.y });
-        break;
+    if (isDrawingMode && drawingLine) {
+      // Add point to current line
+      setDrawingLine({
+        ...drawingLine,
+        points: [...drawingLine.points, { x, y }]
+      });
+    } else {
+      // First check if click is on a player (highest priority)
+      let playerClicked = false;
+      for (const player of players) {
+        const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+        if (distance <= playerRadius) {
+          playerClicked = true;
+          if (e.shiftKey || e.metaKey) {
+            // Start drawing line with Shift or Cmd/Ctrl click
+            setIsDrawingMode(true);
+            setDrawingLine({
+              id: `line-${Date.now()}`,
+              playerId: player.id,
+              points: []
+            });
+            setSelectedLineId(null);
+            setSelectedPoint(null);
+          } else {
+            // Regular drag - deselect lines when clicking a player
+            setDraggingPlayer(player.id);
+            setDragOffset({ x: x - player.x, y: y - player.y });
+            setSelectedLineId(null);
+            setSelectedPoint(null);
+            // Also clear any line dragging state
+            setDraggingLine(null);
+            setLineDragOffset({ x: 0, y: 0 });
+          }
+          break;
+        }
+      }
+      
+      if (!playerClicked) {
+        // Check if click is on a point
+        let pointClicked = false;
+        let lineClicked = false;
+        
+        if (selectedLineId) {
+          const selectedLine = lines.find(l => l.id === selectedLineId);
+          if (selectedLine) {
+            for (let i = 0; i < selectedLine.points.length; i++) {
+              const point = selectedLine.points[i];
+              const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+              if (distance <= 8) { // 8 pixels tolerance for points
+                setSelectedPoint({ lineId: selectedLineId, pointIndex: i });
+                setDraggingPoint(true);
+                pointClicked = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (!pointClicked) {
+          // Check if click is on a line
+          for (const line of lines) {
+            const player = players.find(p => p.id === line.playerId);
+            if (!player) continue;
+            
+            // Check each segment of the line
+            let prevPoint = { x: player.x, y: player.y };
+            for (const point of line.points) {
+              const distance = pointToLineDistance(x, y, prevPoint.x, prevPoint.y, point.x, point.y);
+              if (distance < 5) { // 5 pixels tolerance
+                setSelectedLineId(line.id);
+                setDraggingLine(line.id);
+                setLineDragOffset({ x, y });
+                setSelectedPoint(null);
+                lineClicked = true;
+                break;
+              }
+              prevPoint = point;
+            }
+            if (lineClicked) break;
+          }
+        }
+        
+        // If nothing was clicked (no player, line, or point), deselect
+        if (!playerClicked && !lineClicked && !pointClicked) {
+          setSelectedLineId(null);
+          setSelectedPoint(null);
+        }
       }
     }
   };
@@ -355,21 +579,107 @@ const Field = ({ width = 800, height = 600 }: FieldProps) => {
       setHoveredPlayer(null);
     }
     
-    // Handle dragging
+    // Handle player dragging
     if (draggingPlayer) {
+      // dragOffset is the initial offset from player center to mouse
+      // So new player position = current mouse position - initial offset
+      const newPlayerX = x - dragOffset.x;
+      const newPlayerY = y - dragOffset.y;
+      
       setPlayers(prevPlayers =>
         prevPlayers.map(player =>
           player.id === draggingPlayer
-            ? { ...player, x: x - dragOffset.x, y: y - dragOffset.y }
+            ? { ...player, x: newPlayerX, y: newPlayerY }
             : player
         )
       );
     }
+    
+    // Handle point dragging
+    if (draggingPoint && selectedPoint) {
+      setLines(prevLines =>
+        prevLines.map(line => {
+          if (line.id === selectedPoint.lineId) {
+            const oldPoint = line.points[selectedPoint.pointIndex];
+            if (oldPoint) {
+              const dx = x - oldPoint.x;
+              const dy = y - oldPoint.y;
+              
+              // Move the selected point and all subsequent points
+              return {
+                ...line,
+                points: line.points.map((point, index) => {
+                  if (index === selectedPoint.pointIndex) {
+                    // Move the selected point to mouse position
+                    return { x, y };
+                  } else if (index > selectedPoint.pointIndex) {
+                    // Move subsequent points by the same delta
+                    return {
+                      x: point.x + dx,
+                      y: point.y + dy
+                    };
+                  }
+                  // Keep previous points unchanged
+                  return point;
+                })
+              };
+            }
+          }
+          return line;
+        })
+      );
+    } else if (draggingLine) {
+      // Handle line dragging
+      const dx = x - lineDragOffset.x;
+      const dy = y - lineDragOffset.y;
+      
+      setLines(prevLines =>
+        prevLines.map(line =>
+          line.id === draggingLine
+            ? {
+                ...line,
+                points: line.points.map(point => ({
+                  x: point.x + dx,
+                  y: point.y + dy
+                }))
+              }
+            : line
+        )
+      );
+      
+      setLineDragOffset({ x, y });
+    }
+    
+    // Store mouse position for preview line
+    setMousePosition({ x, y });
   };
   
   const handleMouseUp = () => {
     setDraggingPlayer(null);
+    setDraggingLine(null);
+    setDraggingPoint(false);
   };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && isDrawingMode) {
+      // Cancel line drawing
+      setIsDrawingMode(false);
+      setDrawingLine(null);
+    } else if (e.key === 'Enter' && isDrawingMode && drawingLine) {
+      // Finish line drawing
+      setLines([...lines, drawingLine]);
+      setIsDrawingMode(false);
+      setDrawingLine(null);
+    }
+  };
+  
+  // Add focus handling for keyboard events
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas && isDrawingMode) {
+      canvas.focus();
+    }
+  }, [isDrawingMode]);
 
   return (
     <canvas
@@ -381,7 +691,13 @@ const Field = ({ width = 800, height = 600 }: FieldProps) => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={() => setHoveredPlayer(null)}
-      style={{ cursor: draggingPlayer ? 'grabbing' : (hoveredPlayer ? 'grab' : 'default') }}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      style={{ 
+        cursor: isDrawingMode ? 'crosshair' : 
+                draggingPlayer || draggingLine || draggingPoint ? 'grabbing' : 
+                (hoveredPlayer ? 'grab' : 'default') 
+      }}
     />
   );
 };

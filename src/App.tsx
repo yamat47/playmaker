@@ -3,6 +3,9 @@ import { useState } from 'react';
 
 function App() {
   const [selectedElement] = useState<string | null>(null);
+  const [currentTool, setCurrentTool] = useState<
+    'select' | 'player' | 'route' | 'eraser'
+  >('select');
 
   const handleExport = () => {
     const canvas = document.querySelector('canvas');
@@ -34,7 +37,12 @@ function App() {
            */}
           <button
             title="Select"
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"
+            className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+              currentTool === 'select'
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
+            }`}
+            onClick={() => setCurrentTool('select')}
           >
             <svg
               className="w-5 h-5"
@@ -60,7 +68,12 @@ function App() {
            */}
           <button
             title="Add Player"
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"
+            className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+              currentTool === 'player'
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
+            }`}
+            onClick={() => setCurrentTool('player')}
           >
             <svg
               className="w-5 h-5"
@@ -85,7 +98,12 @@ function App() {
            */}
           <button
             title="Draw Route"
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"
+            className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+              currentTool === 'route'
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
+            }`}
+            onClick={() => setCurrentTool('route')}
           >
             <svg
               className="w-5 h-5"
@@ -187,7 +205,12 @@ function App() {
            */}
           <button
             title="Eraser"
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"
+            className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+              currentTool === 'eraser'
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
+            }`}
+            onClick={() => setCurrentTool('eraser')}
           >
             <svg
               className="w-5 h-5"
@@ -391,7 +414,7 @@ function App() {
         {/* Center - Canvas */}
         <main className="flex-1 bg-gray-100 overflow-auto">
           <div className="min-h-full flex items-center justify-center p-8">
-            <Field />
+            <Field currentTool={currentTool} />
           </div>
         </main>
 
@@ -423,7 +446,19 @@ function App() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No element selected</p>
+            <div className="text-sm text-gray-500">
+              <p>No element selected</p>
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-gray-600">Tips:</p>
+                <ul className="text-xs text-gray-500 space-y-1">
+                  <li>• Shift/Cmd + Click a player to draw a route</li>
+                  <li>• Press Enter to finish drawing</li>
+                  <li>• Press Esc to cancel drawing</li>
+                  <li>• Use Player tool to add players</li>
+                  <li>• Use Eraser tool to delete</li>
+                </ul>
+              </div>
+            </div>
           )}
         </aside>
       </div>

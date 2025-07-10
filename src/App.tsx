@@ -6,6 +6,11 @@ function App() {
   const [currentTool, setCurrentTool] = useState<
     'select' | 'player' | 'route' | 'eraser'
   >('select');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [startRouteDrawing, setStartRouteDrawing] = useState<{
+    playerId: string;
+    routeType: 'solid' | 'dashed' | 'dotted';
+  } | null>(null);
 
   const handleExport = () => {
     const canvas = document.querySelector('canvas');
@@ -119,6 +124,90 @@ function App() {
               />
             </svg>
           </button>
+
+          {/* Route Type Selection - Only visible when a player is selected */}
+          {selectedPlayerId && (
+            <div className="flex flex-col space-y-1 p-1 bg-gray-100 rounded">
+              <button
+                title="Solid Line"
+                className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+                  startRouteDrawing?.routeType === 'solid'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600'
+                }`}
+                onClick={() =>
+                  setStartRouteDrawing({
+                    playerId: selectedPlayerId,
+                    routeType: 'solid',
+                  })
+                }
+              >
+                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                  <line
+                    x1="4"
+                    y1="12"
+                    x2="20"
+                    y2="12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </button>
+              <button
+                title="Dashed Line"
+                className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+                  startRouteDrawing?.routeType === 'dashed'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600'
+                }`}
+                onClick={() =>
+                  setStartRouteDrawing({
+                    playerId: selectedPlayerId,
+                    routeType: 'dashed',
+                  })
+                }
+              >
+                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                  <line
+                    x1="4"
+                    y1="12"
+                    x2="20"
+                    y2="12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray="5 3"
+                  />
+                </svg>
+              </button>
+              <button
+                title="Dotted Line"
+                className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+                  startRouteDrawing?.routeType === 'dotted'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600'
+                }`}
+                onClick={() =>
+                  setStartRouteDrawing({
+                    playerId: selectedPlayerId,
+                    routeType: 'dotted',
+                  })
+                }
+              >
+                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                  <line
+                    x1="4"
+                    y1="12"
+                    x2="20"
+                    y2="12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray="2 2"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Formation Tool */}
           {/* TODO: プリセットのフォーメーションを配置するツール
            * - オフェンス：Iフォーメーション、ショットガン、ピストル等
@@ -414,7 +503,13 @@ function App() {
         {/* Center - Canvas */}
         <main className="flex-1 bg-gray-100 overflow-auto">
           <div className="min-h-full flex items-center justify-center p-8">
-            <Field currentTool={currentTool} />
+            <Field
+              currentTool={currentTool}
+              selectedPlayerId={selectedPlayerId}
+              onPlayerSelect={setSelectedPlayerId}
+              startRouteDrawing={startRouteDrawing}
+              onRouteDrawingStart={setStartRouteDrawing}
+            />
           </div>
         </main>
 

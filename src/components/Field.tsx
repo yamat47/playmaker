@@ -4,6 +4,18 @@ interface FieldProps {
   width?: number;
   height?: number;
   currentTool?: 'select' | 'player' | 'route' | 'eraser';
+  selectedPlayerId?: string | null;
+  onPlayerSelect?: (playerId: string | null) => void;
+  startRouteDrawing?: {
+    playerId: string;
+    routeType: 'solid' | 'dashed' | 'dotted';
+  } | null;
+  onRouteDrawingStart?: (
+    value: {
+      playerId: string;
+      routeType: 'solid' | 'dashed' | 'dotted';
+    } | null,
+  ) => void;
 }
 
 interface Player {
@@ -17,6 +29,7 @@ interface Line {
   id: string;
   playerId: string;
   points: { x: number; y: number }[];
+  type: 'solid' | 'dashed' | 'dotted';
 }
 
 // Helper function to check if a point is near a line segment
@@ -63,6 +76,9 @@ const Field = ({
   width = 1200,
   height = 600,
   currentTool = 'select',
+  onPlayerSelect,
+  startRouteDrawing,
+  onRouteDrawingStart,
 }: FieldProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -114,6 +130,26 @@ const Field = ({
       ]);
     }
   }, [width, height, players.length]);
+
+  // Watch for route drawing start from props
+  useEffect(() => {
+    if (startRouteDrawing && startRouteDrawing.playerId) {
+      const player = players.find((p) => p.id === startRouteDrawing.playerId);
+      if (player) {
+        setIsDrawingMode(true);
+        setDrawingLine({
+          id: `line-${Date.now()}`,
+          playerId: player.id,
+          points: [],
+          type: startRouteDrawing.routeType,
+        });
+        setSelectedLineId(null);
+        setSelectedPoint(null);
+        // Clear the startRouteDrawing after initiating
+        onRouteDrawingStart?.(null);
+      }
+    }
+  }, [startRouteDrawing, players, onRouteDrawingStart]);
 
   // Drawing effect
   useEffect(() => {
@@ -367,6 +403,15 @@ const Field = ({
           ctx.lineWidth = 3;
         }
 
+        // 線種に応じてダッシュパターンを設定
+        if (line.type === 'dashed') {
+          ctx.setLineDash([10, 5]);
+        } else if (line.type === 'dotted') {
+          ctx.setLineDash([2, 3]);
+        } else {
+          ctx.setLineDash([]);
+        }
+
         ctx.beginPath();
         ctx.moveTo(player.x, player.y);
 
@@ -375,6 +420,7 @@ const Field = ({
         });
 
         ctx.stroke();
+        ctx.setLineDash([]); // ダッシュパターンをリセット
 
         // 最後のセグメントに矢印を描画
         if (line.points.length > 0) {
@@ -434,7 +480,16 @@ const Field = ({
       const player = players.find((p) => p.id === drawingLine.playerId);
       if (player) {
         ctx.strokeStyle = '#666666';
-        ctx.setLineDash([5, 5]);
+
+        // 線種に応じてプレビューのダッシュパターンを設定
+        if (drawingLine.type === 'dashed') {
+          ctx.setLineDash([10, 5]);
+        } else if (drawingLine.type === 'dotted') {
+          ctx.setLineDash([2, 3]);
+        } else {
+          ctx.setLineDash([5, 5]); // 実線のプレビューは薄い破線
+        }
+
         ctx.beginPath();
         ctx.moveTo(player.x, player.y);
 
@@ -598,6 +653,7 @@ const Field = ({
               id: `line-${Date.now()}`,
               playerId: player.id,
               points: [],
+              type: 'solid', // デフォルトは実線
             });
             setSelectedLineId(null);
             setSelectedPoint(null);
@@ -608,6 +664,7 @@ const Field = ({
             setSelectedLineId(null);
             setSelectedPoint(null);
             setSelectedPlayerId(player.id);
+            onPlayerSelect?.(player.id); // 親コンポーネントに通知
             // Also clear any line dragging state
             setDraggingLine(null);
             setLineDragOffset({ x: 0, y: 0 });
@@ -677,6 +734,7 @@ const Field = ({
           setSelectedLineId(null);
           setSelectedPoint(null);
           setSelectedPlayerId(null);
+          onPlayerSelect?.(null); // 親コンポーネントに通知
         }
       }
     }

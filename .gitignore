@@ -48,6 +48,7 @@ coverage
 *.pid
 *.seed
 *.pid.lock
+.vite
 
 # Testing
 .vitest

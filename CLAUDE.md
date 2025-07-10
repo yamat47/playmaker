@@ -1,96 +1,39 @@
-# CLAUDE.md
+# Claude Code メモ
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 重要な作業ルール
 
-## Project Overview
+### コード変更後の必須チェック
 
-Playmaker is a sports play editor/visualizer application with:
-- **Rails 8.0.2 API backend** in `/rails/`
-- **React 19 + TypeScript frontend** in `/react-router/`
-- Canvas-based editor using Konva.js for drawing plays
+コードを変更した後は、必ず以下のコマンドを実行してエラーがないことを確認する：
 
-## Essential Commands
+1. **型チェック**: `pnpm run typecheck`
+2. **リント**: `pnpm run lint`
+3. **ビルド**: `pnpm run build`
 
-### Development Setup
-```bash
-# Initial setup (from root)
-rails/bin/setup --skip-server && cd react-router && pnpm install
+### パッケージマネージャー
 
-# Start both servers for development
-# Terminal 1 - Rails backend (port 3000):
-cd rails && bin/dev
+- **pnpm** を使用すること（npmではない）
 
-# Terminal 2 - React frontend (port 5173):
-cd react-router && pnpm dev
-```
+### コーディング規約
 
-### Rails Commands (run from `/rails/`)
-```bash
-bin/dev                    # Start Rails development server
-bin/rails db:prepare       # Create and migrate database
-bundle exec rubocop        # Run Ruby linter
-bundle exec brakeman       # Run security analysis
-bin/importmap audit        # Audit JavaScript dependencies
-```
+- **すべてのファイルの末尾に改行を入れること**
 
-### React Commands (run from `/react-router/`)
-```bash
-pnpm dev                   # Start Vite development server
-pnpm build                 # Build for production
-pnpm lint                  # Run Biome linter
-pnpm format                # Format code with Biome
-pnpm typecheck             # Run TypeScript type checking
-```
+### テスト駆動開発（TDD）
 
-## Architecture Overview
+- **t-wadaのTDDアプローチに従って実装を進めること**
+- 新機能の実装時は以下のサイクルを守る：
+  1. **Red**: 失敗するテストを先に書く
+  2. **Green**: テストを通す最小限の実装を行う
+  3. **Refactor**: コードをリファクタリングして品質を向上させる
+- テストファーストで考え、実装前に期待する振る舞いを明確にする
+- 各機能に対して適切なユニットテストを書く
 
-### API Structure
-- Rails serves API endpoints under `/api/*`
-- Current endpoint: `GET /api/players` returns initial player positions
-- SPA is served from `/editor/*` route via `SpaController`
+### 現在のプロジェクト
 
-### Frontend Architecture
-- Single Page Application with React Router
-- Main editor component at `/` uses Konva.js for canvas rendering
-- State management: Local React state (no Redux/Context)
-- Key data models: `Player` and `Arrow` (straight/curved) with hierarchical relationships
+- アメリカンフットボールのプレイダイアグラムエディタ
+- React + TypeScript + Vite + Tailwind CSS
+- Canvas描画にはKonva.jsを使用予定（依存関係には追加済み）
 
-### Development Flow
-1. Vite dev server proxies `/api/*` requests to Rails backend (port 3000)
-2. Frontend fetches initial data from Rails API
-3. All editing happens client-side with local state
-4. No persistence layer currently implemented
+### Using MCP
 
-### Key Files
-- `/rails/config/routes.rb` - API and SPA routing
-- `/rails/app/controllers/api/players_controller.rb` - Player data API
-- `/react-router/src/Editor.tsx` - Main canvas editor component
-- `/react-router/vite.config.ts` - Proxy configuration for API
-
-## CI Checks
-
-To ensure your changes will pass CI, run the following commands:
-
-### Rails CI Checks (from project root)
-```bash
-cd rails && bundle exec rubocop    # Ruby linting
-cd rails && bundle exec brakeman   # Security analysis
-```
-
-### React CI Checks (from project root)
-```bash
-cd react-router && pnpm lint       # Biome linting
-cd react-router && pnpm typecheck  # TypeScript type checking
-cd react-router && pnpm format     # Biome formatting check
-```
-
-### Run All CI Checks
-```bash
-# From project root
-cd rails && bundle exec rubocop && bundle exec brakeman && cd ../react-router && pnpm lint && pnpm typecheck && pnpm format
-```
-
-## Important Notes
-
-### File Creation
-- Always ensure files end with a newline character when creating or editing files
+実装中に技術的に詰まったところやわからないところ、解決できないエラーなどがあればo3 mcpに英語で相談して。

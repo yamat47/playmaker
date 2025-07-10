@@ -1,3 +1,13 @@
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=3.4.4
-FROM ghcr.io/rails/devcontainer/images/ruby:$RUBY_VERSION
+FROM mcr.microsoft.com/devcontainers/javascript-node:20-bookworm
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
+# Create developer user if not exists (features should handle this)
+# Additional setup can be added here if needed
+
+# Set working directory
+WORKDIR /workspace
+
+# Ensure proper permissions for the workspace
+RUN chown -R developer:developer /workspace || true

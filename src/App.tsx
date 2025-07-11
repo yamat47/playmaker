@@ -415,6 +415,7 @@ function App() {
               onPlayerUpdate={(playerId, updates) => {
                 updatePlayer(playerId, updates);
               }}
+              onToolChange={setCurrentTool}
               startRouteDrawing={startRouteDrawing}
               onRouteDrawingStart={setStartRouteDrawing}
             />

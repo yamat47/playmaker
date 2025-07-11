@@ -9,6 +9,7 @@ interface FieldProps {
   onPlayersChange?: (players: Player[]) => void;
   onPlayerSelect?: (playerId: string | null, player?: Player) => void;
   onPlayerUpdate?: (playerId: string, updates: Partial<Player>) => void;
+  onToolChange?: (tool: 'select' | 'player' | 'eraser') => void;
   startRouteDrawing?: {
     playerId: string;
     routeType: 'solid' | 'dashed' | 'dotted';
@@ -85,6 +86,7 @@ const Field = ({
   onPlayersChange,
   onPlayerSelect,
   onPlayerUpdate,
+  onToolChange,
   startRouteDrawing,
   onRouteDrawingStart,
 }: FieldProps) => {
@@ -639,6 +641,9 @@ const Field = ({
         color: '#3B82F6', // デフォルトは青色
       };
       setPlayers([...players, newPlayer]);
+
+      // 選手を追加したら選択モードに戻る
+      onToolChange?.('select');
     } else if (currentTool === 'eraser') {
       // 消しゴムモード - プレイヤーをクリックして削除
       for (const player of players) {

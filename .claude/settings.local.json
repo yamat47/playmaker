@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(ls:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm install:*)",
+      "Bash(rm:*)",
+      "Bash(pnpm test:*)",
+      "mcp__o3__o3-search",
+      "Bash(claude /commands/git/commit \"Add GitHub Actions workflow and PR template\")",
+      "Bash(git switch:*)",
+      "Bash(git push:*)",
+      "Bash(export NEW_COMMIT=\"aaf05e9\")",
+      "Bash(export BRANCH=\"feat/add-github-actions-workflow-and-pr-templ-20250711\")",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr view:*)",
+      "Bash(find:*)",
+      "Bash(gh pr edit:*)"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": ["o3"]
+}

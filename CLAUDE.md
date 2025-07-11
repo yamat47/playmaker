@@ -8,7 +8,18 @@
 
 1. **型チェック**: `pnpm run typecheck`
 2. **リント**: `pnpm run lint`
-3. **ビルド**: `pnpm run build`
+3. **テスト**: `pnpm run test --run`
+4. **ビルド**: `pnpm run build`
+
+### CI/CD
+
+- GitHub ActionsでCIが設定されており、以下が自動実行される：
+  - ESLintによるコード品質チェック
+  - Prettierによるコードフォーマットチェック
+  - TypeScriptの型チェック
+  - Vitestによるテスト実行
+  - ビルドの成功確認
+- mainブランチとviveブランチへのpush、およびmainブランチへのPRで自動実行
 
 ### パッケージマネージャー
 
@@ -17,6 +28,9 @@
 ### コーディング規約
 
 - **すべてのファイルの末尾に改行を入れること**
+- **Prettierでコードフォーマットを統一すること**
+  - `pnpm prettier --write "**/*.{js,jsx,ts,tsx,json,css,md}"` でフォーマット
+  - pre-commitフックで自動フォーマットされる
 
 ### テスト駆動開発（TDD）
 

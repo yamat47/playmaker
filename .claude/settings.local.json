@@ -22,7 +22,9 @@
       "Bash(find:*)",
       "Bash(gh pr edit:*)",
       "Bash(git checkout:*)",
-      "Bash(claude /commands/git/commit \"feat: update Claude settings and git create-pr command\")"
+      "Bash(claude /commands/git/commit \"feat: update Claude settings and git create-pr command\")",
+      "Bash(claude /commands/git/commit \"Remove route drawing tool button from sidebar\")",
+      "Bash(claude /commands/git/commit)"
     ],
     "deny": []
   },

@@ -1,4 +1,4 @@
-import Field from './components/Field';
+import Field, { type Player } from './components/Field';
 import { useState } from 'react';
 
 function App() {
@@ -7,10 +7,23 @@ function App() {
     'select' | 'player' | 'eraser'
   >('select');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [startRouteDrawing, setStartRouteDrawing] = useState<{
     playerId: string;
     routeType: 'solid' | 'dashed' | 'dotted';
   } | null>(null);
+
+  const updatePlayer = (playerId: string, updates: Partial<Player>) => {
+    setPlayers((prevPlayers) =>
+      prevPlayers.map((player) =>
+        player.id === playerId ? { ...player, ...updates } : player,
+      ),
+    );
+    if (selectedPlayer && selectedPlayer.id === playerId) {
+      setSelectedPlayer({ ...selectedPlayer, ...updates });
+    }
+  };
 
   const handleExport = () => {
     const canvas = document.querySelector('canvas');
@@ -393,7 +406,15 @@ function App() {
             <Field
               currentTool={currentTool}
               selectedPlayerId={selectedPlayerId}
-              onPlayerSelect={setSelectedPlayerId}
+              players={players}
+              onPlayersChange={setPlayers}
+              onPlayerSelect={(playerId, player) => {
+                setSelectedPlayerId(playerId);
+                setSelectedPlayer(player || null);
+              }}
+              onPlayerUpdate={(playerId, updates) => {
+                updatePlayer(playerId, updates);
+              }}
               startRouteDrawing={startRouteDrawing}
               onRouteDrawingStart={setStartRouteDrawing}
             />
@@ -409,6 +430,78 @@ function App() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Type</label>
                 <div className="text-sm text-gray-700">Player</div>
+              </div>
+
+              {/* Shape Selection */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-2">
+                  Shape
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className={`p-2 flex items-center justify-center rounded border transition-all ${
+                      selectedPlayer?.shape === 'circle'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() => {
+                      if (selectedPlayer) {
+                        updatePlayer(selectedPlayer.id, { shape: 'circle' });
+                      }
+                    }}
+                  >
+                    <div className="w-5 h-5 rounded-full border-2 border-current" />
+                  </button>
+                  <button
+                    className={`p-2 flex items-center justify-center rounded border transition-all ${
+                      selectedPlayer?.shape === 'square'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() => {
+                      if (selectedPlayer) {
+                        updatePlayer(selectedPlayer.id, { shape: 'square' });
+                      }
+                    }}
+                  >
+                    <div className="w-5 h-5 border-2 border-current" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Color Selection */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-2">
+                  Color
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { name: 'Blue', value: '#3B82F6' },
+                    { name: 'Red', value: '#EF4444' },
+                    { name: 'Green', value: '#10B981' },
+                    { name: 'Yellow', value: '#F59E0B' },
+                    { name: 'Purple', value: '#8B5CF6' },
+                    { name: 'Pink', value: '#EC4899' },
+                  ].map((color) => (
+                    <button
+                      key={color.value}
+                      title={color.name}
+                      className={`p-2 rounded border-2 transition-all ${
+                        selectedPlayer?.color === color.value
+                          ? 'border-gray-800 shadow-md'
+                          : 'border-gray-300 hover:border-gray-500'
+                      }`}
+                      style={{ backgroundColor: color.value }}
+                      onClick={() => {
+                        if (selectedPlayer) {
+                          updatePlayer(selectedPlayer.id, {
+                            color: color.value,
+                          });
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Route Drawing Options */}

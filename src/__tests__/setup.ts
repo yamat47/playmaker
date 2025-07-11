@@ -1,6 +1,13 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 
+// devicePixelRatioをモック
+Object.defineProperty(window, 'devicePixelRatio', {
+  value: 1,
+  writable: true,
+  configurable: true,
+});
+
 // Mock canvas context
 const mockCanvasContext = {
   fillStyle: '',
@@ -19,6 +26,7 @@ const mockCanvasContext = {
   fill: vi.fn(),
   arc: vi.fn(),
   fillText: vi.fn(),
+  strokeText: vi.fn(),
   save: vi.fn(),
   restore: vi.fn(),
   translate: vi.fn(),

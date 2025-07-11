@@ -29,6 +29,7 @@ interface Player {
   team: 'offense' | 'defense';
   shape: 'circle' | 'square';
   color: string;
+  label?: string;
 }
 
 interface Line {
@@ -146,6 +147,7 @@ const Field = ({
           team: 'offense',
           shape: 'circle',
           color: '#3B82F6',
+          label: 'X',
         },
         {
           id: 'defensive-1',
@@ -154,6 +156,7 @@ const Field = ({
           team: 'defense',
           shape: 'circle',
           color: '#EF4444',
+          label: 'DE',
         },
       ]);
     }
@@ -187,6 +190,22 @@ const Field = ({
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // 高解像度ディスプレイ対応
+    const dpr = window.devicePixelRatio || 1;
+
+    // Canvasの実際のサイズを設定
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+
+    // CSSサイズを維持
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    // コンテキストをスケール
+    if (ctx.scale) {
+      ctx.scale(dpr, dpr);
+    }
 
     // フィールドの緑色背景
     ctx.fillStyle = '#4a7c59';
@@ -566,6 +585,30 @@ const Field = ({
           ctx.stroke();
         }
       }
+
+      // ラベルを描画
+      if (player.label) {
+        ctx.save();
+
+        // テキストのスタイル設定
+        ctx.fillStyle = '#FFFFFF'; // 白文字
+        ctx.strokeStyle = player.color || '#3B82F6'; // 背景色で縁取り
+        ctx.lineWidth = 3;
+        ctx.font = `bold ${playerRadius * 0.8}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // フォントのメトリクスを考慮した調整
+        const textY = player.y + playerRadius * 0.1; // 少し下に調整
+
+        // テキストに縁取りをつけて描画
+        if (ctx.strokeText) {
+          ctx.strokeText(player.label, player.x, textY);
+        }
+        ctx.fillText(player.label, player.x, textY);
+
+        ctx.restore();
+      }
     });
   }, [
     width,
@@ -639,6 +682,7 @@ const Field = ({
         team: 'offense',
         shape: 'circle',
         color: '#3B82F6', // デフォルトは青色
+        label: '', // デフォルトは空
       };
       setPlayers([...players, newPlayer]);
 
@@ -976,8 +1020,6 @@ const Field = ({
   return (
     <canvas
       ref={canvasRef}
-      width={width}
-      height={height}
       className="border border-gray-300 shadow-lg"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}

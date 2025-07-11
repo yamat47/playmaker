@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi } from 'vitest';
 
 // Mock canvas context
 const mockCanvasContext = {
@@ -25,15 +25,15 @@ const mockCanvasContext = {
   scale: vi.fn(),
   closePath: vi.fn(),
   setLineDash: vi.fn(),
-}
+};
 
 // Mock getContext
 HTMLCanvasElement.prototype.getContext = vi.fn((contextId: string) => {
   if (contextId === '2d') {
-    return mockCanvasContext as unknown as CanvasRenderingContext2D
+    return mockCanvasContext as unknown as CanvasRenderingContext2D;
   }
-  return null
-}) as any // eslint-disable-line @typescript-eslint/no-explicit-any
+  return null;
+}) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 // Mock getBoundingClientRect for canvas
 HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(() => ({
@@ -46,4 +46,4 @@ HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(() => ({
   x: 0,
   y: 0,
   toJSON: () => {},
-}))
+}));

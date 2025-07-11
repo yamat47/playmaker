@@ -1,5 +1,5 @@
 interface ToolbarProps {
-  onExport: () => void
+  onExport: () => void;
 }
 
 const Toolbar = ({ onExport }: ToolbarProps) => {
@@ -18,7 +18,7 @@ const Toolbar = ({ onExport }: ToolbarProps) => {
         Export PNG
       </button>
     </div>
-  )
-}
+  );
+};
 
-export default Toolbar
+export default Toolbar;

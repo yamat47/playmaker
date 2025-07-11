@@ -125,89 +125,6 @@ function App() {
             </svg>
           </button>
 
-          {/* Route Type Selection - Only visible when a player is selected */}
-          {selectedPlayerId && (
-            <div className="flex flex-col space-y-1 p-1 bg-gray-100 rounded">
-              <button
-                title="Solid Line"
-                className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
-                  startRouteDrawing?.routeType === 'solid'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600'
-                }`}
-                onClick={() =>
-                  setStartRouteDrawing({
-                    playerId: selectedPlayerId,
-                    routeType: 'solid',
-                  })
-                }
-              >
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <line
-                    x1="4"
-                    y1="12"
-                    x2="20"
-                    y2="12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </button>
-              <button
-                title="Dashed Line"
-                className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
-                  startRouteDrawing?.routeType === 'dashed'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600'
-                }`}
-                onClick={() =>
-                  setStartRouteDrawing({
-                    playerId: selectedPlayerId,
-                    routeType: 'dashed',
-                  })
-                }
-              >
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <line
-                    x1="4"
-                    y1="12"
-                    x2="20"
-                    y2="12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeDasharray="5 3"
-                  />
-                </svg>
-              </button>
-              <button
-                title="Dotted Line"
-                className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
-                  startRouteDrawing?.routeType === 'dotted'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600'
-                }`}
-                onClick={() =>
-                  setStartRouteDrawing({
-                    playerId: selectedPlayerId,
-                    routeType: 'dotted',
-                  })
-                }
-              >
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <line
-                    x1="4"
-                    y1="12"
-                    x2="20"
-                    y2="12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeDasharray="2 2"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
-
           {/* Formation Tool */}
           {/* TODO: プリセットのフォーメーションを配置するツール
            * - オフェンス：Iフォーメーション、ショットガン、ピストル等
@@ -516,7 +433,125 @@ function App() {
         {/* Right Sidebar - Properties */}
         <aside className="w-64 bg-white border-l border-gray-200 p-4">
           <h2 className="text-sm font-medium text-gray-700 mb-4">Properties</h2>
-          {selectedElement ? (
+          {selectedPlayerId ? (
+            <div className="space-y-4">
+              {/* Player Information */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Type</label>
+                <div className="text-sm text-gray-700">Player</div>
+              </div>
+
+              {/* Route Drawing Options */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-2">
+                  Draw Route
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    title="Solid Line"
+                    className={`p-3 flex items-center justify-center rounded border transition-all ${
+                      startRouteDrawing?.routeType === 'solid'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() =>
+                      setStartRouteDrawing({
+                        playerId: selectedPlayerId,
+                        routeType: 'solid',
+                      })
+                    }
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 32 16">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="30"
+                        y2="8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    title="Dashed Line"
+                    className={`p-3 flex items-center justify-center rounded border transition-all ${
+                      startRouteDrawing?.routeType === 'dashed'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() =>
+                      setStartRouteDrawing({
+                        playerId: selectedPlayerId,
+                        routeType: 'dashed',
+                      })
+                    }
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 32 16">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="30"
+                        y2="8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeDasharray="5 3"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    title="Dotted Line"
+                    className={`p-3 flex items-center justify-center rounded border transition-all ${
+                      startRouteDrawing?.routeType === 'dotted'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() =>
+                      setStartRouteDrawing({
+                        playerId: selectedPlayerId,
+                        routeType: 'dotted',
+                      })
+                    }
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 32 16">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="30"
+                        y2="8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeDasharray="2 2"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                {startRouteDrawing && (
+                  <p className="text-xs text-blue-600 mt-2">
+                    Click on field to draw route
+                  </p>
+                )}
+              </div>
+
+              {/* Position */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Position
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    placeholder="X"
+                    className="bg-gray-50 border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Y"
+                    className="bg-gray-50 border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : selectedElement ? (
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Type</label>
@@ -546,7 +581,8 @@ function App() {
               <div className="mt-4 space-y-2">
                 <p className="text-xs font-medium text-gray-600">Tips:</p>
                 <ul className="text-xs text-gray-500 space-y-1">
-                  <li>• Shift/Cmd + Click a player to draw a route</li>
+                  <li>• Click a player to select</li>
+                  <li>• Select route type to start drawing</li>
                   <li>• Press Enter to finish drawing</li>
                   <li>• Press Esc to cancel drawing</li>
                   <li>• Use Player tool to add players</li>

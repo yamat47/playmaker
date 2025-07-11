@@ -646,25 +646,14 @@ const Field = ({
         const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
         if (distance <= playerRadius) {
           playerClicked = true;
-          if (currentTool === 'route' || e.shiftKey || e.metaKey) {
-            // Start drawing line with Route tool or Shift/Cmd click
-            setIsDrawingMode(true);
-            setDrawingLine({
-              id: `line-${Date.now()}`,
-              playerId: player.id,
-              points: [],
-              type: 'solid', // デフォルトは実線
-            });
-            setSelectedLineId(null);
-            setSelectedPoint(null);
-          } else if (currentTool === 'select') {
-            // Regular drag - deselect lines when clicking a player
+          if (currentTool === 'select') {
+            // Select player
+            setSelectedPlayerId(player.id);
+            onPlayerSelect?.(player.id); // 親コンポーネントに通知
             setDraggingPlayer(player.id);
             setDragOffset({ x: x - player.x, y: y - player.y });
             setSelectedLineId(null);
             setSelectedPoint(null);
-            setSelectedPlayerId(player.id);
-            onPlayerSelect?.(player.id); // 親コンポーネントに通知
             // Also clear any line dragging state
             setDraggingLine(null);
             setLineDragOffset({ x: 0, y: 0 });
@@ -674,67 +663,75 @@ const Field = ({
       }
 
       if (!playerClicked) {
-        // Check if click is on a point
-        let pointClicked = false;
-        let lineClicked = false;
+        // If drawing mode is active, add points to the line
+        if (isDrawingMode && drawingLine) {
+          setDrawingLine({
+            ...drawingLine,
+            points: [...drawingLine.points, { x, y }],
+          });
+        } else {
+          // Check if click is on a point
+          let pointClicked = false;
+          let lineClicked = false;
 
-        if (selectedLineId) {
-          const selectedLine = lines.find((l) => l.id === selectedLineId);
-          if (selectedLine) {
-            for (let i = 0; i < selectedLine.points.length; i++) {
-              const point = selectedLine.points[i];
-              const distance = Math.sqrt(
-                (x - point.x) ** 2 + (y - point.y) ** 2,
-              );
-              if (distance <= 8) {
-                // 8 pixels tolerance for points
-                setSelectedPoint({ lineId: selectedLineId, pointIndex: i });
-                setDraggingPoint(true);
-                pointClicked = true;
-                break;
+          if (selectedLineId) {
+            const selectedLine = lines.find((l) => l.id === selectedLineId);
+            if (selectedLine) {
+              for (let i = 0; i < selectedLine.points.length; i++) {
+                const point = selectedLine.points[i];
+                const distance = Math.sqrt(
+                  (x - point.x) ** 2 + (y - point.y) ** 2,
+                );
+                if (distance <= 8) {
+                  // 8 pixels tolerance for points
+                  setSelectedPoint({ lineId: selectedLineId, pointIndex: i });
+                  setDraggingPoint(true);
+                  pointClicked = true;
+                  break;
+                }
               }
             }
           }
-        }
 
-        if (!pointClicked) {
-          // Check if click is on a line
-          for (const line of lines) {
-            const player = players.find((p) => p.id === line.playerId);
-            if (!player) continue;
+          if (!pointClicked) {
+            // Check if click is on a line
+            for (const line of lines) {
+              const player = players.find((p) => p.id === line.playerId);
+              if (!player) continue;
 
-            // Check each segment of the line
-            let prevPoint = { x: player.x, y: player.y };
-            for (const point of line.points) {
-              const distance = pointToLineDistance(
-                x,
-                y,
-                prevPoint.x,
-                prevPoint.y,
-                point.x,
-                point.y,
-              );
-              if (distance < 5) {
-                // 5 pixels tolerance
-                setSelectedLineId(line.id);
-                setDraggingLine(line.id);
-                setLineDragOffset({ x, y });
-                setSelectedPoint(null);
-                lineClicked = true;
-                break;
+              // Check each segment of the line
+              let prevPoint = { x: player.x, y: player.y };
+              for (const point of line.points) {
+                const distance = pointToLineDistance(
+                  x,
+                  y,
+                  prevPoint.x,
+                  prevPoint.y,
+                  point.x,
+                  point.y,
+                );
+                if (distance < 5) {
+                  // 5 pixels tolerance
+                  setSelectedLineId(line.id);
+                  setDraggingLine(line.id);
+                  setLineDragOffset({ x, y });
+                  setSelectedPoint(null);
+                  lineClicked = true;
+                  break;
+                }
+                prevPoint = point;
               }
-              prevPoint = point;
+              if (lineClicked) break;
             }
-            if (lineClicked) break;
           }
-        }
 
-        // If nothing was clicked (no player, line, or point), deselect
-        if (!playerClicked && !lineClicked && !pointClicked) {
-          setSelectedLineId(null);
-          setSelectedPoint(null);
-          setSelectedPlayerId(null);
-          onPlayerSelect?.(null); // 親コンポーネントに通知
+          // If nothing was clicked (no player, line, or point), deselect
+          if (!playerClicked && !lineClicked && !pointClicked) {
+            setSelectedLineId(null);
+            setSelectedPoint(null);
+            setSelectedPlayerId(null);
+            onPlayerSelect?.(null); // 親コンポーネントに通知
+          }
         }
       }
     }
@@ -854,11 +851,13 @@ const Field = ({
       // Cancel line drawing
       setIsDrawingMode(false);
       setDrawingLine(null);
+      onRouteDrawingStart?.(null);
     } else if (e.key === 'Enter' && isDrawingMode && drawingLine) {
       // Finish line drawing
       setLines([...lines, drawingLine]);
       setIsDrawingMode(false);
       setDrawingLine(null);
+      onRouteDrawingStart?.(null);
     } else if (
       (e.key === 'Delete' || e.key === 'Backspace') &&
       selectedPlayerId
@@ -867,6 +866,7 @@ const Field = ({
       setPlayers(players.filter((p) => p.id !== selectedPlayerId));
       setLines(lines.filter((l) => l.playerId !== selectedPlayerId));
       setSelectedPlayerId(null);
+      onPlayerSelect?.(null);
     } else if (
       (e.key === 'Delete' || e.key === 'Backspace') &&
       selectedLineId
@@ -884,6 +884,32 @@ const Field = ({
       canvas.focus();
     }
   }, [isDrawingMode]);
+
+  // 右パネルから線描画を開始
+  useEffect(() => {
+    if (startRouteDrawing && selectedPlayerId === startRouteDrawing.playerId) {
+      setIsDrawingMode(true);
+      setDrawingLine({
+        id: `line-${Date.now()}`,
+        playerId: startRouteDrawing.playerId,
+        points: [],
+        type: startRouteDrawing.routeType,
+      });
+      setSelectedLineId(null);
+      setSelectedPoint(null);
+      // フォーカスを設定
+      canvasRef.current?.focus();
+    }
+  }, [startRouteDrawing, selectedPlayerId]);
+
+  // ツールが変更されたときに描画をキャンセル
+  useEffect(() => {
+    if (currentTool !== 'select' && isDrawingMode) {
+      setIsDrawingMode(false);
+      setDrawingLine(null);
+      onRouteDrawingStart?.(null);
+    }
+  }, [currentTool, isDrawingMode, onRouteDrawingStart]);
 
   return (
     <canvas

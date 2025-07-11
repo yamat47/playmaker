@@ -3,7 +3,7 @@ import { useRef, useEffect, useState } from 'react';
 interface FieldProps {
   width?: number;
   height?: number;
-  currentTool?: 'select' | 'player' | 'route' | 'eraser';
+  currentTool?: 'select' | 'player' | 'eraser';
   selectedPlayerId?: string | null;
   onPlayerSelect?: (playerId: string | null) => void;
   startRouteDrawing?: {
@@ -929,7 +929,7 @@ const Field = ({
             ? 'copy'
             : currentTool === 'eraser'
               ? 'not-allowed'
-              : currentTool === 'route' || isDrawingMode
+              : isDrawingMode
                 ? 'crosshair'
                 : draggingPlayer || draggingLine || draggingPoint
                   ? 'grabbing'

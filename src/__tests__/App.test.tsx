@@ -18,7 +18,6 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByTitle('Select')).toBeInTheDocument();
     expect(screen.getByTitle('Add Player')).toBeInTheDocument();
-    expect(screen.getByTitle('Draw Route')).toBeInTheDocument();
     expect(screen.getByTitle('Formations')).toBeInTheDocument();
     expect(screen.getByTitle('Add Text')).toBeInTheDocument();
     expect(screen.getByTitle('Blocking')).toBeInTheDocument();

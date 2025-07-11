@@ -4,7 +4,7 @@ import { useState } from 'react';
 function App() {
   const [selectedElement] = useState<string | null>(null);
   const [currentTool, setCurrentTool] = useState<
-    'select' | 'player' | 'route' | 'eraser'
+    'select' | 'player' | 'eraser'
   >('select');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [startRouteDrawing, setStartRouteDrawing] = useState<{
@@ -91,36 +91,6 @@ function App() {
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-          </button>
-          {/* Route Drawing Tool */}
-          {/* TODO: パスルートやランプレイの動きを描画するツール
-           * - 線種（実線、破線、点線、ジグザグ）
-           * - 矢印、ブロック、丸などの終端記号
-           * - ルートの深さ（ヤード数）表示
-           * - プレスナップモーションの表現
-           */}
-          <button
-            title="Draw Route"
-            className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
-              currentTool === 'route'
-                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
-            }`}
-            onClick={() => setCurrentTool('route')}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 5l7 7-7 7M5 5l7 7-7 7"
               />
             </svg>
           </button>

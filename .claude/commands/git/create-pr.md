@@ -83,15 +83,19 @@ This pull request introduces commit \`$NEW_COMMIT\` on branch \`$BRANCH\`.
 
 ### Checklist
 
-- [x] Code builds and unit tests pass locally
-- [x] Relevant documentation updated
-- [x] Reviewer has sufficient context
+- [ ] Code builds and unit tests pass locally
+- [ ] Relevant documentation updated
+- [ ] Reviewer has sufficient context
 
 ### Motivation and Context
+
+<!-- Explain *why* the change is necessary, link issues if applicable -->
 
 [Analyze the commit type and message to explain why these changes are necessary]
 
 ### Implementation Details
+
+<!-- Briefly describe *what* was done and any important decisions -->
 
 [Based on the changed files and commit message, describe what was implemented:
 
@@ -101,6 +105,8 @@ This pull request introduces commit \`$NEW_COMMIT\` on branch \`$BRANCH\`.
 
 ### Testing Instructions
 
+<!-- Provide clear, repeatable steps so reviewers can verify the change -->
+
 [Provide clear steps to test the changes:
 
 1. How to verify the functionality works
@@ -109,9 +115,13 @@ This pull request introduces commit \`$NEW_COMMIT\` on branch \`$BRANCH\`.
 
 ### Related Issues
 
+<!-- e.g. Closes #123, Relates to #456 -->
+
 [Check if commit message references any issues, otherwise state N/A]
 
 ### Notes for Release
+
+<!-- Optional: user-facing details for the changelog -->
 
 [Summarize user-facing changes in a concise way]
 EOF

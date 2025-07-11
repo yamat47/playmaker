@@ -20,7 +20,9 @@
       "Bash(gh pr create:*)",
       "Bash(gh pr view:*)",
       "Bash(find:*)",
-      "Bash(gh pr edit:*)"
+      "Bash(gh pr edit:*)",
+      "Bash(git checkout:*)",
+      "Bash(claude /commands/git/commit \"feat: update Claude settings and git create-pr command\")"
     ],
     "deny": []
   },

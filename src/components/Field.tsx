@@ -5,7 +5,10 @@ interface FieldProps {
   height?: number;
   currentTool?: 'select' | 'player' | 'eraser';
   selectedPlayerId?: string | null;
-  onPlayerSelect?: (playerId: string | null) => void;
+  players?: Player[];
+  onPlayersChange?: (players: Player[]) => void;
+  onPlayerSelect?: (playerId: string | null, player?: Player) => void;
+  onPlayerUpdate?: (playerId: string, updates: Partial<Player>) => void;
   startRouteDrawing?: {
     playerId: string;
     routeType: 'solid' | 'dashed' | 'dotted';
@@ -23,6 +26,8 @@ interface Player {
   x: number;
   y: number;
   team: 'offense' | 'defense';
+  shape: 'circle' | 'square';
+  color: string;
 }
 
 interface Line {
@@ -76,12 +81,29 @@ const Field = ({
   width = 1200,
   height = 600,
   currentTool = 'select',
+  players: externalPlayers,
+  onPlayersChange,
   onPlayerSelect,
+  onPlayerUpdate,
   startRouteDrawing,
   onRouteDrawingStart,
 }: FieldProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [internalPlayers, setInternalPlayers] = useState<Player[]>([]);
+  const players = externalPlayers || internalPlayers;
+  const setPlayers = (
+    newPlayers: Player[] | ((prev: Player[]) => Player[]),
+  ) => {
+    if (onPlayersChange) {
+      if (typeof newPlayers === 'function') {
+        onPlayersChange(newPlayers(players));
+      } else {
+        onPlayersChange(newPlayers);
+      }
+    } else {
+      setInternalPlayers(newPlayers);
+    }
+  };
   const [draggingPlayer, setDraggingPlayer] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hoveredPlayer, setHoveredPlayer] = useState<string | null>(null);
@@ -120,15 +142,20 @@ const Field = ({
           x: hashLeftX,
           y: fiftyYardLine,
           team: 'offense',
+          shape: 'circle',
+          color: '#3B82F6',
         },
         {
           id: 'defensive-1',
           x: hashRightX,
           y: fiftyYardLine - yardHeight * 2,
           team: 'defense',
+          shape: 'circle',
+          color: '#EF4444',
         },
       ]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height, players.length]);
 
   // Watch for route drawing start from props
@@ -511,12 +538,8 @@ const Field = ({
     const playerRadius = footToPixel * 1.5; // 1.5フィート（約45cm）
 
     players.forEach((player) => {
-      // 選手の色（枠線なし）
-      if (player.team === 'offense') {
-        ctx.fillStyle = '#60a5fa'; // 明るい青色
-      } else {
-        ctx.fillStyle = '#f87171'; // 明るい赤色
-      }
+      // 選手の色
+      ctx.fillStyle = player.color || '#3B82F6';
 
       // 選択されている場合は枠線を追加
       if (player.id === selectedPlayerId) {
@@ -524,13 +547,22 @@ const Field = ({
         ctx.lineWidth = 3;
       }
 
-      // 円を描画（枠線なし、文字なし）
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, playerRadius, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (player.id === selectedPlayerId) {
-        ctx.stroke();
+      // 形状に応じて描画
+      if (player.shape === 'square') {
+        // 四角形を描画
+        const size = playerRadius * 1.5;
+        ctx.fillRect(player.x - size / 2, player.y - size / 2, size, size);
+        if (player.id === selectedPlayerId) {
+          ctx.strokeRect(player.x - size / 2, player.y - size / 2, size, size);
+        }
+      } else {
+        // 円を描画（デフォルト）
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, playerRadius, 0, Math.PI * 2);
+        ctx.fill();
+        if (player.id === selectedPlayerId) {
+          ctx.stroke();
+        }
       }
     });
   }, [
@@ -603,6 +635,8 @@ const Field = ({
         x,
         y,
         team: 'offense',
+        shape: 'circle',
+        color: '#3B82F6', // デフォルトは青色
       };
       setPlayers([...players, newPlayer]);
     } else if (currentTool === 'eraser') {
@@ -649,7 +683,7 @@ const Field = ({
           if (currentTool === 'select') {
             // Select player
             setSelectedPlayerId(player.id);
-            onPlayerSelect?.(player.id); // 親コンポーネントに通知
+            onPlayerSelect?.(player.id, player); // 親コンポーネントに通知
             setDraggingPlayer(player.id);
             setDragOffset({ x: x - player.x, y: y - player.y });
             setSelectedLineId(null);
@@ -902,6 +936,29 @@ const Field = ({
     }
   }, [startRouteDrawing, selectedPlayerId]);
 
+  // 選手データを親コンポーネントに同期
+  useEffect(() => {
+    const updatePlayer = (playerId: string, updates: Partial<Player>) => {
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((player) =>
+          player.id === playerId ? { ...player, ...updates } : player,
+        ),
+      );
+      onPlayerUpdate?.(playerId, updates);
+    };
+
+    // updatePlayerを外部から呼び出せるようにする
+    (
+      window as unknown as { _fieldUpdatePlayer?: typeof updatePlayer }
+    )._fieldUpdatePlayer = updatePlayer;
+
+    return () => {
+      delete (window as unknown as { _fieldUpdatePlayer?: unknown })
+        ._fieldUpdatePlayer;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onPlayerUpdate]);
+
   // ツールが変更されたときに描画をキャンセル
   useEffect(() => {
     if (currentTool !== 'select' && isDrawingMode) {
@@ -941,4 +998,4 @@ const Field = ({
   );
 };
 
-export default Field;
+export { Field as default, type Player };

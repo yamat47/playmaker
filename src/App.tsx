@@ -1,5 +1,70 @@
 import Field, { type Player } from './components/Field';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+
+// Responsive wrapper component that calculates field dimensions
+function ResponsiveFieldWrapper({
+  children,
+}: {
+  children: (width: number, height: number) => React.ReactNode;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 1200, height: 600 });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (!containerRef.current) return;
+
+      const containerWidth = containerRef.current.clientWidth;
+      const containerHeight = containerRef.current.clientHeight;
+
+      // Field aspect ratio (2:1)
+      const fieldAspectRatio = 2;
+
+      // Add padding (24px on each side)
+      const padding = 24;
+      const availableWidth = containerWidth - padding * 2;
+
+      // Calculate dimensions that fit within container while maintaining aspect ratio
+      let fieldWidth = availableWidth;
+      let fieldHeight = fieldWidth / fieldAspectRatio;
+
+      // If calculated height exceeds container height, scale based on height instead
+      const availableHeight = containerHeight - padding * 2;
+      if (fieldHeight > availableHeight) {
+        fieldHeight = availableHeight;
+        fieldWidth = fieldHeight * fieldAspectRatio;
+      }
+
+      // Ensure minimum size
+      const minWidth = 400;
+      const minHeight = 200;
+      fieldWidth = Math.max(fieldWidth, minWidth);
+      fieldHeight = Math.max(fieldHeight, minHeight);
+
+      setDimensions({ width: fieldWidth, height: fieldHeight });
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="min-h-full flex items-center justify-center px-12 py-8"
+    >
+      {children(dimensions.width, dimensions.height)}
+    </div>
+  );
+}
 
 function App() {
   const [selectedElement] = useState<string | null>(null);
@@ -402,24 +467,28 @@ function App() {
 
         {/* Center - Canvas */}
         <main className="flex-1 bg-gray-100 overflow-auto">
-          <div className="min-h-full flex items-center justify-center px-12 py-8">
-            <Field
-              currentTool={currentTool}
-              selectedPlayerId={selectedPlayerId}
-              players={players}
-              onPlayersChange={setPlayers}
-              onPlayerSelect={(playerId, player) => {
-                setSelectedPlayerId(playerId);
-                setSelectedPlayer(player || null);
-              }}
-              onPlayerUpdate={(playerId, updates) => {
-                updatePlayer(playerId, updates);
-              }}
-              onToolChange={setCurrentTool}
-              startRouteDrawing={startRouteDrawing}
-              onRouteDrawingStart={setStartRouteDrawing}
-            />
-          </div>
+          <ResponsiveFieldWrapper>
+            {(width, height) => (
+              <Field
+                width={width}
+                height={height}
+                currentTool={currentTool}
+                selectedPlayerId={selectedPlayerId}
+                players={players}
+                onPlayersChange={setPlayers}
+                onPlayerSelect={(playerId, player) => {
+                  setSelectedPlayerId(playerId);
+                  setSelectedPlayer(player || null);
+                }}
+                onPlayerUpdate={(playerId, updates) => {
+                  updatePlayer(playerId, updates);
+                }}
+                onToolChange={setCurrentTool}
+                startRouteDrawing={startRouteDrawing}
+                onRouteDrawingStart={setStartRouteDrawing}
+              />
+            )}
+          </ResponsiveFieldWrapper>
         </main>
 
         {/* Right Sidebar - Properties */}

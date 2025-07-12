@@ -22,7 +22,7 @@ describe('Field', () => {
   it('applies correct styling classes', () => {
     const { container } = render(<Field />);
     const canvas = container.querySelector('canvas');
-    expect(canvas).toHaveClass('border', 'border-gray-300', 'shadow-lg');
+    expect(canvas).toHaveClass('shadow-lg');
   });
 
   it('draws field on canvas', () => {

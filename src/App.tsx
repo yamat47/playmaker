@@ -1,4 +1,4 @@
-import Field, { type Player } from './components/Field';
+import Field, { type Player, type Line } from './components/Field';
 import { useState, useRef, useEffect } from 'react';
 
 // Responsive wrapper component that calculates field dimensions
@@ -73,9 +73,13 @@ function App() {
   >('select');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [lines, setLines] = useState<Line[]>([]);
+  void lines; // TODO: lines will be used for displaying line properties
   const [players, setPlayers] = useState<Player[]>([]);
   const [startRouteDrawing, setStartRouteDrawing] = useState<{
-    playerId: string;
+    playerId?: string;
+    lineId?: string;
     routeType: 'solid' | 'dashed' | 'dotted';
   } | null>(null);
 
@@ -484,6 +488,12 @@ function App() {
                   updatePlayer(playerId, updates);
                 }}
                 onToolChange={setCurrentTool}
+                onLineSelect={(lineId, newLines) => {
+                  setSelectedLineId(lineId);
+                  if (newLines) {
+                    setLines(newLines);
+                  }
+                }}
                 startRouteDrawing={startRouteDrawing}
                 onRouteDrawingStart={setStartRouteDrawing}
               />
@@ -686,6 +696,105 @@ function App() {
                 {startRouteDrawing && (
                   <p className="text-xs text-blue-600 mt-2">
                     Click on field to draw route
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : selectedLineId ? (
+            <div className="space-y-4">
+              {/* Line Information */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Type</label>
+                <div className="text-sm text-gray-700">Line</div>
+              </div>
+
+              {/* Route Drawing Options for continuing from line */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-2">
+                  Continue Route
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    title="Solid Line"
+                    className={`p-3 flex items-center justify-center rounded border transition-all ${
+                      startRouteDrawing?.routeType === 'solid'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() =>
+                      setStartRouteDrawing({
+                        lineId: selectedLineId,
+                        routeType: 'solid',
+                      })
+                    }
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 32 16">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="30"
+                        y2="8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    title="Dashed Line"
+                    className={`p-3 flex items-center justify-center rounded border transition-all ${
+                      startRouteDrawing?.routeType === 'dashed'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() =>
+                      setStartRouteDrawing({
+                        lineId: selectedLineId,
+                        routeType: 'dashed',
+                      })
+                    }
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 32 16">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="30"
+                        y2="8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeDasharray="5 3"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    title="Dotted Line"
+                    className={`p-3 flex items-center justify-center rounded border transition-all ${
+                      startRouteDrawing?.routeType === 'dotted'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
+                    }`}
+                    onClick={() =>
+                      setStartRouteDrawing({
+                        lineId: selectedLineId,
+                        routeType: 'dotted',
+                      })
+                    }
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 32 16">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="30"
+                        y2="8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeDasharray="2 2"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                {startRouteDrawing && (
+                  <p className="text-xs text-blue-600 mt-2">
+                    Line will be added from endpoint
                   </p>
                 )}
               </div>

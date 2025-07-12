@@ -158,7 +158,7 @@ const Field = ({
           y: fiftyYardLine,
           team: 'offense',
           shape: 'circle',
-          color: '#3B82F6',
+          color: '#ffffff', // 白色（無色）
           label: 'X',
         },
         {
@@ -467,14 +467,19 @@ const Field = ({
         const player = players.find((p) => p.id === line.playerId);
         if (!player) return;
 
-        // 選択されているラインは別のスタイルで描画
+        // 選択されているラインにグローエフェクトを適用
         if (line.id === selectedLineId) {
-          ctx.strokeStyle = '#4338ca'; // 濃い青紫
-          ctx.lineWidth = 4;
-        } else {
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 3;
+          ctx.save();
+          // シャドウ（blur）を設定
+          ctx.shadowColor = '#0C8CE9';
+          ctx.shadowBlur = 20;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
         }
+
+        // 線の色は変えない
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = line.id === selectedLineId ? 4 : 3;
 
         // 線種に応じてダッシュパターンを設定
         if (line.type === 'dashed') {
@@ -523,6 +528,11 @@ const Field = ({
             lastPoint.y - arrowLength * Math.sin(angle + arrowAngle),
           );
           ctx.stroke();
+        }
+
+        // 選択されている場合はシャドウをリセット
+        if (line.id === selectedLineId) {
+          ctx.restore();
         }
 
         // 選択されたラインの場合、ポイントを表示
@@ -581,34 +591,57 @@ const Field = ({
     }
 
     // 選手を描画
-    const playerRadius = footToPixel * 1.5; // 1.5フィート（約45cm）
+    const playerRadius = footToPixel * 2; // 2フィート（約60cm）- ひと回り大きく
 
     players.forEach((player) => {
-      // 選手の色
-      ctx.fillStyle = player.color || '#3B82F6';
-
-      // 選択されている場合は枠線を追加
+      // 選択時の青いグローエフェクトを先に描画
       if (player.id === selectedPlayerId) {
-        ctx.strokeStyle = '#4338ca';
-        ctx.lineWidth = 3;
+        ctx.save();
+        // シャドウ（blur）を設定 - より濃く
+        ctx.shadowColor = '#0C8CE9';
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // 選択時: 透明なアウトライン（blurのみ表示するため）
+        ctx.strokeStyle = 'transparent';
+        ctx.lineWidth = 0;
+
+        // シャドウを適用するために形を描画
+        if (player.shape === 'square') {
+          const size = playerRadius * 1.5;
+          ctx.fillStyle = 'rgba(12, 140, 233, 0.8)';
+          ctx.fillRect(player.x - size / 2, player.y - size / 2, size, size);
+        } else {
+          ctx.fillStyle = 'rgba(12, 140, 233, 0.8)';
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, playerRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
       }
+
+      // 選手の色（白色をデフォルトに）
+      ctx.fillStyle = player.color || '#ffffff';
 
       // 形状に応じて描画
       if (player.shape === 'square') {
         // 四角形を描画
         const size = playerRadius * 1.5;
         ctx.fillRect(player.x - size / 2, player.y - size / 2, size, size);
-        if (player.id === selectedPlayerId) {
-          ctx.strokeRect(player.x - size / 2, player.y - size / 2, size, size);
-        }
+        // やや濃いグレーの枠線
+        ctx.strokeStyle = '#666666';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(player.x - size / 2, player.y - size / 2, size, size);
       } else {
         // 円を描画（デフォルト）
         ctx.beginPath();
         ctx.arc(player.x, player.y, playerRadius, 0, Math.PI * 2);
         ctx.fill();
-        if (player.id === selectedPlayerId) {
-          ctx.stroke();
-        }
+        // やや濃いグレーの枠線
+        ctx.strokeStyle = '#666666';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
 
       // ラベルを描画
@@ -617,7 +650,8 @@ const Field = ({
 
         // テキストのスタイル設定
         ctx.fillStyle = '#FFFFFF'; // 白文字
-        ctx.strokeStyle = player.color || '#3B82F6'; // 背景色で縁取り
+        ctx.strokeStyle =
+          player.color === '#ffffff' ? '#666666' : player.color || '#666666'; // 白の場合はグレーで縁取り
         ctx.lineWidth = 3;
         ctx.font = `bold ${playerRadius * 0.8}px Arial`;
         ctx.textAlign = 'center';
@@ -646,6 +680,7 @@ const Field = ({
     selectedLineId,
     selectedPoint,
     selectedPlayerId,
+    hoveredPlayer,
   ]);
 
   // Mouse event handlers
@@ -661,7 +696,7 @@ const Field = ({
     const fieldWidthYards = 53.3;
     const yardWidth = width / fieldWidthYards;
     const footToPixel = yardWidth / 3;
-    const playerRadius = footToPixel * 1.5;
+    const playerRadius = footToPixel * 2; // 2フィート（約60cm）- ひと回り大きく
 
     if (isDrawingMode && drawingLine) {
       // ダブルクリックの検出（300ms以内）
@@ -706,7 +741,7 @@ const Field = ({
         y,
         team: 'offense',
         shape: 'circle',
-        color: '#3B82F6', // デフォルトは青色
+        color: '#ffffff', // デフォルトは白色（無色）
         label: '', // デフォルトは空
       };
       setPlayers([...players, newPlayer]);
@@ -857,7 +892,7 @@ const Field = ({
     const fieldWidthYards = 53.3;
     const yardWidth = width / fieldWidthYards;
     const footToPixel = yardWidth / 3;
-    const playerRadius = footToPixel * 1.5;
+    const playerRadius = footToPixel * 2; // 2フィート（約60cm）- ひと回り大きく
 
     let isHovering = false;
     for (const player of players) {
@@ -1063,7 +1098,7 @@ const Field = ({
                 : draggingPlayer || draggingLine || draggingPoint
                   ? 'grabbing'
                   : hoveredPlayer
-                    ? 'grab'
+                    ? 'pointer'
                     : 'default',
       }}
     />

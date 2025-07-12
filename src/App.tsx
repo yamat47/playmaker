@@ -567,7 +567,7 @@ function App() {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { name: 'Blue', value: '#3B82F6' },
+                    { name: 'White', value: '#ffffff' },
                     { name: 'Red', value: '#EF4444' },
                     { name: 'Green', value: '#10B981' },
                     { name: 'Yellow', value: '#F59E0B' },
@@ -581,7 +581,7 @@ function App() {
                         selectedPlayer?.color === color.value
                           ? 'border-gray-800 shadow-md'
                           : 'border-gray-300 hover:border-gray-500'
-                      }`}
+                      } ${color.value === '#ffffff' ? 'bg-white' : ''}`}
                       style={{ backgroundColor: color.value }}
                       onClick={() => {
                         if (selectedPlayer) {
@@ -590,7 +590,11 @@ function App() {
                           });
                         }
                       }}
-                    />
+                    >
+                      {color.value === '#ffffff' && (
+                        <div className="w-full h-full bg-gray-100 rounded-sm" />
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>

@@ -470,6 +470,27 @@ function App() {
                 </div>
               </div>
 
+              {/* Label Input */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-2">
+                  Label
+                </label>
+                <input
+                  type="text"
+                  value={selectedPlayer?.label || ''}
+                  onChange={(e) => {
+                    if (selectedPlayer) {
+                      updatePlayer(selectedPlayer.id, {
+                        label: e.target.value,
+                      });
+                    }
+                  }}
+                  placeholder="X, Y, DE, 8, 82..."
+                  className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                  maxLength={4}
+                />
+              </div>
+
               {/* Color Selection */}
               <div>
                 <label className="block text-xs text-gray-500 mb-2">
@@ -595,48 +616,12 @@ function App() {
                   </p>
                 )}
               </div>
-
-              {/* Position */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Position
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    placeholder="X"
-                    className="bg-gray-50 border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Y"
-                    className="bg-gray-50 border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              </div>
             </div>
           ) : selectedElement ? (
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Type</label>
                 <div className="text-sm text-gray-700">{selectedElement}</div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Position
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    placeholder="X"
-                    className="bg-gray-50 border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Y"
-                    className="bg-gray-50 border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                </div>
               </div>
             </div>
           ) : (

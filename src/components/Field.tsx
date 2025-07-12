@@ -130,14 +130,26 @@ const Field = ({
     if (players.length === 0) {
       const fieldWidthYards = 53.3;
       const displayYards = 30;
-      const yardHeight = height / displayYards;
-      const yardWidth = width / fieldWidthYards;
+
+      // 初期配置のための計算（描画時と同じ計算）
+      const tempInchToPixel = width / fieldWidthYards / 36;
+      const horizontalLineThickness = tempInchToPixel * 4;
+      const effectiveHeight = height - horizontalLineThickness;
+      const yardHeight = effectiveHeight / displayYards;
+      const topOffset = horizontalLineThickness / 2;
+
+      const tempYardWidth = width / fieldWidthYards;
+      const tempInchToPixelWidth = tempYardWidth / 36;
+      const sidelineThickness = tempInchToPixelWidth * 4;
+      const effectiveWidth = width - sidelineThickness;
+      const yardWidth = effectiveWidth / fieldWidthYards;
+
       const footToPixel = yardWidth / 3;
       const hashInsetFeet = 60;
       const hashInset = footToPixel * hashInsetFeet;
-      const hashLeftX = hashInset;
-      const hashRightX = width - hashInset;
-      const fiftyYardLine = 15 * yardHeight;
+      const hashLeftX = sidelineThickness / 2 + hashInset;
+      const hashRightX = width - sidelineThickness / 2 - hashInset;
+      const fiftyYardLine = topOffset + 15 * yardHeight;
 
       setPlayers([
         {
@@ -207,28 +219,40 @@ const Field = ({
       ctx.scale(dpr, dpr);
     }
 
-    // フィールドの緑色背景
-    ctx.fillStyle = '#4a7c59';
+    // フィールドの白色背景
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
 
     // フィールドの寸法計算
     // 実際のフィールド: 幅53.3ヤード、表示範囲30ヤード（35-65ヤード）
     const fieldWidthYards = 53.3;
     const displayYards = 30;
-    const yardHeight = height / displayYards;
-    const yardWidth = width / fieldWidthYards;
+
+    // 上下の線の太さを考慮して実際のフィールド高さを計算
+    const tempInchToPixel = width / fieldWidthYards / 36;
+    const horizontalLineThickness = tempInchToPixel * 4;
+    const effectiveHeight = height - horizontalLineThickness; // 上下の線の内側間の高さ
+    const yardHeight = effectiveHeight / displayYards;
+    const topOffset = horizontalLineThickness / 2; // 上端からのオフセット
+
+    // サイドラインの太さを考慮して実際のフィールド幅を計算
+    const tempYardWidth = width / fieldWidthYards;
+    const tempInchToPixelSide = tempYardWidth / 36;
+    const sidelineThickness = tempInchToPixelSide * 4;
+    const effectiveWidth = width - sidelineThickness; // サイドラインの内側間の幅
+    const yardWidth = effectiveWidth / fieldWidthYards;
 
     // 単位変換（1ヤード = 3フィート = 36インチ）
     const inchToPixel = yardWidth / 36;
     const footToPixel = yardWidth / 3;
 
-    // サイドラインの位置（実際のフィールドに合わせて）
-    const sidelineLeft = 0;
-    const sidelineRight = width;
+    // サイドラインの位置
+    const sidelineLeft = sidelineThickness / 2;
+    const sidelineRight = width - sidelineThickness / 2;
 
-    // サイドライン（4インチ幅）
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = inchToPixel * 4;
+    // サイドライン（太い線）
+    ctx.strokeStyle = '#999999';
+    ctx.lineWidth = inchToPixel * 4; // 4インチ幅
     ctx.beginPath();
     ctx.moveTo(sidelineLeft, 0);
     ctx.lineTo(sidelineLeft, height);
@@ -239,26 +263,27 @@ const Field = ({
     // 5ヤードごとの横線（35, 40, 45, 50, 55, 60, 65）
     // NCAAルール: サイドラインまで引く
     const lineInset = 0;
+    ctx.strokeStyle = '#999999';
     ctx.lineWidth = inchToPixel * 4; // 4インチ幅
     for (let yard = 35; yard <= 65; yard += 5) {
-      const y = (65 - yard) * yardHeight;
+      const y = topOffset + (65 - yard) * yardHeight;
       ctx.beginPath();
       ctx.moveTo(sidelineLeft + lineInset, y);
       ctx.lineTo(sidelineRight - lineInset, y);
       ctx.stroke();
     }
 
-    // 50ヤードラインの強調（他の線と同じ4インチ幅）
-    ctx.lineWidth = inchToPixel * 4;
-    ctx.strokeStyle = '#ffffff';
-    const fiftyYardY = 15 * yardHeight; // 65-50=15
+    // 50ヤードラインの強調
+    ctx.lineWidth = inchToPixel * 4; // 4インチ幅
+    ctx.strokeStyle = '#999999';
+    const fiftyYardY = topOffset + 15 * yardHeight; // 65-50=15
     ctx.beginPath();
     ctx.moveTo(sidelineLeft + lineInset, fiftyYardY);
     ctx.lineTo(sidelineRight - lineInset, fiftyYardY);
     ctx.stroke();
 
     // 1ヤードマーク（フィールド端とハッシュマーク）
-    ctx.lineWidth = inchToPixel * 4; // 4インチ幅
+    ctx.lineWidth = inchToPixel * 2; // 2インチ幅（細い線）
     const markLength = inchToPixel * 24; // 24インチ（2フィート）長
 
     // フィールド端のマーク位置（4インチ内側）
@@ -283,7 +308,7 @@ const Field = ({
     for (let i = 0; i <= displayYards; i++) {
       if (i % 5 !== 0) {
         // 5ヤードラインでは描画しない
-        const y = i * yardHeight;
+        const y = topOffset + i * yardHeight;
 
         // 左端のマーク
         ctx.beginPath();
@@ -318,7 +343,7 @@ const Field = ({
 
     // ヤード数字の描画
     ctx.font = 'bold 36px Arial'; // サイズを小さく
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#CCCCCC'; // 薄いグレーで塗りつぶし
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -331,7 +356,7 @@ const Field = ({
 
     // 左側の数字（外から見て自然な向き）
     for (const { digit1, digit2, yardLine } of yardNumbersConfig) {
-      const lineY = (65 - yardLine) * yardHeight;
+      const lineY = topOffset + (65 - yardLine) * yardHeight;
       const digitSpacing = 16; // 数字間の間隔（より詰めて表示）
 
       // 第1桁（上側）
@@ -355,7 +380,7 @@ const Field = ({
         const arrowOffset = footToPixel * 6; // 数字から6フィート離れた位置
 
         ctx.save();
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#CCCCCC'; // 薄いグレーで塗りつぶし
 
         if (yardLine === 40) {
           // 40ヤード - 矢印は数字の下（35ヤード方向）- 上向き矢印
@@ -380,7 +405,7 @@ const Field = ({
 
     // 右側の数字（外から見て自然な向き）
     for (const { digit1, digit2, yardLine } of yardNumbersConfig) {
-      const lineY = (65 - yardLine) * yardHeight;
+      const lineY = topOffset + (65 - yardLine) * yardHeight;
       const digitSpacing = 16; // 数字間の間隔（より詰めて表示）
 
       // 第1桁（下側に配置 - 右側は読み方向が逆）
@@ -404,7 +429,7 @@ const Field = ({
         const arrowOffset = footToPixel * 6; // 数字から6フィート離れた位置
 
         ctx.save();
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#CCCCCC'; // 薄いグレーで塗りつぶし
 
         if (yardLine === 40) {
           // 40ヤード - 矢印は数字の下（35ヤード方向）- 上向き矢印
@@ -1020,7 +1045,7 @@ const Field = ({
   return (
     <canvas
       ref={canvasRef}
-      className="border border-gray-300 shadow-lg"
+      className="shadow-lg"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

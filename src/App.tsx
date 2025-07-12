@@ -402,7 +402,7 @@ function App() {
 
         {/* Center - Canvas */}
         <main className="flex-1 bg-gray-100 overflow-auto">
-          <div className="min-h-full flex items-center justify-center p-8">
+          <div className="min-h-full flex items-center justify-center px-12 py-8">
             <Field
               currentTool={currentTool}
               selectedPlayerId={selectedPlayerId}

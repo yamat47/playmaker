@@ -74,14 +74,44 @@ function App() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [selectedSegmentPath, setSelectedSegmentPath] = useState<
+    number[] | null
+  >(null);
   const [lines, setLines] = useState<Line[]>([]);
-  void lines; // TODO: lines will be used for displaying line properties
   const [players, setPlayers] = useState<Player[]>([]);
   const [startRouteDrawing, setStartRouteDrawing] = useState<{
     playerId?: string;
     lineId?: string;
     routeType: 'solid' | 'dashed' | 'dotted';
   } | null>(null);
+  const fieldRef = useRef<{
+    changeSegmentType: (
+      lineId: string,
+      segmentPath: number[],
+      newType: 'solid' | 'dashed' | 'dotted',
+    ) => void;
+  }>(null);
+
+  // Helper function to get selected segment type
+  const getSelectedSegmentType = (): 'solid' | 'dashed' | 'dotted' | null => {
+    if (!selectedLineId || !selectedSegmentPath) return null;
+
+    const line = lines.find((l) => l.id === selectedLineId);
+    if (!line) return null;
+
+    // Navigate to the selected segment
+    let currentSegment = line.segments[selectedSegmentPath[0]];
+    for (let i = 1; i < selectedSegmentPath.length; i++) {
+      if (
+        !currentSegment.branches ||
+        !currentSegment.branches[selectedSegmentPath[i]]
+      )
+        return null;
+      currentSegment = currentSegment.branches[selectedSegmentPath[i]];
+    }
+
+    return currentSegment.type;
+  };
 
   const updatePlayer = (playerId: string, updates: Partial<Player>) => {
     setPlayers((prevPlayers) =>
@@ -474,6 +504,7 @@ function App() {
           <ResponsiveFieldWrapper>
             {(width, height) => (
               <Field
+                ref={fieldRef}
                 width={width}
                 height={height}
                 currentTool={currentTool}
@@ -488,8 +519,9 @@ function App() {
                   updatePlayer(playerId, updates);
                 }}
                 onToolChange={setCurrentTool}
-                onLineSelect={(lineId, newLines) => {
+                onLineSelect={(lineId, newLines, segmentPath) => {
                   setSelectedLineId(lineId);
+                  setSelectedSegmentPath(segmentPath || null);
                   if (newLines) {
                     setLines(newLines);
                   }
@@ -707,6 +739,63 @@ function App() {
                 <label className="block text-xs text-gray-500 mb-1">Type</label>
                 <div className="text-sm text-gray-700">Line</div>
               </div>
+
+              {/* Change Line Type */}
+              {selectedSegmentPath && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-2">
+                    Change Line Type
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['solid', 'dashed', 'dotted'].map((type) => {
+                      const currentType = getSelectedSegmentType();
+                      const isActive = currentType === type;
+                      return (
+                        <button
+                          key={type}
+                          title={`${type.charAt(0).toUpperCase() + type.slice(1)} Line`}
+                          className={`p-3 flex items-center justify-center rounded border transition-all ${
+                            isActive
+                              ? 'bg-green-500 text-white border-green-600'
+                              : 'bg-white hover:bg-green-50 text-gray-600 hover:text-green-600 border-gray-300'
+                          }`}
+                          onClick={() => {
+                            if (
+                              selectedLineId &&
+                              selectedSegmentPath &&
+                              fieldRef.current
+                            ) {
+                              fieldRef.current.changeSegmentType(
+                                selectedLineId,
+                                selectedSegmentPath,
+                                type as 'solid' | 'dashed' | 'dotted',
+                              );
+                            }
+                          }}
+                        >
+                          <svg className="w-8 h-4" viewBox="0 0 32 16">
+                            <line
+                              x1="2"
+                              y1="8"
+                              x2="30"
+                              y2="8"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeDasharray={
+                                type === 'dashed'
+                                  ? '5 3'
+                                  : type === 'dotted'
+                                    ? '2 2'
+                                    : undefined
+                              }
+                            />
+                          </svg>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Route Drawing Options for continuing from line */}
               <div>

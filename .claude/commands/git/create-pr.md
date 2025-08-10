@@ -4,14 +4,13 @@ allowed-tools: >
   Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*),
   Bash(git push:*), Bash(git rev-parse:*), Bash(gh pr create:*),
   Bash(gh repo view:*), Bash(gh auth status:*), Bash(date:*),
-  Markdown(commands/git/commit.md)
+  Markdown(commands/git/commits.md)
 description: |
-  Stage all relevant changes, create a Conventional-Commits commit
-  (delegating to `commands/git/commit.md`), push a new branch, and open a
+  Stage all relevant changes, create multiple Conventional-Commits commits
+  (delegating to `commands/git/commits.md`), push a new branch, and open a
   pull request to **main** with a standardised body template.
   The command is fully non-interactive; it fails on missing data.
-  `$ARGUMENTS`, if present, pre-populates the commit *subject* and the PR
-  *title*.
+  `$ARGUMENTS`, if present, pre-populates the PR *title*.
 ---
 
 ## Context
@@ -22,125 +21,130 @@ description: |
 
 ## Task
 
-1. **Create commit**
-   - Invoke the existing commit command, forwarding `$ARGUMENTS`.
+1. **Derive branch name**
+   - Generate a branch name based on the commit type and date.
+   - If `$ARGUMENTS` is provided, use it to derive a slug; otherwise generate a temporary name:
 
      ```bash
-     claude /commands/git/commit $ARGUMENTS
-     ```
-
-   - Capture the new commit hash in `NEW_COMMIT=$(git rev-parse --short HEAD)`.
-
-2. **Derive branch name**
-   - Use the commit _type_ and _subject_ (kebab-cased, ≤40 chars) plus a
-     datestamp:
-
-     ```bash
-     TYPE=$(git log -1 --format=%s | cut -d'(' -f1)
-     SLUG=$(git log -1 --format=%s | sed -E 's/^[^:]+: //; s/[^a-zA-Z0-9]+/-/g; s/-+$//; s/^-+//; s/-{2,}/-/g' | cut -c1-40 | tr '[:upper:]' '[:lower:]')
      DATE=$(date +%Y%m%d)
+     if [ -n "$ARGUMENTS" ]; then
+       # Extract type from arguments (assume format like "feat: something")
+       TYPE=$(echo "$ARGUMENTS" | cut -d':' -f1 | tr -d ' ')
+       # Create slug from the rest of the message
+       SLUG=$(echo "$ARGUMENTS" | sed -E 's/^[^:]+: //; s/[^a-zA-Z0-9]+/-/g; s/-+$//; s/^-+//; s/-{2,}/-/g' | cut -c1-40 | tr '[:upper:]' '[:lower:]')
+     else
+       # Generate a temporary branch name
+       TYPE="feature"
+       SLUG="update"
+     fi
      BRANCH="${TYPE}/${SLUG}-${DATE}"
      ```
 
-3. **Create and push branch**
+2. **Create and switch to new branch**
 
    ```bash
    git switch -c "$BRANCH"
+   ```
+
+   - This ensures we're not committing directly to main.
+
+3. **Create commits**
+   - Invoke the existing commits command to create multiple logical commits.
+
+     ```bash
+     claude /commands/git/commits
+     ```
+
+   - This will automatically analyze all changes and create multiple commits grouped by functionality.
+
+4. **Push branch to remote**
+
+   ```bash
    git push -u origin "$BRANCH"
    ```
 
    - Abort with error if push fails.
 
-4. **Analyze changes and compose PR metadata**
-   - Title: If $ARGUMENTS is non-empty, use it; otherwise use the commit subject verbatim.
+5. **Analyze changes and compose PR metadata**
+   - Title: Analyze all commit messages and create a comprehensive title that summarizes the changes.
+     - If $ARGUMENTS is provided, consider it as a hint but still analyze all commits.
+     - Generate a title that captures the overall purpose of all commits.
+   - **REQUIRED: Read the PR template from `.github/pull_request_template.md` or `.github/PULL_REQUEST_TEMPLATE.md`**
+     - If no template exists, abort with error message
    - Gather information about changes:
 
      ```bash
      # Get changed files
      CHANGED_FILES=$(git diff --name-status main...HEAD)
 
-     # Get commit message details
-     COMMIT_MSG=$(git log -1 --format=%B)
-     COMMIT_TYPE=$(git log -1 --format=%s | cut -d':' -f1)
+     # Get all commit messages since main
+     COMMITS=$(git log main...HEAD --format="- %s")
+
+     # Get last commit details for title if needed
+     LAST_COMMIT_MSG=$(git log -1 --format=%s)
+
+     # REQUIRED: Read PR template (must check both possible locations)
+     if [ -f .github/pull_request_template.md ]; then
+       PR_TEMPLATE=$(cat .github/pull_request_template.md)
+     elif [ -f .github/PULL_REQUEST_TEMPLATE.md ]; then
+       PR_TEMPLATE=$(cat .github/PULL_REQUEST_TEMPLATE.md)
+     else
+       echo "Error: PR template not found in .github/" >&2
+       exit 1
+     fi
      ```
 
-   - Generate comprehensive PR body based on changes:
-     - Analyze file changes to understand the impact
-     - Create detailed implementation notes
-     - Generate clear testing instructions
-     - All content must be in English
+   - Generate comprehensive PR title and body:
+     - **Title Generation**:
+       - Analyze all commit messages to understand the scope of changes
+       - If multiple features/fixes, use a general title like "feat: 複数の機能改善と修正"
+       - If focused on one area, be specific like "feat(admin): 管理画面の機能強化"
+       - Consider commit types (feat, fix, etc.) to determine the primary type
+       - Title should be in Conventional Commits format with Japanese description
+     - **Body Generation**:
+       - **REQUIRED: Parse and fill in ALL template sections with appropriate content**
+       - **REQUIRED: Remove all HTML comments (<!-- -->) and placeholder text**
+       - Analyze file changes to understand the impact
+       - Create detailed implementation notes based on actual changes
+       - List all commits in the appropriate section
+       - All content must be in Japanese
+       - Use active voice with developer as subject (e.g., "実装しました" not "実装されました")
+       - **IMPORTANT: The PR body must follow the exact structure of the template**
+       - **IMPORTANT: In Japanese text, insert a line break after each sentence ending with "。" for better readability**
 
-5. **Create pull request with auto-generated content**
+6. **Create pull request with auto-generated content**
 
    ```bash
-   # Generate PR body content
-   PR_BODY=$(cat <<EOF
+   # Generate PR body content based on template
+   # The PR body MUST be generated by:
+   # 1. REQUIRED: Reading the template from .github/pull_request_template.md or .github/PULL_REQUEST_TEMPLATE.md
+   # 2. REQUIRED: Filling in ALL sections from the template based on the commit and changes
+   # 3. REQUIRED: Removing ALL HTML comment lines (lines containing <!--) and placeholder text
+   # 4. REQUIRED: Following the exact structure and section headers from the template
+   # 5. Ensuring all content is in Japanese with active voice
+
+   # [The actual PR body generation will be done by the AI assistant
+   # who MUST read the template and fill it in appropriately]
+
+   # IMPORTANT: The AI assistant MUST:
+   # - First read the PR template file
+   # - Fill in each section (背景/モチベーション, 詳細, 補足情報, チェックリスト)
+   # - Not skip any sections from the template
+   # - Remove all HTML comments and example text
+
+   gh pr create \
+     --base main \
+     --head "$BRANCH" \
+     --title "$TITLE" \
+     --body "$PR_BODY"
    ```
 
-### Summary
-
-This pull request introduces commit \`$NEW_COMMIT\` on branch \`$BRANCH\`.
-
-### Checklist
-
-- [ ] Code builds and unit tests pass locally
-- [ ] Relevant documentation updated
-- [ ] Reviewer has sufficient context
-
-### Motivation and Context
-
-<!-- Explain *why* the change is necessary, link issues if applicable -->
-
-[Analyze the commit type and message to explain why these changes are necessary]
-
-### Implementation Details
-
-<!-- Briefly describe *what* was done and any important decisions -->
-
-[Based on the changed files and commit message, describe what was implemented:
-
-- List specific files that were added/modified/deleted
-- Explain the purpose of each significant change
-- Include technical details about the implementation]
-
-### Testing Instructions
-
-<!-- Provide clear, repeatable steps so reviewers can verify the change -->
-
-[Provide clear steps to test the changes:
-
-1. How to verify the functionality works
-2. What edge cases to check
-3. Expected behavior]
-
-### Related Issues
-
-<!-- e.g. Closes #123, Relates to #456 -->
-
-[Check if commit message references any issues, otherwise state N/A]
-
-### Notes for Release
-
-<!-- Optional: user-facing details for the changelog -->
-
-[Summarize user-facing changes in a concise way]
-EOF
-)
-
-gh pr create \
- --base main \
- --head "$BRANCH" \
-   --title "$TITLE" \
- --body "$PR_BODY"
-
-````
-
-6. Display result
+7. Display result
 
 ```bash
 echo "Pull request opened:"
 gh pr view --web
-````
+```
 
-7. Output
+8. Output
    - Print the PR URL on stdout for downstream tooling.

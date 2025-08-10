@@ -4,6 +4,7 @@ import {
   useState,
   useImperativeHandle,
   forwardRef,
+  useCallback,
 } from 'react';
 
 interface FieldProps {
@@ -150,19 +151,24 @@ const Field = forwardRef<FieldRef, FieldProps>(
     };
     const [internalLines, setInternalLines] = useState<Line[]>([]);
     const lines = externalLines || internalLines;
-    const setLines = (
-      newLines: Line[] | ((prev: Line[]) => Line[]),
-    ) => {
-      if (onLinesChange) {
-        if (typeof newLines === 'function') {
-          onLinesChange(newLines(lines));
+    const setLines = useCallback(
+      (newLines: Line[] | ((prev: Line[]) => Line[])) => {
+        if (onLinesChange) {
+          if (typeof newLines === 'function') {
+            onLinesChange(newLines(lines));
+          } else {
+            onLinesChange(newLines);
+          }
         } else {
-          onLinesChange(newLines);
+          if (typeof newLines === 'function') {
+            setInternalLines(newLines);
+          } else {
+            setInternalLines(newLines);
+          }
         }
-      } else {
-        setInternalLines(newLines);
-      }
-    };
+      },
+      [lines, onLinesChange],
+    );
     const [draggingPlayer, setDraggingPlayer] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [hoveredPlayer, setHoveredPlayer] = useState<string | null>(null);
@@ -627,6 +633,7 @@ const Field = forwardRef<FieldRef, FieldProps>(
       onLineSelect,
       width,
       height,
+      setLines,
     ]);
 
     // Drawing effect

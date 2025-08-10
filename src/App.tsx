@@ -67,9 +67,7 @@ function ResponsiveFieldWrapper({
 }
 
 function App() {
-  const [currentTool, setCurrentTool] = useState<
-    'select' | 'player'
-  >('select');
+  const [currentTool, setCurrentTool] = useState<'select' | 'player'>('select');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
@@ -135,11 +133,11 @@ function App() {
 
   const handleDeletePlayer = () => {
     if (!selectedPlayerId) return;
-    
+
     // プレイヤーと関連する線を削除
-    setPlayers(prev => prev.filter(p => p.id !== selectedPlayerId));
-    setLines(prev => prev.filter(l => l.playerId !== selectedPlayerId));
-    
+    setPlayers((prev) => prev.filter((p) => p.id !== selectedPlayerId));
+    setLines((prev) => prev.filter((l) => l.playerId !== selectedPlayerId));
+
     // 選択状態をクリア
     setSelectedPlayerId(null);
     setSelectedPlayer(null);
@@ -147,67 +145,80 @@ function App() {
 
   const handleDeleteLine = () => {
     if (!selectedLineId) return;
-    
-    setLines(prev => {
+
+    setLines((prev) => {
       // 選択されたセグメントパスがない場合は、線全体を削除
       if (!selectedSegmentPath || selectedSegmentPath.length === 0) {
-        return prev.filter(l => l.id !== selectedLineId);
+        return prev.filter((l) => l.id !== selectedLineId);
       }
-      
+
       // 最初のセグメントが選択されている場合は、線全体を削除
       if (selectedSegmentPath.length === 1 && selectedSegmentPath[0] === 0) {
-        return prev.filter(l => l.id !== selectedLineId);
+        return prev.filter((l) => l.id !== selectedLineId);
       }
-      
+
       // それ以外の場合は、選択されたセグメントとその先を削除
-      return prev.map(line => {
-        if (line.id !== selectedLineId) return line;
-        
-        // Deep copy of segments
-        const newSegments = JSON.parse(JSON.stringify(line.segments));
-        
-        // Helper function to remove segment by path
-        const removeSegmentByPath = (segments: any[], path: number[]) => {
-          if (path.length === 1) {
-            // Remove this segment and all following segments
-            segments.length = path[0];
+      return prev
+        .map((line) => {
+          if (line.id !== selectedLineId) return line;
+
+          // Deep copy of segments
+          const newSegments = JSON.parse(JSON.stringify(line.segments));
+
+          // Helper function to remove segment by path
+          interface LineSegmentType {
+            points: { x: number; y: number }[];
+            type: 'solid' | 'dashed' | 'dotted';
+            branches?: LineSegmentType[];
+          }
+          const removeSegmentByPath = (
+            segments: LineSegmentType[],
+            path: number[],
+          ) => {
+            if (path.length === 1) {
+              // Remove this segment and all following segments
+              segments.length = path[0];
+              return true;
+            }
+
+            // Navigate to parent segment
+            let currentSegment = segments[path[0]];
+            for (let i = 1; i < path.length - 1; i++) {
+              if (
+                !currentSegment.branches ||
+                !currentSegment.branches[path[i]]
+              ) {
+                return false;
+              }
+              currentSegment = currentSegment.branches[path[i]];
+            }
+
+            // Remove the selected branch
+            if (currentSegment.branches) {
+              const branchIndex = path[path.length - 1];
+              currentSegment.branches.splice(branchIndex, 1);
+
+              // If no branches left, remove the branches array
+              if (currentSegment.branches.length === 0) {
+                delete currentSegment.branches;
+              }
+            }
+
             return true;
+          };
+
+          removeSegmentByPath(newSegments, selectedSegmentPath);
+
+          // If no segments left, filter out this line
+          if (newSegments.length === 0) {
+            return null;
           }
-          
-          // Navigate to parent segment
-          let currentSegment = segments[path[0]];
-          for (let i = 1; i < path.length - 1; i++) {
-            if (!currentSegment.branches || !currentSegment.branches[path[i]]) {
-              return false;
-            }
-            currentSegment = currentSegment.branches[path[i]];
-          }
-          
-          // Remove the selected branch
-          if (currentSegment.branches) {
-            const branchIndex = path[path.length - 1];
-            currentSegment.branches.splice(branchIndex, 1);
-            
-            // If no branches left, remove the branches array
-            if (currentSegment.branches.length === 0) {
-              delete currentSegment.branches;
-            }
-          }
-          
-          return true;
-        };
-        
-        removeSegmentByPath(newSegments, selectedSegmentPath);
-        
-        // If no segments left, filter out this line
-        if (newSegments.length === 0) {
-          return null;
-        }
-        
-        return { ...line, segments: newSegments };
-      }).filter((line): line is Line => line !== null);
+
+          return { ...line, segments: newSegments };
+        })
+        .filter((line): line is Line => line !== null);
     });
-    
+
     // 選択状態をクリア
     setSelectedLineId(null);
     setSelectedSegmentPath(null);
@@ -362,7 +373,6 @@ function App() {
               />
             </svg>
           </button>
-
 
           <div className="h-px bg-gray-200 w-8 my-2" />
 
@@ -791,7 +801,12 @@ function App() {
                              bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 
                              border border-red-200 rounded transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -967,7 +982,12 @@ function App() {
                              bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 
                              border border-red-200 rounded transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"

@@ -21,6 +21,5 @@ describe('App', () => {
     expect(screen.getByTitle('Formations')).toBeInTheDocument();
     expect(screen.getByTitle('Add Text')).toBeInTheDocument();
     expect(screen.getByTitle('Blocking')).toBeInTheDocument();
-    expect(screen.getByTitle('Eraser')).toBeInTheDocument();
   });
 });

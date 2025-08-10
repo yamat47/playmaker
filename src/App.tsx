@@ -67,9 +67,8 @@ function ResponsiveFieldWrapper({
 }
 
 function App() {
-  const [selectedElement] = useState<string | null>(null);
   const [currentTool, setCurrentTool] = useState<
-    'select' | 'player' | 'eraser'
+    'select' | 'player'
   >('select');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -132,6 +131,86 @@ function App() {
     link.download = 'play-diagram.png';
     link.href = canvas.toDataURL();
     link.click();
+  };
+
+  const handleDeletePlayer = () => {
+    if (!selectedPlayerId) return;
+    
+    // プレイヤーと関連する線を削除
+    setPlayers(prev => prev.filter(p => p.id !== selectedPlayerId));
+    setLines(prev => prev.filter(l => l.playerId !== selectedPlayerId));
+    
+    // 選択状態をクリア
+    setSelectedPlayerId(null);
+    setSelectedPlayer(null);
+  };
+
+  const handleDeleteLine = () => {
+    if (!selectedLineId) return;
+    
+    setLines(prev => {
+      // 選択されたセグメントパスがない場合は、線全体を削除
+      if (!selectedSegmentPath || selectedSegmentPath.length === 0) {
+        return prev.filter(l => l.id !== selectedLineId);
+      }
+      
+      // 最初のセグメントが選択されている場合は、線全体を削除
+      if (selectedSegmentPath.length === 1 && selectedSegmentPath[0] === 0) {
+        return prev.filter(l => l.id !== selectedLineId);
+      }
+      
+      // それ以外の場合は、選択されたセグメントとその先を削除
+      return prev.map(line => {
+        if (line.id !== selectedLineId) return line;
+        
+        // Deep copy of segments
+        const newSegments = JSON.parse(JSON.stringify(line.segments));
+        
+        // Helper function to remove segment by path
+        const removeSegmentByPath = (segments: any[], path: number[]) => {
+          if (path.length === 1) {
+            // Remove this segment and all following segments
+            segments.length = path[0];
+            return true;
+          }
+          
+          // Navigate to parent segment
+          let currentSegment = segments[path[0]];
+          for (let i = 1; i < path.length - 1; i++) {
+            if (!currentSegment.branches || !currentSegment.branches[path[i]]) {
+              return false;
+            }
+            currentSegment = currentSegment.branches[path[i]];
+          }
+          
+          // Remove the selected branch
+          if (currentSegment.branches) {
+            const branchIndex = path[path.length - 1];
+            currentSegment.branches.splice(branchIndex, 1);
+            
+            // If no branches left, remove the branches array
+            if (currentSegment.branches.length === 0) {
+              delete currentSegment.branches;
+            }
+          }
+          
+          return true;
+        };
+        
+        removeSegmentByPath(newSegments, selectedSegmentPath);
+        
+        // If no segments left, filter out this line
+        if (newSegments.length === 0) {
+          return null;
+        }
+        
+        return { ...line, segments: newSegments };
+      }).filter((line): line is Line => line !== null);
+    });
+    
+    // 選択状態をクリア
+    setSelectedLineId(null);
+    setSelectedSegmentPath(null);
   };
 
   return (
@@ -284,36 +363,6 @@ function App() {
             </svg>
           </button>
 
-          {/* Eraser Tool */}
-          {/* TODO: 要素を削除するツール
-           * - クリックで個別要素を削除
-           * - ドラッグで範囲削除
-           * - 削除対象のフィルター（プレイヤーのみ、ルートのみ等）
-           * - 全削除機能
-           */}
-          <button
-            title="Eraser"
-            className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
-              currentTool === 'eraser'
-                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
-            }`}
-            onClick={() => setCurrentTool('eraser')}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
 
           <div className="h-px bg-gray-200 w-8 my-2" />
 
@@ -511,6 +560,8 @@ function App() {
                 selectedPlayerId={selectedPlayerId}
                 players={players}
                 onPlayersChange={setPlayers}
+                lines={lines}
+                onLinesChange={setLines}
                 onPlayerSelect={(playerId, player) => {
                   setSelectedPlayerId(playerId);
                   setSelectedPlayer(player || null);
@@ -731,6 +782,26 @@ function App() {
                   </p>
                 )}
               </div>
+
+              {/* Delete Button */}
+              <div className="pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleDeletePlayer}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 
+                             bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 
+                             border border-red-200 rounded transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  <span>Delete Player</span>
+                </button>
+              </div>
             </div>
           ) : selectedLineId ? (
             <div className="space-y-4">
@@ -887,12 +958,25 @@ function App() {
                   </p>
                 )}
               </div>
-            </div>
-          ) : selectedElement ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Type</label>
-                <div className="text-sm text-gray-700">{selectedElement}</div>
+
+              {/* Delete Button */}
+              <div className="pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleDeleteLine}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 
+                             bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 
+                             border border-red-200 rounded transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  <span>Delete Line</span>
+                </button>
               </div>
             </div>
           ) : (
@@ -906,7 +990,7 @@ function App() {
                   <li>• Press Enter to finish drawing</li>
                   <li>• Press Esc to cancel drawing</li>
                   <li>• Use Player tool to add players</li>
-                  <li>• Use Eraser tool to delete</li>
+                  <li>• Select element and use Delete key</li>
                 </ul>
               </div>
             </div>

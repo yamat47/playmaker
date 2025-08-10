@@ -9,13 +9,15 @@ import {
 interface FieldProps {
   width?: number;
   height?: number;
-  currentTool?: 'select' | 'player' | 'eraser';
+  currentTool?: 'select' | 'player';
   selectedPlayerId?: string | null;
   players?: Player[];
   onPlayersChange?: (players: Player[]) => void;
+  lines?: Line[];
+  onLinesChange?: (lines: Line[]) => void;
   onPlayerSelect?: (playerId: string | null, player?: Player) => void;
   onPlayerUpdate?: (playerId: string, updates: Partial<Player>) => void;
-  onToolChange?: (tool: 'select' | 'player' | 'eraser') => void;
+  onToolChange?: (tool: 'select' | 'player') => void;
   onLineSelect?: (
     lineId: string | null,
     lines?: Line[],
@@ -118,6 +120,8 @@ const Field = forwardRef<FieldRef, FieldProps>(
       currentTool = 'select',
       players: externalPlayers,
       onPlayersChange,
+      lines: externalLines,
+      onLinesChange,
       onPlayerSelect,
       onPlayerUpdate,
       onToolChange,
@@ -144,10 +148,24 @@ const Field = forwardRef<FieldRef, FieldProps>(
         setInternalPlayers(newPlayers);
       }
     };
+    const [internalLines, setInternalLines] = useState<Line[]>([]);
+    const lines = externalLines || internalLines;
+    const setLines = (
+      newLines: Line[] | ((prev: Line[]) => Line[]),
+    ) => {
+      if (onLinesChange) {
+        if (typeof newLines === 'function') {
+          onLinesChange(newLines(lines));
+        } else {
+          onLinesChange(newLines);
+        }
+      } else {
+        setInternalLines(newLines);
+      }
+    };
     const [draggingPlayer, setDraggingPlayer] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [hoveredPlayer, setHoveredPlayer] = useState<string | null>(null);
-    const [lines, setLines] = useState<Line[]>([]);
     const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
     const [selectedSegmentPath, setSelectedSegmentPath] = useState<
       number[] | null
@@ -1221,69 +1239,6 @@ const Field = forwardRef<FieldRef, FieldProps>(
 
         // 選手を追加したら選択モードに戻る
         onToolChange?.('select');
-      } else if (currentTool === 'eraser') {
-        // 消しゴムモード - プレイヤーをクリックして削除
-        for (const player of players) {
-          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
-          if (distance <= playerRadius) {
-            setPlayers(players.filter((p) => p.id !== player.id));
-            // プレイヤーに関連するラインも削除
-            setLines(lines.filter((l) => l.playerId !== player.id));
-            break;
-          }
-        }
-
-        // ラインをクリックして削除
-        for (const line of lines) {
-          const player = players.find((p) => p.id === line.playerId);
-          if (!player) continue;
-
-          let foundHit = false;
-          let currentPos = { x: player.x, y: player.y };
-
-          for (const segment of line.segments) {
-            // Check line from current position to first point
-            if (segment.points.length > 0) {
-              const distance = pointToLineDistance(
-                x,
-                y,
-                currentPos.x,
-                currentPos.y,
-                segment.points[0].x,
-                segment.points[0].y,
-              );
-              if (distance < 5) {
-                foundHit = true;
-              }
-            }
-
-            // Check lines within segment
-            for (let i = 0; i < segment.points.length - 1; i++) {
-              const distance = pointToLineDistance(
-                x,
-                y,
-                segment.points[i].x,
-                segment.points[i].y,
-                segment.points[i + 1].x,
-                segment.points[i + 1].y,
-              );
-              if (distance < 5) {
-                foundHit = true;
-                break;
-              }
-            }
-
-            // Update current position
-            if (segment.points.length > 0) {
-              currentPos = segment.points[segment.points.length - 1];
-            }
-
-            if (foundHit) {
-              setLines(lines.filter((l) => l.id !== line.id));
-              break;
-            }
-          }
-        }
       } else {
         // 通常モード (select) またはルート描画モード (route)
         let playerClicked = false;
@@ -1678,13 +1633,11 @@ const Field = forwardRef<FieldRef, FieldProps>(
           cursor:
             currentTool === 'player'
               ? 'copy'
-              : currentTool === 'eraser'
-                ? 'not-allowed'
-                : draggingPlayer || draggingLine || draggingPoint
-                  ? 'grabbing'
-                  : hoveredPlayer
-                    ? 'pointer'
-                    : 'default',
+              : draggingPlayer || draggingLine || draggingPoint
+                ? 'grabbing'
+                : hoveredPlayer
+                  ? 'pointer'
+                  : 'default',
         }}
       />
     );

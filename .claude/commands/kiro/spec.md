@@ -25,16 +25,19 @@ Execute the Specification-Driven Development workflow adapted for existing featu
 ### 3. Workflow Selection
 
 #### For Bug Fixes (simple issues):
+
 - Skip directly to minimal requirements and task list
 - Focus on understanding the bug and fix approach
 - Create lightweight documentation
 
 #### For Minor Enhancements (1-2 days work):
+
 - Execute `/requirements` for focused analysis
 - Simplified design focusing on integration points
 - Compact task list
 
 #### For Major Enhancements (3+ days work):
+
 - Full workflow: requirements → design → tasks
 - Comprehensive documentation
 - Detailed impact analysis
@@ -42,6 +45,7 @@ Execute the Specification-Driven Development workflow adapted for existing featu
 ### 4. Stage Execution
 
 Based on task type, execute appropriate stages:
+
 - Stage 1: Requirements analysis (focused on changes)
 - Stage 2: Design (emphasis on integration)
 - Stage 3: Task breakdown (implementation steps)
@@ -51,6 +55,7 @@ Based on task type, execute appropriate stages:
 ### 5. Implementation Readiness
 
 Provide:
+
 - Clear next steps for implementation
 - Identified files to modify
 - Testing approach

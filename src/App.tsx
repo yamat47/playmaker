@@ -1,4 +1,12 @@
-import Field, { type Player, type Line } from './components/Field';
+import Field from './components/Field';
+import type {
+  Player,
+  Line,
+  CurrentTool,
+  LineType,
+  RouteDrawingState,
+  FieldRef,
+} from './types';
 import { useState, useRef, useEffect } from 'react';
 
 // Responsive wrapper component that calculates field dimensions
@@ -67,7 +75,7 @@ function ResponsiveFieldWrapper({
 }
 
 function App() {
-  const [currentTool, setCurrentTool] = useState<'select' | 'player'>('select');
+  const [currentTool, setCurrentTool] = useState<CurrentTool>('select');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
@@ -76,21 +84,12 @@ function App() {
   >(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [startRouteDrawing, setStartRouteDrawing] = useState<{
-    playerId?: string;
-    lineId?: string;
-    routeType: 'solid' | 'dashed' | 'dotted';
-  } | null>(null);
-  const fieldRef = useRef<{
-    changeSegmentType: (
-      lineId: string,
-      segmentPath: number[],
-      newType: 'solid' | 'dashed' | 'dotted',
-    ) => void;
-  }>(null);
+  const [startRouteDrawing, setStartRouteDrawing] =
+    useState<RouteDrawingState | null>(null);
+  const fieldRef = useRef<FieldRef>(null);
 
   // Helper function to get selected segment type
-  const getSelectedSegmentType = (): 'solid' | 'dashed' | 'dotted' | null => {
+  const getSelectedSegmentType = (): LineType | null => {
     if (!selectedLineId || !selectedSegmentPath) return null;
 
     const line = lines.find((l) => l.id === selectedLineId);
@@ -168,7 +167,7 @@ function App() {
           // Helper function to remove segment by path
           interface LineSegmentType {
             points: { x: number; y: number }[];
-            type: 'solid' | 'dashed' | 'dotted';
+            type: LineType;
             branches?: LineSegmentType[];
           }
           const removeSegmentByPath = (
@@ -854,7 +853,7 @@ function App() {
                               fieldRef.current.changeSegmentType(
                                 selectedLineId,
                                 selectedSegmentPath,
-                                type as 'solid' | 'dashed' | 'dotted',
+                                type as LineType,
                               );
                             }
                           }}

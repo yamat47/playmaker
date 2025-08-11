@@ -1,13 +1,7 @@
 import Field from './components/Field';
-import type {
-  Player,
-  Line,
-  CurrentTool,
-  LineType,
-  RouteDrawingState,
-  FieldRef,
-} from './types';
+import type { Line, LineType, FieldRef } from './types';
 import { useState, useRef, useEffect } from 'react';
+import { useEditorStore } from './stores/editorStore';
 
 // Responsive wrapper component that calculates field dimensions
 function ResponsiveFieldWrapper({
@@ -75,17 +69,34 @@ function ResponsiveFieldWrapper({
 }
 
 function App() {
-  const [currentTool, setCurrentTool] = useState<CurrentTool>('select');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
-  const [selectedSegmentPath, setSelectedSegmentPath] = useState<
-    number[] | null
-  >(null);
-  const [lines, setLines] = useState<Line[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [startRouteDrawing, setStartRouteDrawing] =
-    useState<RouteDrawingState | null>(null);
+  // Zustand store hooks
+  const {
+    players,
+    lines,
+    selectedElementId,
+    selectedElementType,
+    selectedSegmentPath,
+    currentTool,
+    startRouteDrawing,
+    setPlayers,
+    setLines,
+    updatePlayer,
+    deletePlayer,
+    selectElement,
+    clearSelection,
+    setTool,
+    startDrawingRoute,
+    stopDrawingRoute,
+    getSelectedPlayer,
+  } = useEditorStore();
+
+  // Computed values for backward compatibility
+  const selectedPlayerId =
+    selectedElementType === 'player' ? selectedElementId : null;
+  const selectedLineId =
+    selectedElementType === 'line' ? selectedElementId : null;
+  const selectedPlayer = getSelectedPlayer();
+
   const fieldRef = useRef<FieldRef>(null);
 
   // Helper function to get selected segment type
@@ -109,16 +120,7 @@ function App() {
     return currentSegment.type;
   };
 
-  const updatePlayer = (playerId: string, updates: Partial<Player>) => {
-    setPlayers((prevPlayers) =>
-      prevPlayers.map((player) =>
-        player.id === playerId ? { ...player, ...updates } : player,
-      ),
-    );
-    if (selectedPlayer && selectedPlayer.id === playerId) {
-      setSelectedPlayer({ ...selectedPlayer, ...updates });
-    }
-  };
+  // updatePlayer is now coming from the store
 
   const handleExport = () => {
     const canvas = document.querySelector('canvas');
@@ -132,20 +134,14 @@ function App() {
 
   const handleDeletePlayer = () => {
     if (!selectedPlayerId) return;
-
-    // プレイヤーと関連する線を削除
-    setPlayers((prev) => prev.filter((p) => p.id !== selectedPlayerId));
-    setLines((prev) => prev.filter((l) => l.playerId !== selectedPlayerId));
-
-    // 選択状態をクリア
-    setSelectedPlayerId(null);
-    setSelectedPlayer(null);
+    deletePlayer(selectedPlayerId);
   };
 
   const handleDeleteLine = () => {
     if (!selectedLineId) return;
 
-    setLines((prev) => {
+    const updatedLines = (() => {
+      const prev = lines;
       // 選択されたセグメントパスがない場合は、線全体を削除
       if (!selectedSegmentPath || selectedSegmentPath.length === 0) {
         return prev.filter((l) => l.id !== selectedLineId);
@@ -216,11 +212,10 @@ function App() {
           return { ...line, segments: newSegments };
         })
         .filter((line): line is Line => line !== null);
-    });
+    })();
 
-    // 選択状態をクリア
-    setSelectedLineId(null);
-    setSelectedSegmentPath(null);
+    setLines(updatedLines);
+    clearSelection();
   };
 
   return (
@@ -248,7 +243,7 @@ function App() {
                 ? 'bg-blue-500 text-white hover:bg-blue-600'
                 : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
             }`}
-            onClick={() => setCurrentTool('select')}
+            onClick={() => setTool('select')}
           >
             <svg
               className="w-5 h-5"
@@ -279,7 +274,7 @@ function App() {
                 ? 'bg-blue-500 text-white hover:bg-blue-600'
                 : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'
             }`}
-            onClick={() => setCurrentTool('player')}
+            onClick={() => setTool('player')}
           >
             <svg
               className="w-5 h-5"
@@ -571,23 +566,27 @@ function App() {
                 onPlayersChange={setPlayers}
                 lines={lines}
                 onLinesChange={setLines}
-                onPlayerSelect={(playerId, player) => {
-                  setSelectedPlayerId(playerId);
-                  setSelectedPlayer(player || null);
+                onPlayerSelect={(playerId) => {
+                  selectElement(playerId, playerId ? 'player' : null);
                 }}
                 onPlayerUpdate={(playerId, updates) => {
                   updatePlayer(playerId, updates);
                 }}
-                onToolChange={setCurrentTool}
+                onToolChange={setTool}
                 onLineSelect={(lineId, newLines, segmentPath) => {
-                  setSelectedLineId(lineId);
-                  setSelectedSegmentPath(segmentPath || null);
+                  selectElement(
+                    lineId,
+                    lineId ? 'line' : null,
+                    segmentPath || undefined,
+                  );
                   if (newLines) {
                     setLines(newLines);
                   }
                 }}
                 startRouteDrawing={startRouteDrawing}
-                onRouteDrawingStart={setStartRouteDrawing}
+                onRouteDrawingStart={(value) =>
+                  value ? startDrawingRoute(value) : stopDrawingRoute()
+                }
               />
             )}
           </ResponsiveFieldWrapper>
@@ -715,7 +714,7 @@ function App() {
                         : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
                     }`}
                     onClick={() =>
-                      setStartRouteDrawing({
+                      startDrawingRoute({
                         playerId: selectedPlayerId,
                         routeType: 'solid',
                       })
@@ -740,7 +739,7 @@ function App() {
                         : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
                     }`}
                     onClick={() =>
-                      setStartRouteDrawing({
+                      startDrawingRoute({
                         playerId: selectedPlayerId,
                         routeType: 'dashed',
                       })
@@ -766,7 +765,7 @@ function App() {
                         : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
                     }`}
                     onClick={() =>
-                      setStartRouteDrawing({
+                      startDrawingRoute({
                         playerId: selectedPlayerId,
                         routeType: 'dotted',
                       })
@@ -896,7 +895,7 @@ function App() {
                         : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
                     }`}
                     onClick={() =>
-                      setStartRouteDrawing({
+                      startDrawingRoute({
                         lineId: selectedLineId,
                         routeType: 'solid',
                       })
@@ -921,7 +920,7 @@ function App() {
                         : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
                     }`}
                     onClick={() =>
-                      setStartRouteDrawing({
+                      startDrawingRoute({
                         lineId: selectedLineId,
                         routeType: 'dashed',
                       })
@@ -947,7 +946,7 @@ function App() {
                         : 'bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-600 border-gray-300'
                     }`}
                     onClick={() =>
-                      setStartRouteDrawing({
+                      startDrawingRoute({
                         lineId: selectedLineId,
                         routeType: 'dotted',
                       })

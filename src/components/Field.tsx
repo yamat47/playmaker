@@ -6,72 +6,14 @@ import {
   forwardRef,
   useCallback,
 } from 'react';
-
-interface FieldProps {
-  width?: number;
-  height?: number;
-  currentTool?: 'select' | 'player';
-  selectedPlayerId?: string | null;
-  players?: Player[];
-  onPlayersChange?: (players: Player[]) => void;
-  lines?: Line[];
-  onLinesChange?: (lines: Line[]) => void;
-  onPlayerSelect?: (playerId: string | null, player?: Player) => void;
-  onPlayerUpdate?: (playerId: string, updates: Partial<Player>) => void;
-  onToolChange?: (tool: 'select' | 'player') => void;
-  onLineSelect?: (
-    lineId: string | null,
-    lines?: Line[],
-    segmentPath?: number[],
-  ) => void;
-  startRouteDrawing?: {
-    playerId?: string;
-    lineId?: string;
-    routeType: 'solid' | 'dashed' | 'dotted';
-  } | null;
-  onRouteDrawingStart?: (
-    value: {
-      playerId?: string;
-      lineId?: string;
-      routeType: 'solid' | 'dashed' | 'dotted';
-    } | null,
-  ) => void;
-  onLineTypeChange?: (
-    lineId: string,
-    segmentPath: number[],
-    newType: 'solid' | 'dashed' | 'dotted',
-  ) => void;
-}
-
-interface FieldRef {
-  changeSegmentType: (
-    lineId: string,
-    segmentPath: number[],
-    newType: 'solid' | 'dashed' | 'dotted',
-  ) => void;
-}
-
-interface Player {
-  id: string;
-  x: number;
-  y: number;
-  team: 'offense' | 'defense';
-  shape: 'circle' | 'square';
-  color: string;
-  label?: string;
-}
-
-interface LineSegment {
-  points: { x: number; y: number }[];
-  type: 'solid' | 'dashed' | 'dotted';
-  branches?: LineSegment[]; // Branches from the end of this segment
-}
-
-interface Line {
-  id: string;
-  playerId: string;
-  segments: LineSegment[];
-}
+import type {
+  Player,
+  Line,
+  LineSegment,
+  LineType,
+  FieldProps,
+  FieldRef,
+} from '../types';
 
 // Helper function to check if a point is near a line segment
 const pointToLineDistance = (
@@ -191,7 +133,7 @@ const Field = forwardRef<FieldRef, FieldProps>(
     const changeSegmentType = (
       lineId: string,
       segmentPath: number[],
-      newType: 'solid' | 'dashed' | 'dotted',
+      newType: LineType,
     ) => {
       setLines((prevLines) =>
         prevLines.map((line) => {
@@ -1651,5 +1593,5 @@ const Field = forwardRef<FieldRef, FieldProps>(
   },
 );
 
-export { Field as default, type Player, type Line };
-export type { FieldProps };
+export { Field as default };
+export type { Player, Line, FieldProps } from '../types';

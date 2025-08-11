@@ -25,7 +25,8 @@
       "Bash(claude /commands/git/commit \"feat: update Claude settings and git create-pr command\")",
       "Bash(claude /commands/git/commit \"Remove route drawing tool button from sidebar\")",
       "Bash(claude /commands/git/commit)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(pnpm approve-builds:*)"
     ],
     "deny": []
   },

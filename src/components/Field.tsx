@@ -61,6 +61,7 @@ const Field = forwardRef<FieldRef, FieldProps>(
       width = 1200,
       height = 600,
       currentTool = 'select',
+      selectedPlayerId: externalSelectedPlayerId,
       players: externalPlayers,
       onPlayersChange,
       lines: externalLines,
@@ -125,8 +126,22 @@ const Field = forwardRef<FieldRef, FieldProps>(
       pointIndex: number;
     } | null>(null);
     const [draggingPoint, setDraggingPoint] = useState<boolean>(false);
-    const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(
-      null,
+    // Use external selectedPlayerId if provided, otherwise maintain internal state for backward compat
+    const [internalSelectedPlayerId, setInternalSelectedPlayerId] = useState<
+      string | null
+    >(null);
+    const selectedPlayerId =
+      externalSelectedPlayerId !== undefined
+        ? externalSelectedPlayerId
+        : internalSelectedPlayerId;
+    const setSelectedPlayerId = useCallback(
+      (id: string | null) => {
+        // Always update internal state for backward compatibility
+        setInternalSelectedPlayerId(id);
+        // Always notify parent about selection change
+        onPlayerSelect?.(id);
+      },
+      [onPlayerSelect],
     );
 
     // Helper function to change line segment type
@@ -263,7 +278,6 @@ const Field = forwardRef<FieldRef, FieldProps>(
 
             // Clear player selection when creating a line
             setSelectedPlayerId(null);
-            onPlayerSelect?.(null);
             onLineSelect?.(newLine.id, [...lines, newLine], [0]);
 
             // Clear the startRouteDrawing after creating the line
@@ -576,6 +590,7 @@ const Field = forwardRef<FieldRef, FieldProps>(
       width,
       height,
       setLines,
+      setSelectedPlayerId,
     ]);
 
     // Drawing effect
@@ -1175,19 +1190,61 @@ const Field = forwardRef<FieldRef, FieldProps>(
 
       if (currentTool === 'player') {
         // プレイヤー追加モード
-        const newPlayer: Player = {
-          id: `player-${Date.now()}`,
-          x,
-          y,
-          team: 'offense',
-          shape: 'circle',
-          color: '#ffffff', // デフォルトは白色（無色）
-          label: '', // デフォルトは空
-        };
-        setPlayers([...players, newPlayer]);
+        // まず既存の選手をクリックしたかチェック
+        let existingPlayerClicked = false;
+        for (const player of players) {
+          const distance = Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2);
+          if (distance <= playerRadius) {
+            // 既存の選手をクリックした場合、選択してselectモードに切り替え
+            existingPlayerClicked = true;
+            setSelectedPlayerId(player.id);
+            setDraggingPlayer(player.id);
+            setDragOffset({ x: x - player.x, y: y - player.y });
+            setSelectedLineId(null);
+            setSelectedSegmentPath(null);
+            setSelectedPoint(null);
+            setDraggingLine(null);
+            setLineDragOffset({ x: 0, y: 0 });
+            onLineSelect?.(null, lines, undefined);
+            onToolChange?.('select');
+            e.stopPropagation();
+            e.preventDefault();
+            break;
+          }
+        }
 
-        // 選手を追加したら選択モードに戻る
-        onToolChange?.('select');
+        // 既存の選手をクリックしていない場合のみ、新しい選手を追加
+        if (!existingPlayerClicked) {
+          const newPlayerId = `player-${Date.now()}`;
+          const newPlayer: Player = {
+            id: newPlayerId,
+            x,
+            y,
+            team: 'offense',
+            shape: 'circle',
+            color: '#ffffff', // デフォルトは白色（無色）
+            label: '', // デフォルトは空
+          };
+          // まず新しいプレイヤーをプレイヤーリストに追加
+          const newPlayers = [...players, newPlayer];
+          setPlayers(newPlayers);
+          onPlayersChange?.(newPlayers);
+
+          // 新しい選手を選択状態にする
+          setSelectedPlayerId(newPlayer.id);
+          setSelectedLineId(null);
+          setSelectedSegmentPath(null);
+          setSelectedPoint(null);
+          onLineSelect?.(null, lines, undefined);
+
+          // 選手を追加したら選択モードに戻る
+          onToolChange?.('select');
+
+          // Prevent event from being processed again
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
       } else {
         // 通常モード (select) またはルート描画モード (route)
         let playerClicked = false;
@@ -1197,8 +1254,7 @@ const Field = forwardRef<FieldRef, FieldProps>(
             playerClicked = true;
             if (currentTool === 'select') {
               // Select player
-              setSelectedPlayerId(player.id);
-              onPlayerSelect?.(player.id, player); // 親コンポーネントに通知
+              setSelectedPlayerId(player.id); // 親コンポーネントに通知
               setDraggingPlayer(player.id);
               setDragOffset({ x: x - player.x, y: y - player.y });
               setSelectedLineId(null);
@@ -1248,7 +1304,6 @@ const Field = forwardRef<FieldRef, FieldProps>(
                   setSelectedLineId(line.id);
                   setSelectedSegmentPath(null);
                   setSelectedPlayerId(null);
-                  onPlayerSelect?.(null);
                   return true;
                 }
                 globalIndexRef.value++;
@@ -1366,7 +1421,6 @@ const Field = forwardRef<FieldRef, FieldProps>(
                   setSelectedPoint(null);
                   // Clear player selection when selecting a line
                   setSelectedPlayerId(null);
-                  onPlayerSelect?.(null);
                   onLineSelect?.(line.id, lines, result.path);
                   lineClicked = true;
                   break;
@@ -1387,8 +1441,7 @@ const Field = forwardRef<FieldRef, FieldProps>(
             setSelectedLineId(null);
             setSelectedSegmentPath(null);
             setSelectedPoint(null);
-            setSelectedPlayerId(null);
-            onPlayerSelect?.(null); // 親コンポーネントに通知
+            setSelectedPlayerId(null); // 親コンポーネントに通知
             onLineSelect?.(null, undefined, undefined);
           }
         }
@@ -1534,7 +1587,6 @@ const Field = forwardRef<FieldRef, FieldProps>(
         setPlayers(players.filter((p) => p.id !== selectedPlayerId));
         setLines(lines.filter((l) => l.playerId !== selectedPlayerId));
         setSelectedPlayerId(null);
-        onPlayerSelect?.(null);
       } else if (
         (e.key === 'Delete' || e.key === 'Backspace') &&
         selectedLineId

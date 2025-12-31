@@ -59,10 +59,11 @@ export const useEditorStore = create<EditorState>()(
       startRouteDrawing: null,
 
       // Player actions
-      addPlayer: (player) =>
+      addPlayer: (player) => {
         set((state) => ({
           players: [...state.players, player],
-        })),
+        }));
+      },
 
       updatePlayer: (id, updates) =>
         set((state) => ({
@@ -108,12 +109,13 @@ export const useEditorStore = create<EditorState>()(
       setLines: (lines) => set({ lines }),
 
       // Selection actions
-      selectElement: (id, type, segmentPath) =>
+      selectElement: (id, type, segmentPath) => {
         set({
           selectedElementId: id,
           selectedElementType: type,
           selectedSegmentPath: segmentPath,
-        }),
+        });
+      },
 
       clearSelection: () =>
         set({

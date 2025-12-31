@@ -26,6 +26,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.46.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.6.1",

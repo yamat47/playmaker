@@ -69,33 +69,37 @@ function ResponsiveFieldWrapper({
 }
 
 function App() {
-  // Zustand store hooks
-  const {
-    players,
-    lines,
-    selectedElementId,
-    selectedElementType,
-    selectedSegmentPath,
-    currentTool,
-    startRouteDrawing,
-    setPlayers,
-    setLines,
-    updatePlayer,
-    deletePlayer,
-    selectElement,
-    clearSelection,
-    setTool,
-    startDrawingRoute,
-    stopDrawingRoute,
-    getSelectedPlayer,
-  } = useEditorStore();
+  // Zustand store hooks - use selector to ensure proper subscription
+  const players = useEditorStore((state) => state.players);
+  const lines = useEditorStore((state) => state.lines);
+  const selectedElementId = useEditorStore((state) => state.selectedElementId);
+  const selectedElementType = useEditorStore(
+    (state) => state.selectedElementType,
+  );
+  const selectedSegmentPath = useEditorStore(
+    (state) => state.selectedSegmentPath,
+  );
+  const currentTool = useEditorStore((state) => state.currentTool);
+  const startRouteDrawing = useEditorStore((state) => state.startRouteDrawing);
+
+  const setPlayers = useEditorStore((state) => state.setPlayers);
+  const setLines = useEditorStore((state) => state.setLines);
+  const updatePlayer = useEditorStore((state) => state.updatePlayer);
+  const deletePlayer = useEditorStore((state) => state.deletePlayer);
+  const selectElement = useEditorStore((state) => state.selectElement);
+  const clearSelection = useEditorStore((state) => state.clearSelection);
+  const setTool = useEditorStore((state) => state.setTool);
+  const startDrawingRoute = useEditorStore((state) => state.startDrawingRoute);
+  const stopDrawingRoute = useEditorStore((state) => state.stopDrawingRoute);
 
   // Computed values for backward compatibility
   const selectedPlayerId =
     selectedElementType === 'player' ? selectedElementId : null;
   const selectedLineId =
     selectedElementType === 'line' ? selectedElementId : null;
-  const selectedPlayer = getSelectedPlayer();
+  const selectedPlayer = selectedPlayerId
+    ? players.find((p) => p.id === selectedPlayerId) || null
+    : null;
 
   const fieldRef = useRef<FieldRef>(null);
 
@@ -574,11 +578,11 @@ function App() {
                 }}
                 onToolChange={setTool}
                 onLineSelect={(lineId, newLines, segmentPath) => {
-                  selectElement(
-                    lineId,
-                    lineId ? 'line' : null,
-                    segmentPath || undefined,
-                  );
+                  // Only update selection if we're selecting a line, not clearing it
+                  // This prevents clearing player selection when clicking on a player
+                  if (lineId) {
+                    selectElement(lineId, 'line', segmentPath || undefined);
+                  }
                   if (newLines) {
                     setLines(newLines);
                   }

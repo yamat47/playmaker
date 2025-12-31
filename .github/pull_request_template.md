@@ -27,4 +27,3 @@ This pull request introduces commit `${NEW_COMMIT}` on branch `${BRANCH}`.
 ### Notes for Release
 
 <!-- Optional: user-facing details for the changelog -->
-

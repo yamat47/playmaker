@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bundle install:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
+      "Bash(git branch:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git restore:*)",
+      "Bash(date:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh api:*)",
+      "Bash(./scripts/dcc exec:*)",
+      "Bash(./scripts/dcc up:*)",
+      "Bash(ls:*)",
+      "Skill(git:commit)",
+      "Skill(git:commits)",
+      "Skill(git:create-pr)",
+      "WebFetch(domain:github.com)",
+      "Write(/tmp/pr-body.md)"
+    ]
+  },
+  "plansDirectory": "./docs/plans",
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
+}

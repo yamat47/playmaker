@@ -65,4 +65,30 @@ describe("Emitter", () => {
 
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it("dispose 済みの emitter に event を登録しても IDisposable が返り、その dispose は例外を投げない", () => {
+    // Arrange
+    const emitter = new Emitter<number>();
+    emitter.dispose();
+
+    // Act
+    const sub = emitter.event(vi.fn());
+
+    // Assert: no-op な IDisposable が返り、dispose しても例外にならない
+    expect(() => sub.dispose()).not.toThrow();
+  });
+
+  it("dispose 済みの emitter に登録したリスナは fire されても呼ばれない", () => {
+    // Arrange
+    const emitter = new Emitter<number>();
+    emitter.dispose();
+    const listener = vi.fn();
+    emitter.event(listener);
+
+    // Act
+    emitter.fire(99);
+
+    // Assert: リスナは一度も呼ばれない
+    expect(listener).not.toHaveBeenCalled();
+  });
 });

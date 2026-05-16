@@ -1,0 +1,41 @@
+# Dependabot による依存自動更新設定
+# 方針: 常に最新（メジャー含む）を追随する。
+#  - minor / patch はエコシステムごとにまとめて 1 PR（ノイズ削減）
+#  - major は個別 PR（破壊的変更を 1 件ずつレビューするため、あえてグループ化しない）
+version: 2
+
+updates:
+  # npm（pnpm） — package.json / pnpm-lock.yaml
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    # package.json の指定レンジ自体も最新へ引き上げる（lockfile 追従だけにしない）
+    versioning-strategy: increase
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      production-dependencies:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  # GitHub Actions — .github/workflows/*
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns:
+          - "*"

@@ -1,24 +1,23 @@
 import { CanvasSurface } from "./browser/index.js";
-import { Disposable, toDisposable } from "./common/index.js";
+import {
+  Disposable,
+  type FieldZone,
+  type PlayData,
+  resolvePlayData,
+  toDisposable,
+} from "./common/index.js";
 import "./styles.css";
 
-export type PlaymakerMode = "view" | "edit";
+export type { FieldState, FieldZone, PlayData } from "./common/index.js";
 
-/**
- * 商用ソフトに保存・復元されるプレー図データ。
- * version でスキーマ進化に備える（マイグレーション機構は M8 で実装）。
- * フィールド/選手/線の具体スキーマは M1〜M3 で確定する。
- */
-export interface PlayData {
-  version: 1;
-}
+export type PlaymakerMode = "view" | "edit";
 
 export interface PlaymakerOptions {
   /** 既定は "edit"。"view" は読み取り専用（編集 UI を出さない）。 */
   mode?: PlaymakerMode;
-  /** 初期表示するプレー図データ。 */
+  /** 初期表示するプレー図データ。欠落・古い形式は既定で補完する。 */
   initialData?: PlayData;
-  /** 編集操作のたびに最新の PlayData を通知する（M4 以降で発火）。 */
+  /** 編集操作のたびに最新の PlayData を通知する（発火は M4 以降）。 */
   onChange?: (data: PlayData) => void;
 }
 
@@ -29,10 +28,14 @@ export interface PlaymakerOptions {
 export class Playmaker extends Disposable {
   readonly mode: PlaymakerMode;
   private readonly root: HTMLElement;
+  private readonly surface: CanvasSurface;
+  // Model は Playmaker が専有し、View(CanvasSurface) は描画のみ（Model–View 分離）。
+  private data: PlayData;
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
     super();
     this.mode = options.mode ?? "edit";
+    this.data = resolvePlayData(options.initialData);
 
     this.root = document.createElement("div");
     this.root.className = "playmaker-root";
@@ -40,6 +43,31 @@ export class Playmaker extends Disposable {
     container.appendChild(this.root);
     this._register(toDisposable(() => this.root.remove()));
 
-    this._register(new CanvasSurface(this.root));
+    this.surface = this._register(new CanvasSurface(this.root, this.data.field.zone));
+  }
+
+  /** 現在のフィールドゾーン。 */
+  get fieldZone(): FieldZone {
+    return this.data.field.zone;
+  }
+
+  /**
+   * フィールドゾーンを切り替える（PRD 5.1）。
+   * onChange 通知は編集コマンド機構を入れる M4 以降で配線する。
+   */
+  setFieldZone(zone: FieldZone): void {
+    if (zone === this.data.field.zone) {
+      return;
+    }
+    this.data = { ...this.data, field: { ...this.data.field, zone } };
+    this.surface.setZone(zone);
+  }
+
+  /**
+   * 現在の PlayData のスナップショット（防御的コピー）。
+   * 正式な往復契約は M8 で確定する。
+   */
+  getPlayData(): PlayData {
+    return { version: 1, field: { ...this.data.field } };
   }
 }

@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  clonePlayData,
   createEmptyPlayData,
   DEFAULT_FIELD_ZONE,
   isFieldZone,
   type PlayData,
   resolvePlayData,
 } from "./play-data.js";
+
+// noUncheckedIndexedAccess 下で `!` を使わず型を絞るためのテスト局所ヘルパ。
+function must<T>(value: T | undefined): T {
+  if (value === undefined) {
+    throw new Error("expected a defined value");
+  }
+  return value;
+}
 
 describe("createEmptyPlayData", () => {
   it("version 1・既定ゾーン・選手/線なしの新規データを返す", () => {
@@ -27,6 +36,55 @@ describe("createEmptyPlayData", () => {
     expect(a.field).not.toBe(b.field);
     expect(a.players).not.toBe(b.players);
     expect(a.lines).not.toBe(b.lines);
+  });
+});
+
+describe("clonePlayData", () => {
+  const source: PlayData = {
+    version: 1,
+    field: { zone: "redzone" },
+    players: [
+      {
+        id: "qb",
+        position: { lateralYard: 26, absoluteYard: 48 },
+        shape: "circle",
+        label: "QB",
+        color: "#f00",
+      },
+    ],
+    lines: [
+      {
+        id: "r1",
+        kind: "route",
+        startPlayerId: "qb",
+        waypoints: [{ lateralYard: 30, absoluteYard: 52 }],
+        end: { lateralYard: 35, absoluteYard: 60 },
+        interpolation: "bezier",
+      },
+    ],
+  };
+
+  it("値が等しく独立した深いコピーを返す", () => {
+    const copy = clonePlayData(source);
+
+    expect(copy).toEqual(source);
+    expect(copy).not.toBe(source);
+    expect(copy.field).not.toBe(source.field);
+    expect(copy.players[0]).not.toBe(source.players[0]);
+    expect(copy.lines[0]).not.toBe(source.lines[0]);
+    expect(copy.lines[0]?.waypoints[0]).not.toBe(source.lines[0]?.waypoints[0]);
+  });
+
+  it("コピーを書き換えても元データへ波及しない", () => {
+    const copy = clonePlayData(source);
+
+    copy.field.zone = "middle";
+    must(copy.players[0]).label = "WR";
+    must(copy.lines[0]).waypoints.push({ lateralYard: 0, absoluteYard: 0 });
+
+    expect(source.field.zone).toBe("redzone");
+    expect(source.players[0]?.label).toBe("QB");
+    expect(source.lines[0]?.waypoints).toHaveLength(1);
   });
 });
 

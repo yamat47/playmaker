@@ -1,8 +1,8 @@
 // 商用ソフトに保存・復元される唯一のデータ表現（PRD 5.8 / 6.6）。
 // DOM 非依存。M1 で field、M2 で players、M3 で lines を確定。
 
-import { type Line, normalizeLines } from "./line.js";
-import { normalizePlayers, type Player } from "./player.js";
+import { cloneLine, type Line, normalizeLines } from "./line.js";
+import { clonePlayer, normalizePlayers, type Player } from "./player.js";
 
 /**
  * フィールドのどの 30 ヤード窓を映すか（PRD 5.1）。
@@ -40,6 +40,20 @@ export function isFieldZone(value: unknown): value is FieldZone {
 /** 既定状態の新規 PlayData（選手・線なし）。 */
 export function createEmptyPlayData(): PlayData {
   return { version: 1, field: { zone: DEFAULT_FIELD_ZONE }, players: [], lines: [] };
+}
+
+/**
+ * PlayData を深く複製する（field / 各 player / 各 line まで共有しない）。
+ * Model が外へ渡すスナップショット（onChange 通知・getData）を入力と切り離すための一手。
+ * 商用ソフトが受け取ったデータを書き換えても内部状態に波及しない（PRD 5.8 の往復契約準備）。
+ */
+export function clonePlayData(data: PlayData): PlayData {
+  return {
+    version: 1,
+    field: { ...data.field },
+    players: data.players.map(clonePlayer),
+    lines: data.lines.map(cloneLine),
+  };
 }
 
 /**

@@ -170,4 +170,22 @@ describe("hitTestLine", () => {
     expect(() => hitTestLine([l], players, { lateralYard: 0, absoluteYard: 0 }, 0)).toThrow();
     expect(() => hitTestLine([l], players, { lateralYard: 0, absoluteYard: 0 }, -1)).toThrow();
   });
+
+  describe("退化した 1 点線（起点選手位置と終点が同座標・waypoints 空）", () => {
+    // wr の position は (5, 50)。end も同座標にすると anchors が [P, P] となり
+    // dedupeConsecutive で [P]（1 点）へ縮約され distanceToPolyline の length===1 分岐を通る。
+    const degenerate = line("degen", { end: { lateralYard: 5, absoluteYard: 50 } });
+
+    it("その点と同座標（距離 0）は許容半径内で hit する", () => {
+      expect(hitTestLine([degenerate], players, { lateralYard: 5, absoluteYard: 50 })).toBe(
+        degenerate,
+      );
+    });
+
+    it("許容半径より離れた点は undefined（境界値）", () => {
+      expect(
+        hitTestLine([degenerate], players, { lateralYard: 5, absoluteYard: 55 }),
+      ).toBeUndefined();
+    });
+  });
 });

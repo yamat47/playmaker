@@ -1,6 +1,7 @@
 // 商用ソフトに保存・復元される唯一のデータ表現（PRD 5.8 / 6.6）。
-// DOM 非依存。M1 で field、M2 で players を確定。線は M3 で同じ要領で足す。
+// DOM 非依存。M1 で field、M2 で players、M3 で lines を確定。
 
+import { type Line, normalizeLines } from "./line.js";
 import { normalizePlayers, type Player } from "./player.js";
 
 /**
@@ -22,22 +23,23 @@ export interface FieldState {
 
 /**
  * プレー図データ。`version` でスキーマ進化に備える（マイグレーション機構は M8）。
- * 線は後続マイルストーンでこの型に追加する。
  */
 export interface PlayData {
   version: 1;
   field: FieldState;
   /** 配置済みの選手（描画順 = 配列順。後の要素ほど上に重なる）。 */
   players: Player[];
+  /** 描画する線（描画順 = 配列順。選手の下に敷く＝起点が選手で隠れない）。 */
+  lines: Line[];
 }
 
 export function isFieldZone(value: unknown): value is FieldZone {
   return typeof value === "string" && (FIELD_ZONES as readonly string[]).includes(value);
 }
 
-/** 既定状態の新規 PlayData（選手なし）。 */
+/** 既定状態の新規 PlayData（選手・線なし）。 */
 export function createEmptyPlayData(): PlayData {
-  return { version: 1, field: { zone: DEFAULT_FIELD_ZONE }, players: [] };
+  return { version: 1, field: { zone: DEFAULT_FIELD_ZONE }, players: [], lines: [] };
 }
 
 /**
@@ -48,9 +50,13 @@ export function createEmptyPlayData(): PlayData {
  */
 export function resolvePlayData(data: PlayData | undefined): PlayData {
   const zone = data?.field?.zone;
+  // 線の起点参照を弾けるよう、先に選手を確定してから id 集合を渡す。
+  const players = normalizePlayers(data?.players);
+  const validPlayerIds = new Set(players.map((p) => p.id));
   return {
     version: 1,
     field: { zone: isFieldZone(zone) ? zone : DEFAULT_FIELD_ZONE },
-    players: normalizePlayers(data?.players),
+    players,
+    lines: normalizeLines(data?.lines, validPlayerIds),
   };
 }

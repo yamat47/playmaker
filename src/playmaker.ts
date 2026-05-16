@@ -1,5 +1,6 @@
 import { CanvasSurface } from "./browser/index.js";
 import {
+  cloneLine,
   clonePlayer,
   Disposable,
   type FieldZone,
@@ -13,6 +14,9 @@ export type {
   FieldPosition,
   FieldState,
   FieldZone,
+  Line,
+  LineInterpolation,
+  LineKind,
   PlayData,
   Player,
   PlayerShape,
@@ -89,6 +93,7 @@ export class Playmaker extends Disposable {
       version: 1,
       field: { ...this.data.field },
       players: this.data.players.map(clonePlayer),
+      lines: this.data.lines.map(cloneLine),
     };
   }
 }

@@ -11,6 +11,9 @@
   --playmaker-player-fill: #1565c0;
   --playmaker-player-stroke: rgba(255, 255, 255, 0.9);
   --playmaker-player-label-color: #ffffff;
+  --playmaker-line-route-color: #ffeb3b;
+  --playmaker-line-block-color: #ffffff;
+  --playmaker-line-motion-color: #ffeb3b;
   --playmaker-surface-bg: #ffffff;
   --playmaker-border-color: #d0d0d0;
   --playmaker-text-color: #1a1a1a;

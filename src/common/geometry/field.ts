@@ -3,6 +3,7 @@
 // 戦術的厳密性より組み込みやすさ優先（PRD 4.1）。実寸は合理的近似でよい。
 
 import type { FieldZone } from "../model/play-data.js";
+import type { FieldPosition } from "../model/player.js";
 
 /** フィールド幅（サイドライン間）= 規定 160 ft = 53.33 yd。 */
 export const FIELD_WIDTH_YARDS = 160 / 3;
@@ -138,6 +139,27 @@ export class FieldGeometry {
     return {
       x: this.xForLateralYard(lateralYard),
       y: this.yForAbsoluteYard(absoluteYard),
+    };
+  }
+
+  // --- 逆変換（Canvas px → ヤード）。M5 の入力 → hit-test の土台。
+  // 縮退ビューポート（scale=0）では割り算が発散するため、forward と対称な
+  // 安全値（原点 / 窓奥）へ丸めて NaN を上流に流さない。
+
+  lateralYardForX(x: number): number {
+    return this.scale > 0 ? (x - this.offsetX) / this.scale : 0;
+  }
+
+  absoluteYardForY(y: number): number {
+    return this.scale > 0
+      ? this.window.endYard - (y - this.offsetY) / this.scale
+      : this.window.endYard;
+  }
+
+  fromCanvas(point: CanvasPoint): FieldPosition {
+    return {
+      lateralYard: this.lateralYardForX(point.x),
+      absoluteYard: this.absoluteYardForY(point.y),
     };
   }
 

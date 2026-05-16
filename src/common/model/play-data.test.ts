@@ -8,10 +8,10 @@ import {
 } from "./play-data.js";
 
 describe("createEmptyPlayData", () => {
-  it("version 1 と既定ゾーンの新規データを返す", () => {
+  it("version 1・既定ゾーン・選手なしの新規データを返す", () => {
     const data = createEmptyPlayData();
 
-    expect(data).toEqual({ version: 1, field: { zone: DEFAULT_FIELD_ZONE } });
+    expect(data).toEqual({ version: 1, field: { zone: DEFAULT_FIELD_ZONE }, players: [] });
   });
 
   it("呼ぶたびに独立したオブジェクトを返す（共有しない）", () => {
@@ -20,6 +20,7 @@ describe("createEmptyPlayData", () => {
 
     expect(a).not.toBe(b);
     expect(a.field).not.toBe(b.field);
+    expect(a.players).not.toBe(b.players);
   });
 });
 
@@ -40,26 +41,28 @@ describe("isFieldZone", () => {
 });
 
 describe("resolvePlayData", () => {
-  it("undefined には既定ゾーンの空データを返す", () => {
+  it("undefined には既定ゾーン・選手なしの空データを返す", () => {
     expect(resolvePlayData(undefined)).toEqual({
       version: 1,
       field: { zone: DEFAULT_FIELD_ZONE },
+      players: [],
     });
   });
 
   it("正当なゾーンはそのまま保持する", () => {
-    const input: PlayData = { version: 1, field: { zone: "redzone" } };
+    const input: PlayData = { version: 1, field: { zone: "redzone" }, players: [] };
 
     expect(resolvePlayData(input).field.zone).toBe("redzone");
   });
 
   it("入力を共有せず新規オブジェクトを返す（Model 専有）", () => {
-    const input: PlayData = { version: 1, field: { zone: "own-redzone" } };
+    const input: PlayData = { version: 1, field: { zone: "own-redzone" }, players: [] };
 
     const resolved = resolvePlayData(input);
 
     expect(resolved).not.toBe(input);
     expect(resolved.field).not.toBe(input.field);
+    expect(resolved.players).not.toBe(input.players);
     expect(resolved.field.zone).toBe("own-redzone");
   });
 
@@ -69,5 +72,37 @@ describe("resolvePlayData", () => {
 
     expect(resolvePlayData(broken).field.zone).toBe(DEFAULT_FIELD_ZONE);
     expect(resolvePlayData(missingField).field.zone).toBe(DEFAULT_FIELD_ZONE);
+  });
+
+  it("選手を正規化して保持し、入力要素を共有しない", () => {
+    const input = {
+      version: 1,
+      field: { zone: "middle" },
+      players: [{ id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "square" }],
+    } as unknown as PlayData;
+
+    const resolved = resolvePlayData(input);
+
+    expect(resolved.players).toEqual([
+      {
+        id: "qb",
+        position: { lateralYard: 26, absoluteYard: 48 },
+        shape: "square",
+        label: "",
+      },
+    ]);
+    expect(resolved.players[0]).not.toBe(input.players[0]);
+  });
+
+  it("players が無い/不正なら空配列にフォールバックする（古い永続データ耐性）", () => {
+    const missing = { version: 1, field: { zone: "middle" } } as unknown as PlayData;
+    const broken = {
+      version: 1,
+      field: { zone: "middle" },
+      players: "nope",
+    } as unknown as PlayData;
+
+    expect(resolvePlayData(missing).players).toEqual([]);
+    expect(resolvePlayData(broken).players).toEqual([]);
   });
 });

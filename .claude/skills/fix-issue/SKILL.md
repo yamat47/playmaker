@@ -26,10 +26,10 @@ gh issue view $ARGUMENTS --json title,body,labels,assignees
 
 ### 実装方針
 
-1. **DHH/37signals パターンに従う**
-   - サービスオブジェクトは使用しない
-   - カスタムアクションは新しいコントローラーへ
-   - Concernsはドメイン関心事で分割
+1. **アーキテクチャ規約に従う**（`.claude/rules/architecture.md`）
+   - ロジックは DOM 非依存の `src/common/` に置く
+   - 依存はインターフェース抽出 + 手動コンストラクタ注入
+   - 編集操作はコマンドパターン、ライフサイクルは Disposable/Emitter
 
 2. **最小限の変更**
    - Issue の要件に直接関係する変更のみ
@@ -37,16 +37,19 @@ gh issue view $ARGUMENTS --json title,body,labels,assignees
 
 3. **テストファースト**
    - 先にテストを書く（可能な場合）
-   - Request Spec を優先
+   - `common` 層の単体テストを優先
 
 ## Step 4: 検証
 
 ```bash
+# 型チェック
+pnpm run typecheck
+
 # テスト実行
-./bin/dcc exec bundle exec rspec
+pnpm run test
 
 # Lint 実行
-./bin/dcc exec bundle exec rubocop
+pnpm run lint
 ```
 
 ## Step 5: コミット
@@ -66,11 +69,10 @@ Fixes #$ARGUMENTS
 ## チェックリスト
 
 - [ ] Issue の要件を満たしている
-- [ ] テストが追加されている
+- [ ] テストが追加されている（common 層中心）
 - [ ] 既存のテストが通る
-- [ ] Lint エラーがない
-- [ ] DHH パターンに従っている
-- [ ] 日本語コメントがマイグレーションに含まれている（DB変更時）
+- [ ] 型エラー・Lint エラーがない
+- [ ] アーキテクチャ規約（レイヤ分離 / IF 抽出 / コマンドパターン）に従っている
 
 ## 出力形式
 
@@ -82,8 +84,8 @@ Fixes #$ARGUMENTS
 - [変更ファイル2]: 説明
 
 ### テスト結果
-✅ RSpec: X examples, 0 failures
-✅ RuboCop: no offenses
+✅ Vitest: X passed (X)
+✅ TypeScript / Biome: エラーなし
 
 ### コミット
 `abc1234` fix(scope): 概要

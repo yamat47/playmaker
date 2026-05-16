@@ -1,0 +1,27 @@
+/*
+ * Playmaker のスタイル。商用ソフト側は --playmaker-* を上書きするだけで
+ * 配色・フォント・サイズをデザインシステムに合わせられる（PRD 6.5）。
+ * UI（ツールバー/プロパティパネル）は M5 でこの変数体系の上に実装する。
+ */
+.playmaker-root {
+  --playmaker-font-family: system-ui, sans-serif;
+  --playmaker-field-bg: #2e7d32;
+  --playmaker-surface-bg: #ffffff;
+  --playmaker-border-color: #d0d0d0;
+  --playmaker-text-color: #1a1a1a;
+  --playmaker-accent-color: #1565c0;
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  font-family: var(--playmaker-font-family);
+  color: var(--playmaker-text-color);
+  background: var(--playmaker-field-bg);
+  overflow: hidden;
+}
+
+.playmaker-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

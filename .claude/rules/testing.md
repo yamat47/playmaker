@@ -1,86 +1,46 @@
 ---
-description: RSpec テスト規約。FactoryBot、Request Spec のスタイル。
+description: Vitest テスト規約。common 層中心、インターフェース注入、AAA。
 paths:
-  - "application/spec/**"
+  - "src/**/*.test.ts"
 ---
 
 # テスト規約
 
-## RSpec ベストプラクティス
+Playmaker は VSCode 流レイヤ分離を採る。テストは `common` 層（DOM 非依存の純ロジック）を厚く、`browser` 層は最小限にする。詳細方針は `docs/plans/implementation-roadmap.md`。
 
-### パフォーマンス
-- レコード取得より`exist`での存在確認を優先
+## 配置・命名
 
-### FactoryBot
-- **traitで意図を明確に** — 例: `create(:csv_import_request, :for_amazon_gift_card)`
-- **デフォルト値は固定値を使わず、ランダム値を使う**
-  - `Faker`、`.sample`、`SecureRandom` 等でランダムにする
-  - 特定の値が必要な場合は trait で明示する
-  - テスト側で必要な値を明示的に渡す（`create(:factory, attribute: 'value')`）
+- ソースと同階層に `*.test.ts`（`src/common/event/emitter.ts` → `src/common/event/emitter.test.ts`）
+- Vitest は `src/**/*.test.ts` を **node 環境**で実行（`vite.config.ts` の `test`）
+- 実行: `pnpm run test`（全体）/ `pnpm vitest run <file>`（個別）/ `pnpm run test:watch`
 
-### テストで関連付けを確認
-- 新しい関連付けは必ずテストで検証
+## スタイル
 
-### allow_any_instance_ofを避ける
-```ruby
-# Bad
-allow_any_instance_of(Model).to receive(:method)
+- `describe` でユニット、`it` の主語は日本語で振る舞いを明確に
+- AAA（Arrange / Act / Assert）。1 つの `it` は論理的に 1 振る舞い
+- 正常系 → 異常系 → 境界値の順で網羅
+- スパイは `vi.fn()`、`toHaveBeenCalledExactlyOnceWith` / `toHaveBeenCalledOnce` を活用
 
-# Good
-instance = Model.new
-allow(instance).to receive(:method)
-allow(Model).to receive(:new).and_return(instance)
+## テスト容易性の原則
+
+- **ロジックは common に置き、DOM 非依存で単体テストする**。`document` 等を common のテストに持ち込まない
+- 実装差し替えは**インターフェース注入**（`IRenderer` 等のフェイクをコンストラクタに渡す）。モンキーパッチ / 全インスタンス差し替えを避ける
+
+```ts
+// GOOD
+const renderer: IRenderer = { render: vi.fn(), dispose: vi.fn() };
+const subject = new SomeController(model, renderer);
 ```
 
-### ネストの深さを制限内に収める
-- contextを結合して1行にまとめる
-- 例: `context 'when validation fails with malformed CSV' do`
-- 不要なdescribeの階層を削除
+## 重点的に網羅する対象（common 層）
 
-## Request Specs の規約
+- モデルの不変条件と `onChange` 発火
+- コマンドの適用・取り消し（コマンドパターン）
+- Undo / Redo スタックの遷移
+- 幾何計算（bezier、hit-test、座標変換）
+- PlayData の `version` と migration
 
-### ファイル構成
-- **パスごとにファイルを分割**（同じコントローラーでも別パスは別ファイル）
-- DRY を追求せず、テストの独立性と可読性を優先
-- ディレクトリ: `spec/requests/{namespace}/{リソース名}/`
-- ファイル名: `{パス識別子}_spec.rb`
+## やらないこと
 
-```
-spec/requests/onecareer/report/reports/
-├── index_spec.rb      # GET /reports
-├── draft_spec.rb      # GET /reports/draft
-├── pending_spec.rb    # GET /reports/pending
-└── approved_spec.rb   # GET /reports/approved
-```
-
-### パス指定
-- **文字列でパスを指定**（url_helpers を使わない）
-
-```ruby
-# Good
-get '/onecareer/report/reports', headers: headers
-
-# Bad
-get onecareer_report_reports_path, headers: headers
-```
-
-### RuboCop nested groups への対応
-- **`rubocop:disable` を使わない**
-- アサーションを `.and` で結合してネストを減らす
-
-```ruby
-# Good
-it 'returns reports with filter links' do
-  get '/onecareer/report/reports', headers: headers
-
-  expect(response).to have_http_status(:ok)
-  expect(response.body)
-    .to include('タイトル')
-    .and include('/onecareer/report/reports/draft')
-    .and include('/onecareer/report/reports/pending')
-end
-```
-
-### テストデータのセットアップ
-- 基本的なデータはFactoryBotで作成
-- 特定のメソッドをstubする場合は、インスタンスを先に生成してからstub
+- 視覚回帰テスト（VRT）は採用しない（方針確定済み）
+- E2E / ブラウザ自動操作は MVP 範囲外（`demo/` playground で手動目視）

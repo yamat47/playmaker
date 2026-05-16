@@ -3,4 +3,5 @@
 
 export { CanvasSurface } from "./rendering/canvas-surface.js";
 export { FieldRenderer, type FieldTheme } from "./rendering/field-renderer.js";
+export { LineRenderer, type LineTheme } from "./rendering/line-renderer.js";
 export { PlayerRenderer, type PlayerTheme } from "./rendering/player-renderer.js";

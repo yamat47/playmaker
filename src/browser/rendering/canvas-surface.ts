@@ -1,17 +1,18 @@
 import { Disposable, FieldGeometry, type PlayData, toDisposable } from "../../common/index.js";
 import { FieldRenderer, type FieldTheme } from "./field-renderer.js";
+import { LineRenderer, type LineTheme } from "./line-renderer.js";
 import { PlayerRenderer, type PlayerTheme } from "./player-renderer.js";
 
 /**
  * Canvas のライフサイクル・解像度（DPR）・リサイズを管理し、
- * 現在の PlayData（ゾーン + 選手）を 1 フレームへ合成描画する土台。
+ * 現在の PlayData（ゾーン + 線 + 選手）を 1 フレームへ合成描画する土台。
  * Model は Playmaker が専有し、ここは渡された PlayData を描くだけ（Model–View 分離）。
- * 線の描画は M3 でこの上に重ねる。
  */
 export class CanvasSurface extends Disposable {
   readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly fieldRenderer = new FieldRenderer();
+  private readonly lineRenderer = new LineRenderer();
   private readonly playerRenderer = new PlayerRenderer();
   private data: PlayData;
 
@@ -57,8 +58,10 @@ export class CanvasSurface extends Disposable {
   private render(): void {
     const { clientWidth, clientHeight } = this.canvas.parentElement ?? this.canvas;
     const geometry = new FieldGeometry(clientWidth, clientHeight, this.data.field.zone);
-    const { field, player } = this.readThemes();
+    const { field, line, player } = this.readThemes();
+    // 線は選手の下に敷く＝起点（選手位置）がマーカーで隠れ、線の根元が綺麗に見える。
     this.fieldRenderer.draw(this.ctx, geometry, field);
+    this.lineRenderer.draw(this.ctx, geometry, this.data.lines, this.data.players, line);
     this.playerRenderer.draw(this.ctx, geometry, this.data.players, player);
   }
 
@@ -66,7 +69,7 @@ export class CanvasSurface extends Disposable {
    * 配色は親要素（.playmaker-root）の CSS 変数から読む。
    * 商用ソフトが --playmaker-* を上書きすれば描画色も追従する（PRD 6.5）。
    */
-  private readThemes(): { field: FieldTheme; player: PlayerTheme } {
+  private readThemes(): { field: FieldTheme; line: LineTheme; player: PlayerTheme } {
     const host = this.canvas.parentElement;
     const styles = host ? getComputedStyle(host) : null;
     const read = (name: string, fallback: string): string => {
@@ -78,6 +81,11 @@ export class CanvasSurface extends Disposable {
         fieldColor: read("--playmaker-field-bg", "#2e7d32"),
         lineColor: read("--playmaker-field-line-color", "rgba(255, 255, 255, 0.85)"),
         numberColor: read("--playmaker-field-number-color", "rgba(255, 255, 255, 0.9)"),
+      },
+      line: {
+        routeColor: read("--playmaker-line-route-color", "#ffeb3b"),
+        blockColor: read("--playmaker-line-block-color", "#ffffff"),
+        motionColor: read("--playmaker-line-motion-color", "#ffeb3b"),
       },
       player: {
         fillColor: read("--playmaker-player-fill", "#1565c0"),

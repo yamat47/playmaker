@@ -1,5 +1,6 @@
 import { CanvasSurface } from "./browser/index.js";
 import {
+  clonePlayer,
   Disposable,
   type FieldZone,
   type PlayData,
@@ -8,7 +9,14 @@ import {
 } from "./common/index.js";
 import "./styles.css";
 
-export type { FieldState, FieldZone, PlayData } from "./common/index.js";
+export type {
+  FieldPosition,
+  FieldState,
+  FieldZone,
+  PlayData,
+  Player,
+  PlayerShape,
+} from "./common/index.js";
 
 export type PlaymakerMode = "view" | "edit";
 
@@ -43,7 +51,7 @@ export class Playmaker extends Disposable {
     container.appendChild(this.root);
     this._register(toDisposable(() => this.root.remove()));
 
-    this.surface = this._register(new CanvasSurface(this.root, this.data.field.zone));
+    this.surface = this._register(new CanvasSurface(this.root, this.data));
   }
 
   /** 現在のフィールドゾーン。 */
@@ -60,7 +68,16 @@ export class Playmaker extends Disposable {
       return;
     }
     this.data = { ...this.data, field: { ...this.data.field, zone } };
-    this.surface.setZone(zone);
+    this.surface.setData(this.data);
+  }
+
+  /**
+   * プレー図データを丸ごと投入し直す（PRD 5.2 の「PlayData 投入で選手表示」/ 5.8 再読込）。
+   * 欠落・古い形式は既定で補完する。正式な往復契約は M8 で確定する。
+   */
+  setPlayData(data: PlayData): void {
+    this.data = resolvePlayData(data);
+    this.surface.setData(this.data);
   }
 
   /**
@@ -68,6 +85,10 @@ export class Playmaker extends Disposable {
    * 正式な往復契約は M8 で確定する。
    */
   getPlayData(): PlayData {
-    return { version: 1, field: { ...this.data.field } };
+    return {
+      version: 1,
+      field: { ...this.data.field },
+      players: this.data.players.map(clonePlayer),
+    };
   }
 }

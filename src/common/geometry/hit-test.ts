@@ -22,11 +22,7 @@ export function hitTestPlayer(
     throw new Error("Playmaker: radiusYards は正の数である必要があります。");
   }
   const r2 = radiusYards * radiusYards;
-  for (let i = players.length - 1; i >= 0; i--) {
-    const player = players[i];
-    if (player === undefined) {
-      continue;
-    }
+  for (const player of [...players].reverse()) {
     const dx = player.position.lateralYard - target.lateralYard;
     const dy = player.position.absoluteYard - target.absoluteYard;
     if (dx * dx + dy * dy <= r2) {
@@ -58,9 +54,8 @@ export function distanceToSegment(p: FieldPosition, a: FieldPosition, b: FieldPo
 
 /** ポリライン（連続する線分列）への最短距離。点が 1 個ならその点距離。 */
 function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]): number {
-  if (points.length === 0) {
-    return Number.POSITIVE_INFINITY;
-  }
+  // sampleLinePath は空ポリラインを返しうるが専用ガードは不要：length===1 を外れ
+  // 下の for も回らず min=+Infinity（= hit なし）がそのまま返る。
   if (points.length === 1) {
     const only = points[0] as FieldPosition;
     return distanceToSegment(p, only, only);
@@ -91,11 +86,7 @@ export function hitTestLine(
     throw new Error("Playmaker: toleranceYards は正の数である必要があります。");
   }
   const byId = indexPlayersById(players);
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i];
-    if (line === undefined) {
-      continue;
-    }
+  for (const line of [...lines].reverse()) {
     const anchors = lineAnchorPoints(line, byId);
     if (anchors === undefined) {
       continue;

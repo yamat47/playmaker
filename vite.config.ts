@@ -29,7 +29,8 @@ export default defineConfig({
     dts({
       include: ["src"],
       exclude: ["src/**/*.test.ts"],
-      rollupTypes: true,
+      // v5: 全型定義を api-extractor で単一 playmaker.d.ts に束ねる
+      bundleTypes: true,
     }),
   ],
   test: {

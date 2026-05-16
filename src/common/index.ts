@@ -1,6 +1,26 @@
 // common 層の公開面。DOM 非依存のロジックのみをここから export する。
-// 以降のマイルストーンで commands / undoRedo / formations を追加する。
+// 以降のマイルストーンで formations を追加する。
 
+export type { ICommand } from "./commands/command.js";
+export {
+  CommandService,
+  type ICommandService,
+} from "./commands/command-service.js";
+export { SetFieldZoneCommand } from "./commands/field-commands.js";
+export {
+  AddLineCommand,
+  type LinePatch,
+  RemoveLineCommand,
+  SetLineWaypointsCommand,
+  UpdateLineCommand,
+} from "./commands/line-commands.js";
+export {
+  AddPlayerCommand,
+  MovePlayerCommand,
+  type PlayerPatch,
+  RemovePlayerCommand,
+  UpdatePlayerCommand,
+} from "./commands/player-commands.js";
 export { Emitter, type Event } from "./event/emitter.js";
 export {
   catmullRomBezierControls,
@@ -48,6 +68,7 @@ export {
   normalizeLines,
 } from "./model/line.js";
 export {
+  clonePlayData,
   createEmptyPlayData,
   DEFAULT_FIELD_ZONE,
   type FieldState,
@@ -56,6 +77,12 @@ export {
   type PlayData,
   resolvePlayData,
 } from "./model/play-data.js";
+export {
+  type IPlayModel,
+  type LineRemoval,
+  type PlayerRemoval,
+  PlayModel,
+} from "./model/play-model.js";
 export {
   clonePlayer,
   DEFAULT_PLAYER_SHAPE,
@@ -66,3 +93,7 @@ export {
   type Player,
   type PlayerShape,
 } from "./model/player.js";
+export {
+  type IUndoRedoService,
+  UndoRedoService,
+} from "./undoRedo/undo-redo-service.js";

@@ -1,20 +1,23 @@
-import { Disposable, FieldGeometry, type FieldZone, toDisposable } from "../../common/index.js";
+import { Disposable, FieldGeometry, type PlayData, toDisposable } from "../../common/index.js";
 import { FieldRenderer, type FieldTheme } from "./field-renderer.js";
+import { PlayerRenderer, type PlayerTheme } from "./player-renderer.js";
 
 /**
  * Canvas のライフサイクル・解像度（DPR）・リサイズを管理し、
- * 現在のゾーンに対応するフィールドを描く土台。
- * 選手/線の描画は M2・M3 でこの上に重ねる。
+ * 現在の PlayData（ゾーン + 選手）を 1 フレームへ合成描画する土台。
+ * Model は Playmaker が専有し、ここは渡された PlayData を描くだけ（Model–View 分離）。
+ * 線の描画は M3 でこの上に重ねる。
  */
 export class CanvasSurface extends Disposable {
   readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly fieldRenderer = new FieldRenderer();
-  private zone: FieldZone;
+  private readonly playerRenderer = new PlayerRenderer();
+  private data: PlayData;
 
-  constructor(parent: HTMLElement, zone: FieldZone) {
+  constructor(parent: HTMLElement, data: PlayData) {
     super();
-    this.zone = zone;
+    this.data = data;
 
     this.canvas = document.createElement("canvas");
     this.canvas.className = "playmaker-canvas";
@@ -34,12 +37,9 @@ export class CanvasSurface extends Disposable {
     this.resize();
   }
 
-  /** ゾーンを切り替えて再描画する（PRD 5.1 のゾーン切替）。 */
-  setZone(zone: FieldZone): void {
-    if (zone === this.zone) {
-      return;
-    }
-    this.zone = zone;
+  /** 描画対象の PlayData を差し替えて再描画する（ゾーン切替・選手投入の双方）。 */
+  setData(data: PlayData): void {
+    this.data = data;
     this.render();
   }
 
@@ -56,15 +56,17 @@ export class CanvasSurface extends Disposable {
 
   private render(): void {
     const { clientWidth, clientHeight } = this.canvas.parentElement ?? this.canvas;
-    const geometry = new FieldGeometry(clientWidth, clientHeight, this.zone);
-    this.fieldRenderer.draw(this.ctx, geometry, this.readTheme());
+    const geometry = new FieldGeometry(clientWidth, clientHeight, this.data.field.zone);
+    const { field, player } = this.readThemes();
+    this.fieldRenderer.draw(this.ctx, geometry, field);
+    this.playerRenderer.draw(this.ctx, geometry, this.data.players, player);
   }
 
   /**
    * 配色は親要素（.playmaker-root）の CSS 変数から読む。
-   * 商用ソフトが --playmaker-* を上書きすればフィールド色も追従する（PRD 6.5）。
+   * 商用ソフトが --playmaker-* を上書きすれば描画色も追従する（PRD 6.5）。
    */
-  private readTheme(): FieldTheme {
+  private readThemes(): { field: FieldTheme; player: PlayerTheme } {
     const host = this.canvas.parentElement;
     const styles = host ? getComputedStyle(host) : null;
     const read = (name: string, fallback: string): string => {
@@ -72,9 +74,16 @@ export class CanvasSurface extends Disposable {
       return v ? v : fallback;
     };
     return {
-      fieldColor: read("--playmaker-field-bg", "#2e7d32"),
-      lineColor: read("--playmaker-field-line-color", "rgba(255, 255, 255, 0.85)"),
-      numberColor: read("--playmaker-field-number-color", "rgba(255, 255, 255, 0.9)"),
+      field: {
+        fieldColor: read("--playmaker-field-bg", "#2e7d32"),
+        lineColor: read("--playmaker-field-line-color", "rgba(255, 255, 255, 0.85)"),
+        numberColor: read("--playmaker-field-number-color", "rgba(255, 255, 255, 0.9)"),
+      },
+      player: {
+        fillColor: read("--playmaker-player-fill", "#1565c0"),
+        strokeColor: read("--playmaker-player-stroke", "rgba(255, 255, 255, 0.9)"),
+        labelColor: read("--playmaker-player-label-color", "#ffffff"),
+      },
     };
   }
 }

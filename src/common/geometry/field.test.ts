@@ -158,4 +158,37 @@ describe("FieldGeometry", () => {
     expect(Number.isNaN(g.offsetX)).toBe(false);
     expect(Number.isNaN(g.toCanvas(10, 50).x)).toBe(false);
   });
+
+  it("逆変換は forward と往復で一致する（横）", () => {
+    const g = new FieldGeometry(1000, 600, "middle");
+
+    expect(g.lateralYardForX(g.xForLateralYard(0))).toBeCloseTo(0, 10);
+    expect(g.lateralYardForX(g.xForLateralYard(20))).toBeCloseTo(20, 10);
+  });
+
+  it("逆変換は forward と往復で一致する（縦・ゾーン非依存の絶対ヤード）", () => {
+    const g = new FieldGeometry(1000, 600, "redzone");
+
+    expect(g.absoluteYardForY(g.yForAbsoluteYard(95))).toBeCloseTo(95, 10);
+    expect(g.absoluteYardForY(g.yForAbsoluteYard(110))).toBeCloseTo(110, 10);
+  });
+
+  it("fromCanvas は toCanvas の逆（点の往復）", () => {
+    const g = new FieldGeometry(1000, 600, "middle");
+    const canvas = g.toCanvas(26.6, 52);
+
+    const back = g.fromCanvas(canvas);
+
+    expect(back.lateralYard).toBeCloseTo(26.6, 10);
+    expect(back.absoluteYard).toBeCloseTo(52, 10);
+  });
+
+  it("縮退ビューポートでも逆変換は NaN を出さない", () => {
+    const g = new FieldGeometry(0, 0, "middle");
+
+    const back = g.fromCanvas({ x: 100, y: 100 });
+
+    expect(Number.isNaN(back.lateralYard)).toBe(false);
+    expect(Number.isNaN(back.absoluteYard)).toBe(false);
+  });
 });

@@ -32,3 +32,5 @@ coverage/
 
 # Type checking
 *.tsbuildinfo
+
+.tmp

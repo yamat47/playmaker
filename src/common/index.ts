@@ -16,6 +16,7 @@ export {
   yardLinesInWindow,
   ZONE_WINDOW_LENGTH_YARDS,
 } from "./geometry/field.js";
+export { hitTestPlayer } from "./geometry/hit-test.js";
 export {
   Disposable,
   DisposableStore,
@@ -31,3 +32,13 @@ export {
   type PlayData,
   resolvePlayData,
 } from "./model/play-data.js";
+export {
+  clonePlayer,
+  DEFAULT_PLAYER_SHAPE,
+  type FieldPosition,
+  isPlayerShape,
+  normalizePlayers,
+  PLAYER_RADIUS_YARDS,
+  type Player,
+  type PlayerShape,
+} from "./model/player.js";

@@ -1,5 +1,7 @@
 // 商用ソフトに保存・復元される唯一のデータ表現（PRD 5.8 / 6.6）。
-// DOM 非依存。M1 では field のみ確定し、選手/線は M2・M3 で field と同じ要領で足す。
+// DOM 非依存。M1 で field、M2 で players を確定。線は M3 で同じ要領で足す。
+
+import { normalizePlayers, type Player } from "./player.js";
 
 /**
  * フィールドのどの 30 ヤード窓を映すか（PRD 5.1）。
@@ -20,20 +22,22 @@ export interface FieldState {
 
 /**
  * プレー図データ。`version` でスキーマ進化に備える（マイグレーション機構は M8）。
- * 選手・線は後続マイルストーンでこの型に追加する。
+ * 線は後続マイルストーンでこの型に追加する。
  */
 export interface PlayData {
   version: 1;
   field: FieldState;
+  /** 配置済みの選手（描画順 = 配列順。後の要素ほど上に重なる）。 */
+  players: Player[];
 }
 
 export function isFieldZone(value: unknown): value is FieldZone {
   return typeof value === "string" && (FIELD_ZONES as readonly string[]).includes(value);
 }
 
-/** 既定状態の新規 PlayData。 */
+/** 既定状態の新規 PlayData（選手なし）。 */
 export function createEmptyPlayData(): PlayData {
-  return { version: 1, field: { zone: DEFAULT_FIELD_ZONE } };
+  return { version: 1, field: { zone: DEFAULT_FIELD_ZONE }, players: [] };
 }
 
 /**
@@ -47,5 +51,6 @@ export function resolvePlayData(data: PlayData | undefined): PlayData {
   return {
     version: 1,
     field: { zone: isFieldZone(zone) ? zone : DEFAULT_FIELD_ZONE },
+    players: normalizePlayers(data?.players),
   };
 }

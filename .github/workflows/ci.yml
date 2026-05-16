@@ -10,6 +10,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# JS アクション(checkout/setup-node 等)を最新の Node 24 ランタイムで動かす
+# （Node 20 ランタイムは非推奨。GitHub 強制移行前に先取りする）
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   verify:
     name: typecheck / lint / test / build
@@ -25,7 +30,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 25
           cache: pnpm
 
       - name: Install dependencies

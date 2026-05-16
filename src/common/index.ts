@@ -21,6 +21,16 @@ export {
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "./commands/player-commands.js";
+export {
+  EditorController,
+  type EditorOverlay,
+  type EditorSelection,
+  type EditorTool,
+  type EditorViewState,
+  type IEditorController,
+  WAYPOINT_HANDLE_RADIUS_YARDS,
+} from "./editing/editor-controller.js";
+export { IdFactory, type IIdFactory } from "./editing/id-factory.js";
 export { Emitter, type Event } from "./event/emitter.js";
 export {
   catmullRomBezierControls,

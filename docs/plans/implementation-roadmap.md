@@ -148,6 +148,30 @@ PRD 5.4 の編集ロジック基盤を **common のみ・UI なし**で確定。
 - `playmaker.ts` への結線（公開 `options.onChange` 発火・view⇄edit での編集無効化）と input→command 変換は **M5**（browser・edit UI）
 - `onChange` の往復契約（PlayData の version/migration を含む確定）は **M8**
 
+### 実装メモ：編集 UI（コマンド配線・入力・UI）（2026-05-16, M5）
+
+PRD 5.4 の編集操作を VSCode 流の軽量適用で実装。判断ロジックを common に寄せて
+node 単体で全網羅し、browser は薄い DOM シェルに保った。フォーメーション読込
+（5.4 の 1 項目）はロードマップ通り **M6** として分離した。
+
+**M5 で確定（common: editing・テスト済 / 209 tests・common 100%）**
+- `EditorController`（`IEditorController`・DOM 非依存）= ツール(`select`/`add-player`/`draw-line`)・選択・**ヤード空間ジェスチャ**(pointerDown/Move/Up・commitLine・cancel) を受け、適切な `ICommand` を `ICommandService` 経由で発行する唯一の入口。hit-test は M2/M3 の common を再利用
+- ドラッグ/作図中プレビューは **`getRenderModel()`**（Model スナップショット＋一時状態の純合成）で表現。これで実データ変更は **1 コマンド = onChange 1 回**（M4 契約）を保ち、見た目の追従はコマンド・履歴を汚さない。`getOverlay()` が選択強調/ハンドル位置（ヤード空間）を返し browser は描くだけ
+- **選択は「id の希望」で stale 許容**（対象が消えても自動解除せず lookup が空を返す）。これで防御分岐がすべて到達可能になり `v8 ignore` 0 件で common 100% を維持（前 M と同じ規律）。`IdFactory` は prefix ごと単調増加で衝突しない安定 id を採番（削除済み id を再利用しない＝Undo 復活と衝突しない）
+- waypoint 編集は M4 の可逆プリミティブ `SetLineWaypointsCommand` に**ハンドルのドラッグ移動**を載せた（列まるごと差し替え）。線の `end` 編集は M4 で凍結した 9 コマンドに無く、PRD 5.4 の語（「描画／waypoint 編集」）に沿って**作図やり直し（delete→draw）で代替**。waypoint の個別 add/insert と end 編集は **M9 磨き**へ
+- フィールドゾーン切替を `SetFieldZoneCommand` 経由に統一（Undo/onChange の対象に）。M1 で直接 set していた `Playmaker.setFieldZone` も結線し直した
+
+**M5 で確定（browser: 最小限・VRT なし）**
+- `CanvasSurface` を controller 駆動へ：`getRenderModel()`/`getOverlay()` を 1 フレーム合成描画＋選択 overlay（選手リング/線ハイライト/waypoint ハンドル）。`clientToYard` で px→ヤード逆変換を提供（座標規約を 1 か所に集約）
+- `PointerInput`（pointer/dblclick＝作図確定/`Esc`＝取消/`Enter`＝確定/`⌘|Ctrl+Z`＝Undo・`Shift`/`Y`＝Redo。PRD 8.1 で Undo/Redo ショートカットのみスコープ内）。`Toolbar`/`PropertyPanel` はバニラ DOM・`--playmaker-*`（`--playmaker-selection-color` 追加）
+- `playmaker.ts` = 1 セッション(Model+履歴+UI)を結線。`model.onDidChange`→`options.onChange` 発火（構築時は無発火＝再読込は edit でない）。**edit のみ UI/入力**、`view` は読み取り専用（PRD 5.5・CSS でも保険的に非表示）。`setPlayData` は Model に `setData` を足さず**セッション再構築**で対応（履歴リセット＝M4 API を尊重）
+- demo は内蔵 UI で編集＋Undo/Redo を目視、`onChange` でデータ連携を可視化
+
+**M6 / M8 / M9 へ繰り延べ**
+- フォーメーションテンプレート読込（5.4 の 1 項目）= **M6**
+- `onChange` の往復契約（version/migration 含む確定）= **M8**
+- 見た目磨き（選択強調/矢じり/ハンドル体裁）・waypoint 個別 add/remove・線 end のドラッグ編集 = **M9**
+
 ### 完了判定（PRD 7 章）
 - 機能要件（PRD 5 章）すべてが仕様通り動作
 - `common` 層の単体テストおよび統合テストが通る

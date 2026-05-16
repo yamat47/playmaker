@@ -1,7 +1,7 @@
 /*
  * Playmaker のスタイル。商用ソフト側は --playmaker-* を上書きするだけで
  * 配色・フォント・サイズをデザインシステムに合わせられる（PRD 6.5）。
- * UI（ツールバー/プロパティパネル）は M5 でこの変数体系の上に実装する。
+ * UI（ツールバー/プロパティパネル）は M5 でこの変数体系の上に実装した。
  */
 .playmaker-root {
   --playmaker-font-family: system-ui, sans-serif;
@@ -14,6 +14,7 @@
   --playmaker-line-route-color: #ffeb3b;
   --playmaker-line-block-color: #ffffff;
   --playmaker-line-motion-color: #ffeb3b;
+  --playmaker-selection-color: #ff9800;
   --playmaker-surface-bg: #ffffff;
   --playmaker-border-color: #d0d0d0;
   --playmaker-text-color: #1a1a1a;
@@ -32,4 +33,110 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/*
+ * 編集 UI は Canvas の上に重ねる HTML オーバーレイ（PRD 6.5 / M7 の PNG 除外に有利）。
+ * 配色・サイズは --playmaker-* 由来で商用ソフトのデザインに追従する。
+ */
+.playmaker-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--playmaker-border-color);
+  border-radius: 6px;
+  background: var(--playmaker-surface-bg);
+  color: var(--playmaker-text-color);
+}
+
+.playmaker-toolbar__button {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid var(--playmaker-border-color);
+  border-radius: 4px;
+  background: var(--playmaker-surface-bg);
+  color: var(--playmaker-text-color);
+  cursor: pointer;
+}
+
+.playmaker-toolbar__button:hover:not(:disabled) {
+  border-color: var(--playmaker-accent-color);
+}
+
+.playmaker-toolbar__button[aria-pressed="true"] {
+  background: var(--playmaker-accent-color);
+  border-color: var(--playmaker-accent-color);
+  color: #ffffff;
+}
+
+.playmaker-toolbar__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.playmaker-toolbar__sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 4px;
+  background: var(--playmaker-border-color);
+}
+
+.playmaker-panel {
+  position: absolute;
+  top: 56px;
+  right: 8px;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--playmaker-border-color);
+  border-radius: 6px;
+  background: var(--playmaker-surface-bg);
+  color: var(--playmaker-text-color);
+}
+
+.playmaker-panel__title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.playmaker-panel__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.playmaker-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.playmaker-panel__row input,
+.playmaker-panel__row select {
+  font: inherit;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 4px;
+}
+
+.playmaker-panel__row input[type="color"] {
+  flex: 0 0 auto;
+  width: 40px;
+  padding: 0;
+}
+
+/* view モードでは編集 UI を出さない（PRD 5.5）。保険として CSS でも隠す。 */
+.playmaker-root[data-mode="view"] .playmaker-toolbar,
+.playmaker-root[data-mode="view"] .playmaker-panel {
+  display: none;
 }

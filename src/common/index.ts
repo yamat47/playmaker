@@ -3,6 +3,12 @@
 
 export { Emitter, type Event } from "./event/emitter.js";
 export {
+  catmullRomBezierControls,
+  cubicBezierPoint,
+  DEFAULT_BEZIER_SAMPLES_PER_SEGMENT,
+  sampleLinePath,
+} from "./geometry/bezier.js";
+export {
   type CanvasPoint,
   displayYardNumber,
   END_ZONE_DEPTH_YARDS,
@@ -16,13 +22,31 @@ export {
   yardLinesInWindow,
   ZONE_WINDOW_LENGTH_YARDS,
 } from "./geometry/field.js";
-export { hitTestPlayer } from "./geometry/hit-test.js";
+export {
+  distanceToSegment,
+  hitTestLine,
+  hitTestPlayer,
+  LINE_HIT_TOLERANCE_YARDS,
+} from "./geometry/hit-test.js";
 export {
   Disposable,
   DisposableStore,
   type IDisposable,
   toDisposable,
 } from "./lifecycle/disposable.js";
+export {
+  cloneLine,
+  DEFAULT_LINE_INTERPOLATION,
+  DEFAULT_LINE_KIND,
+  indexPlayersById,
+  isLineInterpolation,
+  isLineKind,
+  type Line,
+  type LineInterpolation,
+  type LineKind,
+  lineAnchorPoints,
+  normalizeLines,
+} from "./model/line.js";
 export {
   createEmptyPlayData,
   DEFAULT_FIELD_ZONE,

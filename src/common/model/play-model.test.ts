@@ -56,6 +56,20 @@ describe("PlayModel 構築", () => {
 
     expect(model.findPlayer("a")?.label).toBe("a");
   });
+
+  it("版なしの旧来 blob も migratePlayData 経由で現行版へ寄せて取り込む", () => {
+    // 商用ソフトが永続化した未バージョン化データの再読込（PRD 6.6 唯一の入口）。
+    const legacy = {
+      field: { zone: "redzone" },
+      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square" }],
+    } as unknown as PlayData;
+
+    const model = new PlayModel(legacy);
+
+    expect(model.getData().version).toBe(1);
+    expect(model.getFieldZone()).toBe("redzone");
+    expect(model.findPlayer("wr")?.shape).toBe("square");
+  });
 });
 
 describe("PlayModel 参照系", () => {

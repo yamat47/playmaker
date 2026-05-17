@@ -26,6 +26,7 @@
       }
       #controls {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
       }
       #controls button {
@@ -38,6 +39,32 @@
         color: #fff;
         border-color: #1565c0;
       }
+      #data {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px 12px;
+        border-bottom: 1px solid #ddd;
+      }
+      #data .row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 13px;
+      }
+      #data button {
+        padding: 3px 9px;
+        font: inherit;
+        cursor: pointer;
+      }
+      #data textarea {
+        width: 100%;
+        height: 92px;
+        box-sizing: border-box;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        resize: vertical;
+      }
       #stage {
         flex: 1;
         min-height: 0;
@@ -47,10 +74,21 @@
   <body>
     <div id="app">
       <header>
-        <span>Playmaker Playground — M7: PNG エクスポート（編集 UI 除外）</span>
+        <span>Playmaker Playground — M8: データ連携（PlayData 往復・version/migration）</span>
         <div id="controls"></div>
         <span id="status" style="margin-left: auto; opacity: 0.7"></span>
       </header>
+      <section id="data">
+        <div class="row">
+          <strong>PlayData JSON</strong>
+          <button id="json-export" type="button">現在の図を JSON へ書き出す</button>
+          <button id="json-import" type="button">JSON を読み込む（往復）</button>
+          <button id="json-legacy" type="button">版なし旧 blob を再現</button>
+          <button id="json-future" type="button">未来版(v99) blob を再現</button>
+          <span id="data-status" style="opacity: 0.7"></span>
+        </div>
+        <textarea id="json" spellcheck="false" aria-label="PlayData JSON"></textarea>
+      </section>
       <div id="stage"></div>
     </div>
     <script type="module" src="/main.ts"></script>

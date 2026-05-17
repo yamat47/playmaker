@@ -9,7 +9,11 @@
 //     クリア→攻→守 と重ねると追記セマンティクス（攻守を順に置ける）が分かる。
 // M7: PNG エクスポート。「PNG を出力」で現在のプレー図をダウンロードし、編集 UI が
 //     含まれない（view/edit いずれでも同じ図）ことを目視する。
+// M8: データ連携（PlayData 往復・version/migration）。JSON パネルで getPlayData の
+//     書き出し→読込（setPlayData）の往復、版なし旧 blob・未来版 blob が現行版へ
+//     寄る（migratePlayData）ことを目視する。編集すると onChange で JSON も更新。
 import {
+  CURRENT_PLAY_DATA_VERSION,
   FORMATION_PRESETS,
   type Line,
   type PlayData,
@@ -22,12 +26,22 @@ import {
 const stage = document.getElementById("stage");
 const controlsEl = document.getElementById("controls");
 const statusEl = document.getElementById("status");
-if (!stage || !controlsEl || !statusEl) {
-  throw new Error("#stage / #controls / #status が見つかりません");
+const jsonEl = document.getElementById("json");
+const dataStatusEl = document.getElementById("data-status");
+if (
+  !stage ||
+  !controlsEl ||
+  !statusEl ||
+  !(jsonEl instanceof HTMLTextAreaElement) ||
+  !dataStatusEl
+) {
+  throw new Error("#stage / #controls / #status / #json / #data-status が見つかりません");
 }
 const controls: HTMLElement = controlsEl;
 const status: HTMLElement = statusEl;
 const mountPoint: HTMLElement = stage;
+const jsonArea: HTMLTextAreaElement = jsonEl;
+const dataStatus: HTMLElement = dataStatusEl;
 
 // M2/M3 目視用サンプル: 6 形状・色・ラベル・3 線種・直線/ベジェ・waypoint。
 const DEFENSE_COLOR = "#c62828";
@@ -148,6 +162,32 @@ let changeCount = 0;
 function onChange(data: PlayData): void {
   changeCount += 1;
   status.textContent = `onChange #${changeCount}｜選手 ${data.players.length}・線 ${data.lines.length}・ゾーン ${data.field.zone}`;
+  // version の現行確定を編集ごとに目視できるよう通知データをそのまま出す。
+  jsonArea.value = JSON.stringify(data, null, 2);
+}
+
+/** 現在のプレー図（正準スナップショット）を JSON 欄へ書き出す。 */
+function refreshJson(): void {
+  jsonArea.value = JSON.stringify(playmaker.getPlayData(), null, 2);
+}
+
+/**
+ * JSON 欄の内容を setPlayData で読み込み、結果を再表示する。
+ * setPlayData は onChange を発火しない契約なので明示的に書き戻し、版なし/未来版
+ * blob が現行版へ寄る（migratePlayData）ことを往復として目視できる。
+ */
+function loadFromJsonText(): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonArea.value);
+  } catch (error) {
+    dataStatus.textContent = `JSON 解析エラー: ${(error as Error).message}`;
+    return;
+  }
+  // 旧版・未来版・破損も migratePlayData が現行へ寄せる前提で型を緩めて渡す。
+  playmaker.setPlayData(parsed as PlayData);
+  refreshJson();
+  dataStatus.textContent = "読込完了（version は現行へ寄せて再表示）";
 }
 
 function create(initialData?: PlayData): Playmaker {
@@ -162,7 +202,7 @@ function create(initialData?: PlayData): Playmaker {
 }
 
 let playmaker = create({
-  version: 1,
+  version: CURRENT_PLAY_DATA_VERSION,
   field: { zone: "middle" },
   players: SAMPLE_PLAYERS,
   lines: SAMPLE_LINES,
@@ -178,20 +218,22 @@ function addAction(label: string, onClick: () => void): HTMLButtonElement {
 
 addAction("サンプル隊形＋線を読み込む", () => {
   playmaker.setPlayData({
-    version: 1,
+    version: CURRENT_PLAY_DATA_VERSION,
     field: { zone: playmaker.fieldZone },
     players: SAMPLE_PLAYERS,
     lines: SAMPLE_LINES,
   });
+  refreshJson();
 });
 
 addAction("クリア", () => {
   playmaker.setPlayData({
-    version: 1,
+    version: CURRENT_PLAY_DATA_VERSION,
     field: { zone: playmaker.fieldZone },
     players: [],
     lines: [],
   });
+  refreshJson();
 });
 
 // 公開 API loadFormation の目視（追記）。クリア→攻→守 の順で重ねられる。
@@ -221,6 +263,7 @@ const modeButton = addAction("", () => {
   mode = mode === "edit" ? "view" : "edit";
   playmaker = create(snapshot);
   syncModeButton();
+  refreshJson();
 });
 
 function syncModeButton(): void {
@@ -230,6 +273,53 @@ function syncModeButton(): void {
 
 syncModeButton();
 
+// JSON パネル（M8 往復・migration の目視）。静的 HTML のボタンに結線する。
+// 静的 HTML ボタンは HMR を跨いで生き残るため、signal でリスナを束ね再読込時に外す
+// （束ねないとホットリロードごとに多重登録され 1 クリックで多重発火する）。
+const demoLifetime = new AbortController();
+
+function bindButton(id: string, onClick: () => void): void {
+  const button = document.getElementById(id);
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`#${id} が見つかりません`);
+  }
+  button.addEventListener("click", onClick, { signal: demoLifetime.signal });
+}
+
+/** 任意 blob を JSON 欄へ流し込み読込まで通す（旧版/未来版 fixture の目視に共通）。 */
+function loadFixture(blob: unknown): void {
+  jsonArea.value = JSON.stringify(blob, null, 2);
+  loadFromJsonText();
+}
+
+bindButton("json-export", () => {
+  refreshJson();
+  dataStatus.textContent = "現在の getPlayData を書き出し";
+});
+bindButton("json-import", loadFromJsonText);
+// version フィールドの無い商用ソフト初期データ → 読込で現行版へ寄る。
+bindButton("json-legacy", () =>
+  loadFixture({
+    field: { zone: "own-redzone" },
+    players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square" }],
+  }),
+);
+// 新しい lib で保存された未来版 → 前方互換で現行へ寄り未知項目は落ちる。
+bindButton("json-future", () =>
+  loadFixture({
+    version: 99,
+    field: { zone: "redzone" },
+    players: [{ id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "circle" }],
+    lines: [],
+    futureOnlyField: { whatever: true },
+  }),
+);
+
+refreshJson();
+
 if (import.meta.hot) {
-  import.meta.hot.dispose(() => playmaker.dispose());
+  import.meta.hot.dispose(() => {
+    demoLifetime.abort();
+    playmaker.dispose();
+  });
 }

@@ -192,6 +192,44 @@ describe("PlayModel.removePlayer / restorePlayer", () => {
   });
 });
 
+describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () => {
+  it("addPlayers は全選手を末尾へ複製し 1 回だけ発火、入力と切り離す", () => {
+    const model = new PlayModel();
+    const listener = vi.fn();
+    model.onDidChange(listener);
+    const ps = [player("x", 1, 1), player("y", 2, 2)];
+
+    model.addPlayers(ps);
+    must(ps[0]).label = "tampered";
+
+    expect(model.getData().players.map((p) => p.id)).toEqual(["x", "y"]);
+    expect(model.findPlayer("x")?.label).toBe("x");
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("removePlayers は複数選手と従属線をカスケード除去し 1 回発火、メメント順を保つ", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    const removals = model.removePlayers(["a", "b"]);
+
+    expect(removals.map((r) => r.player.id)).toEqual(["a", "b"]);
+    // a 起点の la/lc が先に消え、続いて（残り lines に対して）b 起点の lb が消える。
+    expect(removals[0]?.removedLines.map((r) => r.line.id)).toEqual(["la", "lc"]);
+    expect(removals[1]?.removedLines.map((r) => r.line.id)).toEqual(["lb"]);
+    expect(model.getData().players.map((p) => p.id)).toEqual(["c"]);
+    expect(model.getData().lines).toEqual([]);
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("removePlayers は未知 id を含むと throw する（コア共有の契約）", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.removePlayers(["a", "ghost"])).toThrow(/unknown player id "ghost"/);
+  });
+});
+
 describe("PlayModel 線の追加・挿入・削除・更新", () => {
   it("addLine は末尾へ複製を足し発火する", () => {
     const model = new PlayModel({ ...seed(), lines: [] });

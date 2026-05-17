@@ -8,10 +8,10 @@ import {
   type Formation,
   IdFactory,
   type ImageExportOptions,
+  migratePlayData,
   normalizeFormation,
   type PlayData,
   PlayModel,
-  resolvePlayData,
   toDisposable,
   UndoRedoService,
 } from "./common/index.js";
@@ -32,16 +32,30 @@ export type {
   Player,
   PlayerShape,
 } from "./common/index.js";
-export { FORMATION_PRESETS, getFormationPreset } from "./common/index.js";
+export {
+  CURRENT_PLAY_DATA_VERSION,
+  FORMATION_PRESETS,
+  getFormationPreset,
+  migratePlayData,
+} from "./common/index.js";
 
 export type PlaymakerMode = "view" | "edit";
 
 export interface PlaymakerOptions {
   /** 既定は "edit"。"view" は読み取り専用（編集 UI を出さない・PRD 5.5）。 */
   mode?: PlaymakerMode;
-  /** 初期表示するプレー図データ。欠落・古い形式は既定で補完する。 */
+  /**
+   * 初期表示するプレー図データ。商用ソフトが永続化した PlayData をそのまま渡せる。
+   * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行スキーマへ寄せる
+   * （決して投げず復元不能要素のみ除外＝PRD 6.6 の往復契約）。
+   */
   initialData?: PlayData;
-  /** 編集操作のたびに最新の PlayData を通知する（暫定契約。確定は M8）。 */
+  /**
+   * 編集確定契約（PRD 5.8）：編集コマンドおよび Undo/Redo の確定ごとに **1 回**、
+   * 最新 PlayData の深いスナップショット（`version` は常に現行・内部状態と分離）を渡す。
+   * 受け手はそのまま永続化でき、書き換えても内部に波及しない。構築時・`setPlayData`
+   * での再読込・PNG 出力では発火しない（再読込は編集ではない）。
+   */
   onChange?: (data: PlayData) => void;
 }
 
@@ -74,7 +88,7 @@ export class Playmaker extends Disposable {
     this._register(toDisposable(() => this.root.remove()));
 
     this.surface = this._register(
-      new CanvasSurface(this.root, resolvePlayData(options.initialData)),
+      new CanvasSurface(this.root, migratePlayData(options.initialData)),
     );
 
     const built = this.buildSession(options.initialData);
@@ -111,8 +125,10 @@ export class Playmaker extends Disposable {
   }
 
   /**
-   * プレー図データを丸ごと投入し直す（PRD 5.8 再読込）。履歴はリセットされる。
-   * 欠落・古い形式は既定で補完する。正式な往復契約は M8 で確定する。
+   * 商用ソフトが永続化した PlayData を後から丸ごと再読込する（PRD 5.8）。
+   * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行へ寄せ、決して
+   * 投げない。1 セッション = 1 Model なので履歴はリセットされ、再読込は編集では
+   * ないため `onChange` は発火しない（編集確定のみが通知契約＝PRD 6.6）。
    */
   setPlayData(data: PlayData): void {
     this.session.dispose();
@@ -123,8 +139,9 @@ export class Playmaker extends Disposable {
   }
 
   /**
-   * 現在の PlayData のスナップショット（防御的コピー）。
-   * 正式な往復契約は M8 で確定する。
+   * 現在のプレー図の正準スナップショット（深い防御的コピー・`version` は現行）。
+   * そのまま JSON 化して永続化でき、後で `setPlayData` / `initialData` に戻すと
+   * 同値のプレー図に復元される（PRD 5.8 / 6.6 の往復契約）。
    */
   getPlayData(): PlayData {
     return this.model.getData();

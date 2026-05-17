@@ -80,6 +80,20 @@
   cursor: not-allowed;
 }
 
+.playmaker-toolbar__select {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--playmaker-border-color);
+  border-radius: 4px;
+  background: var(--playmaker-surface-bg);
+  color: var(--playmaker-text-color);
+  cursor: pointer;
+}
+
+.playmaker-toolbar__select:hover {
+  border-color: var(--playmaker-accent-color);
+}
+
 .playmaker-toolbar__sep {
   width: 1px;
   align-self: stretch;

@@ -41,8 +41,12 @@ export interface IPlayModel {
   findLine(id: string): Line | undefined;
   setFieldZone(zone: FieldZone): void;
   addPlayer(player: Player): void;
+  /** 複数選手を一括追加し、変更を 1 回だけ発火する（フォーメーション読込=M6）。 */
+  addPlayers(players: readonly Player[]): void;
   /** 選手を削除し、起点がその選手の線もカスケード除去する。巻き戻し用メメントを返す。 */
   removePlayer(id: string): PlayerRemoval;
+  /** 複数選手を一括削除し（各々従属線をカスケード）、変更を 1 回だけ発火する。 */
+  removePlayers(ids: readonly string[]): PlayerRemoval[];
   /** removePlayer の逆操作。選手と従属線を元の並びへ戻す。 */
   restorePlayer(removal: PlayerRemoval): void;
   /** 同 id の選手を差し替え、差し替え前の選手（複製）を返す。 */
@@ -103,12 +107,25 @@ export class PlayModel implements IPlayModel {
     this.emitChange();
   }
 
-  addPlayer(player: Player): void {
+  // 変更を発火しない純粋なミューテーション。単発（emit 付き）と一括（最後に 1 回 emit）の
+  // 両方からこのコアを共有し、「1 操作 = onChange 1 回」を一括時も保つ（M4 契約）。
+  private addPlayerCore(player: Player): void {
     this.state = { ...this.state, players: [...this.state.players, clonePlayer(player)] };
+  }
+
+  addPlayer(player: Player): void {
+    this.addPlayerCore(player);
     this.emitChange();
   }
 
-  removePlayer(id: string): PlayerRemoval {
+  addPlayers(players: readonly Player[]): void {
+    for (const player of players) {
+      this.addPlayerCore(player);
+    }
+    this.emitChange();
+  }
+
+  private removePlayerCore(id: string): PlayerRemoval {
     const target = this.state.players.find((p) => p.id === id);
     if (target === undefined) {
       throw new Error(`PlayModel.removePlayer: unknown player id "${id}"`);
@@ -129,8 +146,19 @@ export class PlayModel implements IPlayModel {
       players: this.state.players.filter((p) => p !== target),
       lines,
     };
-    this.emitChange();
     return { player: clonePlayer(target), index, removedLines };
+  }
+
+  removePlayer(id: string): PlayerRemoval {
+    const removal = this.removePlayerCore(id);
+    this.emitChange();
+    return removal;
+  }
+
+  removePlayers(ids: readonly string[]): PlayerRemoval[] {
+    const removals = ids.map((id) => this.removePlayerCore(id));
+    this.emitChange();
+    return removals;
   }
 
   restorePlayer(removal: PlayerRemoval): void {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandService } from "../commands/command-service.js";
+import type { Formation } from "../formations/formation.js";
 import { RemoveLineCommand, RemovePlayerCommand } from "../index.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
@@ -579,6 +580,79 @@ describe("EditorController: アクション", () => {
     controller.redo();
     expect(model.getData().players).toHaveLength(3);
     expect(controller.getViewState().canUndo).toBe(true);
+  });
+});
+
+describe("EditorController: loadFormation（フォーメーション読込）", () => {
+  const formation: Formation = {
+    id: "x",
+    name: "テスト隊形",
+    side: "offense",
+    players: [
+      { position: { lateralYard: 30, absoluteYard: 45 }, shape: "circle", label: "A" },
+      {
+        position: { lateralYard: 32, absoluteYard: 45 },
+        shape: "square",
+        label: "B",
+        color: "#c62828",
+      },
+    ],
+  };
+
+  it("既存選手を保ち衝突しない id で追記、選択解除、Undo で取り消せる", () => {
+    const { controller, model, undoRedo } = setup();
+    controller.pointerDown({ lateralYard: 10, absoluteYard: 50 }); // p-a 選択
+    controller.pointerUp({ lateralYard: 10, absoluteYard: 50 });
+
+    controller.loadFormation(formation);
+
+    const players = model.getData().players;
+    expect(players.map((p) => p.id)).toEqual(["p-a", "p-b", "player-1", "player-2"]);
+    expect(players[2]).toEqual({
+      id: "player-1",
+      position: { lateralYard: 30, absoluteYard: 45 },
+      shape: "circle",
+      label: "A",
+    });
+    expect(players[3]?.color).toBe("#c62828"); // 色ありテンプレートは色を保つ
+    expect(controller.getSelection()).toBeNull(); // 読込で選択解除
+    expect(undoRedo.canUndo).toBe(true);
+
+    controller.undo();
+    expect(model.getData().players.map((p) => p.id)).toEqual(["p-a", "p-b"]);
+  });
+
+  it("既存に同形式の id があっても IdFactory が衝突を避ける", () => {
+    const { controller, model } = setup({
+      version: 1,
+      field: { zone: "middle" },
+      players: [
+        {
+          id: "player-1",
+          position: { lateralYard: 1, absoluteYard: 50 },
+          shape: "circle",
+          label: "X",
+        },
+      ],
+      lines: [],
+    });
+
+    controller.loadFormation(formation);
+
+    const ids = model.getData().players.map((p) => p.id);
+    expect(ids).toEqual(["player-1", "player-2", "player-3"]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("配置可能な選手が無ければ no-op（コマンドも発火も出ない）", () => {
+    const { controller, model, undoRedo, changes } = setup();
+    changes.mockClear();
+
+    controller.loadFormation({ id: "empty", name: "空", side: "offense", players: [] });
+
+    expect(model.getData().players.map((p) => p.id)).toEqual(["p-a", "p-b"]);
+    expect(undoRedo.canUndo).toBe(false);
+    expect(changes).not.toHaveBeenCalled();
   });
 });
 

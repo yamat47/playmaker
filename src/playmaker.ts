@@ -5,7 +5,9 @@ import {
   DisposableStore,
   EditorController,
   type FieldZone,
+  type Formation,
   IdFactory,
+  normalizeFormation,
   type PlayData,
   PlayModel,
   resolvePlayData,
@@ -18,6 +20,9 @@ export type {
   FieldPosition,
   FieldState,
   FieldZone,
+  Formation,
+  FormationPlayer,
+  FormationSide,
   Line,
   LineInterpolation,
   LineKind,
@@ -25,6 +30,7 @@ export type {
   Player,
   PlayerShape,
 } from "./common/index.js";
+export { FORMATION_PRESETS, getFormationPreset } from "./common/index.js";
 
 export type PlaymakerMode = "view" | "edit";
 
@@ -85,6 +91,21 @@ export class Playmaker extends Disposable {
    */
   setFieldZone(zone: FieldZone): void {
     this.controller.setFieldZone(zone);
+  }
+
+  /**
+   * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
+   * 既存のプレー図へ追記する（攻守プリセットを順に重ねられる）。外部の
+   * カスタム隊形は normalizeFormation で正規化し、配置可能な選手が無ければ no-op。
+   * 編集操作なので Undo/onChange の対象（view モードでも API としては有効）。
+   * プリセットは公開 `FORMATION_PRESETS` / `getFormationPreset` から取得できる。
+   */
+  loadFormation(formation: Formation): void {
+    const normalized = normalizeFormation(formation);
+    if (normalized === null) {
+      return;
+    }
+    this.controller.loadFormation(normalized);
   }
 
   /**

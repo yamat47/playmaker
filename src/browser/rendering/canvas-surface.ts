@@ -3,10 +3,12 @@ import {
   type EditorOverlay,
   FieldGeometry,
   type FieldPosition,
+  type ImageExportOptions,
   indexPlayersById,
   lineAnchorPoints,
   PLAYER_RADIUS_YARDS,
   type PlayData,
+  resolveImageExportSize,
   sampleLinePath,
   toDisposable,
   WAYPOINT_HANDLE_RADIUS_YARDS,
@@ -83,17 +85,61 @@ export class CanvasSurface extends Disposable {
     this.render();
   }
 
+  /**
+   * 指定 PlayData を PNG（Blob）として書き出す（PRD 5.7）。
+   * - data はコミット済みスナップショット想定。選択強調・waypoint ハンドル・
+   *   作図中プレビューといった編集補助は drawPlay が描かない構図なので構造的に
+   *   含まれない（ツールバー/パネルは HTML 兄弟要素で canvas 外＝元から非対象）。
+   * - 配色は画面と同じ host の --playmaker-* を読むためオンスクリーンと一致する。
+   * - 出力寸法はフィールド窓のアスペクト比なのでレターボックス余白は出ない。
+   */
+  exportToPngBlob(data: PlayData, options?: ImageExportOptions): Promise<Blob> {
+    const { width, height } = resolveImageExportSize(options);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Playmaker: エクスポート用 2D canvas context を取得できませんでした。");
+    }
+    const geometry = new FieldGeometry(width, height, data.field.zone);
+    this.drawPlay(ctx, geometry, data, this.makeReader());
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Playmaker: PNG への変換に失敗しました。"));
+        }
+      }, "image/png");
+    });
+  }
+
   private render(): void {
     const { clientWidth, clientHeight } = this.canvas.parentElement ?? this.canvas;
     this.geometry = new FieldGeometry(clientWidth, clientHeight, this.data.field.zone);
     // getComputedStyle はスタイル再計算を誘発しうるため 1 render = 1 回に束ねる。
     const read = this.makeReader();
-    const { field, line, player } = this.readThemes(read);
-    // 線は選手の下に敷く＝起点（選手位置）がマーカーで隠れ、線の根元が綺麗に見える。
-    this.fieldRenderer.draw(this.ctx, this.geometry, field);
-    this.lineRenderer.draw(this.ctx, this.geometry, this.data.lines, this.data.players, line);
-    this.playerRenderer.draw(this.ctx, this.geometry, this.data.players, player);
+    this.drawPlay(this.ctx, this.geometry, this.data, read);
     this.drawOverlay(read("--playmaker-selection-color", "#ff9800"));
+  }
+
+  /**
+   * プレー本体（フィールド→線→選手）を 1 フレーム描く。編集 overlay は含めない
+   * ＝ ライブ描画と PNG エクスポートで同一構図を共有し「export = 画面 − 編集 UI」を
+   * 構造で保証する（PRD 5.7）。線は選手の下に敷く＝起点（選手位置）がマーカーで
+   * 隠れ、線の根元が綺麗に見える。
+   */
+  private drawPlay(
+    ctx: CanvasRenderingContext2D,
+    geometry: FieldGeometry,
+    data: PlayData,
+    read: (name: string, fallback: string) => string,
+  ): void {
+    const { field, line, player } = this.readThemes(read);
+    this.fieldRenderer.draw(ctx, geometry, field);
+    this.lineRenderer.draw(ctx, geometry, data.lines, data.players, line);
+    this.playerRenderer.draw(ctx, geometry, data.players, player);
   }
 
   /**

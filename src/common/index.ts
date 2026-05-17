@@ -95,6 +95,14 @@ export {
   normalizeLines,
 } from "./model/line.js";
 export {
+  applyPlayDataMigrations,
+  migratePlayData,
+  PLAY_DATA_MIGRATIONS,
+  type PlayDataMigration,
+  readDeclaredVersion,
+} from "./model/migration.js";
+export {
+  CURRENT_PLAY_DATA_VERSION,
   clonePlayData,
   createEmptyPlayData,
   DEFAULT_FIELD_ZONE,

@@ -22,10 +22,17 @@ export interface FieldState {
 }
 
 /**
- * プレー図データ。`version` でスキーマ進化に備える（マイグレーション機構は M8）。
+ * 現在の PlayData スキーマ版。スキーマを変えるたびに +1 し、`migratePlayData` の
+ * 段（`PLAY_DATA_MIGRATIONS`）に旧→新の変換を 1 つ足す。version の真実源はここ 1 か所。
+ */
+export const CURRENT_PLAY_DATA_VERSION = 1 as const;
+
+/**
+ * プレー図データ。`version` でスキーマ進化に備え、復元時は `migratePlayData` が
+ * 旧版・版なし・未来版いずれも現行へ寄せる（PRD 6.6 の往復契約）。
  */
 export interface PlayData {
-  version: 1;
+  version: typeof CURRENT_PLAY_DATA_VERSION;
   field: FieldState;
   /** 配置済みの選手（描画順 = 配列順。後の要素ほど上に重なる）。 */
   players: Player[];
@@ -39,7 +46,12 @@ export function isFieldZone(value: unknown): value is FieldZone {
 
 /** 既定状態の新規 PlayData（選手・線なし）。 */
 export function createEmptyPlayData(): PlayData {
-  return { version: 1, field: { zone: DEFAULT_FIELD_ZONE }, players: [], lines: [] };
+  return {
+    version: CURRENT_PLAY_DATA_VERSION,
+    field: { zone: DEFAULT_FIELD_ZONE },
+    players: [],
+    lines: [],
+  };
 }
 
 /**
@@ -49,7 +61,7 @@ export function createEmptyPlayData(): PlayData {
  */
 export function clonePlayData(data: PlayData): PlayData {
   return {
-    version: 1,
+    version: CURRENT_PLAY_DATA_VERSION,
     field: { ...data.field },
     players: data.players.map(clonePlayer),
     lines: data.lines.map(cloneLine),
@@ -57,10 +69,10 @@ export function clonePlayData(data: PlayData): PlayData {
 }
 
 /**
- * 外部（商用ソフト）から渡る initialData を内部で安全に扱える形へ正規化する。
- * 永続化された古い／不完全なデータでも落とさず既定で補完する（PRD 6.6 の契約準備）。
- * 返り値は常に新規オブジェクトで、入力を共有・変更しない（Model 専有のため）。
- * 本格的な version マイグレーションは M8 で確定する。
+ * blob を現行スキーマの構造へ正規化する（version 検出・段適用は `migratePlayData`）。
+ * 永続化された古い／不完全なデータでも落とさず既定で補完する。返り値は常に新規
+ * オブジェクトで入力を共有・変更しない（Model 専有）。version マイグレーション段を
+ * 通した後の最終正規化として `migratePlayData` から呼ばれる（PRD 6.6 の往復契約）。
  */
 export function resolvePlayData(data: PlayData | undefined): PlayData {
   const zone = data?.field?.zone;
@@ -68,7 +80,7 @@ export function resolvePlayData(data: PlayData | undefined): PlayData {
   const players = normalizePlayers(data?.players);
   const validPlayerIds = new Set(players.map((p) => p.id));
   return {
-    version: 1,
+    version: CURRENT_PLAY_DATA_VERSION,
     field: { zone: isFieldZone(zone) ? zone : DEFAULT_FIELD_ZONE },
     players,
     lines: normalizeLines(data?.lines, validPlayerIds),

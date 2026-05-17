@@ -4,7 +4,8 @@
 
 import { Emitter, type Event } from "../event/emitter.js";
 import { cloneLine, type Line } from "./line.js";
-import { clonePlayData, type FieldZone, type PlayData, resolvePlayData } from "./play-data.js";
+import { migratePlayData } from "./migration.js";
+import { clonePlayData, type FieldZone, type PlayData } from "./play-data.js";
 import { clonePlayer, type Player } from "./player.js";
 
 /**
@@ -76,11 +77,12 @@ function insertAt<T>(items: readonly T[], index: number, item: T): T[] {
 export class PlayModel implements IPlayModel {
   private readonly _onDidChange = new Emitter<PlayData>();
   readonly onDidChange = this._onDidChange.event;
-  // resolvePlayData が深い新規オブジェクトを返す＝外部入力と完全に切り離した内部状態。
+  // migratePlayData が版検出→段適用→構造正規化した深い新規オブジェクトを返す
+  // ＝外部入力（旧版・破損含む）と完全に切り離した内部状態（PRD 6.6 の唯一の入口）。
   private state: PlayData;
 
   constructor(initialData?: PlayData) {
-    this.state = resolvePlayData(initialData);
+    this.state = migratePlayData(initialData);
   }
 
   getData(): PlayData {

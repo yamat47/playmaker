@@ -4,7 +4,11 @@
 // M5: 編集 UI（ツールバー/プロパティパネル/Undo·Redo/ゾーン切替）。
 //     ツール・プロパティ編集・ゾーン切替・Undo/Redo は Playmaker 内蔵 UI で操作する。
 //     ここではサンプル投入・クリア・mode 切替と、onChange のデータ連携を目視する。
+// M6: フォーメーションテンプレート。ツールバーの「フォーメーション読込…」プルダウン
+//     （内蔵 UI）で自動配置を目視。下の追記ボタンは公開 API loadFormation の確認用で、
+//     クリア→攻→守 と重ねると追記セマンティクス（攻守を順に置ける）が分かる。
 import {
+  FORMATION_PRESETS,
   type Line,
   type PlayData,
   type Player,
@@ -187,6 +191,11 @@ addAction("クリア", () => {
     lines: [],
   });
 });
+
+// 公開 API loadFormation の目視（追記）。クリア→攻→守 の順で重ねられる。
+for (const formation of FORMATION_PRESETS) {
+  addAction(`＋${formation.name}`, () => playmaker.loadFormation(formation));
+}
 
 const modeButton = addAction("", () => {
   // mode 切替は再マウント（現在のプレー図はそのまま引き継ぐ）。

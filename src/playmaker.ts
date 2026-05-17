@@ -7,6 +7,7 @@ import {
   type FieldZone,
   type Formation,
   IdFactory,
+  type ImageExportOptions,
   normalizeFormation,
   type PlayData,
   PlayModel,
@@ -23,6 +24,7 @@ export type {
   Formation,
   FormationPlayer,
   FormationSide,
+  ImageExportOptions,
   Line,
   LineInterpolation,
   LineKind,
@@ -126,6 +128,17 @@ export class Playmaker extends Disposable {
    */
   getPlayData(): PlayData {
     return this.model.getData();
+  }
+
+  /**
+   * 現在のプレー図を PNG 画像（Blob）として書き出す（PRD 5.7）。
+   * エクスポート元はコミット済みの PlayData なので、選択強調・waypoint
+   * ハンドル・作図中プレビュー・ツールバー/パネルといった編集 UI は
+   * 含まれない。view / edit どちらのモードでも利用できる。
+   * `options.width` で出力幅(px)を指定でき、高さは縦横比から導かれる。
+   */
+  exportToPng(options?: ImageExportOptions): Promise<Blob> {
+    return this.surface.exportToPngBlob(this.model.getData(), options);
   }
 
   override dispose(): void {

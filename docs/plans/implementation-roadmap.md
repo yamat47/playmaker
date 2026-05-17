@@ -248,6 +248,61 @@ PRD 5.7 を VSCode 流の軽量適用で実装。寸法決定（純計算）を 
 - `IPlayModel` 軽量 id 取得 API（M5/M6 と同イディオム、`exportToPng` も `getData()`
   全複製を経由）= **M9 仕上げ**（現規模で実害なし）
 
+### 実装メモ：データ連携仕上げ（PlayData 往復・version/migration・onChange 契約確定）（2026-05-17, M8）
+
+PRD 5.8 / 6.6 を VSCode 流の軽量適用で実装。版検出・段適用（純計算）を common に
+寄せて node 単体で全網羅し、browser/公開層は契約確定（ドキュメント）と funnel
+結線のみに留めた。M4〜M7 が繰り延べてきた「`onChange` の往復契約（version/
+migration 含む確定）」をここで凍結した。
+
+**M8 で確定（common: model/migration・テスト済 / 254 tests・common 100%・v8 ignore 0）**
+- `CURRENT_PLAY_DATA_VERSION`（play-data.ts）= version の**真実源 1 か所**。
+  `createEmptyPlayData`/`clonePlayData`/`resolvePlayData` がこれを参照し、`PlayData.version`
+  も `typeof` で束ねる（スキーマ進化時の更新漏れを型で防ぐ）
+- `migratePlayData(raw: unknown)` = 永続 blob → 現行 PlayData の**唯一の公開境界
+  funnel**：版検出（`readDeclaredVersion`・数値以外/非object は版なし=0 扱い）→
+  旧→現行の段適用（`applyPlayDataMigrations`）→ 構造正規化（`resolvePlayData`）。
+  決して投げず version は現行へ確定、内部状態と切り離した新規オブジェクトを返す。
+  `resolvePlayData`/`normalizeFormation`/`resolveImageExportSize` と同じ公開境界の
+  防御正規化作法に揃えた
+- **空エンジンの死コードを置かない判断**：greenfield 単一版では generic な段適用
+  ループ本体が本番経路で未実行＝「common 100% / `v8 ignore` 0」規律と衝突する。
+  そこで `applyPlayDataMigrations` は段を**引数注入**にし、フェイク段で適用/スキップ
+  /非object/null の全分岐を単体テスト（VSCode 流フェイク注入）。本番の
+  `PLAY_DATA_MIGRATIONS` は**空配列＝コードでなくデータ**（カバレッジ対象外）。
+  v2 追加手順（CURRENT を +1・段を 1 つ足す・その段をテスト）はコード comment と
+  本メモに明示＝拡張点を「監査済みの判断」にして 100% を素直に維持
+- 旧版・版なしは 0 扱いで現行へ収束（`resolvePlayData` が旧来の不完全データを
+  既定補完）。未来版（新 lib で保存→旧 lib で復元）は適用段が無く前方互換の
+  ベストエフォート＝未知項目は `resolvePlayData` が落とすだけで投げない
+- `PlayModel` 構築を `migratePlayData` 経由へ統一（inbound の唯一の入口）。
+  `Playmaker` の `CanvasSurface` seed も `migratePlayData` に揃えた
+
+**M8 で確定（browser/公開: 契約凍結・最小限・VRT なし）**
+- **`onChange` 往復契約を凍結**：編集コマンドおよび Undo/Redo の確定ごとに
+  **1 回**、最新 PlayData の深いスナップショット（`version` は常に現行・内部状態と
+  分離＝受け手の書換えが波及しない）。構築時・`setPlayData` 再読込・PNG 出力では
+  非発火（再読込・出力は編集ではない）。`getPlayData` = 正準スナップショットで
+  そのまま JSON 化して永続化でき、`setPlayData`/`initialData` に戻すと同値復元
+  （M4 の「1 コマンド = onChange 1 回」を往復契約として確定）。型 doc から
+  「暫定。確定は M8」を除去し確定文へ差し替え
+- 公開面に `CURRENT_PLAY_DATA_VERSION` / `migratePlayData` を出す（商用ソフトが
+  契約を使える形に）。`applyPlayDataMigrations`/`PLAY_DATA_MIGRATIONS`/
+  `PlayDataMigration` は common 内部に留める（拡張機構＝MVP 公開面は PRD 4.1 で絞る）
+- demo は JSON パネルで「書き出し→読込（往復）」と「版なし旧 blob・未来版(v99)
+  blob が現行版へ寄る」ことを目視。編集確定で `onChange` 経由に JSON も同期更新
+
+**M9 へ繰り延べ**
+- `scale`/DPR・透過背景・余白指定・出力体裁の磨き（M7 既述）= **M9**
+- `IPlayModel` 軽量 id 取得 API（M5/M6/M7 と同イディオム、`getData()` 全複製を共有）
+  = **M9 仕上げ**（現規模で実害なし）
+- 構築時 `initialData` の二重正規化（`Playmaker` の `CanvasSurface` seed と
+  `PlayModel` が各々 funnel を通す）。**M8 以前から存在**（旧 `resolvePlayData` ×2 を
+  M8 で `migratePlayData` ×2 に差し替えただけで挙動不変）。seed は直後の `setScene` で
+  上書きされ可逆、構築 1 回のみで hot path でない。上記 id 取得 API と同じ
+  「構築・複製コスト最適化」族として **M9 仕上げ**へ集約（監査済みの意図的判断）
+- プリセット座標の戦術精緻化・実フィールド/記法準拠の見た目磨き = **M9**
+
 ### 完了判定（PRD 7 章）
 - 機能要件（PRD 5 章）すべてが仕様通り動作
 - `common` 層の単体テストおよび統合テストが通る

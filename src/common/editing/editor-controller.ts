@@ -11,6 +11,7 @@
 
 import type { ICommandService } from "../commands/command-service.js";
 import { SetFieldZoneCommand } from "../commands/field-commands.js";
+import { LoadFormationCommand } from "../commands/formation-commands.js";
 import {
   AddLineCommand,
   type LinePatch,
@@ -26,6 +27,7 @@ import {
   UpdatePlayerCommand,
 } from "../commands/player-commands.js";
 import { Emitter, type Event } from "../event/emitter.js";
+import type { Formation } from "../formations/formation.js";
 import { distanceToSegment, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
 import { Disposable } from "../lifecycle/disposable.js";
 import { DEFAULT_LINE_INTERPOLATION, DEFAULT_LINE_KIND, type Line } from "../model/line.js";
@@ -97,6 +99,8 @@ export interface IEditorController {
   updateSelectedPlayer(patch: PlayerPatch): void;
   updateSelectedLine(patch: LinePatch): void;
   setFieldZone(zone: FieldZone): void;
+  /** フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。 */
+  loadFormation(formation: Formation): void;
   undo(): void;
   redo(): void;
 }
@@ -419,6 +423,36 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.commands.execute(new SetFieldZoneCommand(zone));
+  }
+
+  /**
+   * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
+   * 既存選手・線は保持し追記する。id は IdFactory で採番し既存と衝突させない
+   * （バッチ内重複も taken に積んで回避＝採番直後の再衝突を防ぐ）。
+   * 配置可能な選手が無ければ no-op。1 コマンド = onChange 1 回（M4 契約）。
+   */
+  loadFormation(formation: Formation): void {
+    const taken = new Set(this.model.getData().players.map((p) => p.id));
+    const players: Player[] = formation.players.map((fp) => {
+      const id = this.ids.next("player", taken);
+      taken.add(id);
+      const player: Player = {
+        id,
+        position: { ...fp.position },
+        shape: fp.shape,
+        label: fp.label,
+      };
+      if (fp.color !== undefined) {
+        player.color = fp.color;
+      }
+      return player;
+    });
+    if (players.length === 0) {
+      return;
+    }
+    this.commands.execute(new LoadFormationCommand(players));
+    // 読込で局所の選択は意味を失う＝解除（stale な選択を残さない）。
+    this.setSelection(null);
   }
 
   undo(): void {

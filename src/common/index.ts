@@ -7,6 +7,7 @@ export {
   type ICommandService,
 } from "./commands/command-service.js";
 export { SetFieldZoneCommand } from "./commands/field-commands.js";
+export { LoadFormationCommand } from "./commands/formation-commands.js";
 export {
   AddLineCommand,
   type LinePatch,
@@ -32,6 +33,14 @@ export {
 } from "./editing/editor-controller.js";
 export { IdFactory, type IIdFactory } from "./editing/id-factory.js";
 export { Emitter, type Event } from "./event/emitter.js";
+export {
+  type Formation,
+  type FormationPlayer,
+  type FormationSide,
+  isFormationSide,
+  normalizeFormation,
+} from "./formations/formation.js";
+export { FORMATION_PRESETS, getFormationPreset } from "./formations/presets.js";
 export {
   catmullRomBezierControls,
   cubicBezierPoint,

@@ -34,6 +34,14 @@ export {
 export { IdFactory, type IIdFactory } from "./editing/id-factory.js";
 export { Emitter, type Event } from "./event/emitter.js";
 export {
+  DEFAULT_EXPORT_WIDTH,
+  FIELD_WINDOW_ASPECT,
+  type ImageExportOptions,
+  type ImageExportSize,
+  resolveImageExportSize,
+  resolveImageExportWidth,
+} from "./export/image-export.js";
+export {
   type Formation,
   type FormationPlayer,
   type FormationSide,

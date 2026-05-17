@@ -7,6 +7,8 @@
 // M6: フォーメーションテンプレート。ツールバーの「フォーメーション読込…」プルダウン
 //     （内蔵 UI）で自動配置を目視。下の追記ボタンは公開 API loadFormation の確認用で、
 //     クリア→攻→守 と重ねると追記セマンティクス（攻守を順に置ける）が分かる。
+// M7: PNG エクスポート。「PNG を出力」で現在のプレー図をダウンロードし、編集 UI が
+//     含まれない（view/edit いずれでも同じ図）ことを目視する。
 import {
   FORMATION_PRESETS,
   type Line,
@@ -196,6 +198,21 @@ addAction("クリア", () => {
 for (const formation of FORMATION_PRESETS) {
   addAction(`＋${formation.name}`, () => playmaker.loadFormation(formation));
 }
+
+// PNG エクスポート（PRD 5.7）。出力に編集 UI（ツール/パネル/選択/ハンドル）が
+// 含まれないこと・view/edit いずれでも出せることを目視する。
+addAction("PNG を出力", async () => {
+  const blob = await playmaker.exportToPng();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `playmaker-${mode}-${Date.now()}.png`;
+  a.click();
+  // click() のダウンロード処理はブラウザにより非同期。同期 revoke すると
+  // 取得開始前に URL が失効しダウンロードを取りこぼす環境があるため遅延する。
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  status.textContent = `PNG 出力（${mode} モード・${Math.round(blob.size / 1024)}KB）`;
+});
 
 const modeButton = addAction("", () => {
   // mode 切替は再マウント（現在のプレー図はそのまま引き継ぐ）。

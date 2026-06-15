@@ -27,9 +27,11 @@ export default defineConfig({
   },
   plugins: [
     dts({
-      include: ["src"],
-      exclude: ["src/**/*.test.ts"],
-      // v5: 全型定義を api-extractor で単一 playmaker.d.ts に束ねる
+      // dts emit のルートを src に固定する専用 tsconfig。demo / vite.config.ts を
+      // include に含めると共通祖先がプロジェクトルートに上がり、dts が dist/src/* に
+      // 出てしまうため build 用は分離する
+      tsconfigPath: "tsconfig.build.json",
+      // v5: 全型定義を api-extractor で単一 dist/playmaker.d.ts に束ねる
       bundleTypes: true,
     }),
   ],

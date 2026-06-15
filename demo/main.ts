@@ -1,17 +1,12 @@
-// ローカル確認用 playground のエントリ。
-// M1: フィールド描画 + ゾーン切替。M2: PlayData 投入で選手表示。
-// M3: 線（route/block/motion・直線/ベジェ）+ view モード。
-// M5: 編集 UI（ツールバー/プロパティパネル/Undo·Redo/ゾーン切替）。
-//     ツール・プロパティ編集・ゾーン切替・Undo/Redo は Playmaker 内蔵 UI で操作する。
-//     ここではサンプル投入・クリア・mode 切替と、onChange のデータ連携を目視する。
-// M6: フォーメーションテンプレート。ツールバーの「フォーメーション読込…」プルダウン
-//     （内蔵 UI）で自動配置を目視。下の追記ボタンは公開 API loadFormation の確認用で、
-//     クリア→攻→守 と重ねると追記セマンティクス（攻守を順に置ける）が分かる。
-// M7: PNG エクスポート。「PNG を出力」で現在のプレー図をダウンロードし、編集 UI が
-//     含まれない（view/edit いずれでも同じ図）ことを目視する。
-// M8: データ連携（PlayData 往復・version/migration）。JSON パネルで getPlayData の
-//     書き出し→読込（setPlayData）の往復、版なし旧 blob・未来版 blob が現行版へ
-//     寄る（migratePlayData）ことを目視する。編集すると onChange で JSON も更新。
+// ローカル確認用 playground のエントリ。手元のブラウザで以下を目視する:
+// - フィールド描画とゾーン切替、6 形状・色・ラベルの選手、route/block/motion の線
+// - 内蔵 UI（ツールバー/プロパティパネル/Undo·Redo/ゾーン切替）での編集と view/edit 切替
+// - フォーメーション読込（内蔵プルダウンと公開 API loadFormation の追記セマンティクス）
+// - PNG エクスポート（編集 UI を含まない・view/edit で同一図）
+// - PlayData 往復: getPlayData 書き出し → setPlayData 読込、版なし/未来版 blob が
+//   migratePlayData で現行版へ寄ること。編集すると onChange で JSON も更新される
+// - 密度ストレス（選手 22 + 線 20）: PRD 6.2「典型的フォーメーションを遅延なく」を
+//   手動目視するための fixture（戦術記法の厳密さは PRD 4.1 のとおり狙わない）
 import {
   CURRENT_PLAY_DATA_VERSION,
   FORMATION_PRESETS,
@@ -43,7 +38,7 @@ const mountPoint: HTMLElement = stage;
 const jsonArea: HTMLTextAreaElement = jsonEl;
 const dataStatus: HTMLElement = dataStatusEl;
 
-// M2/M3 目視用サンプル: 6 形状・色・ラベル・3 線種・直線/ベジェ・waypoint。
+// 目視用サンプル: 6 形状・色・ラベル・3 線種・直線/ベジェ・waypoint。
 const DEFENSE_COLOR = "#c62828";
 const SAMPLE_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.7, absoluteYard: 49 }, shape: "square", label: "C" },
@@ -156,6 +151,277 @@ const SAMPLE_LINES: Line[] = [
   },
 ];
 
+// 密度ストレス用 fixture。PRD 6.2 を手動目視するため demo に常設し、戦術的厳密さは狙わずに
+// 6 形状・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認できる配置にする。
+const STRESS_PLAYERS: Player[] = [
+  { id: "ol-c", position: { lateralYard: 26.7, absoluteYard: 49 }, shape: "square", label: "C" },
+  { id: "ol-lg", position: { lateralYard: 24.4, absoluteYard: 49 }, shape: "square", label: "LG" },
+  { id: "ol-rg", position: { lateralYard: 29, absoluteYard: 49 }, shape: "square", label: "RG" },
+  { id: "ol-lt", position: { lateralYard: 22.1, absoluteYard: 49 }, shape: "square", label: "LT" },
+  { id: "ol-rt", position: { lateralYard: 31.3, absoluteYard: 49 }, shape: "square", label: "RT" },
+  { id: "qb", position: { lateralYard: 26.7, absoluteYard: 46.5 }, shape: "circle", label: "QB" },
+  { id: "rb", position: { lateralYard: 26.7, absoluteYard: 43 }, shape: "diamond", label: "RB" },
+  { id: "wr-x", position: { lateralYard: 7, absoluteYard: 49.5 }, shape: "circle", label: "X" },
+  { id: "wr-z", position: { lateralYard: 46, absoluteYard: 49.5 }, shape: "circle", label: "Z" },
+  { id: "wr-y", position: { lateralYard: 38, absoluteYard: 48 }, shape: "circle", label: "Y" },
+  { id: "te", position: { lateralYard: 33.6, absoluteYard: 49 }, shape: "triangle", label: "TE" },
+  {
+    id: "de-l",
+    position: { lateralYard: 21.5, absoluteYard: 51 },
+    shape: "pentagon",
+    label: "",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "dt-l",
+    position: { lateralYard: 24.4, absoluteYard: 51 },
+    shape: "pentagon",
+    label: "",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "dt-r",
+    position: { lateralYard: 29, absoluteYard: 51 },
+    shape: "pentagon",
+    label: "",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "de-r",
+    position: { lateralYard: 31.9, absoluteYard: 51 },
+    shape: "pentagon",
+    label: "",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "lb-w",
+    position: { lateralYard: 22, absoluteYard: 54 },
+    shape: "hexagon",
+    label: "W",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "lb-m",
+    position: { lateralYard: 26.7, absoluteYard: 54 },
+    shape: "hexagon",
+    label: "M",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "lb-s",
+    position: { lateralYard: 31.4, absoluteYard: 54 },
+    shape: "hexagon",
+    label: "S",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "cb-l",
+    position: { lateralYard: 7, absoluteYard: 53 },
+    shape: "hexagon",
+    label: "",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "cb-r",
+    position: { lateralYard: 46, absoluteYard: 53 },
+    shape: "hexagon",
+    label: "",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "fs",
+    position: { lateralYard: 24, absoluteYard: 58 },
+    shape: "diamond",
+    label: "FS",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "ss",
+    position: { lateralYard: 30, absoluteYard: 57 },
+    shape: "diamond",
+    label: "SS",
+    color: DEFENSE_COLOR,
+  },
+];
+
+const STRESS_LINES: Line[] = [
+  {
+    id: "bl-c",
+    kind: "block",
+    startPlayerId: "ol-c",
+    waypoints: [],
+    end: { lateralYard: 26.7, absoluteYard: 50.6 },
+    interpolation: "straight",
+  },
+  {
+    id: "bl-lg",
+    kind: "block",
+    startPlayerId: "ol-lg",
+    waypoints: [],
+    end: { lateralYard: 24.4, absoluteYard: 50.6 },
+    interpolation: "straight",
+  },
+  {
+    id: "bl-rg",
+    kind: "block",
+    startPlayerId: "ol-rg",
+    waypoints: [],
+    end: { lateralYard: 29, absoluteYard: 50.6 },
+    interpolation: "straight",
+  },
+  {
+    id: "bl-lt",
+    kind: "block",
+    startPlayerId: "ol-lt",
+    waypoints: [],
+    end: { lateralYard: 21.8, absoluteYard: 50.6 },
+    interpolation: "straight",
+  },
+  {
+    id: "bl-rt",
+    kind: "block",
+    startPlayerId: "ol-rt",
+    waypoints: [],
+    end: { lateralYard: 31.7, absoluteYard: 50.6 },
+    interpolation: "straight",
+  },
+  // rt-te だけ color を持たせて route の色オーバーライドも 1 ロードで目視できるようにする。
+  {
+    id: "rt-x",
+    kind: "route",
+    startPlayerId: "wr-x",
+    waypoints: [{ lateralYard: 7, absoluteYard: 60 }],
+    end: { lateralYard: 13, absoluteYard: 60 },
+    interpolation: "straight",
+  },
+  {
+    id: "rt-z",
+    kind: "route",
+    startPlayerId: "wr-z",
+    waypoints: [
+      { lateralYard: 46, absoluteYard: 58 },
+      { lateralYard: 43, absoluteYard: 60 },
+    ],
+    end: { lateralYard: 40, absoluteYard: 56 },
+    interpolation: "bezier",
+  },
+  {
+    id: "rt-y",
+    kind: "route",
+    startPlayerId: "wr-y",
+    waypoints: [{ lateralYard: 36, absoluteYard: 54 }],
+    end: { lateralYard: 18, absoluteYard: 61 },
+    interpolation: "bezier",
+  },
+  {
+    id: "rt-te",
+    kind: "route",
+    startPlayerId: "te",
+    waypoints: [{ lateralYard: 33, absoluteYard: 53 }],
+    end: { lateralYard: 38, absoluteYard: 56 },
+    interpolation: "straight",
+    color: "#90caf9",
+  },
+  {
+    id: "rt-rb",
+    kind: "route",
+    startPlayerId: "rb",
+    waypoints: [{ lateralYard: 35, absoluteYard: 46 }],
+    end: { lateralYard: 45, absoluteYard: 51 },
+    interpolation: "bezier",
+  },
+  {
+    id: "mo-y",
+    kind: "motion",
+    startPlayerId: "wr-y",
+    waypoints: [{ lateralYard: 35, absoluteYard: 48 }],
+    end: { lateralYard: 30, absoluteYard: 47.5 },
+    interpolation: "straight",
+  },
+  // 守備サイドの線は color に DEFENSE_COLOR を載せて攻守を一望できる色分けに揃える。
+  {
+    id: "pr-de-l",
+    kind: "route",
+    startPlayerId: "de-l",
+    waypoints: [],
+    end: { lateralYard: 22, absoluteYard: 49 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "pr-dt-l",
+    kind: "route",
+    startPlayerId: "dt-l",
+    waypoints: [],
+    end: { lateralYard: 24, absoluteYard: 49 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "pr-dt-r",
+    kind: "route",
+    startPlayerId: "dt-r",
+    waypoints: [],
+    end: { lateralYard: 29.5, absoluteYard: 49 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "pr-de-r",
+    kind: "route",
+    startPlayerId: "de-r",
+    waypoints: [],
+    end: { lateralYard: 32, absoluteYard: 49 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "cv-lb-w",
+    kind: "route",
+    startPlayerId: "lb-w",
+    waypoints: [{ lateralYard: 22, absoluteYard: 52 }],
+    end: { lateralYard: 20, absoluteYard: 49.5 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "cv-lb-m",
+    kind: "route",
+    startPlayerId: "lb-m",
+    waypoints: [{ lateralYard: 28, absoluteYard: 54 }],
+    end: { lateralYard: 33, absoluteYard: 53 },
+    interpolation: "bezier",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "cv-lb-s",
+    kind: "route",
+    startPlayerId: "lb-s",
+    waypoints: [{ lateralYard: 32, absoluteYard: 53 }],
+    end: { lateralYard: 35, absoluteYard: 52 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "cv-cb-l",
+    kind: "route",
+    startPlayerId: "cb-l",
+    waypoints: [{ lateralYard: 7, absoluteYard: 55 }],
+    end: { lateralYard: 7, absoluteYard: 60 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+  {
+    id: "cv-cb-r",
+    kind: "route",
+    startPlayerId: "cb-r",
+    waypoints: [{ lateralYard: 46, absoluteYard: 55 }],
+    end: { lateralYard: 46, absoluteYard: 60 },
+    interpolation: "straight",
+    color: DEFENSE_COLOR,
+  },
+];
+
 let mode: PlaymakerMode = "edit";
 let changeCount = 0;
 
@@ -216,25 +482,22 @@ function addAction(label: string, onClick: () => void): HTMLButtonElement {
   return button;
 }
 
-addAction("サンプル隊形＋線を読み込む", () => {
+// version/field zone/refreshJson 忘れを防ぐためボタンの差し替え軸（players/lines）だけ受ける。
+function loadScene(players: Player[], lines: Line[]): void {
   playmaker.setPlayData({
     version: CURRENT_PLAY_DATA_VERSION,
     field: { zone: playmaker.fieldZone },
-    players: SAMPLE_PLAYERS,
-    lines: SAMPLE_LINES,
+    players,
+    lines,
   });
   refreshJson();
-});
+}
 
-addAction("クリア", () => {
-  playmaker.setPlayData({
-    version: CURRENT_PLAY_DATA_VERSION,
-    field: { zone: playmaker.fieldZone },
-    players: [],
-    lines: [],
-  });
-  refreshJson();
-});
+addAction("サンプル隊形＋線を読み込む", () => loadScene(SAMPLE_PLAYERS, SAMPLE_LINES));
+addAction("クリア", () => loadScene([], []));
+// 密度ストレス（選手 22 + 線 20）。PRD 6.2「典型的フォーメーションを遅延なく」を
+// このボタン 1 つで読み込み、描画・ゾーン切替・操作の体感速度を手動目視する。
+addAction("密度ストレス (選手22+線20)", () => loadScene(STRESS_PLAYERS, STRESS_LINES));
 
 // 公開 API loadFormation の目視（追記）。クリア→攻→守 の順で重ねられる。
 for (const formation of FORMATION_PRESETS) {
@@ -273,7 +536,7 @@ function syncModeButton(): void {
 
 syncModeButton();
 
-// JSON パネル（M8 往復・migration の目視）。静的 HTML のボタンに結線する。
+// JSON パネル（往復・migration の目視）。静的 HTML のボタンに結線する。
 // 静的 HTML ボタンは HMR を跨いで生き残るため、signal でリスナを束ね再読込時に外す
 // （束ねないとホットリロードごとに多重登録され 1 クリックで多重発火する）。
 const demoLifetime = new AbortController();

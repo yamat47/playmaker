@@ -38,7 +38,7 @@ export interface FieldPosition {
 }
 
 /**
- * 1 人の選手。`id` は将来の選択/編集コマンド（M4・M5）の安定識別子。
+ * 1 人の選手。`id` は選択/編集コマンドの安定識別子。
  * `color` は CSS カラー文字列（任意・未指定はテーマ既定）。
  */
 export interface Player {

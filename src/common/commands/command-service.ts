@@ -6,7 +6,7 @@ import type { IUndoRedoService } from "../undoRedo/undo-redo-service.js";
 import type { ICommand } from "./command.js";
 
 /**
- * 編集はすべてこの IF を通す。UI（M5）の input ハンドラはコマンドを組み立て execute するだけ。
+ * 編集はすべてこの IF を通す。UI の input ハンドラはコマンドを組み立て execute するだけ。
  * 適用と履歴登録を 1 か所に束ね、Model 直接書き換えを禁じる（Model–View 分離の徹底）。
  */
 export interface ICommandService {

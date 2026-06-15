@@ -1,5 +1,5 @@
 // フォーメーション読み込みの編集操作（PRD 5.4「フォーメーションテンプレートの読み込み」/ 5.6）。
-// DOM 非依存。M4 契約に従い 1 コマンド = onChange 1 回（Model のバッチ API で原子発火）。
+// DOM 非依存。1 コマンド = onChange 1 回（Model のバッチ API で原子発火）。
 
 import type { IPlayModel } from "../model/play-model.js";
 import { clonePlayer, type Player } from "../model/player.js";

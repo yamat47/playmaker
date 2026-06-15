@@ -1,7 +1,7 @@
 /*
  * Playmaker のスタイル。商用ソフト側は --playmaker-* を上書きするだけで
  * 配色・フォント・サイズをデザインシステムに合わせられる（PRD 6.5）。
- * UI（ツールバー/プロパティパネル）は M5 でこの変数体系の上に実装した。
+ * UI（ツールバー/プロパティパネル）はこの変数体系の上に実装している。
  */
 .playmaker-root {
   --playmaker-font-family: system-ui, sans-serif;
@@ -36,7 +36,7 @@
 }
 
 /*
- * 編集 UI は Canvas の上に重ねる HTML オーバーレイ（PRD 6.5 / M7 の PNG 除外に有利）。
+ * 編集 UI は Canvas の上に重ねる HTML オーバーレイ（PRD 6.5。PNG エクスポートで UI を別レイヤとして除外できる）。
  * 配色・サイズは --playmaker-* 由来で商用ソフトのデザインに追従する。
  */
 .playmaker-toolbar {

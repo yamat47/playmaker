@@ -64,7 +64,7 @@ export interface PlaymakerOptions {
  * browser（Canvas/入力/UI）を結線する。商用ソフトはコンテナとオプションを渡すだけ。
  *
  * 1 セッション = 1 つの Model + 履歴 + UI。setPlayData は履歴ごと作り直す
- * （Model は唯一の状態保持者で setData を持たない＝M4 の API を尊重）。
+ * （Model は唯一の状態保持者で setData を持たない設計を尊重する）。
  */
 export class Playmaker extends Disposable {
   readonly mode: PlaymakerMode;

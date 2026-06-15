@@ -1,6 +1,6 @@
 // 線のデータ表現（PRD 5.3）。DOM 非依存。
 // PlayData に合成され商用ソフトの DB に保存される（PRD 5.8）。
-// 戦術記法の厳密再現より組み込みやすさ優先（PRD 4.1）: 3 種を構造で区別し、見た目磨きは M9。
+// 戦術記法の厳密再現より組み込みやすさ優先（PRD 4.1）: 3 種を構造で区別し、見た目磨きは意図的にスコープ外。
 
 import type { FieldPosition, Player } from "./player.js";
 
@@ -32,7 +32,7 @@ const LINE_INTERPOLATIONS: readonly LineInterpolation[] = ["straight", "bezier"]
 /**
  * 1 本の線。起点は常に選手（`startPlayerId`）、終点は `end`、その間に
  * 任意個の `waypoints` を持つ（PRD 5.3「起点（選手）と終点、任意個の waypoint」）。
- * 起点を選手に紐付けることで、選手が動けば線も追従する（M5 以降の編集で活きる）。
+ * 起点を選手に紐付けることで、選手が動けば線も追従する。
  * `color`/`thickness` は任意（未指定はテーマ既定）。
  */
 export interface Line {

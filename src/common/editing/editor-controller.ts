@@ -1,9 +1,9 @@
-// 編集 UI（M5）の頭脳。DOM 非依存の純ロジックなので node 単体で全網羅テストできる。
+// 編集 UI の頭脳。DOM 非依存の純ロジックなので node 単体で全網羅テストできる。
 // 役割: ツール状態・選択状態・ヤード空間ジェスチャ(pointerDown/Move/Up)を受け、
 // 適切な ICommand を ICommandService 経由で発行する（Model 直接書き換えはしない）。
 // ドラッグ/作図中のプレビューは getRenderModel()（Model スナップショット＋一時状態の
-// 純粋な合成）で表現する。これにより実データ変更は 1 コマンド = onChange 1 回を保ち
-// （M4 の契約）、見た目の追従はコマンドを汚さずに済む（Model–View 分離の徹底）。
+// 純粋な合成）で表現する。これにより実データ変更は 1 コマンド = onChange 1 回を保ち、
+// 見た目の追従はコマンドを汚さずに済む（Model–View 分離の徹底）。
 //
 // 選択は「id の希望」であり、対象が消えても自動解除しない（lookup 側が欠落を
 // 許容して空を返す＝stale でも無害）。これで防御分岐がすべて到達可能になり、
@@ -163,7 +163,7 @@ export class EditorController extends Disposable implements IEditorController {
     this._register(this.model.onDidChange(() => this._onDidChange.fire()));
   }
 
-  // --- 状態の読み取り -------------------------------------------------------
+  // 状態の読み取り
 
   getTool(): EditorTool {
     return this.tool;
@@ -260,7 +260,7 @@ export class EditorController extends Disposable implements IEditorController {
     return overlay;
   }
 
-  // --- ツール・選択 ---------------------------------------------------------
+  // ツール・選択
 
   setTool(tool: EditorTool): void {
     if (tool === this.tool) {
@@ -280,7 +280,7 @@ export class EditorController extends Disposable implements IEditorController {
     this._onDidChange.fire();
   }
 
-  // --- ジェスチャ（ヤード空間。browser が px→ヤード変換して呼ぶ） ----------
+  // ジェスチャ（ヤード空間。browser が px→ヤード変換して呼ぶ）
 
   pointerDown(pos: FieldPosition): void {
     if (this.tool === "add-player") {
@@ -382,7 +382,7 @@ export class EditorController extends Disposable implements IEditorController {
     this.setSelection({ kind: "line", id });
   }
 
-  // --- アクション（ツールバー/パネルから） --------------------------------
+  // アクション（ツールバー/パネルから）
 
   deleteSelection(): void {
     const s = this.selection;
@@ -429,7 +429,7 @@ export class EditorController extends Disposable implements IEditorController {
    * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
    * 既存選手・線は保持し追記する。id は IdFactory で採番し既存と衝突させない
    * （バッチ内重複も taken に積んで回避＝採番直後の再衝突を防ぐ）。
-   * 配置可能な選手が無ければ no-op。1 コマンド = onChange 1 回（M4 契約）。
+   * 配置可能な選手が無ければ no-op。1 コマンド = onChange 1 回。
    */
   loadFormation(formation: Formation): void {
     const taken = new Set(this.model.getData().players.map((p) => p.id));
@@ -463,7 +463,7 @@ export class EditorController extends Disposable implements IEditorController {
     this.undoRedo.redo();
   }
 
-  // --- 内部 ----------------------------------------------------------------
+  // 内部
 
   private selectPointerDown(pos: FieldPosition): void {
     const data = this.model.getData();

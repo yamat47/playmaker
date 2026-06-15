@@ -57,4 +57,5 @@ src/
 - ビルド: Vite library mode（`pnpm run build` → `dist/` に ESM/CJS/CSS/型）
 - ローカル確認: `pnpm run dev`（`demo/` playground、ホットリロード）
 - UI 文言・コメントは日本語（i18n 機構は持たない＝日本語のみ）
-- コメントは Why を書く。コードを読めば分かる What は書かない
+- コメントの規約は `.claude/rules/comments.md`（コードで語れることは語らせ、Why と
+  腐らない価値だけ書く。マイルストーン等の実装過程はコードに残さない）

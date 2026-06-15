@@ -1,5 +1,5 @@
 // 商用ソフトに保存・復元される唯一のデータ表現（PRD 5.8 / 6.6）。
-// DOM 非依存。M1 で field、M2 で players、M3 で lines を確定。
+// DOM 非依存。field / players / lines を持つ。
 
 import { cloneLine, type Line, normalizeLines } from "./line.js";
 import { clonePlayer, normalizePlayers, type Player } from "./player.js";

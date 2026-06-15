@@ -303,6 +303,64 @@ migration 含む確定）」をここで凍結した。
   「構築・複製コスト最適化」族として **M9 仕上げ**へ集約（監査済みの意図的判断）
 - プリセット座標の戦術精緻化・実フィールド/記法準拠の見た目磨き = **M9**
 
+### 実装メモ：仕上げと MVP 完了判定（2026-06-16, M9）
+
+M0〜M8 で機能 5.1〜5.8 を実装し終え、M9 は「機能の磨き直し」ではなく **PRD 5 章の充足確認・PRD 6 章（非機能）の検証・PRD 4.1 に沿うスコープの最終確定・最小ドキュメント・MVP 完了判定の宣言**に絞った。本マイルストーン全体を grill-me プロセスで 1 通り根から積み上げてから着手し、判断はすべて「監査済みの意図的判断」として以下に記録する。
+
+**M9 スコープの確定（2026-06-16）**
+
+純粋な視覚磨き（renderer 体裁・矢じり/T 字/波線の戦術記法精緻化・プリセット戦術座標の精緻化）は **MVP スコープ外として明示ドロップ**。理由は PRD 4.1「組み込みやすさを最優先、戦術表現の厳密性は意図的に絞る」と PRD 4.2 のトレードオフ序列に正面から従うため。「商用ソフト側で見た目を上書きできる」契約が CSS 変数 + バニラ DOM + 標準 Canvas API で既に成立しており、ライブラリの仕事はそこで止めるのが組み込みやすさに資する。見た目の追い込みは MVP 後に商用リポジトリの実使用評価と合わせて再開する。
+
+**PRD 5.4 充足の根拠（waypoint 編集と線 end）**
+
+PRD 5.4 の「線の waypoint 編集」は M5 で `SetLineWaypointsCommand`（列まるごと差し替えの可逆プリミティブ）+ ハンドルのドラッグ移動で **充足とみなす**。waypoint の個別 add/remove と線 end のドラッグ編集は PRD 5.4 の語に含まれず、「draw（描画）/ waypoint 編集」を満たすうえで利便系の追加機能に過ぎない。線の作り直しは delete → draw で代替可能なので、UX の便宜であって仕様の欠落ではない。意図的にスコープ内へ取り込まない判断（MVP の表現範囲を絞る = PRD 4.1）。
+
+**コメント規約と src/demo クリーンアップ（2026-06-16）**
+
+`.claude/rules/comments.md` を新設（t-wada / 現代的知見の集約：コードで語れることは語らせ、コメントは Why と腐らない価値だけ書く・マイルストーン参照は書かない）。適用範囲は `src/**` `demo/**`。`.claude/rules/architecture.md` の該当 1 行も `comments.md` への参照に置換した。
+
+旧来コメントから **マイルストーン参照（`M0`〜`M9`・「〜で確定」「〜へ繰り延べ」「（M4 契約）」等）と装飾区切り**を `src/**` `demo/**` `src/styles.css` から一斉に除去。Why は残すか言い換え、PRD 参照は Why を補強するもののみ残した。経緯の真実源は VCS 履歴・`docs/plans/`・memory に集約し、コードに**プロセスの residue を残さない**規律へ切り替えた。実装過程の表記は今後コードに混ぜず、ロードマップ・PR・memory で扱う。
+
+**配布形態の凍結（2026-06-16）**
+
+MVP は **git 依存 + `prepare` ビルドスクリプト + git タグでバージョン固定** を確定（`package.json` は既に配線済み）。プライベートレジストリ（GitHub Packages 等）への昇格は商用リポジトリ着手時に再評価する余地として残し、README とロードマップにメモのみ留める。OSS 化・npm 公開は PRD 8.4 のとおりしない。
+
+**内部リファクタの繰延（監査済みの意図的判断）**
+
+M5/M6/M7/M8 で各メモに繰り延べていた以下 2 件は **MVP では実施せず**、監査済みの意図的判断として記録する：
+
+- `IPlayModel` 軽量 id 取得 API（`loadFormation`/`addPlayerAt`/`lineIds`/`exportToPng` が `getData()` 全複製 → id 抽出を共有している）。各メモ既述の通り**現規模で実害なし・挙動不変**。GC 圧と CPU 時間の差は M9 demo の密度ストレス（22+20）でも体感できない範囲。
+- 構築時 `initialData` の二重正規化（`Playmaker` の `CanvasSurface` seed と `PlayModel` が各々 funnel を通す）。M8 以前から存在し挙動不変（seed は直後の `setScene` で上書きされ可逆、構築 1 回のみで hot path でない）。
+
+両者とも「組み込みやすさ・公開 API 契約・正しさ」に影響しない内部最適化族で、商用リポジトリの実使用評価で hot path が見えてから着手する方が判断材料が増える。今は触らない。
+
+**非機能検証（PRD 6 章）**
+
+PRD 6.1 ブラウザサポート（モダンブラウザ Chrome / Firefox / Safari / Edge の最新 2 バージョン・デスクトップのみ）の充足は **`src/**` で使用する Web API の静的監査**で確認した：
+
+- DOM Level 2/3・HTML Living Standard（`document.createElement` / `appendChild` / `addEventListener` / `className` / `parentElement` / `tabIndex` / `HTMLElement.focus` / `<input>` `<select>` `<optgroup>` `<option>` の生成・`.value`）
+- Canvas 2D（`getContext("2d")` / `width` `height` / `toBlob(callback, "image/png")` / `beginPath` `moveTo` `lineTo` `arc` `closePath` `fill` `stroke` `fillRect` `save` `restore` `setTransform` `setLineDash` `measureText` `fillText` / `fillStyle` `strokeStyle` `lineWidth` `lineJoin` `lineCap` `font` `textAlign` `textBaseline`）
+- Pointer Events L2（`pointerdown/move/up` / `clientX/Y` / `pointerId` / `setPointerCapture/releasePointerCapture`） / `dblclick` / `KeyboardEvent`（`key` / `ctrlKey` `metaKey` `shiftKey` / `preventDefault`）
+- `ResizeObserver(parent).observe/disconnect` / `window.devicePixelRatio` / `getComputedStyle(host).getPropertyValue("--playmaker-*")` （CSS Variables L1 の読み取り）
+- `new Promise<Blob>` で `canvas.toBlob` を包む / `Map` / `Set` / `Math.PI` / `Number.isFinite` 等の ECMAScript 標準
+
+**exotic API はゼロ**（OffscreenCanvas / requestAnimationFrame / URL.createObjectURL / AbortController / structuredClone / crypto / fetch / MutationObserver / IntersectionObserver / customElements / Worker / navigator.* / localStorage / matchMedia は `src/` に一切無し）。behind-flag・実験的・vendor 限定の API、polyfill 必須の API なし。**PRD 6.1 を満たす**と判定する。
+
+PRD 6.2 性能（典型的フォーメーション = 選手 22 + 線 20）の充足は `demo/main.ts` に **「密度ストレス (選手22+線20)」fixture を常設**して手動目視できる形にした（オフェンス 11 + ディフェンス 11、6 形状すべて・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認できる配置）。`.claude/rules/testing.md` の「VRT 不採用・E2E は MVP 範囲外・demo 手動目視」と整合する。
+
+PRD 6.3 UI フレームワーク非依存・6.4 ランタイム依存最小・6.5 CSS 変数・6.6 データバージョニングは M0〜M8 で構造的に達成済み（公開 API はバニラ DOM / 描画は Canvas 2D 自前 / 配色は `--playmaker-*` / `migratePlayData` と `CURRENT_PLAY_DATA_VERSION` の funnel 公開）。M9 では新たな構造変更は行わず、既述メモを最終確認のみ。
+
+**最小ドキュメント（2026-06-16）**
+
+ルート `README.md` を 1 枚新設し以下を集約：インストール（git 依存 + prepare + tag・Node 24+）、最小利用例（`new Playmaker(container, options)` + `import "playmaker/styles.css"`）、公開 API 一覧（`getPlayData` / `setPlayData` / `loadFormation` / `fieldZone` / `exportToPng` / `dispose`）、CSS 変数の主要キー、view / edit モード、開発手順、配布形態の確定メモ（プライベートレジストリ昇格余地）。設計判断の確定経緯と要件・規約は `docs/plans/implementation-roadmap.md` / `docs/prd.md` / `.claude/rules/` への参照に留める。OSS 化を想定した API リファレンスや汎用ドキュメント整備は PRD 8.4 のとおり対象外。
+
+**MVP 完了判定（PRD 7 章）**
+
+- **PRD 5.1〜5.8 の機能要件をすべて充足**：5.1 フィールド描画（M1）/ 5.2 選手 6 形状・色・ラベル（M2）/ 5.3 3 種類の線・waypoint・bezier（M3）/ 5.4 編集 UI とコマンド・Undo/Redo・フォーメーション読込・ゾーン切替（M4・M5・M6）/ 5.5 view モード（M3 で view 完成・M5 で UI 無効化）/ 5.6 フォーメーションテンプレートと外部受け入れ（M6）/ 5.7 PNG エクスポート（M7）/ 5.8 データ連携（M8）
+- **PRD 6 章の非機能要件をすべて充足**（上記静的監査と demo 密度ストレス fixture）
+- **テスト通過**：`pnpm run test` で 254 tests 全緑、`src/common/**` カバレッジゲート（lines/branches/functions/statements = 100% / `perFile: true`）通過、`src/` 内の `v8 ignore` は **0 件**。`pnpm typecheck` / `pnpm lint` / `pnpm build` も全緑
+- **`docs/prd.md` 7 章の完了判定**＝「機能要件すべてが仕様通り動作する／ユニットテストおよび統合テストが通る」を満たす。実使用評価・事業性は商用ソフト側 PRD の責務（本ライブラリの範囲外）
+
 ### 完了判定（PRD 7 章）
 - 機能要件（PRD 5 章）すべてが仕様通り動作
 - `common` 層の単体テストおよび統合テストが通る

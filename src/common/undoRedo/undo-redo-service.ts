@@ -5,7 +5,7 @@ import type { ICommand } from "../commands/command.js";
 import type { IPlayModel } from "../model/play-model.js";
 
 /**
- * Undo/Redo の遷移を司る IF。UI（M5）は canUndo/canRedo でボタン活性を決め、
+ * Undo/Redo の遷移を司る IF。UI は canUndo/canRedo でボタン活性を決め、
  * undo/redo を呼ぶ。新規コマンド push で redo スタックは破棄される（分岐履歴は持たない）。
  */
 export interface IUndoRedoService {

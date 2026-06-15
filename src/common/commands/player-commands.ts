@@ -100,7 +100,7 @@ export class UpdatePlayerCommand implements ICommand {
       throw new Error(`UpdatePlayerCommand: unknown player id "${this.playerId}"`);
     }
     const next = clonePlayer(current);
-    // 指定キーのみ上書き（未指定は現状維持）。色のクリアは M5/後続で扱う。
+    // patch は「指定キーのみ差し替え・未指定は現状維持」。undefined を「クリア」と解釈しない。
     if (this.patch.label !== undefined) {
       next.label = this.patch.label;
     }

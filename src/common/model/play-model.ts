@@ -42,7 +42,7 @@ export interface IPlayModel {
   findLine(id: string): Line | undefined;
   setFieldZone(zone: FieldZone): void;
   addPlayer(player: Player): void;
-  /** 複数選手を一括追加し、変更を 1 回だけ発火する（フォーメーション読込=M6）。 */
+  /** 複数選手を一括追加し、変更は最後に 1 回だけ発火する（1 操作 = 1 onChange の契約を一括時も保つ）。 */
   addPlayers(players: readonly Player[]): void;
   /** 選手を削除し、起点がその選手の線もカスケード除去する。巻き戻し用メメントを返す。 */
   removePlayer(id: string): PlayerRemoval;
@@ -72,7 +72,7 @@ function insertAt<T>(items: readonly T[], index: number, item: T): T[] {
 /**
  * 状態を専有し変更を発火する純粋な Model。
  * すべての変更系メソッドは「入力を複製して取り込み」「変更後に onDidChange を 1 回だけ発火」する。
- * 復元不能な参照（未知 id への操作）は契約違反としてその場で throw する（M5 UI は実在対象のみ操作）。
+ * 復元不能な参照（未知 id への操作）は契約違反としてその場で throw する（UI は実在対象のみ操作する前提）。
  */
 export class PlayModel implements IPlayModel {
   private readonly _onDidChange = new Emitter<PlayData>();
@@ -110,7 +110,7 @@ export class PlayModel implements IPlayModel {
   }
 
   // 変更を発火しない純粋なミューテーション。単発（emit 付き）と一括（最後に 1 回 emit）の
-  // 両方からこのコアを共有し、「1 操作 = onChange 1 回」を一括時も保つ（M4 契約）。
+  // 両方からこのコアを共有し、「1 操作 = onChange 1 回」を一括時も保つ。
   private addPlayerCore(player: Player): void {
     this.state = { ...this.state, players: [...this.state.players, clonePlayer(player)] };
   }

@@ -47,7 +47,7 @@ describe("LoadFormationCommand", () => {
     model.onDidChange(onChange);
 
     commands.execute(new LoadFormationCommand(formationPlayers()));
-    expect(onChange).toHaveBeenCalledOnce(); // 一括でも 1 回（M4 契約）
+    expect(onChange).toHaveBeenCalledOnce(); // 一括でも 1 回
     expect(model.getData().players.map((p) => p.id)).toEqual(["e-1", "f-1", "f-2"]);
     expect(model.findPlayer("f-2")?.color).toBe("#c62828");
 

@@ -142,7 +142,7 @@ export class FieldGeometry {
     };
   }
 
-  // --- 逆変換（Canvas px → ヤード）。M5 の入力 → hit-test の土台。
+  // 逆変換（Canvas px → ヤード）。入力 → hit-test の土台。
   // 縮退ビューポート（scale=0）では割り算が発散するため、forward と対称な
   // 安全値（原点 / 窓奥）へ丸めて NaN を上流に流さない。
 

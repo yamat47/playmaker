@@ -5,8 +5,8 @@
 import type { PlayerShape } from "../model/player.js";
 import type { Formation, FormationPlayer } from "./formation.js";
 
-/** ディフェンス選手の既定色（攻守を一目で区別できるよう赤系）。 */
-const DEFENSE_COLOR = "#c62828";
+/** ディフェンス選手の既定色（攻守を一目で区別できるよう、くすませた赤）。 */
+const DEFENSE_COLOR = "#b23a30";
 
 /** オフェンス選手テンプレート（色なし＝テーマ既定）。 */
 function off(
@@ -39,10 +39,10 @@ const OFFENSIVE_LINE: FormationPlayer[] = [
 
 // ディフェンスライン（4 人）は両隊形で共通。
 const DEFENSIVE_LINE: FormationPlayer[] = [
-  def("", 21, 51, "pentagon"),
-  def("", 24.5, 51, "pentagon"),
-  def("", 29, 51, "pentagon"),
-  def("", 32.5, 51, "pentagon"),
+  def("", 21, 51, "circle"),
+  def("", 24.5, 51, "circle"),
+  def("", 29, 51, "circle"),
+  def("", 32.5, 51, "circle"),
 ];
 
 const I_FORMATION: Formation = {
@@ -51,10 +51,10 @@ const I_FORMATION: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("TE", 33.6, 49.5, "triangle"),
+    off("TE", 33.6, 49.5, "square"),
     off("QB", 26.7, 47.5, "circle"),
-    off("FB", 26.7, 45, "diamond"),
-    off("RB", 26.7, 42.5, "diamond"),
+    off("FB", 26.7, 45, "circle"),
+    off("RB", 26.7, 42.5, "circle"),
     off("X", 7, 49.5, "circle"),
     off("Z", 46, 49.5, "circle"),
   ],
@@ -67,7 +67,7 @@ const SHOTGUN_SPREAD: Formation = {
   players: [
     ...OFFENSIVE_LINE,
     off("QB", 26.7, 45, "circle"),
-    off("RB", 29.7, 45, "diamond"),
+    off("RB", 29.7, 45, "circle"),
     off("X", 6, 49.5, "circle"),
     off("Y", 13, 49, "circle"),
     off("H", 40, 49, "circle"),
@@ -81,13 +81,13 @@ const DEFENSE_4_3: Formation = {
   side: "defense",
   players: [
     ...DEFENSIVE_LINE,
-    def("S", 20, 54.5, "hexagon"),
-    def("M", 26.7, 54.5, "hexagon"),
-    def("W", 33, 54.5, "hexagon"),
-    def("", 7, 53, "hexagon"),
-    def("", 46, 53, "hexagon"),
-    def("FS", 22, 60, "diamond"),
-    def("SS", 31, 60, "diamond"),
+    def("S", 20, 54.5, "circle"),
+    def("M", 26.7, 54.5, "circle"),
+    def("W", 33, 54.5, "circle"),
+    def("", 7, 53, "circle"),
+    def("", 46, 53, "circle"),
+    def("FS", 22, 60, "circle"),
+    def("SS", 31, 60, "circle"),
   ],
 };
 
@@ -97,13 +97,13 @@ const DEFENSE_NICKEL: Formation = {
   side: "defense",
   players: [
     ...DEFENSIVE_LINE,
-    def("M", 23, 54.5, "hexagon"),
-    def("W", 31, 54.5, "hexagon"),
-    def("N", 14, 55, "hexagon"),
-    def("", 7, 53, "hexagon"),
-    def("", 46, 53, "hexagon"),
-    def("FS", 22, 60, "diamond"),
-    def("SS", 31, 60, "diamond"),
+    def("M", 23, 54.5, "circle"),
+    def("W", 31, 54.5, "circle"),
+    def("N", 14, 55, "circle"),
+    def("", 7, 53, "circle"),
+    def("", 46, 53, "circle"),
+    def("FS", 22, 60, "circle"),
+    def("SS", 31, 60, "circle"),
   ],
 };
 

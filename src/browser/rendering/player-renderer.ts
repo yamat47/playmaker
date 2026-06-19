@@ -55,7 +55,8 @@ export class PlayerRenderer {
     if (r <= 0) {
       return;
     }
-    const fontPx = Math.max(8, r * 1.05);
+    // ラベルは選手マーカーの中に収まるサイズに抑える（半径の 1/3 ほど）。
+    const fontPx = Math.max(8, r * 0.35);
 
     for (const player of players) {
       const { x, y } = geometry.toCanvas(player.position.lateralYard, player.position.absoluteYard);
@@ -75,7 +76,7 @@ export class PlayerRenderer {
 
       if (player.label !== "") {
         ctx.fillStyle = theme.labelColor;
-        ctx.font = `600 ${fontPx}px var(--playmaker-font-family, system-ui, sans-serif)`;
+        ctx.font = `600 ${fontPx}px system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(player.label, x, y);

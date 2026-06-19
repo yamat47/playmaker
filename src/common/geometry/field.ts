@@ -18,6 +18,22 @@ export const ZONE_WINDOW_LENGTH_YARDS = 30;
 export const HASH_FROM_SIDELINE_YARDS = 20;
 
 /**
+ * リーグ別ハッシュ位置（中央からの片側オフセット, yd）。レンダラはこの表を引くだけで
+ * 切り替えられるよう定数化する（NCAA は左右間 40ft、NFL は約 18.5ft、NFHS は 53⅓ft）。
+ * 既定は日本で主流の NCAA。runtime 切替の API 化は将来課題（PRD 4.1 で範囲を絞る）。
+ */
+export const HASH_CENTER_OFFSET_YARDS_BY_LEAGUE = {
+  ncaa: FIELD_WIDTH_YARDS * 0.125,
+  nfl: FIELD_WIDTH_YARDS * 0.0578,
+  nfhs: FIELD_WIDTH_YARDS * 0.1667,
+} as const;
+
+export type FieldLeague = keyof typeof HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
+
+/** 既定リーグ。NCAA のハッシュ間 40ft が日本の標準。 */
+export const DEFAULT_FIELD_LEAGUE: FieldLeague = "ncaa";
+
+/**
  * 「9 ヤードマーク」（short hash）のサイドラインからの距離。
  * 実フィールドでサイドライン際の球位置を素早く判定するための補助目盛。
  */

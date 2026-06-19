@@ -22,6 +22,7 @@ export {
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "./commands/player-commands.js";
+export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EditorController,
   type EditorOverlay,
@@ -57,11 +58,14 @@ export {
 } from "./geometry/bezier.js";
 export {
   type CanvasPoint,
+  DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
   END_ZONE_DEPTH_YARDS,
   FIELD_WIDTH_YARDS,
   FieldGeometry,
+  type FieldLeague,
   fieldZoneWindow,
+  HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   HASH_FROM_SIDELINE_YARDS,
   HASH_TICK_YARDS,
   isEndZone,

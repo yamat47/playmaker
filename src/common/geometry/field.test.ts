@@ -1,13 +1,30 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
   FIELD_WIDTH_YARDS,
   FieldGeometry,
   fieldZoneWindow,
+  HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   isEndZone,
   yardLinesInWindow,
   ZONE_WINDOW_LENGTH_YARDS,
 } from "./field.js";
+
+describe("ハッシュのリーグ別位置", () => {
+  it("既定は NCAA で、サイドラインから 20yd（中央±0.125W）に来る", () => {
+    expect(DEFAULT_FIELD_LEAGUE).toBe("ncaa");
+    const offset = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE.ncaa;
+    expect(offset).toBeCloseTo(FIELD_WIDTH_YARDS * 0.125);
+    expect(FIELD_WIDTH_YARDS / 2 - offset).toBeCloseTo(20);
+  });
+
+  it("NFHS > NCAA > NFL の順で中央オフセットが大きい（ハッシュが広い）", () => {
+    const { ncaa, nfl, nfhs } = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
+    expect(nfhs).toBeGreaterThan(ncaa);
+    expect(ncaa).toBeGreaterThan(nfl);
+  });
+});
 
 describe("fieldZoneWindow", () => {
   it("own-redzone は自陣EZ(-10)〜自陣RZ(20)を映す", () => {

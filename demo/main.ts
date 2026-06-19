@@ -1,5 +1,5 @@
 // ローカル確認用 playground のエントリ。手元のブラウザで以下を目視する:
-// - フィールド描画とゾーン切替、6 形状・色・ラベルの選手、route/block/motion の線
+// - フィールド描画とゾーン切替、2 形状（丸/四角）・色・ラベルの選手、route/block/motion の線
 // - 内蔵 UI（ツールバー/プロパティパネル/Undo·Redo/ゾーン切替）での編集と view/edit 切替
 // - フォーメーション読込（内蔵プルダウンと公開 API loadFormation の追記セマンティクス）
 // - PNG エクスポート（編集 UI を含まない・view/edit で同一図）
@@ -38,8 +38,8 @@ const mountPoint: HTMLElement = stage;
 const jsonArea: HTMLTextAreaElement = jsonEl;
 const dataStatus: HTMLElement = dataStatusEl;
 
-// 目視用サンプル: 6 形状・色・ラベル・3 線種・直線/ベジェ・waypoint。
-const DEFENSE_COLOR = "#c62828";
+// 目視用サンプル: 2 形状（丸/四角）・色・ラベル・3 線種・直線/ベジェ・waypoint。
+const DEFENSE_COLOR = "#b23a30";
 const SAMPLE_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.7, absoluteYard: 49 }, shape: "square", label: "C" },
   { id: "ol-lg", position: { lateralYard: 24.4, absoluteYard: 49 }, shape: "square", label: "LG" },
@@ -47,50 +47,50 @@ const SAMPLE_PLAYERS: Player[] = [
   { id: "ol-lt", position: { lateralYard: 22.1, absoluteYard: 49 }, shape: "square", label: "LT" },
   { id: "ol-rt", position: { lateralYard: 31.3, absoluteYard: 49 }, shape: "square", label: "RT" },
   { id: "qb", position: { lateralYard: 26.7, absoluteYard: 46.5 }, shape: "circle", label: "QB" },
-  { id: "rb", position: { lateralYard: 26.7, absoluteYard: 43 }, shape: "diamond", label: "RB" },
+  { id: "rb", position: { lateralYard: 26.7, absoluteYard: 43 }, shape: "circle", label: "RB" },
   { id: "wr-x", position: { lateralYard: 7, absoluteYard: 49.5 }, shape: "circle", label: "X" },
   { id: "wr-z", position: { lateralYard: 46, absoluteYard: 49.5 }, shape: "circle", label: "Z" },
   { id: "wr-y", position: { lateralYard: 38, absoluteYard: 48 }, shape: "circle", label: "Y" },
-  { id: "te", position: { lateralYard: 33.6, absoluteYard: 49 }, shape: "triangle", label: "TE" },
+  { id: "te", position: { lateralYard: 33.6, absoluteYard: 49 }, shape: "square", label: "TE" },
   {
     id: "dl-1",
     position: { lateralYard: 24.4, absoluteYard: 51 },
-    shape: "pentagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "dl-2",
     position: { lateralYard: 29, absoluteYard: 51 },
-    shape: "pentagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "lb-m",
     position: { lateralYard: 26.7, absoluteYard: 54 },
-    shape: "hexagon",
+    shape: "circle",
     label: "M",
     color: DEFENSE_COLOR,
   },
   {
     id: "cb-1",
     position: { lateralYard: 7, absoluteYard: 53 },
-    shape: "hexagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "cb-2",
     position: { lateralYard: 46, absoluteYard: 53 },
-    shape: "hexagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "fs",
     position: { lateralYard: 26.7, absoluteYard: 60 },
-    shape: "diamond",
+    shape: "circle",
     label: "FS",
     color: DEFENSE_COLOR,
   },
@@ -152,7 +152,7 @@ const SAMPLE_LINES: Line[] = [
 ];
 
 // 密度ストレス用 fixture。PRD 6.2 を手動目視するため demo に常設し、戦術的厳密さは狙わずに
-// 6 形状・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認できる配置にする。
+// 2 形状（丸/四角）・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認できる配置にする。
 const STRESS_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.7, absoluteYard: 49 }, shape: "square", label: "C" },
   { id: "ol-lg", position: { lateralYard: 24.4, absoluteYard: 49 }, shape: "square", label: "LG" },
@@ -160,85 +160,85 @@ const STRESS_PLAYERS: Player[] = [
   { id: "ol-lt", position: { lateralYard: 22.1, absoluteYard: 49 }, shape: "square", label: "LT" },
   { id: "ol-rt", position: { lateralYard: 31.3, absoluteYard: 49 }, shape: "square", label: "RT" },
   { id: "qb", position: { lateralYard: 26.7, absoluteYard: 46.5 }, shape: "circle", label: "QB" },
-  { id: "rb", position: { lateralYard: 26.7, absoluteYard: 43 }, shape: "diamond", label: "RB" },
+  { id: "rb", position: { lateralYard: 26.7, absoluteYard: 43 }, shape: "circle", label: "RB" },
   { id: "wr-x", position: { lateralYard: 7, absoluteYard: 49.5 }, shape: "circle", label: "X" },
   { id: "wr-z", position: { lateralYard: 46, absoluteYard: 49.5 }, shape: "circle", label: "Z" },
   { id: "wr-y", position: { lateralYard: 38, absoluteYard: 48 }, shape: "circle", label: "Y" },
-  { id: "te", position: { lateralYard: 33.6, absoluteYard: 49 }, shape: "triangle", label: "TE" },
+  { id: "te", position: { lateralYard: 33.6, absoluteYard: 49 }, shape: "square", label: "TE" },
   {
     id: "de-l",
     position: { lateralYard: 21.5, absoluteYard: 51 },
-    shape: "pentagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "dt-l",
     position: { lateralYard: 24.4, absoluteYard: 51 },
-    shape: "pentagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "dt-r",
     position: { lateralYard: 29, absoluteYard: 51 },
-    shape: "pentagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "de-r",
     position: { lateralYard: 31.9, absoluteYard: 51 },
-    shape: "pentagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "lb-w",
     position: { lateralYard: 22, absoluteYard: 54 },
-    shape: "hexagon",
+    shape: "circle",
     label: "W",
     color: DEFENSE_COLOR,
   },
   {
     id: "lb-m",
     position: { lateralYard: 26.7, absoluteYard: 54 },
-    shape: "hexagon",
+    shape: "circle",
     label: "M",
     color: DEFENSE_COLOR,
   },
   {
     id: "lb-s",
     position: { lateralYard: 31.4, absoluteYard: 54 },
-    shape: "hexagon",
+    shape: "circle",
     label: "S",
     color: DEFENSE_COLOR,
   },
   {
     id: "cb-l",
     position: { lateralYard: 7, absoluteYard: 53 },
-    shape: "hexagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "cb-r",
     position: { lateralYard: 46, absoluteYard: 53 },
-    shape: "hexagon",
+    shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
   },
   {
     id: "fs",
     position: { lateralYard: 24, absoluteYard: 58 },
-    shape: "diamond",
+    shape: "circle",
     label: "FS",
     color: DEFENSE_COLOR,
   },
   {
     id: "ss",
     position: { lateralYard: 30, absoluteYard: 57 },
-    shape: "diamond",
+    shape: "circle",
     label: "SS",
     color: DEFENSE_COLOR,
   },

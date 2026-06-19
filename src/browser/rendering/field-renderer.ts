@@ -7,6 +7,7 @@ import {
   FIELD_WIDTH_YARDS,
   type FieldGeometry,
   HASH_FROM_SIDELINE_YARDS,
+  HASH_TICK_YARDS,
   yardLinesInWindow,
 } from "../../common/index.js";
 
@@ -17,12 +18,21 @@ export interface FieldTheme {
   numberColor: string;
 }
 
-// 線の太さ（CSS px）。ゴールライン > 10yd 区切り > 5yd 区切り。
-const GOAL_LINE_WIDTH = 3;
+// 線の太さ（CSS px）。階層: 外枠 > 10yd > 5yd > 1yd ティック。
+const HEAVY_LINE_WIDTH = 3;
 const MAJOR_LINE_WIDTH = 2;
-const MINOR_LINE_WIDTH = 1;
-// ハッシュの目盛り長（ヤード）。実フィールドの 1 ヤード刻みを再現。
-const HASH_TICK_YARDS = 0.8;
+const MINOR_LINE_WIDTH = 1.25;
+const TICK_WIDTH = 1;
+
+// 方向マーカー（"9yd マーク"）の寸法（ヤード単位）。数字を主役にするため小ぶり。
+const ARROW_LENGTH_YARDS = 0.8;
+const ARROW_HALF_WIDTH_YARDS = 0.3;
+// 数字の中心からゴール側へずらす距離。数字の半分の高さ + 少しのゆとり分。
+const ARROW_OFFSET_FROM_NUMBER_YARDS = 2.5;
+
+const NUMBER_HEIGHT_YARDS = 3.5;
+// 番号の lateralYard。三角も同じ列に置いて縦に揃える。
+const NUMBER_FROM_SIDELINE_YARDS = 6;
 
 export class FieldRenderer {
   /**
@@ -32,7 +42,6 @@ export class FieldRenderer {
   draw(ctx: CanvasRenderingContext2D, geometry: FieldGeometry, theme: FieldTheme): void {
     const { viewportWidth, viewportHeight, zone } = geometry;
 
-    // 1) 芝（レターボックス余白も含め全面）
     ctx.fillStyle = theme.fieldColor;
     ctx.fillRect(0, 0, viewportWidth, viewportHeight);
 
@@ -41,44 +50,50 @@ export class FieldRenderer {
     const hashLeft = geometry.xForLateralYard(HASH_FROM_SIDELINE_YARDS);
     const hashRight = geometry.xForLateralYard(FIELD_WIDTH_YARDS - HASH_FROM_SIDELINE_YARDS);
     const tickPx = HASH_TICK_YARDS * geometry.scale;
+    const halfTick = tickPx / 2;
+    const centeredTickXs = [hashLeft, hashRight];
 
-    // 2) ハッシュマーク（1 ヤード刻み・内側 2 列）。10 ヤード線とは重ねない。
+    // サイドラインのティックだけ内向きに伸ばす（外向きはフィールド外に出てしまう）。
+    // 5yd 倍数は横断ラインと重なるためスキップ。9yd 列は三角マーカーに譲る。
     ctx.strokeStyle = theme.lineColor;
-    ctx.lineWidth = MINOR_LINE_WIDTH;
+    ctx.lineWidth = TICK_WIDTH;
     ctx.beginPath();
     for (const yard of yardLinesInWindow(zone, 1)) {
       if (yard % 5 === 0) {
         continue;
       }
       const y = geometry.yForAbsoluteYard(yard);
-      ctx.moveTo(hashLeft - tickPx / 2, y);
-      ctx.lineTo(hashLeft + tickPx / 2, y);
-      ctx.moveTo(hashRight - tickPx / 2, y);
-      ctx.lineTo(hashRight + tickPx / 2, y);
+      ctx.moveTo(left, y);
+      ctx.lineTo(left + tickPx, y);
+      ctx.moveTo(right - tickPx, y);
+      ctx.lineTo(right, y);
+      for (const cx of centeredTickXs) {
+        ctx.moveTo(cx - halfTick, y);
+        ctx.lineTo(cx + halfTick, y);
+      }
     }
     ctx.stroke();
 
-    // 3) ヤードライン（5 ヤード刻み・横断）
+    // 太さ階層ごとに 1 ストロークへ集約（lineWidth 変更はストローク確定のため）。
+    const goalPath = new Path2D();
+    const majorPath = new Path2D();
+    const minorPath = new Path2D();
     for (const yard of yardLinesInWindow(zone, 5)) {
       const y = geometry.yForAbsoluteYard(yard);
-      const isGoalLine = yard === 0 || yard === 100;
-      ctx.strokeStyle = theme.lineColor;
-      ctx.lineWidth = isGoalLine
-        ? GOAL_LINE_WIDTH
-        : yard % 10 === 0
-          ? MAJOR_LINE_WIDTH
-          : MINOR_LINE_WIDTH;
-      ctx.beginPath();
-      ctx.moveTo(left, y);
-      ctx.lineTo(right, y);
-      ctx.stroke();
+      const target =
+        yard === 0 || yard === 100 ? goalPath : yard % 10 === 0 ? majorPath : minorPath;
+      target.moveTo(left, y);
+      target.lineTo(right, y);
     }
+    ctx.lineWidth = MINOR_LINE_WIDTH;
+    ctx.stroke(minorPath);
+    ctx.lineWidth = MAJOR_LINE_WIDTH;
+    ctx.stroke(majorPath);
+    ctx.lineWidth = HEAVY_LINE_WIDTH;
+    ctx.stroke(goalPath);
 
-    // 4) サイドライン（窓の縦範囲ぶん）
     const top = geometry.yForAbsoluteYard(geometry.window.endYard);
     const bottom = geometry.yForAbsoluteYard(geometry.window.startYard);
-    ctx.strokeStyle = theme.lineColor;
-    ctx.lineWidth = GOAL_LINE_WIDTH;
     ctx.beginPath();
     ctx.moveTo(left, top);
     ctx.lineTo(left, bottom);
@@ -86,22 +101,63 @@ export class FieldRenderer {
     ctx.lineTo(right, bottom);
     ctx.stroke();
 
-    // 5) ヤード番号（10 ヤード刻み・左右ハッシュの外側）。ゴール(0)は描かない。
-    const fontPx = Math.max(10, 2.4 * geometry.scale);
-    ctx.fillStyle = theme.numberColor;
-    ctx.font = `600 ${fontPx}px var(--playmaker-font-family, system-ui, sans-serif)`;
+    // 番号付きヤードライン（10yd 刻み）ごとに、数字と「数字の隣の三角」を描く。
+    // 三角は数字からゴール側へ ARROW_OFFSET_FROM_NUMBER_YARDS ずれた位置に置き、
+    // 5yd ラインの上に正確に乗らずに数字とペアで読めるようにする。
+    // ゴール(0)・センター(50)は数字のみ。
+    // 三角は数字と同じ lateralYard 列に揃えて縦に並べる。
+    const arrowLeftX = geometry.xForLateralYard(NUMBER_FROM_SIDELINE_YARDS);
+    const arrowRightX = geometry.xForLateralYard(FIELD_WIDTH_YARDS - NUMBER_FROM_SIDELINE_YARDS);
+    const arrowBaseHalfPx = ARROW_HALF_WIDTH_YARDS * geometry.scale;
+    const halfArrowLength = ARROW_LENGTH_YARDS / 2;
+
+    const fontPx = Math.max(10, NUMBER_HEIGHT_YARDS * geometry.scale);
+    // Canvas の ctx.font は CSS の var() を解釈できず "10px sans-serif" にフォールバックする
+    // ため、--playmaker-font-family を埋め込まず固定スタックを書く。
+    ctx.font = `600 ${fontPx}px system-ui, sans-serif`;
     ctx.textBaseline = "middle";
+    ctx.textAlign = "center";
+    const leftNumberX = geometry.xForLateralYard(NUMBER_FROM_SIDELINE_YARDS);
+    const rightNumberX = geometry.xForLateralYard(FIELD_WIDTH_YARDS - NUMBER_FROM_SIDELINE_YARDS);
+
+    const drawRotatedLabel = (label: string, x: number, y: number, rotation: number): void => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    };
+    const drawArrow = (xc: number, tipY: number, baseY: number): void => {
+      ctx.beginPath();
+      ctx.moveTo(xc, tipY);
+      ctx.lineTo(xc - arrowBaseHalfPx, baseY);
+      ctx.lineTo(xc + arrowBaseHalfPx, baseY);
+      ctx.closePath();
+      ctx.fill();
+    };
+
     for (const yard of yardLinesInWindow(zone, 10)) {
       const n = displayYardNumber(yard);
       if (n === 0) {
         continue;
       }
       const label = String(n);
-      const y = geometry.yForAbsoluteYard(yard);
-      ctx.textAlign = "right";
-      ctx.fillText(label, hashLeft - tickPx, y);
-      ctx.textAlign = "left";
-      ctx.fillText(label, hashRight + tickPx, y);
+      const numberY = geometry.yForAbsoluteYard(yard);
+
+      ctx.fillStyle = theme.numberColor;
+      drawRotatedLabel(label, leftNumberX, numberY, Math.PI / 2);
+      drawRotatedLabel(label, rightNumberX, numberY, -Math.PI / 2);
+
+      if (yard === 50) {
+        continue;
+      }
+      const towardGoal = yard < 50 ? -1 : 1;
+      const arrowCenterYard = yard + towardGoal * ARROW_OFFSET_FROM_NUMBER_YARDS;
+      const tipY = geometry.yForAbsoluteYard(arrowCenterYard + towardGoal * halfArrowLength);
+      const baseY = geometry.yForAbsoluteYard(arrowCenterYard - towardGoal * halfArrowLength);
+      ctx.fillStyle = theme.lineColor;
+      drawArrow(arrowLeftX, tipY, baseY);
+      drawArrow(arrowRightX, tipY, baseY);
     }
   }
 }

@@ -1,4 +1,5 @@
 import {
+  computeFieldMetrics,
   Disposable,
   type EditorOverlay,
   FieldGeometry,
@@ -137,8 +138,10 @@ export class CanvasSurface extends Disposable {
     read: (name: string, fallback: string) => string,
   ): void {
     const { field, line, player } = this.readThemes(read);
-    this.fieldRenderer.draw(ctx, geometry, field);
-    this.lineRenderer.draw(ctx, geometry, data.lines, data.players, line);
+    // 寸法トークンは W/U から導く純計算。1 フレーム 1 回に束ね、各レンダラへ渡す。
+    const metrics = computeFieldMetrics(geometry.fieldPixelWidth, geometry.scale);
+    this.fieldRenderer.draw(ctx, geometry, field, metrics);
+    this.lineRenderer.draw(ctx, geometry, data.lines, data.players, line, metrics);
     this.playerRenderer.draw(ctx, geometry, data.players, player);
   }
 
@@ -210,18 +213,28 @@ export class CanvasSurface extends Disposable {
   } {
     return {
       field: {
-        fieldColor: read("--playmaker-field-bg", "#2e7d32"),
-        lineColor: read("--playmaker-field-line-color", "rgba(255, 255, 255, 0.85)"),
-        numberColor: read("--playmaker-field-number-color", "rgba(255, 255, 255, 0.9)"),
+        fieldColor: read("--playmaker-field-bg", "#3f7a46"),
+        stripeColor: read("--playmaker-field-stripe", "#3a7341"),
+        oobColor: read("--playmaker-field-oob", "#284b2f"),
+        endzoneColor: read("--playmaker-endzone-bg", "#20503c"),
+        lineColor: read("--playmaker-field-line-color", "rgba(238, 242, 236, 0.9)"),
+        goalLineColor: read("--playmaker-goal-line-color", "#ffffff"),
+        numberColor: read("--playmaker-field-number-color", "rgba(238, 242, 236, 0.9)"),
+        numberFontFamily: read(
+          "--playmaker-number-font-family",
+          '"Arial Narrow", sans-serif-condensed, sans-serif',
+        ),
+        pylonColor: read("--playmaker-pylon-color", "#e8722c"),
+        goalpostColor: read("--playmaker-goalpost-color", "#f3c33a"),
       },
       line: {
-        routeColor: read("--playmaker-line-route-color", "#ffeb3b"),
-        blockColor: read("--playmaker-line-block-color", "#ffffff"),
-        motionColor: read("--playmaker-line-motion-color", "#ffeb3b"),
+        routeColor: read("--playmaker-line-route-color", "#f3c33a"),
+        blockColor: read("--playmaker-line-block-color", "#eef2ec"),
+        motionColor: read("--playmaker-line-motion-color", "#f3c33a"),
       },
       player: {
-        fillColor: read("--playmaker-player-fill", "#1565c0"),
-        strokeColor: read("--playmaker-player-stroke", "rgba(255, 255, 255, 0.9)"),
+        fillColor: read("--playmaker-player-fill", "#1e3fae"),
+        strokeColor: read("--playmaker-player-stroke", "#eef2ec"),
         labelColor: read("--playmaker-player-label-color", "#ffffff"),
       },
     };

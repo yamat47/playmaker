@@ -5,15 +5,27 @@
  */
 .playmaker-root {
   --playmaker-font-family: system-ui, sans-serif;
-  --playmaker-field-bg: #2e7d32;
-  --playmaker-field-line-color: rgba(255, 255, 255, 0.85);
-  --playmaker-field-number-color: rgba(255, 255, 255, 0.9);
-  --playmaker-player-fill: #1565c0;
-  --playmaker-player-stroke: rgba(255, 255, 255, 0.9);
+  /* ヤード数字はアスレチック系（縦長・極太）を狙う。同梱せず、商用ソフトが
+     @font-face を足せばコンデンス体になる。既定は OS のコンデンス体スタック。 */
+  --playmaker-number-font-family:
+    "Oswald", "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed,
+    sans-serif;
+  /* フィールドは脇役。彩度・明度を少し落とし、白は純白を避けてプレーを前に出す。 */
+  --playmaker-field-bg: #3f7a46;
+  --playmaker-field-stripe: #3a7341;
+  --playmaker-field-oob: #284b2f;
+  --playmaker-endzone-bg: #20503c;
+  --playmaker-field-line-color: rgba(238, 242, 236, 0.9);
+  --playmaker-field-number-color: rgba(238, 242, 236, 0.9);
+  --playmaker-goal-line-color: #ffffff;
+  --playmaker-pylon-color: #e8722c;
+  --playmaker-goalpost-color: #f3c33a;
+  --playmaker-player-fill: #1e3fae;
+  --playmaker-player-stroke: #eef2ec;
   --playmaker-player-label-color: #ffffff;
-  --playmaker-line-route-color: #ffeb3b;
-  --playmaker-line-block-color: #ffffff;
-  --playmaker-line-motion-color: #ffeb3b;
+  --playmaker-line-route-color: #f3c33a;
+  --playmaker-line-block-color: #eef2ec;
+  --playmaker-line-motion-color: #f3c33a;
   --playmaker-selection-color: #ff9800;
   --playmaker-surface-bg: #ffffff;
   --playmaker-border-color: #d0d0d0;

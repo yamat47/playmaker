@@ -11,7 +11,9 @@ import {
   toDisposable,
 } from "../../common/index.js";
 
-const SHAPES: PlayerShape[] = ["circle", "square", "triangle", "diamond", "pentagon", "hexagon"];
+// 形状の語彙は 2 種に絞る（丸=スキル系、四角=ライン系）。多種混在は図を散らかす。
+// 旧データが持つ他形状はモデル・レンダラ側で引き続き受理する（描画の後方互換）。
+const SHAPES: PlayerShape[] = ["circle", "square"];
 const KINDS: LineKind[] = ["route", "block", "motion"];
 const INTERPOLATIONS: LineInterpolation[] = ["straight", "bezier"];
 
@@ -126,7 +128,7 @@ export class PropertyPanel extends Disposable {
   ): void {
     const input = document.createElement("input");
     input.type = "color";
-    input.value = toHex(value, "#1565c0");
+    input.value = toHex(value, "#1e3fae");
     input.addEventListener("change", () => onChange(input.value));
     this.addRow(labelText, input);
   }

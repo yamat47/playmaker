@@ -57,10 +57,14 @@ export class PlayerRenderer {
     }
     // ラベルは選手マーカーの中に収まるサイズに抑える（半径の 1/3 ほど）。
     const fontPx = Math.max(8, r * 0.35);
+    // 芝から浮かせる白フチ + ごく弱い影。影を強くするとダサくなるので控えめに。
+    const shadowBlur = Math.max(2, r * 0.18);
+    const shadowOffset = Math.max(1, r * 0.08);
 
     for (const player of players) {
       const { x, y } = geometry.toCanvas(player.position.lateralYard, player.position.absoluteYard);
 
+      ctx.save();
       ctx.beginPath();
       if (player.shape === "circle") {
         ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -68,11 +72,20 @@ export class PlayerRenderer {
         this.tracePolygon(ctx, x, y, r, player.shape);
       }
 
+      // 影は塗りにだけ載せる（フチ/ラベルへ二重に乗らないよう塗り直後に解除）。
+      ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+      ctx.shadowBlur = shadowBlur;
+      ctx.shadowOffsetY = shadowOffset;
       ctx.fillStyle = player.color ?? theme.fillColor;
       ctx.fill();
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+
       ctx.lineWidth = STROKE_WIDTH;
       ctx.strokeStyle = theme.strokeColor;
       ctx.stroke();
+      ctx.restore();
 
       if (player.label !== "") {
         ctx.fillStyle = theme.labelColor;

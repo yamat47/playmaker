@@ -2,3 +2,5 @@
 # vite / vitest が依存する esbuild のネイティブバイナリ用スクリプトを明示的に許可する。
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@types/node@26.0.0'

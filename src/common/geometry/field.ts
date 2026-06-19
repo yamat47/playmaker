@@ -17,6 +17,15 @@ export const ZONE_WINDOW_LENGTH_YARDS = 30;
  */
 export const HASH_FROM_SIDELINE_YARDS = 20;
 
+/**
+ * 「9 ヤードマーク」（short hash）のサイドラインからの距離。
+ * 実フィールドでサイドライン際の球位置を素早く判定するための補助目盛。
+ */
+export const NEAR_SIDELINE_TICK_YARDS = 9;
+
+/** 1 ヤード刻みティックの目盛り長（ヤード）。実フィールドの 1 ヤード刻みを再現。 */
+export const HASH_TICK_YARDS = 0.8;
+
 /** レッドゾーンの奥行き（ゴール前 20 ヤード）。 */
 export const RED_ZONE_DEPTH_YARDS = 20;
 

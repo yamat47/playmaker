@@ -17,6 +17,11 @@ export class DisposableStore implements IDisposable {
   private readonly items = new Set<IDisposable>();
   private disposed = false;
 
+  /** 破棄済みか。非同期完了時に「破棄後の作用」を抑止する判定に使う。 */
+  get isDisposed(): boolean {
+    return this.disposed;
+  }
+
   add<T extends IDisposable>(item: T): T {
     if (this.disposed) {
       item.dispose();
@@ -43,6 +48,11 @@ export class DisposableStore implements IDisposable {
  */
 export abstract class Disposable implements IDisposable {
   protected readonly _store = new DisposableStore();
+
+  /** 破棄済みか。非同期完了コールバックが破棄後に作用しないようガードするのに使う。 */
+  protected get isDisposed(): boolean {
+    return this._store.isDisposed;
+  }
 
   protected _register<T extends IDisposable>(item: T): T {
     return this._store.add(item);

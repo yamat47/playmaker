@@ -3,13 +3,24 @@
  * 配色・フォント・サイズをデザインシステムに合わせられる（PRD 6.5）。
  * UI（ツールバー/プロパティパネル）はこの変数体系の上に実装している。
  */
+/*
+ * フィールド描画専用フォント。ヤード数字・選手ラベルはこの同梱フォントに固定し、
+ * 外部からの差し替えを許さない（プロらしい数字の見た目をブランドとして担保する）。
+ * 内部専用名にして商用ソフト側の同名指定と衝突しにくくする。サブセット woff2 は
+ * ビルド時に data URI として本 CSS へ inline される（追加ファイル配布が不要）。
+ * 元フォント: Saira Condensed Bold（SIL OFL 1.1, assets/fonts/OFL.txt）。
+ * 再生成: node scripts/generate-field-font.mjs
+ */
+@font-face {
+  font-family: "Playmaker Saira";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/playmaker-saira-subset.woff2") format("woff2");
+}
+
 .playmaker-root {
   --playmaker-font-family: system-ui, sans-serif;
-  /* ヤード数字はアスレチック系（縦長・極太）を狙う。同梱せず、商用ソフトが
-     @font-face を足せばコンデンス体になる。既定は OS のコンデンス体スタック。 */
-  --playmaker-number-font-family:
-    "Oswald", "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed,
-    sans-serif;
   /* フィールドは脇役。彩度・明度を少し落とし、白は純白を避けてプレーを前に出す。 */
   --playmaker-field-bg: #3f7a46;
   --playmaker-field-stripe: #3a7341;

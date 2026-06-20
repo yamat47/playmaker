@@ -22,6 +22,7 @@ export {
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "./commands/player-commands.js";
+export { FIELD_FONT_FAMILY } from "./design/field-font.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EditorController,

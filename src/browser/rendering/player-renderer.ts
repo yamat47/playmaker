@@ -3,6 +3,7 @@
 // → ロジックは common 単体テストで網羅し、ここは VRT なしでも薄く保てる。
 
 import {
+  FIELD_FONT_FAMILY,
   type FieldGeometry,
   PLAYER_RADIUS_YARDS,
   type Player,
@@ -89,7 +90,7 @@ export class PlayerRenderer {
 
       if (player.label !== "") {
         ctx.fillStyle = theme.labelColor;
-        ctx.font = `600 ${fontPx}px system-ui, sans-serif`;
+        ctx.font = `700 ${fontPx}px ${FIELD_FONT_FAMILY}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(player.label, x, y);

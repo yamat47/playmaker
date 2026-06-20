@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_WIDTH_YARDS, ZONE_WINDOW_LENGTH_YARDS } from "../geometry/field.js";
+import { FIELD_WIDTH_YARDS, zoneWindowLength } from "../geometry/field.js";
 import {
   DEFAULT_EXPORT_WIDTH,
-  FIELD_WINDOW_ASPECT,
+  fieldWindowAspect,
   type ImageExportOptions,
   resolveImageExportSize,
   resolveImageExportWidth,
 } from "./image-export.js";
 
-describe("FIELD_WINDOW_ASPECT", () => {
-  it("フィールド窓（幅 / 縦 30yd）の比に一致する", () => {
-    expect(FIELD_WINDOW_ASPECT).toBe(FIELD_WIDTH_YARDS / ZONE_WINDOW_LENGTH_YARDS);
+describe("fieldWindowAspect", () => {
+  it("各ゾーンの窓（幅 / 縦＝ゾーン窓長）の比に一致する", () => {
+    expect(fieldWindowAspect("middle")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("middle"));
+    expect(fieldWindowAspect("redzone")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("redzone"));
+  });
+
+  it("縦長なレッドゾーン窓は middle より横長比が小さい", () => {
+    expect(fieldWindowAspect("redzone")).toBeLessThan(fieldWindowAspect("middle"));
   });
 });
 
@@ -44,31 +49,38 @@ describe("resolveImageExportWidth", () => {
 });
 
 describe("resolveImageExportSize", () => {
-  it("幅指定なし（引数省略）なら既定幅とアスペクト比由来の高さを返す", () => {
-    const size = resolveImageExportSize();
+  it("幅指定なし（省略）なら既定幅とゾーン窓のアスペクト比由来の高さを返す", () => {
+    const size = resolveImageExportSize("middle");
 
     expect(size.width).toBe(DEFAULT_EXPORT_WIDTH);
-    expect(size.height).toBe(Math.round(DEFAULT_EXPORT_WIDTH / FIELD_WINDOW_ASPECT));
+    expect(size.height).toBe(Math.round(DEFAULT_EXPORT_WIDTH / fieldWindowAspect("middle")));
   });
 
-  it("指定幅からフィールド窓のアスペクト比で高さを導く", () => {
-    const size = resolveImageExportSize({ width: 1777 });
+  it("指定幅からゾーン窓のアスペクト比で高さを導く", () => {
+    const size = resolveImageExportSize("middle", { width: 1777 });
 
     expect(size.width).toBe(1777);
-    expect(size.height).toBe(Math.round(1777 / FIELD_WINDOW_ASPECT));
+    expect(size.height).toBe(Math.round(1777 / fieldWindowAspect("middle")));
+  });
+
+  it("縦長なレッドゾーン窓は同じ幅でも高さが大きくなる", () => {
+    const middle = resolveImageExportSize("middle", { width: 1600 });
+    const redzone = resolveImageExportSize("redzone", { width: 1600 });
+
+    expect(redzone.height).toBeGreaterThan(middle.height);
   });
 
   it("不正な幅は既定へ丸めたうえで高さを導く", () => {
     const options: ImageExportOptions = { width: -1 };
 
-    const size = resolveImageExportSize(options);
+    const size = resolveImageExportSize("redzone", options);
 
     expect(size.width).toBe(DEFAULT_EXPORT_WIDTH);
-    expect(size.height).toBe(Math.round(DEFAULT_EXPORT_WIDTH / FIELD_WINDOW_ASPECT));
+    expect(size.height).toBe(Math.round(DEFAULT_EXPORT_WIDTH / fieldWindowAspect("redzone")));
   });
 
   it("最小幅 1 でも高さは 1 以上になる", () => {
-    const size = resolveImageExportSize({ width: 1 });
+    const size = resolveImageExportSize("middle", { width: 1 });
 
     expect(size.width).toBe(1);
     expect(size.height).toBeGreaterThanOrEqual(1);

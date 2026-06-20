@@ -36,7 +36,7 @@ export { IdFactory, type IIdFactory } from "./editing/id-factory.js";
 export { Emitter, type Event } from "./event/emitter.js";
 export {
   DEFAULT_EXPORT_WIDTH,
-  FIELD_WINDOW_ASPECT,
+  fieldWindowAspect,
   type ImageExportOptions,
   type ImageExportSize,
   resolveImageExportSize,
@@ -74,6 +74,7 @@ export {
   type YardWindow,
   yardLinesInWindow,
   ZONE_WINDOW_LENGTH_YARDS,
+  zoneWindowLength,
 } from "./geometry/field.js";
 export {
   distanceToSegment,

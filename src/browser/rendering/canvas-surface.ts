@@ -95,7 +95,7 @@ export class CanvasSurface extends Disposable {
    * - 出力寸法はフィールド窓のアスペクト比なのでレターボックス余白は出ない。
    */
   exportToPngBlob(data: PlayData, options?: ImageExportOptions): Promise<Blob> {
-    const { width, height } = resolveImageExportSize(options);
+    const { width, height } = resolveImageExportSize(data.field.zone, options);
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;

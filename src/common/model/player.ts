@@ -25,7 +25,7 @@ const PLAYER_SHAPES: readonly PlayerShape[] = [
  * 必ず一致するよう common に置き両層で共有する。フィールドは縦横等倍スケールのため、
  * ヤード空間の円形当たり判定がそのまま画面上の円になる。
  */
-export const PLAYER_RADIUS_YARDS = 1.1;
+export const PLAYER_RADIUS_YARDS = 0.93;
 
 /**
  * フィールド上の論理位置（ヤード空間）。geometry の語彙に揃える。

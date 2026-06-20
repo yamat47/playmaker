@@ -14,11 +14,13 @@ describe("computeFieldMetrics", () => {
     expect(m.hashTickLength).toBeCloseTo(0.375 * U);
     expect(m.numberHeight).toBeCloseTo(2.4 * U);
     expect(m.tokenDiameter).toBeCloseTo(D);
+    expect(m.markerStroke).toBeCloseTo(D / 14);
+    expect(m.markerLabelFont).toBeCloseTo(0.5 * D);
     expect(m.routeWidth).toBeCloseTo(0.11 * D);
     expect(m.blockWidth).toBeCloseTo(m.routeWidth);
     expect(m.blockCapLength).toBeCloseTo(0.4 * D);
-    expect(m.arrowLength).toBeCloseTo(D);
-    expect(m.arrowHalfWidth).toBeCloseTo(0.62 * D);
+    expect(m.arrowLength).toBeCloseTo(0.72 * D);
+    expect(m.arrowHalfWidth).toBeCloseTo(0.24 * D);
     expect(m.motionDash[0]).toBeCloseTo(1.1 * U);
     expect(m.motionDash[1]).toBeCloseTo(0.7 * U);
   });
@@ -43,6 +45,8 @@ describe("computeFieldMetrics", () => {
     expect(m.hashTickLength).toBe(0);
     expect(m.numberHeight).toBe(10);
     expect(m.tokenDiameter).toBe(0);
+    expect(m.markerStroke).toBe(1);
+    expect(m.markerLabelFont).toBe(8);
     expect(m.routeWidth).toBe(1.5);
     expect(m.arrowLength).toBe(0);
     expect(m.motionDash).toEqual([0, 0]);

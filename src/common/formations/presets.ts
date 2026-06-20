@@ -6,7 +6,7 @@ import type { PlayerShape } from "../model/player.js";
 import type { Formation, FormationPlayer } from "./formation.js";
 
 /** ディフェンス選手の既定色（攻守を一目で区別できるよう、くすませた赤）。 */
-const DEFENSE_COLOR = "#b23a30";
+const DEFENSE_COLOR = "#8f4034";
 
 /** オフェンス選手テンプレート（色なし＝テーマ既定）。 */
 function off(

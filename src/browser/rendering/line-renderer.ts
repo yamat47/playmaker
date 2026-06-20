@@ -58,6 +58,7 @@ export class LineRenderer {
 
       const color = line.color ?? this.colorFor(line.kind, theme);
       const width = line.thickness ?? this.widthFor(line.kind, metrics);
+      const isBlock = line.kind === "block";
 
       ctx.save();
       ctx.strokeStyle = color;
@@ -68,18 +69,21 @@ export class LineRenderer {
         ctx.setLineDash([...metrics.motionDash]);
       }
 
+      // 矢印付きの線は根元で止める＝線が矢じり内へ潜らず先端が鋭く整う。ブロックは
+      // 終端に T 字キャップを当てるため終点まで引く。矢じりの向き/位置は元 path から得る。
+      const strokePath = isBlock ? path : this.trimForArrow(path, metrics.arrowLength);
       ctx.beginPath();
-      const head = path[0] as CanvasPoint;
+      const head = strokePath[0] as CanvasPoint;
       ctx.moveTo(head.x, head.y);
-      for (let i = 1; i < path.length; i++) {
-        const pt = path[i] as CanvasPoint;
+      for (let i = 1; i < strokePath.length; i++) {
+        const pt = strokePath[i] as CanvasPoint;
         ctx.lineTo(pt.x, pt.y);
       }
       ctx.stroke();
       ctx.setLineDash([]);
 
       // 記法で区別: 走路は矢印、ブロックは T 字キャップ。
-      if (line.kind === "block") {
+      if (isBlock) {
         this.drawBlockCap(ctx, path, color, metrics, width);
       } else {
         this.drawArrowHead(ctx, path, color, metrics);
@@ -117,6 +121,27 @@ export class LineRenderer {
       }
     }
     return undefined;
+  }
+
+  /**
+   * 矢じりの根元（終点から arrowLength 手前）で終わるポリラインを返す。
+   * 線が三角の内側に潜って先端が潰れるのを防ぐ。最終区間が矢じりより短い場合は
+   * 線が消えないよう区間の 90% までに留める（残りは矢じりが覆う）。
+   */
+  private trimForArrow(path: readonly CanvasPoint[], arrowLength: number): readonly CanvasPoint[] {
+    if (path.length < 2) {
+      return path;
+    }
+    const angle = this.endAngle(path);
+    if (angle === undefined) {
+      return path;
+    }
+    const tip = path[path.length - 1] as CanvasPoint;
+    const prev = path[path.length - 2] as CanvasPoint;
+    const segLen = Math.hypot(tip.x - prev.x, tip.y - prev.y);
+    const pull = Math.min(arrowLength, segLen * 0.9);
+    const neck = { x: tip.x - pull * Math.cos(angle), y: tip.y - pull * Math.sin(angle) };
+    return [...path.slice(0, -1), neck];
   }
 
   /** 終点に、進行方向へ向けた塗り三角の矢じりを描く（route / motion）。 */

@@ -39,6 +39,7 @@
     "@microsoft/api-extractor": "^7.58.9",
     "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "4.1.9",
+    "subset-font": "^2.5.0",
     "typescript": "~6.0.0",
     "vite": "^8.0.16",
     "vite-plugin-dts": "^5.0.2",

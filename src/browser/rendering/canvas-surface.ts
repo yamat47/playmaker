@@ -2,6 +2,7 @@ import {
   computeFieldMetrics,
   Disposable,
   type EditorOverlay,
+  FIELD_FONT_FAMILY,
   FieldGeometry,
   type FieldPosition,
   type ImageExportOptions,
@@ -57,6 +58,31 @@ export class CanvasSurface extends Disposable {
     this._register(toDisposable(() => observer.disconnect()));
 
     this.resize();
+    this.renderWhenFontReady();
+  }
+
+  /**
+   * 同梱フォント（@font-face "Playmaker Saira"）は CSS パース後に非同期で実体化する。
+   * 初回フレームは即描画（フォント未ロードなら sans-serif で代替）し、ロード完了後に
+   * 1 回だけ再描画して数字・ラベルを同梱フォントへ差し替える＝白画面を出さない。
+   * 既にロード済み（キャッシュ）なら初回 render で完成しているので何もしない。
+   */
+  private renderWhenFontReady(): void {
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    const fontSpec = `700 1em ${FIELD_FONT_FAMILY}`;
+    if (!fonts || fonts.check(fontSpec)) {
+      return;
+    }
+    fonts.load(fontSpec).then(
+      () => {
+        if (!this.isDisposed) {
+          this.render();
+        }
+      },
+      () => {
+        // 代替フォントのまま描画を続ける（ロード失敗でも図は成立する）。
+      },
+    );
   }
 
   /** 描画モデルと選択 overlay を差し替えて再描画する（編集のたびに呼ばれる）。 */
@@ -220,10 +246,6 @@ export class CanvasSurface extends Disposable {
         lineColor: read("--playmaker-field-line-color", "rgba(238, 242, 236, 0.9)"),
         goalLineColor: read("--playmaker-goal-line-color", "#ffffff"),
         numberColor: read("--playmaker-field-number-color", "rgba(238, 242, 236, 0.9)"),
-        numberFontFamily: read(
-          "--playmaker-number-font-family",
-          '"Arial Narrow", sans-serif-condensed, sans-serif',
-        ),
         pylonColor: read("--playmaker-pylon-color", "#e8722c"),
         goalpostColor: read("--playmaker-goalpost-color", "#f3c33a"),
       },

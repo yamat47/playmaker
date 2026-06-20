@@ -23,6 +23,9 @@ export default defineConfig({
       fileName: (format) => (format === "es" ? "playmaker.js" : "playmaker.cjs"),
       cssFileName: "playmaker",
     },
+    // 同梱フォント（woff2）は data URI として playmaker.css へ inline する＝利用側は
+    // css を読むだけでよく、別ファイル配置やパス解決が要らない。他アセットは既定に従う。
+    assetsInlineLimit: (filePath) => (filePath.endsWith(".woff2") ? true : undefined),
     sourcemap: true,
   },
   plugins: [

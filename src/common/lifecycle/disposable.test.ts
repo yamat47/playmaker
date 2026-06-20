@@ -35,6 +35,15 @@ describe("DisposableStore", () => {
 
     expect(late).toHaveBeenCalledOnce();
   });
+
+  it("isDisposed は dispose の前後で false → true に変わる", () => {
+    const store = new DisposableStore();
+    expect(store.isDisposed).toBe(false);
+
+    store.dispose();
+
+    expect(store.isDisposed).toBe(true);
+  });
 });
 
 describe("Disposable", () => {
@@ -51,5 +60,20 @@ describe("Disposable", () => {
     sample.dispose();
 
     expect(child).toHaveBeenCalledOnce();
+  });
+
+  it("isDisposed で破棄状態を子クラスから判定できる", () => {
+    class Sample extends Disposable {
+      get disposedNow(): boolean {
+        return this.isDisposed;
+      }
+    }
+
+    const sample = new Sample();
+    expect(sample.disposedNow).toBe(false);
+
+    sample.dispose();
+
+    expect(sample.disposedNow).toBe(true);
   });
 });

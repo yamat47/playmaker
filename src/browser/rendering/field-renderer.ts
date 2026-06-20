@@ -6,6 +6,7 @@
 import {
   DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
+  FIELD_FONT_FAMILY,
   FIELD_WIDTH_YARDS,
   type FieldGeometry,
   type FieldMetrics,
@@ -13,7 +14,10 @@ import {
   yardLinesInWindow,
 } from "../../common/index.js";
 
-/** 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。 */
+/**
+ * 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。
+ * フォントは同梱フォント固定でテーマ対象外（FIELD_FONT_FAMILY）。
+ */
 export interface FieldTheme {
   fieldColor: string;
   /** 刈り込みストライプの濃い帯（芝ベースとの明度差はごく僅か）。 */
@@ -25,8 +29,6 @@ export interface FieldTheme {
   /** ゴールライン（最重要境界。通常ラインより太く・純白）。 */
   goalLineColor: string;
   numberColor: string;
-  /** 数字のアスレチック系フォントスタック。 */
-  numberFontFamily: string;
   pylonColor: string;
   goalpostColor: string;
 }
@@ -37,6 +39,9 @@ const ARROW_HALF_WIDTH_YARDS = 0.3;
 const ARROW_OFFSET_FROM_NUMBER_YARDS = 2.5;
 // 番号の lateralYard（サイドラインから）。方向三角も同じ列に置いて縦に揃える。
 const NUMBER_FROM_SIDELINE_YARDS = 6;
+// 2 桁数字はヤードライン上に中央配置するため、桁間を空けて隙間にラインを収める
+// （実フィールド同様、数字がラインに食い込まない）。数字高に比例させ表示サイズに追従。
+const NUMBER_DIGIT_SPACING_PER_HEIGHT = 0.18;
 
 export class FieldRenderer {
   /**
@@ -222,16 +227,27 @@ export class FieldRenderer {
     const arrowBaseHalfPx = ARROW_HALF_WIDTH_YARDS * geometry.scale;
     const halfArrowLength = ARROW_LENGTH_YARDS / 2;
 
-    // Canvas の ctx.font は CSS var() を解釈できないため、テーマから読んだ実体スタックを書く。
-    ctx.font = `600 ${metrics.numberHeight}px ${theme.numberFontFamily}`;
+    // ctx.font は CSS var() を解釈できないため、同梱フォントの実体名を直接書く。
+    ctx.font = `700 ${metrics.numberHeight}px ${FIELD_FONT_FAMILY}`;
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
 
+    // 数字はヤードライン上に置くので、桁間の隙間 [-gap/2, +gap/2] を原点（＝ライン）の
+    // 中心に揃え、線が 2 桁のちょうど中央を通るようにする。各桁を実測幅で内側エッジから
+    // 配置するため、桁幅差や末尾字間に依らずズレない（ctx.letterSpacing は末尾字間も
+    // advance に含み textAlign:center を片寄らせるので使わない）。
+    const gap = metrics.numberHeight * NUMBER_DIGIT_SPACING_PER_HEIGHT;
     const drawRotatedLabel = (label: string, x: number, y: number, rotation: number): void => {
+      const [head, tail] = [...label];
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rotation);
-      ctx.fillText(label, 0, 0);
+      if (label.length === 2 && head !== undefined && tail !== undefined) {
+        ctx.fillText(head, -gap / 2 - ctx.measureText(head).width / 2, 0);
+        ctx.fillText(tail, gap / 2 + ctx.measureText(tail).width / 2, 0);
+      } else {
+        ctx.fillText(label, 0, 0);
+      }
       ctx.restore();
     };
     const drawArrow = (xc: number, tipY: number, baseY: number): void => {

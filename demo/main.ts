@@ -39,7 +39,7 @@ const jsonArea: HTMLTextAreaElement = jsonEl;
 const dataStatus: HTMLElement = dataStatusEl;
 
 // 目視用サンプル: 2 形状（丸/四角）・色・ラベル・3 線種・直線/ベジェ・waypoint。
-const DEFENSE_COLOR = "#b23a30";
+const DEFENSE_COLOR = "#8f4034";
 const SAMPLE_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.7, absoluteYard: 49 }, shape: "square", label: "C" },
   { id: "ol-lg", position: { lateralYard: 24.4, absoluteYard: 49 }, shape: "square", label: "LG" },

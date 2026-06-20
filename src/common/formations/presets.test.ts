@@ -23,7 +23,7 @@ describe("FORMATION_PRESETS データ健全性", () => {
         expect(Number.isFinite(p.position.absoluteYard)).toBe(true);
         // 守は赤で塗り、攻は色なし（テーマ既定）。
         if (formation.side === "defense") {
-          expect(p.color).toBe("#c62828");
+          expect(p.color).toBe("#b23a30");
         } else {
           expect(p.color).toBeUndefined();
         }

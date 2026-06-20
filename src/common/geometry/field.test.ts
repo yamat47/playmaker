@@ -1,32 +1,51 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
   FIELD_WIDTH_YARDS,
   FieldGeometry,
   fieldZoneWindow,
+  HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   isEndZone,
   yardLinesInWindow,
   ZONE_WINDOW_LENGTH_YARDS,
+  zoneWindowLength,
 } from "./field.js";
 
-describe("fieldZoneWindow", () => {
-  it("own-redzone は自陣EZ(-10)〜自陣RZ(20)を映す", () => {
-    expect(fieldZoneWindow("own-redzone")).toEqual({ startYard: -10, endYard: 20 });
+describe("ハッシュのリーグ別位置", () => {
+  it("既定は NCAA で、サイドラインから 20yd（中央±0.125W）に来る", () => {
+    expect(DEFAULT_FIELD_LEAGUE).toBe("ncaa");
+    const offset = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE.ncaa;
+    expect(offset).toBeCloseTo(FIELD_WIDTH_YARDS * 0.125);
+    expect(FIELD_WIDTH_YARDS / 2 - offset).toBeCloseTo(20);
   });
 
-  it("redzone は相手RZ(80)〜相手EZ(110)を映す", () => {
-    expect(fieldZoneWindow("redzone")).toEqual({ startYard: 80, endYard: 110 });
+  it("NFHS > NCAA > NFL の順で中央オフセットが大きい（ハッシュが広い）", () => {
+    const { ncaa, nfl, nfhs } = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
+    expect(nfhs).toBeGreaterThan(ncaa);
+    expect(ncaa).toBeGreaterThan(nfl);
+  });
+});
+
+describe("fieldZoneWindow", () => {
+  it("own-redzone は自陣EZ(-10)〜自陣25yd(25)を映す", () => {
+    expect(fieldZoneWindow("own-redzone")).toEqual({ startYard: -10, endYard: 25 });
+  });
+
+  it("redzone は相手25yd(75)〜相手EZ(110)を映す", () => {
+    expect(fieldZoneWindow("redzone")).toEqual({ startYard: 75, endYard: 110 });
   });
 
   it("middle はセンター 50 を中央に置く 35..65", () => {
     expect(fieldZoneWindow("middle")).toEqual({ startYard: 35, endYard: 65 });
   });
+});
 
-  it("どのゾーンも窓の長さは 30 ヤード", () => {
-    for (const zone of ["middle", "redzone", "own-redzone"] as const) {
-      const w = fieldZoneWindow(zone);
-      expect(w.endYard - w.startYard).toBe(ZONE_WINDOW_LENGTH_YARDS);
-    }
+describe("zoneWindowLength", () => {
+  it("middle は 30yd、レッドゾーン系は数字の見切れ回避で 35yd", () => {
+    expect(zoneWindowLength("middle")).toBe(ZONE_WINDOW_LENGTH_YARDS);
+    expect(zoneWindowLength("redzone")).toBe(35);
+    expect(zoneWindowLength("own-redzone")).toBe(35);
   });
 });
 
@@ -72,8 +91,8 @@ describe("yardLinesInWindow", () => {
     expect(yardLinesInWindow("own-redzone", 10)).toEqual([-10, 0, 10, 20]);
   });
 
-  it("redzone を 5 ヤード刻みで列挙する（相手 EZ の 110 まで）", () => {
-    expect(yardLinesInWindow("redzone", 5)).toEqual([80, 85, 90, 95, 100, 105, 110]);
+  it("redzone を 5 ヤード刻みで列挙する（相手 25yd の 75 から EZ の 110 まで）", () => {
+    expect(yardLinesInWindow("redzone", 5)).toEqual([75, 80, 85, 90, 95, 100, 105, 110]);
   });
 
   it("刻み幅が 0 以下なら例外", () => {
@@ -121,7 +140,7 @@ describe("FieldGeometry", () => {
     const middle = new FieldGeometry(1000, 600, "middle");
     const redzone = new FieldGeometry(1000, 600, "redzone");
 
-    // 50 は middle 窓の中央だが redzone(80..110) では窓外で下端より下になる。
+    // 50 は middle 窓の中央だが redzone(75..110) では窓外で下端より下になる。
     expect(middle.yForAbsoluteYard(50)).toBeCloseTo(
       middle.offsetY + middle.fieldPixelHeight / 2,
       10,

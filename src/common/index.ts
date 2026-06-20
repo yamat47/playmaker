@@ -22,6 +22,7 @@ export {
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "./commands/player-commands.js";
+export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EditorController,
   type EditorOverlay,
@@ -35,7 +36,7 @@ export { IdFactory, type IIdFactory } from "./editing/id-factory.js";
 export { Emitter, type Event } from "./event/emitter.js";
 export {
   DEFAULT_EXPORT_WIDTH,
-  FIELD_WINDOW_ASPECT,
+  fieldWindowAspect,
   type ImageExportOptions,
   type ImageExportSize,
   resolveImageExportSize,
@@ -57,11 +58,14 @@ export {
 } from "./geometry/bezier.js";
 export {
   type CanvasPoint,
+  DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
   END_ZONE_DEPTH_YARDS,
   FIELD_WIDTH_YARDS,
   FieldGeometry,
+  type FieldLeague,
   fieldZoneWindow,
+  HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   HASH_FROM_SIDELINE_YARDS,
   HASH_TICK_YARDS,
   isEndZone,
@@ -70,6 +74,7 @@ export {
   type YardWindow,
   yardLinesInWindow,
   ZONE_WINDOW_LENGTH_YARDS,
+  zoneWindowLength,
 } from "./geometry/field.js";
 export {
   distanceToSegment,

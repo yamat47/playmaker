@@ -8,7 +8,11 @@ import type { FieldPosition } from "../model/player.js";
 /** フィールド幅（サイドライン間）= 規定 160 ft = 53.33 yd。 */
 export const FIELD_WIDTH_YARDS = 160 / 3;
 
-/** 1 ゾーンで映す縦方向の長さ（PRD 5.1「約 30 ヤード分」）。 */
+/**
+ * middle ゾーンで映す縦長（PRD 5.1「約 30 ヤード分」）。
+ * レッドゾーン窓は数字の見切れ回避でこれより深い（RED_ZONE_DEPTH + END_ZONE = 35）。
+ * 窓ごとの実長は zoneWindowLength で得る。
+ */
 export const ZONE_WINDOW_LENGTH_YARDS = 30;
 
 /**
@@ -16,6 +20,22 @@ export const ZONE_WINDOW_LENGTH_YARDS = 30;
  * 日本のアメフトはカレッジルール準拠が主流のためこれを採用。厳密値より目安。
  */
 export const HASH_FROM_SIDELINE_YARDS = 20;
+
+/**
+ * リーグ別ハッシュ位置（中央からの片側オフセット, yd）。レンダラはこの表を引くだけで
+ * 切り替えられるよう定数化する（NCAA は左右間 40ft、NFL は約 18.5ft、NFHS は 53⅓ft）。
+ * 既定は日本で主流の NCAA。runtime 切替の API 化は将来課題（PRD 4.1 で範囲を絞る）。
+ */
+export const HASH_CENTER_OFFSET_YARDS_BY_LEAGUE = {
+  ncaa: FIELD_WIDTH_YARDS * 0.125,
+  nfl: FIELD_WIDTH_YARDS * 0.0578,
+  nfhs: FIELD_WIDTH_YARDS * 0.1667,
+} as const;
+
+export type FieldLeague = keyof typeof HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
+
+/** 既定リーグ。NCAA のハッシュ間 40ft が日本の標準。 */
+export const DEFAULT_FIELD_LEAGUE: FieldLeague = "ncaa";
 
 /**
  * 「9 ヤードマーク」（short hash）のサイドラインからの距離。
@@ -26,13 +46,17 @@ export const NEAR_SIDELINE_TICK_YARDS = 9;
 /** 1 ヤード刻みティックの目盛り長（ヤード）。実フィールドの 1 ヤード刻みを再現。 */
 export const HASH_TICK_YARDS = 0.8;
 
-/** レッドゾーンの奥行き（ゴール前 20 ヤード）。 */
-export const RED_ZONE_DEPTH_YARDS = 20;
+/**
+ * レッドゾーン窓に映す奥行き（25 ヤードライン〜ゴール）。実レッドゾーン（ゴール前 20yd）
+ * より広いのは、20yd ラインが窓端に乗って数字が見切れるのを避けるため。
+ */
+export const RED_ZONE_DEPTH_YARDS = 25;
 
 /**
  * エンドゾーンの奥行き（ゴールラインの外側 10 ヤード）。
  * これにより絶対ヤードの定義域は -10..110（自陣 EZ 〜 相手陣 EZ）に広がる。
- * RED_ZONE_DEPTH_YARDS(20) + END_ZONE_DEPTH_YARDS(10) = ZONE_WINDOW_LENGTH_YARDS(30)。
+ * RED_ZONE_DEPTH_YARDS(25) + END_ZONE_DEPTH_YARDS(10) = レッドゾーン窓 35yd
+ * （中央窓 ZONE_WINDOW_LENGTH_YARDS=30 より深い）。
  */
 export const END_ZONE_DEPTH_YARDS = 10;
 
@@ -44,18 +68,18 @@ export interface YardWindow {
 }
 
 /**
- * ゾーン → 表示する絶対ヤード窓 [start, end]（常に長さ 30）。
+ * ゾーン → 表示する絶対ヤード窓 [start, end]。middle は 30yd、レッドゾーン系は 35yd。
  * 絶対ヤードは -10 = 自陣エンドライン / 0 = 自ゴール / 50 = センター /
  * 100 = 相手ゴール / 110 = 相手エンドライン。攻撃方向は増加方向（= 画面上）。
- * レッドゾーン系は実スコアリング領域（ゴール前 20yd）＋エンドゾーン 10yd を映す。
+ * レッドゾーン系は 25 ヤードライン〜ゴール＋エンドゾーン 10yd を映す。
  */
 export function fieldZoneWindow(zone: FieldZone): YardWindow {
   switch (zone) {
     case "own-redzone":
-      // 自陣エンドゾーン(-10..0) + 自陣レッドゾーン(0..20)。
+      // 自陣エンドゾーン(-10..0) + 自陣 25yd まで(0..25)。
       return { startYard: -END_ZONE_DEPTH_YARDS, endYard: RED_ZONE_DEPTH_YARDS };
     case "redzone":
-      // 相手レッドゾーン(80..100) + 相手エンドゾーン(100..110)。
+      // 相手 25yd まで(75..100) + 相手エンドゾーン(100..110)。
       return { startYard: 100 - RED_ZONE_DEPTH_YARDS, endYard: 100 + END_ZONE_DEPTH_YARDS };
     case "middle": {
       // センター(50)を窓の中央に置く。
@@ -63,6 +87,12 @@ export function fieldZoneWindow(zone: FieldZone): YardWindow {
       return { startYard: 50 - half, endYard: 50 + half };
     }
   }
+}
+
+/** ゾーン窓の縦長（yd）。middle は 30、レッドゾーン系は 35。geometry / export 共用。 */
+export function zoneWindowLength(zone: FieldZone): number {
+  const { startYard, endYard } = fieldZoneWindow(zone);
+  return endYard - startYard;
 }
 
 /** フィールド外（エンドゾーン）か。境界のゴールライン 0/100 は含めない。 */
@@ -126,11 +156,12 @@ export class FieldGeometry {
     readonly zone: FieldZone,
   ) {
     this.window = fieldZoneWindow(zone);
+    const windowLength = this.window.endYard - this.window.startYard;
     const w = Math.max(0, viewportWidth);
     const h = Math.max(0, viewportHeight);
-    this.scale = Math.min(w / FIELD_WIDTH_YARDS, h / ZONE_WINDOW_LENGTH_YARDS);
+    this.scale = Math.min(w / FIELD_WIDTH_YARDS, h / windowLength);
     this.fieldPixelWidth = FIELD_WIDTH_YARDS * this.scale;
-    this.fieldPixelHeight = ZONE_WINDOW_LENGTH_YARDS * this.scale;
+    this.fieldPixelHeight = windowLength * this.scale;
     this.offsetX = (w - this.fieldPixelWidth) / 2;
     this.offsetY = (h - this.fieldPixelHeight) / 2;
   }

@@ -168,7 +168,7 @@ export class CanvasSurface extends Disposable {
     const metrics = computeFieldMetrics(geometry.fieldPixelWidth, geometry.scale);
     this.fieldRenderer.draw(ctx, geometry, field, metrics);
     this.lineRenderer.draw(ctx, geometry, data.lines, data.players, line, metrics);
-    this.playerRenderer.draw(ctx, geometry, data.players, player);
+    this.playerRenderer.draw(ctx, geometry, data.players, player, metrics);
   }
 
   /**
@@ -218,13 +218,18 @@ export class CanvasSurface extends Disposable {
       }
     }
 
-    const handleSize = WAYPOINT_HANDLE_RADIUS_YARDS * this.geometry.scale;
+    // アイコンは hit 許容（WAYPOINT_HANDLE_RADIUS_YARDS）の一部だけを描く。フルに
+    // 描くとマーカー並みに大きいので小さく出し、掴みやすさは hit 許容側に委ねる。
+    const handleHalf = Math.max(3, 0.45 * WAYPOINT_HANDLE_RADIUS_YARDS * this.geometry.scale);
     for (const wp of waypointHandles) {
       const { x, y } = this.geometry.toCanvas(wp.lateralYard, wp.absoluteYard);
       this.ctx.beginPath();
-      this.ctx.rect(x - handleSize, y - handleSize, handleSize * 2, handleSize * 2);
+      this.ctx.rect(x - handleHalf, y - handleHalf, handleHalf * 2, handleHalf * 2);
       this.ctx.fillStyle = accent;
       this.ctx.fill();
+      this.ctx.lineWidth = 1.5;
+      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+      this.ctx.stroke();
     }
   }
 
@@ -243,19 +248,19 @@ export class CanvasSurface extends Disposable {
         stripeColor: read("--playmaker-field-stripe", "#3a7341"),
         oobColor: read("--playmaker-field-oob", "#284b2f"),
         endzoneColor: read("--playmaker-endzone-bg", "#20503c"),
-        lineColor: read("--playmaker-field-line-color", "rgba(238, 242, 236, 0.9)"),
-        goalLineColor: read("--playmaker-goal-line-color", "#ffffff"),
-        numberColor: read("--playmaker-field-number-color", "rgba(238, 242, 236, 0.9)"),
-        pylonColor: read("--playmaker-pylon-color", "#e8722c"),
-        goalpostColor: read("--playmaker-goalpost-color", "#f3c33a"),
+        lineColor: read("--playmaker-field-line-color", "rgba(236, 240, 234, 0.82)"),
+        goalLineColor: read("--playmaker-goal-line-color", "rgba(255, 255, 255, 0.92)"),
+        numberColor: read("--playmaker-field-number-color", "rgba(236, 240, 234, 0.72)"),
+        pylonColor: read("--playmaker-pylon-color", "#d06a30"),
+        goalpostColor: read("--playmaker-goalpost-color", "#c2a64a"),
       },
       line: {
-        routeColor: read("--playmaker-line-route-color", "#f3c33a"),
-        blockColor: read("--playmaker-line-block-color", "#eef2ec"),
-        motionColor: read("--playmaker-line-motion-color", "#f3c33a"),
+        routeColor: read("--playmaker-line-route-color", "#c49a3c"),
+        blockColor: read("--playmaker-line-block-color", "#c49a3c"),
+        motionColor: read("--playmaker-line-motion-color", "#c49a3c"),
       },
       player: {
-        fillColor: read("--playmaker-player-fill", "#1e3fae"),
+        fillColor: read("--playmaker-player-fill", "#2b4c72"),
         strokeColor: read("--playmaker-player-stroke", "#eef2ec"),
         labelColor: read("--playmaker-player-label-color", "#ffffff"),
       },

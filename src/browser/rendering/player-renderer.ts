@@ -5,6 +5,7 @@
 import {
   FIELD_FONT_FAMILY,
   type FieldGeometry,
+  type FieldMetrics,
   PLAYER_RADIUS_YARDS,
   type Player,
   type PlayerShape,
@@ -19,8 +20,6 @@ export interface PlayerTheme {
   /** ラベル文字色。 */
   labelColor: string;
 }
-
-const STROKE_WIDTH = 2;
 
 // 正多角形の頂点角（apex を上に向ける）。circle は arc で特別扱い。
 // 当たり領域（hit-test）は半径 r の外接円なので、全頂点を r 上に置き整合させる。
@@ -51,49 +50,43 @@ export class PlayerRenderer {
     geometry: FieldGeometry,
     players: readonly Player[],
     theme: PlayerTheme,
+    metrics: FieldMetrics,
   ): void {
+    // 半径は hit-test と一致させるため PLAYER_RADIUS_YARDS から導く（player.ts の不変条件）。
+    // 枠線・ラベルは D 比トークン（metrics）を使い、寸法を 1 か所へ集約する。
     const r = PLAYER_RADIUS_YARDS * geometry.scale;
     if (r <= 0) {
       return;
     }
-    // ラベルは選手マーカーの中に収まるサイズに抑える（半径の 1/3 ほど）。
-    const fontPx = Math.max(8, r * 0.35);
-    // 芝から浮かせる白フチ + ごく弱い影。影を強くするとダサくなるので控えめに。
-    const shadowBlur = Math.max(2, r * 0.18);
-    const shadowOffset = Math.max(1, r * 0.08);
+    const fontPx = metrics.markerLabelFont;
+    const strokeWidth = metrics.markerStroke;
 
     for (const player of players) {
       const { x, y } = geometry.toCanvas(player.position.lateralYard, player.position.absoluteYard);
 
-      ctx.save();
+      // 影・グラデーションを持たない完全フラット。塗り → 枠線の順で描く。
       ctx.beginPath();
       if (player.shape === "circle") {
         ctx.arc(x, y, r, 0, Math.PI * 2);
       } else {
         this.tracePolygon(ctx, x, y, r, player.shape);
       }
-
-      // 影は塗りにだけ載せる（フチ/ラベルへ二重に乗らないよう塗り直後に解除）。
-      ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-      ctx.shadowBlur = shadowBlur;
-      ctx.shadowOffsetY = shadowOffset;
       ctx.fillStyle = player.color ?? theme.fillColor;
       ctx.fill();
-      ctx.shadowColor = "transparent";
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
-
-      ctx.lineWidth = STROKE_WIDTH;
+      ctx.lineWidth = strokeWidth;
       ctx.strokeStyle = theme.strokeColor;
       ctx.stroke();
-      ctx.restore();
 
       if (player.label !== "") {
         ctx.fillStyle = theme.labelColor;
         ctx.font = `700 ${fontPx}px ${FIELD_FONT_FAMILY}`;
         ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(player.label, x, y);
+        // textBaseline="middle" は em ボックス基準でフォント次第で上下にずれる。
+        // 実際の字面ボックス（actualBoundingBox）の中心をマーカー中心へ合わせる。
+        ctx.textBaseline = "alphabetic";
+        const tm = ctx.measureText(player.label);
+        const labelY = y + (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent) / 2;
+        ctx.fillText(player.label, x, labelY);
       }
     }
   }

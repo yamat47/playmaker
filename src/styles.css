@@ -26,17 +26,19 @@
   --playmaker-field-stripe: #3a7341;
   --playmaker-field-oob: #284b2f;
   --playmaker-endzone-bg: #20503c;
-  --playmaker-field-line-color: rgba(238, 242, 236, 0.9);
-  --playmaker-field-number-color: rgba(238, 242, 236, 0.9);
-  --playmaker-goal-line-color: #ffffff;
-  --playmaker-pylon-color: #e8722c;
-  --playmaker-goalpost-color: #f3c33a;
-  --playmaker-player-fill: #1e3fae;
+  --playmaker-field-line-color: rgba(236, 240, 234, 0.82);
+  --playmaker-field-number-color: rgba(236, 240, 234, 0.72);
+  --playmaker-goal-line-color: rgba(255, 255, 255, 0.92);
+  --playmaker-pylon-color: #d06a30;
+  --playmaker-goalpost-color: #c2a64a;
+  /* オフェンスは沈めたスレート、ディフェンスはくすませた煉瓦（presets 側）。原色フル彩度を避ける。 */
+  --playmaker-player-fill: #2b4c72;
   --playmaker-player-stroke: #eef2ec;
   --playmaker-player-label-color: #ffffff;
-  --playmaker-line-route-color: #f3c33a;
-  --playmaker-line-block-color: #eef2ec;
-  --playmaker-line-motion-color: #f3c33a;
+  /* オフェンス動線は 1 色（落ち着いた琥珀）。route/block/motion は記法（矢印/T 字/破線）で区別する。 */
+  --playmaker-line-route-color: #c49a3c;
+  --playmaker-line-block-color: #c49a3c;
+  --playmaker-line-motion-color: #c49a3c;
   --playmaker-selection-color: #ff9800;
   --playmaker-surface-bg: #ffffff;
   --playmaker-border-color: #d0d0d0;

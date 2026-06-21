@@ -4,12 +4,12 @@ import { isFormationSide, normalizeFormation } from "./formation.js";
 import { FORMATION_PRESETS, getFormationPreset } from "./presets.js";
 
 describe("FORMATION_PRESETS データ健全性", () => {
-  it("攻 2・守 2 の 4 プリセットで id は一意", () => {
-    expect(FORMATION_PRESETS).toHaveLength(4);
+  it("攻 7・守 6 の 13 プリセットで id は一意", () => {
+    expect(FORMATION_PRESETS).toHaveLength(13);
     const ids = FORMATION_PRESETS.map((f) => f.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(FORMATION_PRESETS.filter((f) => f.side === "offense")).toHaveLength(2);
-    expect(FORMATION_PRESETS.filter((f) => f.side === "defense")).toHaveLength(2);
+    expect(FORMATION_PRESETS.filter((f) => f.side === "offense")).toHaveLength(7);
+    expect(FORMATION_PRESETS.filter((f) => f.side === "defense")).toHaveLength(6);
   });
 
   it("各プリセットは 11 人・side/shape/位置が妥当・攻守で色付けが分かれる", () => {
@@ -31,6 +31,17 @@ describe("FORMATION_PRESETS データ健全性", () => {
     }
   });
 
+  it("各プリセットは middle ゾーン窓 (abs 35..65) とフィールド幅に収まる", () => {
+    for (const formation of FORMATION_PRESETS) {
+      for (const p of formation.players) {
+        expect(p.position.absoluteYard).toBeGreaterThanOrEqual(35);
+        expect(p.position.absoluteYard).toBeLessThanOrEqual(65);
+        expect(p.position.lateralYard).toBeGreaterThanOrEqual(0);
+        expect(p.position.lateralYard).toBeLessThanOrEqual(53.3);
+      }
+    }
+  });
+
   it("各プリセットは公開境界の normalizeFormation を通過し選手数を保つ", () => {
     for (const formation of FORMATION_PRESETS) {
       const normalized = normalizeFormation(formation);
@@ -42,7 +53,7 @@ describe("FORMATION_PRESETS データ健全性", () => {
 
 describe("getFormationPreset", () => {
   it("既知 id は該当プリセット、未知 id は undefined", () => {
-    expect(getFormationPreset("i-formation")?.name).toBe("I フォーメーション");
+    expect(getFormationPreset("i-formation")?.name).toBe("I-Formation");
     expect(getFormationPreset("defense-nickel")?.side).toBe("defense");
     expect(getFormationPreset("does-not-exist")).toBeUndefined();
   });

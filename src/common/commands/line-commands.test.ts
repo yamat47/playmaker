@@ -5,6 +5,7 @@ import { PlayModel } from "../model/play-model.js";
 import {
   AddLineCommand,
   RemoveLineCommand,
+  SetLineEndCommand,
   SetLineWaypointsCommand,
   UpdateLineCommand,
 } from "./line-commands.js";
@@ -142,5 +143,31 @@ describe("SetLineWaypointsCommand", () => {
       /unknown line id "ghost"/,
     );
     expect(() => new SetLineWaypointsCommand("l1", []).undo(model)).toThrow(/apply 未実行/);
+  });
+});
+
+describe("SetLineEndCommand", () => {
+  it("終点だけを差し替え waypoint は不変、undo で元へ戻す。構築後の改変は無効", () => {
+    const model = new PlayModel(seed());
+    const end = { lateralYard: 12, absoluteYard: 70 };
+    const cmd = new SetLineEndCommand("l1", end);
+    end.lateralYard = 999;
+
+    cmd.apply(model);
+    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 12, absoluteYard: 70 });
+    expect(model.findLine("l1")?.waypoints).toEqual([]);
+
+    cmd.undo(model);
+    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 5, absoluteYard: 60 });
+  });
+
+  it("未知 id の apply と apply 前 undo は throw する", () => {
+    const model = new PlayModel(seed());
+    const end = { lateralYard: 0, absoluteYard: 0 };
+
+    expect(() => new SetLineEndCommand("ghost", end).apply(model)).toThrow(
+      /unknown line id "ghost"/,
+    );
+    expect(() => new SetLineEndCommand("l1", end).undo(model)).toThrow(/apply 未実行/);
   });
 });

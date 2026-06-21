@@ -5,6 +5,8 @@
 import {
   Disposable,
   type IEditorController,
+  LINE_COLOR_PALETTE,
+  type LineColorOption,
   type LineInterpolation,
   type LineKind,
   type PlayerShape,
@@ -70,7 +72,7 @@ export class PropertyPanel extends Disposable {
       this.addSelect("補間", INTERPOLATIONS, line.interpolation, (v) =>
         controller.updateSelectedLine({ interpolation: v }),
       );
-      this.addColor("色", line.color, (v) => controller.updateSelectedLine({ color: v }));
+      this.addLineColor(line.color, (v) => controller.updateSelectedLine({ color: v }));
       this.addNumber("太さ", line.thickness ?? 2, (v) =>
         controller.updateSelectedLine({ thickness: v }),
       );
@@ -131,6 +133,34 @@ export class PropertyPanel extends Disposable {
     input.value = toHex(value, "#1e3fae");
     input.addEventListener("change", () => onChange(input.value));
     this.addRow(labelText, input);
+  }
+
+  // 線色は自由選択ではなく既定パレットに絞る。スウォッチ色はテーマの
+  // --playmaker-* から解決し、host の上書きに追従する（未定義なら fallback）。
+  private addLineColor(value: string | undefined, onChange: (v: string) => void): void {
+    const styles = getComputedStyle(this.element);
+    const resolve = (opt: LineColorOption): string => {
+      const v = styles.getPropertyValue(opt.cssVar).trim();
+      return v !== "" ? v : opt.fallback;
+    };
+    const group = document.createElement("div");
+    group.className = "playmaker-panel__swatches";
+    for (const opt of LINE_COLOR_PALETTE) {
+      const color = resolve(opt);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "playmaker-panel__swatch";
+      btn.title = opt.label;
+      btn.setAttribute("aria-label", opt.label);
+      btn.style.backgroundColor = color;
+      btn.setAttribute(
+        "aria-pressed",
+        String(value !== undefined && value.toLowerCase() === color.toLowerCase()),
+      );
+      btn.addEventListener("click", () => onChange(color));
+      group.appendChild(btn);
+    }
+    this.addRow("色", group);
   }
 
   private addSelect<T extends string>(

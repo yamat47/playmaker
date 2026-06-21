@@ -16,6 +16,7 @@ import {
   AddLineCommand,
   type LinePatch,
   RemoveLineCommand,
+  SetLineEndCommand,
   SetLineWaypointsCommand,
   UpdateLineCommand,
 } from "../commands/line-commands.js";
@@ -46,8 +47,13 @@ export type EditorSelection =
   | { readonly kind: "line"; readonly id: string }
   | null;
 
-/** 選択中の線の waypoint をドラッグでき、その当たり半径（ヤード）。 */
+/** 選択中の線の waypoint / 終点ハンドルをドラッグでき、その当たり半径（ヤード）。 */
 export const WAYPOINT_HANDLE_RADIUS_YARDS = 0.9;
+
+// 作図中、直前点とこの距離（ヤード）以内のクリックは同一点とみなし打点しない。
+// ダブルクリック確定は pointerdown を 2 度発火させ終点直上に重複点（＝不可視の
+// 折れ線）を生むため、それを構造的に防ぐ。手動の意図的な近接打点は実用上ない粒度。
+const LINE_POINT_MERGE_RADIUS_YARDS = 0.5;
 
 /** プレビュー専用の合成線 id。Model には決して入らない（getRenderModel の中だけ）。 */
 const DRAFT_LINE_ID = "__playmaker_draft_line__";
@@ -61,6 +67,8 @@ export interface EditorOverlay {
   selectedLineId?: string;
   /** 選択中の線の waypoint ハンドル位置（ドラッグ対象）。それ以外は空配列。 */
   waypointHandles: FieldPosition[];
+  /** 選択中の線の終点ハンドル位置（ドラッグ対象）。線未選択なら undefined。 */
+  endpointHandle?: FieldPosition;
 }
 
 /** ツールバー/プロパティパネルが描画に使う集約ビュー状態。 */
@@ -125,6 +133,14 @@ type Interaction =
       current: FieldPosition;
     }
   | {
+      readonly type: "drag-endpoint";
+      readonly lineId: string;
+      readonly origin: FieldPosition;
+      readonly offsetLat: number;
+      readonly offsetAbs: number;
+      current: FieldPosition;
+    }
+  | {
       readonly type: "draw-line";
       readonly startPlayerId: string;
       readonly points: FieldPosition[];
@@ -134,6 +150,12 @@ type Interaction =
 
 function samePosition(a: FieldPosition, b: FieldPosition): boolean {
   return a.lateralYard === b.lateralYard && a.absoluteYard === b.absoluteYard;
+}
+
+// 2 点間距離（ヤード）。geometry の primitive を退化線分（同一点 = 点距離）として
+// 再利用し、ハンドル当たり・近接判定の距離計算を一本化する。
+function pointDistance(a: FieldPosition, b: FieldPosition): number {
+  return distanceToSegment(a, b, b);
 }
 
 function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
@@ -223,6 +245,12 @@ export class EditorController extends Disposable implements IEditorController {
         ),
       };
     }
+    if (i.type === "drag-endpoint") {
+      return {
+        ...data,
+        lines: data.lines.map((l) => (l.id === i.lineId ? { ...l, end: { ...i.current } } : l)),
+      };
+    }
     // draw-line: 起点選手 → 既存 points → 追従カーソルを終点としたプレビュー線を足す。
     return {
       ...data,
@@ -255,6 +283,10 @@ export class EditorController extends Disposable implements IEditorController {
             ? { ...drag.current }
             : w,
         );
+        overlay.endpointHandle =
+          drag?.type === "drag-endpoint" && drag.lineId === s.id
+            ? { ...drag.current }
+            : { ...line.end };
       }
     }
     return overlay;
@@ -339,6 +371,10 @@ export class EditorController extends Disposable implements IEditorController {
       this._onDidChange.fire();
       return;
     }
+    if (i.type === "drag-endpoint") {
+      this.commands.execute(new SetLineEndCommand(i.lineId, final));
+      return;
+    }
     const waypoints = line.waypoints.map((w, idx) => (idx === i.index ? final : w));
     this.commands.execute(new SetLineWaypointsCommand(i.lineId, waypoints));
   }
@@ -379,6 +415,9 @@ export class EditorController extends Disposable implements IEditorController {
       interpolation: DEFAULT_LINE_INTERPOLATION,
     };
     this.commands.execute(new AddLineCommand(line));
+    // 作図直後は選択モードへ戻し、引いた線を選択する（連続作図より編集導線を優先）。
+    // ツール遷移は setTool に集約する（同値ガード・interaction 破棄・発火を一本化）。
+    this.setTool("select");
     this.setSelection({ kind: "line", id });
   }
 
@@ -467,11 +506,26 @@ export class EditorController extends Disposable implements IEditorController {
 
   private selectPointerDown(pos: FieldPosition): void {
     const data = this.model.getData();
-    // 1) 選択中の線の waypoint ハンドルを最優先で掴む（選手/線と重なっても編集可能に）。
+    // 1) 選択中の線のハンドルを最優先で掴む（選手/線と重なっても編集可能に）。
+    //    終点 → waypoint の順で当てる（先端を動かしたい操作を最後の waypoint に
+    //    奪われないよう、終点を先に拾う）。
     const s = this.selection;
     if (s?.kind === "line") {
       const line = data.lines.find((l) => l.id === s.id);
       if (line !== undefined) {
+        if (this.hitEndpoint(line, pos)) {
+          const origin = { ...line.end };
+          this.interaction = {
+            type: "drag-endpoint",
+            lineId: line.id,
+            origin,
+            offsetLat: origin.lateralYard - pos.lateralYard,
+            offsetAbs: origin.absoluteYard - pos.absoluteYard,
+            current: { ...origin },
+          };
+          this._onDidChange.fire();
+          return;
+        }
         const index = this.hitWaypoint(line, pos);
         if (index !== undefined) {
           const origin = line.waypoints[index] as FieldPosition;
@@ -518,8 +572,13 @@ export class EditorController extends Disposable implements IEditorController {
   private drawLinePointerDown(pos: FieldPosition): void {
     const i = this.interaction;
     if (i?.type === "draw-line") {
-      // 作図中: クリックごとに中継点を打つ（最後の点が終点になる）。
-      i.points.push({ ...pos });
+      // 作図中: クリックごとに中継点を打つ（最後の点が終点になる）。直前点と
+      // ほぼ同座標なら打点せずカーソルだけ進める（ダブルクリック確定で生じる
+      // 終点直上の重複点＝不可視の折れ線を防ぐ）。
+      const last = i.points[i.points.length - 1];
+      if (last === undefined || !this.nearPoint(last, pos)) {
+        i.points.push({ ...pos });
+      }
       i.cursor = { ...pos };
       this._onDidChange.fire();
       return;
@@ -551,12 +610,19 @@ export class EditorController extends Disposable implements IEditorController {
     this.setSelection({ kind: "player", id });
   }
 
+  private hitEndpoint(line: Line, pos: FieldPosition): boolean {
+    return pointDistance(pos, line.end) <= WAYPOINT_HANDLE_RADIUS_YARDS;
+  }
+
+  private nearPoint(a: FieldPosition, b: FieldPosition): boolean {
+    return pointDistance(a, b) <= LINE_POINT_MERGE_RADIUS_YARDS;
+  }
+
   private hitWaypoint(line: Line, pos: FieldPosition): number | undefined {
-    // 末尾優先（後の waypoint ほど手前に描く想定に合わせる）。点距離は
-    // geometry の primitive（退化線分 = 点距離）を再利用し当たり計算を一本化する。
+    // 末尾優先（後の waypoint ほど手前に描く想定に合わせる）。
     for (let idx = line.waypoints.length - 1; idx >= 0; idx--) {
       const w = line.waypoints[idx] as FieldPosition;
-      if (distanceToSegment(pos, w, w) <= WAYPOINT_HANDLE_RADIUS_YARDS) {
+      if (pointDistance(pos, w) <= WAYPOINT_HANDLE_RADIUS_YARDS) {
         return idx;
       }
     }

@@ -184,6 +184,33 @@ describe("EditorController: 線の作図（draw-line）", () => {
     expect(controller.getViewState().drawing).toBe(false);
   });
 
+  it("確定後は select ツールへ戻す（連続作図せず編集導線へ）", () => {
+    const { controller } = setup();
+    controller.setTool("draw-line");
+    controller.pointerDown({ lateralYard: 10, absoluteYard: 50 }); // p-a
+    controller.pointerDown({ lateralYard: 18, absoluteYard: 60 }); // end
+
+    controller.commitLine();
+
+    expect(controller.getTool()).toBe("select");
+  });
+
+  it("直前点とほぼ同座標の打点は無視する（ダブルクリック確定の重複点を防ぐ）", () => {
+    const { controller, model } = setup();
+    controller.setTool("draw-line");
+    controller.pointerDown({ lateralYard: 10, absoluteYard: 50 }); // p-a
+    controller.pointerDown({ lateralYard: 18, absoluteYard: 60 }); // end（1 度目）
+    controller.pointerDown({ lateralYard: 18.1, absoluteYard: 60 }); // dblclick の 2 度目相当
+
+    controller.commitLine();
+
+    // 終点直上に重複 waypoint を作らない＝不可視の折れ線が生まれない。
+    expect(model.getData().lines[1]).toMatchObject({
+      waypoints: [],
+      end: { lateralYard: 18, absoluteYard: 60 },
+    });
+  });
+
   it("点が無いまま確定すると線を追加せず作図を破棄する", () => {
     const { controller, model, changes } = setup();
     controller.setTool("draw-line");
@@ -466,6 +493,108 @@ describe("EditorController: waypoint 編集", () => {
   });
 });
 
+describe("EditorController: 終点（endpoint）編集", () => {
+  it("終点を掴んでドラッグし、end だけ更新・他線/waypoint 不変・undo 可", () => {
+    const { controller, model, undoRedo } = setup({
+      version: 1,
+      field: { zone: "middle" },
+      players: [
+        { id: "p-a", position: { lateralYard: 10, absoluteYard: 50 }, shape: "circle", label: "A" },
+      ],
+      lines: [
+        {
+          id: "l-1",
+          kind: "route",
+          startPlayerId: "p-a",
+          waypoints: [{ lateralYard: 15, absoluteYard: 52 }],
+          end: { lateralYard: 25, absoluteYard: 55 },
+          interpolation: "straight",
+        },
+        {
+          id: "l-2",
+          kind: "block",
+          startPlayerId: "p-a",
+          waypoints: [],
+          end: { lateralYard: 5, absoluteYard: 45 },
+          interpolation: "straight",
+        },
+      ],
+    });
+    controller.pointerDown({ lateralYard: 25, absoluteYard: 55 }); // l-1 選択
+
+    controller.pointerDown({ lateralYard: 25, absoluteYard: 55 }); // 終点ハンドルを掴む
+    controller.pointerMove({ lateralYard: 28, absoluteYard: 58 });
+    // overlay/プレビューに drag-endpoint が反映され、他線は不変。
+    expect(controller.getOverlay().endpointHandle).toEqual({ lateralYard: 28, absoluteYard: 58 });
+    const rendered = controller.getRenderModel();
+    expect(rendered.lines.find((l) => l.id === "l-1")?.end).toEqual({
+      lateralYard: 28,
+      absoluteYard: 58,
+    });
+    expect(rendered.lines.find((l) => l.id === "l-2")?.end).toEqual({
+      lateralYard: 5,
+      absoluteYard: 45,
+    });
+    controller.pointerUp({ lateralYard: 28, absoluteYard: 58 });
+
+    expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 28, absoluteYard: 58 });
+    expect(model.findLine("l-1")?.waypoints).toEqual([{ lateralYard: 15, absoluteYard: 52 }]);
+
+    undoRedo.undo();
+    expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 25, absoluteYard: 55 });
+  });
+
+  it("終点を掴んで動かさず離せばコマンドを出さない", () => {
+    const { controller, undoRedo } = setup();
+    controller.pointerDown({ lateralYard: 25, absoluteYard: 55 }); // l-1 選択
+    controller.pointerDown({ lateralYard: 25, absoluteYard: 55 }); // 終点を掴む
+    controller.pointerUp({ lateralYard: 25, absoluteYard: 55 });
+
+    expect(undoRedo.canUndo).toBe(false);
+  });
+
+  it("終点ドラッグ中に線が消えたら離してもコマンドを出さない", () => {
+    const { controller, commands, model } = setup();
+    controller.pointerDown({ lateralYard: 25, absoluteYard: 55 }); // l-1 選択
+    controller.pointerDown({ lateralYard: 25, absoluteYard: 55 }); // 終点を掴む
+    commands.execute(new RemoveLineCommand("l-1"));
+
+    controller.pointerMove({ lateralYard: 28, absoluteYard: 58 });
+    expect(() => controller.pointerUp({ lateralYard: 28, absoluteYard: 58 })).not.toThrow();
+    expect(model.getData().lines).toHaveLength(0);
+  });
+
+  it("終点と waypoint が近接でも終点を優先して掴む", () => {
+    const { controller, model } = setup({
+      version: 1,
+      field: { zone: "middle" },
+      players: [
+        { id: "p-a", position: { lateralYard: 10, absoluteYard: 50 }, shape: "circle", label: "A" },
+      ],
+      lines: [
+        {
+          id: "l-x",
+          kind: "route",
+          startPlayerId: "p-a",
+          waypoints: [{ lateralYard: 20, absoluteYard: 60 }],
+          end: { lateralYard: 20.2, absoluteYard: 60 }, // waypoint とほぼ同座標
+          interpolation: "straight",
+        },
+      ],
+    });
+    controller.pointerDown({ lateralYard: 15, absoluteYard: 55 }); // l-x 上を選択
+    expect(controller.getSelection()).toEqual({ kind: "line", id: "l-x" });
+
+    controller.pointerDown({ lateralYard: 20.2, absoluteYard: 60 }); // 重なり領域を掴む
+    controller.pointerMove({ lateralYard: 30, absoluteYard: 65 });
+    controller.pointerUp({ lateralYard: 30, absoluteYard: 65 });
+
+    // 終点が動き、waypoint は残る（先端ドラッグが waypoint に奪われない）。
+    expect(model.findLine("l-x")?.end).toEqual({ lateralYard: 30, absoluteYard: 65 });
+    expect(model.findLine("l-x")?.waypoints).toEqual([{ lateralYard: 20, absoluteYard: 60 }]);
+  });
+});
+
 describe("EditorController: アクション", () => {
   it("deleteSelection: 無選択では何もしない", () => {
     const { controller, changes } = setup();
@@ -674,6 +803,7 @@ describe("EditorController: getOverlay / getSelected*", () => {
     expect(controller.getOverlay()).toEqual({
       selectedLineId: "l-1",
       waypointHandles: [{ lateralYard: 15, absoluteYard: 52 }],
+      endpointHandle: { lateralYard: 25, absoluteYard: 55 },
     });
     expect(controller.getSelectedLine()).toMatchObject({ id: "l-1" });
 

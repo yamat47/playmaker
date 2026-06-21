@@ -125,3 +125,32 @@ export class SetLineWaypointsCommand implements ICommand {
     model.updateLine(this.previous);
   }
 }
+
+/** 線の終点を移動する。waypoint と独立に end だけを差し替える可逆プリミティブ。 */
+export class SetLineEndCommand implements ICommand {
+  readonly label = "終点の移動";
+  private readonly end: FieldPosition;
+  private previous: Line | undefined;
+
+  constructor(
+    private readonly lineId: string,
+    end: FieldPosition,
+  ) {
+    this.end = { ...end };
+  }
+
+  apply(model: IPlayModel): void {
+    const current = model.findLine(this.lineId);
+    if (current === undefined) {
+      throw new Error(`SetLineEndCommand: unknown line id "${this.lineId}"`);
+    }
+    this.previous = model.updateLine({ ...current, end: { ...this.end } });
+  }
+
+  undo(model: IPlayModel): void {
+    if (this.previous === undefined) {
+      throw new Error("SetLineEndCommand.undo: apply 未実行");
+    }
+    model.updateLine(this.previous);
+  }
+}

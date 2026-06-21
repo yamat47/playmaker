@@ -1,158 +1,64 @@
-// ローカル確認用 playground のエントリ。手元のブラウザで以下を目視する:
-// - フィールド描画とゾーン切替、2 形状（丸/四角）・色・ラベルの選手、route/block/motion の線
-// - 内蔵 UI（ツールバー/プロパティパネル/Undo·Redo/ゾーン切替）での編集と view/edit 切替
-// - フォーメーション読込（内蔵プルダウンと公開 API loadFormation の追記セマンティクス）
-// - PNG エクスポート（編集 UI を含まない・view/edit で同一図）
-// - PlayData 往復: getPlayData 書き出し → setPlayData 読込、版なし/未来版 blob が
-//   migratePlayData で現行版へ寄ること。編集すると onChange で JSON も更新される
-// - 密度ストレス（選手 22 + 線 20）: PRD 6.2「典型的フォーメーションを遅延なく」を
-//   手動目視するための fixture（戦術記法の厳密さは PRD 4.1 のとおり狙わない）
+// ローカル確認用 playground のエントリ。「Sideline Slate」筐体で以下を目視する:
+// - 左レールのプリセット・ライブラリ（フォーメーション 13・プレー図 16）をワンクリック読込
+// - 中央フィールドでの内蔵 UI（ツールバー/プロパティパネル）編集と view/edit 切替
+// - PNG エクスポート（編集 UI を含まない）
+// - 開発者ドロワー: PlayData 往復（getPlayData→setPlayData・版なし/未来版の migration）と
+//   密度ストレス（選手 22 + 線 20）を手動目視する fixture
 import {
   CURRENT_PLAY_DATA_VERSION,
   FORMATION_PRESETS,
+  type Formation,
   type Line,
+  PLAY_PRESETS,
+  type PlayCategory,
   type PlayData,
   type Player,
   Playmaker,
   type PlaymakerMode,
   type PlaymakerOptions,
+  type PlayPreset,
 } from "playmaker";
 
-const stage = document.getElementById("stage");
-const controlsEl = document.getElementById("controls");
-const statusEl = document.getElementById("status");
-const jsonEl = document.getElementById("json");
-const dataStatusEl = document.getElementById("data-status");
-if (
-  !stage ||
-  !controlsEl ||
-  !statusEl ||
-  !(jsonEl instanceof HTMLTextAreaElement) ||
-  !dataStatusEl
-) {
-  throw new Error("#stage / #controls / #status / #json / #data-status が見つかりません");
+function need<T extends HTMLElement>(id: string): T {
+  const el = document.getElementById(id);
+  if (el === null) {
+    throw new Error(`#${id} が見つかりません`);
+  }
+  return el as T;
 }
-const controls: HTMLElement = controlsEl;
-const status: HTMLElement = statusEl;
-const mountPoint: HTMLElement = stage;
-const jsonArea: HTMLTextAreaElement = jsonEl;
-const dataStatus: HTMLElement = dataStatusEl;
 
-// 目視用サンプル: 2 形状（丸/四角）・色・ラベル・3 線種・直線/ベジェ・waypoint。
+const mountPoint = need("stage");
+const libraryScroll = need("library-scroll");
+const statusEl = need("status");
+const jsonArea = need<HTMLTextAreaElement>("json");
+const dataStatus = need("data-status");
+const infoName = need("playinfo-name");
+const infoChip = need("playinfo-chip");
+const infoPers = need("playinfo-pers");
+const infoSummary = need("playinfo-summary");
+
+// 静的 HTML のボタン/コンテナは HMR を跨いで生き残る。signal でリスナを束ねて再読込時に
+// 外し、コンテナは作り直す前に空にする（束ねないとホットリロードごとに多重登録される）。
+const demoLifetime = new AbortController();
+const { signal } = demoLifetime;
+
 const DEFENSE_COLOR = "#8f4034";
-const SAMPLE_PLAYERS: Player[] = [
-  { id: "ol-c", position: { lateralYard: 26.7, absoluteYard: 49 }, shape: "square", label: "C" },
-  { id: "ol-lg", position: { lateralYard: 24.4, absoluteYard: 49 }, shape: "square", label: "LG" },
-  { id: "ol-rg", position: { lateralYard: 29, absoluteYard: 49 }, shape: "square", label: "RG" },
-  { id: "ol-lt", position: { lateralYard: 22.1, absoluteYard: 49 }, shape: "square", label: "LT" },
-  { id: "ol-rt", position: { lateralYard: 31.3, absoluteYard: 49 }, shape: "square", label: "RT" },
-  { id: "qb", position: { lateralYard: 26.7, absoluteYard: 46.5 }, shape: "circle", label: "QB" },
-  { id: "rb", position: { lateralYard: 26.7, absoluteYard: 43 }, shape: "circle", label: "RB" },
-  { id: "wr-x", position: { lateralYard: 7, absoluteYard: 49.5 }, shape: "circle", label: "X" },
-  { id: "wr-z", position: { lateralYard: 46, absoluteYard: 49.5 }, shape: "circle", label: "Z" },
-  { id: "wr-y", position: { lateralYard: 38, absoluteYard: 48 }, shape: "circle", label: "Y" },
-  { id: "te", position: { lateralYard: 33.6, absoluteYard: 49 }, shape: "square", label: "TE" },
-  {
-    id: "dl-1",
-    position: { lateralYard: 24.4, absoluteYard: 51 },
-    shape: "circle",
-    label: "",
-    color: DEFENSE_COLOR,
-  },
-  {
-    id: "dl-2",
-    position: { lateralYard: 29, absoluteYard: 51 },
-    shape: "circle",
-    label: "",
-    color: DEFENSE_COLOR,
-  },
-  {
-    id: "lb-m",
-    position: { lateralYard: 26.7, absoluteYard: 54 },
-    shape: "circle",
-    label: "M",
-    color: DEFENSE_COLOR,
-  },
-  {
-    id: "cb-1",
-    position: { lateralYard: 7, absoluteYard: 53 },
-    shape: "circle",
-    label: "",
-    color: DEFENSE_COLOR,
-  },
-  {
-    id: "cb-2",
-    position: { lateralYard: 46, absoluteYard: 53 },
-    shape: "circle",
-    label: "",
-    color: DEFENSE_COLOR,
-  },
-  {
-    id: "fs",
-    position: { lateralYard: 26.7, absoluteYard: 60 },
-    shape: "circle",
-    label: "FS",
-    color: DEFENSE_COLOR,
-  },
-];
 
-const SAMPLE_LINES: Line[] = [
-  {
-    id: "rt-x",
-    kind: "route",
-    startPlayerId: "wr-x",
-    waypoints: [{ lateralYard: 7, absoluteYard: 59 }],
-    end: { lateralYard: 13, absoluteYard: 59 },
-    interpolation: "straight",
-  },
-  {
-    id: "rt-z",
-    kind: "route",
-    startPlayerId: "wr-z",
-    waypoints: [
-      { lateralYard: 46, absoluteYard: 58 },
-      { lateralYard: 43, absoluteYard: 60 },
-    ],
-    end: { lateralYard: 44, absoluteYard: 56 },
-    interpolation: "bezier",
-  },
-  {
-    id: "rt-y",
-    kind: "route",
-    startPlayerId: "wr-y",
-    waypoints: [{ lateralYard: 36, absoluteYard: 54 }],
-    end: { lateralYard: 18, absoluteYard: 61 },
-    interpolation: "bezier",
-  },
-  {
-    id: "bl-rt",
-    kind: "block",
-    startPlayerId: "ol-rt",
-    waypoints: [],
-    end: { lateralYard: 29.5, absoluteYard: 50.6 },
-    interpolation: "straight",
-  },
-  {
-    id: "bl-lt",
-    kind: "block",
-    startPlayerId: "ol-lt",
-    waypoints: [],
-    end: { lateralYard: 24, absoluteYard: 50.6 },
-    interpolation: "straight",
-    color: "#90caf9",
-  },
-  {
-    id: "mo-rb",
-    kind: "motion",
-    startPlayerId: "rb",
-    waypoints: [{ lateralYard: 33, absoluteYard: 44 }],
-    end: { lateralYard: 41, absoluteYard: 46 },
-    interpolation: "straight",
-  },
-];
+// タイプ分類 → コールシート色タグ（ラン/パス/RPO/カバレッジ/プレッシャー）。
+const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
+  "run-zone": { label: "RUN", color: "var(--cat-run)" },
+  "run-gap": { label: "RUN", color: "var(--cat-run)" },
+  "pass-quick": { label: "PASS", color: "var(--cat-pass)" },
+  "pass-dropback": { label: "PASS", color: "var(--cat-pass)" },
+  "pass-deep": { label: "PASS", color: "var(--cat-pass)" },
+  pa: { label: "PA", color: "var(--cat-pass)" },
+  rpo: { label: "RPO", color: "var(--cat-rpo)" },
+  coverage: { label: "COV", color: "var(--cat-cov)" },
+  pressure: { label: "PRES", color: "var(--cat-pres)" },
+};
 
-// 密度ストレス用 fixture。PRD 6.2 を手動目視するため demo に常設し、戦術的厳密さは狙わずに
-// 2 形状（丸/四角）・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認できる配置にする。
+// 密度ストレス用 fixture（選手 22 + 線 20）。PRD 6.2 を手動目視するため demo に常設し、
+// 2 形状（丸/四角）・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認する。
 const STRESS_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.7, absoluteYard: 49 }, shape: "square", label: "C" },
   { id: "ol-lg", position: { lateralYard: 24.4, absoluteYard: 49 }, shape: "square", label: "LG" },
@@ -285,7 +191,6 @@ const STRESS_LINES: Line[] = [
     end: { lateralYard: 31.7, absoluteYard: 50.6 },
     interpolation: "straight",
   },
-  // rt-te だけ color を持たせて route の色オーバーライドも 1 ロードで目視できるようにする。
   {
     id: "rt-x",
     kind: "route",
@@ -338,7 +243,6 @@ const STRESS_LINES: Line[] = [
     end: { lateralYard: 30, absoluteYard: 47.5 },
     interpolation: "straight",
   },
-  // 守備サイドの線は color に DEFENSE_COLOR を載せて攻守を一望できる色分けに揃える。
   {
     id: "pr-de-l",
     kind: "route",
@@ -427,21 +331,265 @@ let changeCount = 0;
 
 function onChange(data: PlayData): void {
   changeCount += 1;
-  status.textContent = `onChange #${changeCount}｜選手 ${data.players.length}・線 ${data.lines.length}・ゾーン ${data.field.zone}`;
-  // version の現行確定を編集ごとに目視できるよう通知データをそのまま出す。
+  statusEl.textContent = `onChange #${changeCount}｜選手 ${data.players.length}・線 ${data.lines.length}・ゾーン ${data.field.zone}`;
   jsonArea.value = JSON.stringify(data, null, 2);
 }
 
-/** 現在のプレー図（正準スナップショット）を JSON 欄へ書き出す。 */
 function refreshJson(): void {
   jsonArea.value = JSON.stringify(playmaker.getPlayData(), null, 2);
 }
 
-/**
- * JSON 欄の内容を setPlayData で読み込み、結果を再表示する。
- * setPlayData は onChange を発火しない契約なので明示的に書き戻し、版なし/未来版
- * blob が現行版へ寄る（migratePlayData）ことを往復として目視できる。
- */
+function create(initialData?: PlayData): Playmaker {
+  changeCount = 0;
+  statusEl.textContent = "onChange 待ち（編集すると更新されます）";
+  const options: PlaymakerOptions = { mode, onChange };
+  if (initialData !== undefined) {
+    options.initialData = initialData;
+  }
+  return new Playmaker(mountPoint, options);
+}
+
+let playmaker = create(PLAY_PRESETS[0]?.data);
+
+// ---- 左レール: プリセット・ライブラリ ----
+let activeButton: HTMLButtonElement | null = null;
+
+function setActive(button: HTMLButtonElement): void {
+  activeButton?.classList.remove("is-active");
+  button.classList.add("is-active");
+  activeButton = button;
+}
+
+function setInfo(
+  name: string,
+  chip: { label: string; color: string } | null,
+  pers: string,
+  summary: string,
+): void {
+  infoName.textContent = name;
+  if (chip === null) {
+    infoChip.hidden = true;
+  } else {
+    infoChip.hidden = false;
+    infoChip.textContent = chip.label;
+    infoChip.style.background = chip.color;
+  }
+  infoPers.textContent = pers;
+  infoSummary.textContent = summary;
+}
+
+function presetButton(name: string, tag: string, tagColor: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "preset";
+  const tagEl = document.createElement("span");
+  tagEl.className = "preset__tag";
+  tagEl.textContent = tag;
+  tagEl.style.background = tagColor;
+  const nameEl = document.createElement("span");
+  nameEl.className = "preset__name";
+  nameEl.textContent = name;
+  button.append(tagEl, nameEl);
+  return button;
+}
+
+function groupTitle(text: string): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "group__title";
+  el.textContent = text;
+  return el;
+}
+
+function subTitle(text: string, offense: boolean): HTMLElement {
+  const el = document.createElement("div");
+  el.className = offense ? "group__sub group__sub--off" : "group__sub";
+  el.textContent = text;
+  return el;
+}
+
+function loadFormation(formation: Formation): void {
+  const players: Player[] = formation.players.map((p, i) => ({ ...p, id: `${formation.id}-${i}` }));
+  playmaker.setPlayData({
+    version: CURRENT_PLAY_DATA_VERSION,
+    field: { zone: playmaker.fieldZone },
+    players,
+    lines: [],
+  });
+  refreshJson();
+}
+
+function loadPlay(preset: PlayPreset): void {
+  playmaker.setPlayData(preset.data);
+  refreshJson();
+}
+
+interface PresetRow {
+  name: string;
+  tag: string;
+  tagColor: string;
+  select: () => void;
+}
+
+// 1 行ぶんの見た目と読込処理を item から導く（フォーメーション/プレー図で差分はここだけ）。
+function addSection<T extends { id: string; side: "offense" | "defense" }>(
+  items: readonly T[],
+  side: "offense" | "defense",
+  label: string,
+  toRow: (item: T) => PresetRow,
+): void {
+  const matching = items.filter((it) => it.side === side);
+  if (matching.length === 0) {
+    return;
+  }
+  libraryScroll.append(subTitle(label, side === "offense"));
+  for (const item of matching) {
+    const row = toRow(item);
+    const button = presetButton(row.name, row.tag, row.tagColor);
+    button.dataset.presetId = item.id;
+    button.addEventListener("click", () => {
+      setActive(button);
+      row.select();
+    });
+    libraryScroll.append(button);
+  }
+}
+
+function formationRow(formation: Formation): PresetRow {
+  const offense = formation.side === "offense";
+  return {
+    name: formation.name,
+    tag: offense ? "OFF" : "DEF",
+    tagColor: offense ? "var(--off)" : "var(--def)",
+    select: () => {
+      loadFormation(formation);
+      setInfo(
+        formation.name,
+        null,
+        "Formation",
+        "選手配置のみ（ライン無し）。現在の図を差し替えます。",
+      );
+    },
+  };
+}
+
+function playRow(preset: PlayPreset): PresetRow {
+  const meta = CATEGORY_META[preset.category];
+  return {
+    name: preset.name,
+    tag: meta.label,
+    tagColor: meta.color,
+    select: () => {
+      loadPlay(preset);
+      setInfo(preset.name, meta, preset.personnel, preset.summary);
+    },
+  };
+}
+
+libraryScroll.replaceChildren();
+libraryScroll.append(groupTitle("Formations"));
+addSection(FORMATION_PRESETS, "offense", "Offense", formationRow);
+addSection(FORMATION_PRESETS, "defense", "Defense", formationRow);
+libraryScroll.append(groupTitle("Plays"));
+addSection(PLAY_PRESETS, "offense", "Offense", playRow);
+addSection(PLAY_PRESETS, "defense", "Defense", playRow);
+
+// 初期表示は先頭プレー図に同期する（左レールのハイライトと Play info も合わせる）。
+const initialPreset = PLAY_PRESETS[0];
+if (initialPreset !== undefined) {
+  const initialButton = libraryScroll.querySelector<HTMLButtonElement>(
+    `[data-preset-id="${initialPreset.id}"]`,
+  );
+  if (initialButton !== null) {
+    setActive(initialButton);
+    const meta = CATEGORY_META[initialPreset.category];
+    setInfo(initialPreset.name, meta, initialPreset.personnel, initialPreset.summary);
+  }
+}
+
+// ---- トップバー ----
+const modeButton = need<HTMLButtonElement>("mode-toggle");
+modeButton.addEventListener(
+  "click",
+  () => {
+    // mode 切替は再マウント（現在のプレー図はそのまま引き継ぐ）。
+    const snapshot = playmaker.getPlayData();
+    playmaker.dispose();
+    mode = mode === "edit" ? "view" : "edit";
+    playmaker = create(snapshot);
+    syncModeButton();
+    refreshJson();
+  },
+  { signal },
+);
+
+function syncModeButton(): void {
+  modeButton.textContent = mode === "edit" ? "view モードへ" : "edit モードへ";
+  modeButton.setAttribute("aria-pressed", String(mode === "view"));
+}
+syncModeButton();
+
+need<HTMLButtonElement>("clear").addEventListener(
+  "click",
+  () => {
+    playmaker.setPlayData({
+      version: CURRENT_PLAY_DATA_VERSION,
+      field: { zone: playmaker.fieldZone },
+      players: [],
+      lines: [],
+    });
+    refreshJson();
+    activeButton?.classList.remove("is-active");
+    activeButton = null;
+    setInfo("—", null, "", "");
+  },
+  { signal },
+);
+
+need<HTMLButtonElement>("export-png").addEventListener(
+  "click",
+  async () => {
+    const blob = await playmaker.exportToPng();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `playmaker-${mode}-${Date.now()}.png`;
+    a.click();
+    // click() のダウンロードは環境により非同期。同期 revoke で取りこぼす環境があるため遅延する。
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    statusEl.textContent = `PNG 出力（${mode} モード・${Math.round(blob.size / 1024)}KB）`;
+  },
+  { signal },
+);
+
+const drawer = need("drawer");
+const devToggle = need<HTMLButtonElement>("dev-toggle");
+devToggle.addEventListener(
+  "click",
+  () => {
+    const open = drawer.classList.toggle("is-open");
+    devToggle.setAttribute("aria-pressed", String(open));
+  },
+  { signal },
+);
+
+// ---- 開発者ドロワー: 往復・migration・密度ストレスの目視 ----
+need<HTMLButtonElement>("load-stress").addEventListener(
+  "click",
+  () => {
+    playmaker.setPlayData({
+      version: CURRENT_PLAY_DATA_VERSION,
+      field: { zone: playmaker.fieldZone },
+      players: STRESS_PLAYERS,
+      lines: STRESS_LINES,
+    });
+    refreshJson();
+    activeButton?.classList.remove("is-active");
+    activeButton = null;
+    setInfo("密度ストレス", null, "選手 22・線 20", "描画・操作の体感速度を手動目視する fixture。");
+  },
+  { signal },
+);
+
 function loadFromJsonText(): void {
   let parsed: unknown;
   try {
@@ -456,126 +604,40 @@ function loadFromJsonText(): void {
   dataStatus.textContent = "読込完了（version は現行へ寄せて再表示）";
 }
 
-function create(initialData?: PlayData): Playmaker {
-  changeCount = 0;
-  status.textContent = "onChange 待ち（編集すると更新されます）";
-  // exactOptionalPropertyTypes: initialData は値があるときだけ持たせる。
-  const options: PlaymakerOptions = { mode, onChange };
-  if (initialData !== undefined) {
-    options.initialData = initialData;
-  }
-  return new Playmaker(mountPoint, options);
-}
-
-let playmaker = create({
-  version: CURRENT_PLAY_DATA_VERSION,
-  field: { zone: "middle" },
-  players: SAMPLE_PLAYERS,
-  lines: SAMPLE_LINES,
-});
-
-function addAction(label: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.textContent = label;
-  button.addEventListener("click", onClick);
-  controls.appendChild(button);
-  return button;
-}
-
-// version/field zone/refreshJson 忘れを防ぐためボタンの差し替え軸（players/lines）だけ受ける。
-function loadScene(players: Player[], lines: Line[]): void {
-  playmaker.setPlayData({
-    version: CURRENT_PLAY_DATA_VERSION,
-    field: { zone: playmaker.fieldZone },
-    players,
-    lines,
-  });
-  refreshJson();
-}
-
-addAction("サンプル隊形＋線を読み込む", () => loadScene(SAMPLE_PLAYERS, SAMPLE_LINES));
-addAction("クリア", () => loadScene([], []));
-// 密度ストレス（選手 22 + 線 20）。PRD 6.2「典型的フォーメーションを遅延なく」を
-// このボタン 1 つで読み込み、描画・ゾーン切替・操作の体感速度を手動目視する。
-addAction("密度ストレス (選手22+線20)", () => loadScene(STRESS_PLAYERS, STRESS_LINES));
-
-// 公開 API loadFormation の目視（追記）。クリア→攻→守 の順で重ねられる。
-for (const formation of FORMATION_PRESETS) {
-  addAction(`＋${formation.name}`, () => playmaker.loadFormation(formation));
-}
-
-// PNG エクスポート（PRD 5.7）。出力に編集 UI（ツール/パネル/選択/ハンドル）が
-// 含まれないこと・view/edit いずれでも出せることを目視する。
-addAction("PNG を出力", async () => {
-  const blob = await playmaker.exportToPng();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `playmaker-${mode}-${Date.now()}.png`;
-  a.click();
-  // click() のダウンロード処理はブラウザにより非同期。同期 revoke すると
-  // 取得開始前に URL が失効しダウンロードを取りこぼす環境があるため遅延する。
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  status.textContent = `PNG 出力（${mode} モード・${Math.round(blob.size / 1024)}KB）`;
-});
-
-const modeButton = addAction("", () => {
-  // mode 切替は再マウント（現在のプレー図はそのまま引き継ぐ）。
-  const snapshot = playmaker.getPlayData();
-  playmaker.dispose();
-  mode = mode === "edit" ? "view" : "edit";
-  playmaker = create(snapshot);
-  syncModeButton();
-  refreshJson();
-});
-
-function syncModeButton(): void {
-  modeButton.textContent = mode === "edit" ? "view モードへ" : "edit モードへ";
-  modeButton.setAttribute("aria-pressed", String(mode === "view"));
-}
-
-syncModeButton();
-
-// JSON パネル（往復・migration の目視）。静的 HTML のボタンに結線する。
-// 静的 HTML ボタンは HMR を跨いで生き残るため、signal でリスナを束ね再読込時に外す
-// （束ねないとホットリロードごとに多重登録され 1 クリックで多重発火する）。
-const demoLifetime = new AbortController();
-
-function bindButton(id: string, onClick: () => void): void {
-  const button = document.getElementById(id);
-  if (!(button instanceof HTMLButtonElement)) {
-    throw new Error(`#${id} が見つかりません`);
-  }
-  button.addEventListener("click", onClick, { signal: demoLifetime.signal });
-}
-
-/** 任意 blob を JSON 欄へ流し込み読込まで通す（旧版/未来版 fixture の目視に共通）。 */
 function loadFixture(blob: unknown): void {
   jsonArea.value = JSON.stringify(blob, null, 2);
   loadFromJsonText();
 }
 
-bindButton("json-export", () => {
-  refreshJson();
-  dataStatus.textContent = "現在の getPlayData を書き出し";
-});
-bindButton("json-import", loadFromJsonText);
-// version フィールドの無い商用ソフト初期データ → 読込で現行版へ寄る。
-bindButton("json-legacy", () =>
-  loadFixture({
-    field: { zone: "own-redzone" },
-    players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square" }],
-  }),
+need<HTMLButtonElement>("json-export").addEventListener(
+  "click",
+  () => {
+    refreshJson();
+    dataStatus.textContent = "現在の getPlayData を書き出し";
+  },
+  { signal },
 );
-// 新しい lib で保存された未来版 → 前方互換で現行へ寄り未知項目は落ちる。
-bindButton("json-future", () =>
-  loadFixture({
-    version: 99,
-    field: { zone: "redzone" },
-    players: [{ id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "circle" }],
-    lines: [],
-    futureOnlyField: { whatever: true },
-  }),
+need<HTMLButtonElement>("json-import").addEventListener("click", loadFromJsonText, { signal });
+need<HTMLButtonElement>("json-legacy").addEventListener(
+  "click",
+  () =>
+    loadFixture({
+      field: { zone: "own-redzone" },
+      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square" }],
+    }),
+  { signal },
+);
+need<HTMLButtonElement>("json-future").addEventListener(
+  "click",
+  () =>
+    loadFixture({
+      version: 99,
+      field: { zone: "redzone" },
+      players: [{ id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "circle" }],
+      lines: [],
+      futureOnlyField: { whatever: true },
+    }),
+  { signal },
 );
 
 refreshJson();

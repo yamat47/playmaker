@@ -176,7 +176,7 @@ export class CanvasSurface extends Disposable {
    * 位置計算は common のジオメトリに委譲し、ここは色と図形を置くだけ。
    */
   private drawOverlay(accent: string): void {
-    const { selectedPlayerId, selectedLineId, waypointHandles } = this.overlay;
+    const { selectedPlayerId, selectedLineId, waypointHandles, endpointHandle } = this.overlay;
 
     if (selectedPlayerId !== undefined) {
       const player = this.data.players.find((p) => p.id === selectedPlayerId);
@@ -221,15 +221,30 @@ export class CanvasSurface extends Disposable {
     // アイコンは hit 許容（WAYPOINT_HANDLE_RADIUS_YARDS）の一部だけを描く。フルに
     // 描くとマーカー並みに大きいので小さく出し、掴みやすさは hit 許容側に委ねる。
     const handleHalf = Math.max(3, 0.45 * WAYPOINT_HANDLE_RADIUS_YARDS * this.geometry.scale);
-    for (const wp of waypointHandles) {
-      const { x, y } = this.geometry.toCanvas(wp.lateralYard, wp.absoluteYard);
-      this.ctx.beginPath();
-      this.ctx.rect(x - handleHalf, y - handleHalf, handleHalf * 2, handleHalf * 2);
+    // 現在の path（beginPath 済み）をハンドル共通の塗り・白縁で仕上げる。
+    const paintHandle = () => {
       this.ctx.fillStyle = accent;
       this.ctx.fill();
       this.ctx.lineWidth = 1.5;
       this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
       this.ctx.stroke();
+    };
+    for (const wp of waypointHandles) {
+      const { x, y } = this.geometry.toCanvas(wp.lateralYard, wp.absoluteYard);
+      this.ctx.beginPath();
+      this.ctx.rect(x - handleHalf, y - handleHalf, handleHalf * 2, handleHalf * 2);
+      paintHandle();
+    }
+
+    // 終点ハンドルは waypoint（四角）と区別できるよう円で描く（先端の掴み所を明示）。
+    if (endpointHandle !== undefined) {
+      const { x, y } = this.geometry.toCanvas(
+        endpointHandle.lateralYard,
+        endpointHandle.absoluteYard,
+      );
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, handleHalf + 1, 0, Math.PI * 2);
+      paintHandle();
     }
   }
 

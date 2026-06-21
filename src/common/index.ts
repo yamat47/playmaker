@@ -12,6 +12,7 @@ export {
   AddLineCommand,
   type LinePatch,
   RemoveLineCommand,
+  SetLineEndCommand,
   SetLineWaypointsCommand,
   UpdateLineCommand,
 } from "./commands/line-commands.js";
@@ -23,6 +24,7 @@ export {
   UpdatePlayerCommand,
 } from "./commands/player-commands.js";
 export { FIELD_FONT_FAMILY } from "./design/field-font.js";
+export { LINE_COLOR_PALETTE, type LineColorOption } from "./design/line-palette.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EditorController,

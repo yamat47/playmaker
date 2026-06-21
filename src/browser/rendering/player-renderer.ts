@@ -40,6 +40,12 @@ const SHAPE_ROTATION: Record<Exclude<PlayerShape, "circle">, number> = {
   hexagon: 0,
 };
 
+// 円は外接円半径そのままだと多角形（外接円に内接＝辺が内側）より一回り大きく見え、
+// マーカーが動線（特に LOS 際のブロック）を覆う。描画半径だけ正方形の辺幅へ寄せて
+// 視覚的な大きさを揃える（錯視で円は小さく見えるためやや大きめ）。当たり領域は全形状で
+// 外接円のまま＝hit-test の一様性（player.ts の不変条件）は崩さない。
+const CIRCLE_DRAW_SCALE = 0.82;
+
 export class PlayerRenderer {
   /**
    * players を配列順（後の要素ほど上）に描く。
@@ -67,7 +73,7 @@ export class PlayerRenderer {
       // 影・グラデーションを持たない完全フラット。塗り → 枠線の順で描く。
       ctx.beginPath();
       if (player.shape === "circle") {
-        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.arc(x, y, r * CIRCLE_DRAW_SCALE, 0, Math.PI * 2);
       } else {
         this.tracePolygon(ctx, x, y, r, player.shape);
       }

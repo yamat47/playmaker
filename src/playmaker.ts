@@ -28,15 +28,19 @@ export type {
   Line,
   LineInterpolation,
   LineKind,
+  PlayCategory,
   PlayData,
   Player,
   PlayerShape,
+  PlayPreset,
 } from "./common/index.js";
 export {
   CURRENT_PLAY_DATA_VERSION,
   FORMATION_PRESETS,
   getFormationPreset,
+  getPlayPreset,
   migratePlayData,
+  PLAY_PRESETS,
 } from "./common/index.js";
 
 export type PlaymakerMode = "view" | "edit";

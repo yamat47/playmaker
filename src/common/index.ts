@@ -136,6 +136,8 @@ export {
   type Player,
   type PlayerShape,
 } from "./model/player.js";
+export type { PlayCategory, PlayPreset } from "./plays/play-preset.js";
+export { getPlayPreset, PLAY_PRESETS } from "./plays/presets.js";
 export {
   type IUndoRedoService,
   UndoRedoService,

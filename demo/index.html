@@ -4,92 +4,357 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Playmaker Playground</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      :root {
+        --bg: #161e27;
+        --surface: #1f2a36;
+        --surface-2: #283643;
+        --border: #36465a;
+        --ink: #e7ecf1;
+        --ink-dim: #97a6b6;
+        --accent: #f2c14e;
+        --accent-ink: #161e27;
+        --cat-run: #e0894a;
+        --cat-pass: #5aa1d8;
+        --cat-rpo: #c483cf;
+        --cat-cov: #5fb59c;
+        --cat-pres: #e06457;
+        --off: #f2c14e;
+        --def: #d08573;
+        --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+        --ui: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP",
+          system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       html,
       body {
         margin: 0;
         height: 100%;
-        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--ui);
       }
+
       #app {
         display: flex;
         flex-direction: column;
         height: 100vh;
       }
-      header {
+
+      /* ---- トップバー ---- */
+      .topbar {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 8px 12px;
-        border-bottom: 1px solid #ddd;
-        font-size: 14px;
+        gap: 18px;
+        padding: 10px 18px;
+        background: linear-gradient(180deg, #1d2733, #161e27);
+        border-bottom: 1px solid var(--border);
       }
-      #controls {
+      .brand {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        min-width: 0;
+      }
+      .brand__name {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 24px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .brand__tag {
+        font-size: 12px;
+        color: var(--ink-dim);
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .topbar__spacer {
+        flex: 1;
+      }
+      .topbar__actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        font: inherit;
+        font-size: 13px;
+        padding: 7px 13px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface-2);
+        color: var(--ink);
+        cursor: pointer;
+        transition: border-color 0.12s, background 0.12s;
+      }
+      .btn:hover {
+        border-color: var(--accent);
+      }
+      .btn[aria-pressed="true"] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 600;
+      }
+
+      /* ---- 本体（左レール＋ステージ） ---- */
+      .body {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .library {
+        width: 300px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+      }
+      .library__scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 0 14px;
+      }
+      .group__title {
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-dim);
+        padding: 16px 16px 6px;
+      }
+      .group__sub {
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--def);
+        padding: 8px 16px 4px;
+      }
+      .group__sub--off {
+        color: var(--off);
+      }
+
+      .preset {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        padding: 7px 16px;
+        border: 0;
+        border-left: 3px solid transparent;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      .preset:hover {
+        background: var(--surface-2);
+      }
+      .preset.is-active {
+        background: var(--surface-2);
+        border-left-color: var(--accent);
+      }
+      .preset__tag {
+        flex-shrink: 0;
+        width: 38px;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-align: center;
+        padding: 2px 0;
+        border-radius: 3px;
+        color: var(--accent-ink);
+      }
+      .preset__name {
+        font-family: var(--display);
+        font-weight: 500;
+        font-size: 15px;
+        letter-spacing: 0.01em;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* ---- Play info カード ---- */
+      .playinfo {
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+        padding: 12px 16px 14px;
+      }
+      .playinfo__eyebrow {
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--ink-dim);
+      }
+      .playinfo__name {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 22px;
+        margin: 2px 0 6px;
+        color: var(--ink);
+      }
+      .playinfo__meta {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .playinfo__chip {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        padding: 2px 7px;
+        border-radius: 3px;
+        color: var(--accent-ink);
+      }
+      .playinfo__pers {
+        font-size: 12px;
+        color: var(--ink-dim);
+      }
+      .playinfo__summary {
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: var(--ink);
+        margin: 0;
+      }
+
+      /* ---- ステージ（フィールド） ---- */
+      .stage-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+      #stage {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ---- 開発者ドロワー ---- */
+      .drawer {
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.18s ease;
+      }
+      .drawer.is-open {
+        max-height: 46vh;
+        overflow-y: auto;
+      }
+      .drawer__inner {
+        padding: 12px 18px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .drawer__row {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-      }
-      #controls button {
-        padding: 4px 10px;
-        font: inherit;
-        cursor: pointer;
-      }
-      #controls button[aria-pressed="true"] {
-        background: #1565c0;
-        color: #fff;
-        border-color: #1565c0;
-      }
-      #data {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding: 6px 12px;
-        border-bottom: 1px solid #ddd;
-      }
-      #data .row {
-        display: flex;
-        gap: 6px;
         align-items: center;
-        font-size: 13px;
       }
-      #data button {
-        padding: 3px 9px;
-        font: inherit;
-        cursor: pointer;
+      .drawer__label {
+        font-family: var(--display);
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-size: 12px;
+        color: var(--ink-dim);
+        margin-right: 4px;
       }
-      #data textarea {
+      .drawer__status {
+        font-size: 12px;
+        color: var(--ink-dim);
+      }
+      .drawer textarea {
         width: 100%;
-        height: 92px;
+        height: 150px;
         box-sizing: border-box;
+        background: var(--bg);
+        color: var(--ink);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 12px;
         resize: vertical;
-      }
-      #stage {
-        flex: 1;
-        min-height: 0;
       }
     </style>
   </head>
   <body>
     <div id="app">
-      <header>
-        <span>Playmaker Playground</span>
-        <div id="controls"></div>
-        <span id="status" style="margin-left: auto; opacity: 0.7"></span>
-      </header>
-      <section id="data">
-        <div class="row">
-          <strong>PlayData JSON</strong>
-          <button id="json-export" type="button">現在の図を JSON へ書き出す</button>
-          <button id="json-import" type="button">JSON を読み込む（往復）</button>
-          <button id="json-legacy" type="button">版なし旧 blob を再現</button>
-          <button id="json-future" type="button">未来版(v99) blob を再現</button>
-          <span id="data-status" style="opacity: 0.7"></span>
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand__name">Playmaker</span>
+          <span class="brand__tag">プレー図デザイナー — デモ</span>
         </div>
-        <textarea id="json" spellcheck="false" aria-label="PlayData JSON"></textarea>
+        <div class="topbar__spacer"></div>
+        <div class="topbar__actions">
+          <button id="mode-toggle" class="btn" type="button">view モードへ</button>
+          <button id="clear" class="btn" type="button">クリア</button>
+          <button id="export-png" class="btn" type="button">PNG 出力</button>
+          <button id="dev-toggle" class="btn" type="button" aria-pressed="false">開発者</button>
+        </div>
+      </header>
+
+      <div class="body">
+        <aside class="library">
+          <div id="library-scroll" class="library__scroll"></div>
+          <div class="playinfo">
+            <div class="playinfo__eyebrow">Now showing</div>
+            <div id="playinfo-name" class="playinfo__name">—</div>
+            <div class="playinfo__meta">
+              <span id="playinfo-chip" class="playinfo__chip" hidden></span>
+              <span id="playinfo-pers" class="playinfo__pers"></span>
+            </div>
+            <p id="playinfo-summary" class="playinfo__summary"></p>
+          </div>
+        </aside>
+
+        <main class="stage-wrap">
+          <div id="stage"></div>
+        </main>
+      </div>
+
+      <section id="drawer" class="drawer" aria-label="開発者ツール">
+        <div class="drawer__inner">
+          <div class="drawer__row">
+            <span class="drawer__label">Fixtures</span>
+            <button id="load-stress" class="btn" type="button">密度ストレス (選手22+線20)</button>
+            <span id="status" class="drawer__status"></span>
+          </div>
+          <div class="drawer__row">
+            <span class="drawer__label">PlayData JSON</span>
+            <button id="json-export" class="btn" type="button">書き出す</button>
+            <button id="json-import" class="btn" type="button">読み込む（往復）</button>
+            <button id="json-legacy" class="btn" type="button">版なし旧 blob</button>
+            <button id="json-future" class="btn" type="button">未来版(v99) blob</button>
+            <span id="data-status" class="drawer__status"></span>
+          </div>
+          <textarea id="json" spellcheck="false" aria-label="PlayData JSON"></textarea>
+        </div>
       </section>
-      <div id="stage"></div>
     </div>
     <script type="module" src="/main.ts"></script>
   </body>

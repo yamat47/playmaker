@@ -796,19 +796,18 @@ describe("EditorController: getOverlay / getSelected*", () => {
     expect(controller.getSelectedLine()).toBeUndefined();
   });
 
-  it("線選択で selectedLineId とハンドル、消えていればハンドル空", () => {
+  it("線選択でハンドル、消えていればハンドル空", () => {
     const { controller, commands } = setup();
     controller.pointerDown({ lateralYard: 25, absoluteYard: 55 }); // l-1
 
     expect(controller.getOverlay()).toEqual({
-      selectedLineId: "l-1",
       waypointHandles: [{ lateralYard: 15, absoluteYard: 52 }],
       endpointHandle: { lateralYard: 25, absoluteYard: 55 },
     });
     expect(controller.getSelectedLine()).toMatchObject({ id: "l-1" });
 
     commands.execute(new RemoveLineCommand("l-1")); // stale 選択
-    expect(controller.getOverlay()).toEqual({ selectedLineId: "l-1", waypointHandles: [] });
+    expect(controller.getOverlay()).toEqual({ waypointHandles: [] });
     expect(controller.getSelectedLine()).toBeUndefined();
   });
 });

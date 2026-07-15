@@ -64,7 +64,6 @@ const DRAFT_LINE_ID = "__playmaker_draft_line__";
  */
 export interface EditorOverlay {
   selectedPlayerId?: string;
-  selectedLineId?: string;
   /** 選択中の線の waypoint ハンドル位置（ドラッグ対象）。それ以外は空配列。 */
   waypointHandles: FieldPosition[];
   /** 選択中の線の終点ハンドル位置（ドラッグ対象）。線未選択なら undefined。 */
@@ -274,7 +273,6 @@ export class EditorController extends Disposable implements IEditorController {
     if (s?.kind === "player") {
       overlay.selectedPlayerId = s.id;
     } else if (s?.kind === "line") {
-      overlay.selectedLineId = s.id;
       const line = this.model.findLine(s.id);
       if (line !== undefined) {
         const drag = this.interaction;

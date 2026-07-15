@@ -6,12 +6,9 @@ import {
   FieldGeometry,
   type FieldPosition,
   type ImageExportOptions,
-  indexPlayersById,
-  lineAnchorPoints,
   PLAYER_RADIUS_YARDS,
   type PlayData,
   resolveImageExportSize,
-  sampleLinePath,
   toDisposable,
   WAYPOINT_HANDLE_RADIUS_YARDS,
 } from "../../common/index.js";
@@ -174,9 +171,13 @@ export class CanvasSurface extends Disposable {
   /**
    * 選択強調と waypoint ハンドルを最前面に描く（編集中の視認用）。
    * 位置計算は common のジオメトリに委譲し、ここは色と図形を置くだけ。
+   *
+   * 選択色は対象の「外」に置き、対象の上には重ねない（選手はマーカーの外周リング、線は
+   * waypoint/終点のハンドル）。線色はユーザーがパレットで選ぶので、上塗りすると線色と
+   * 混ざって何色の線なのか読めなくなる。
    */
-  private drawOverlay(accent: string): void {
-    const { selectedPlayerId, selectedLineId, waypointHandles, endpointHandle } = this.overlay;
+  private drawOverlay(selectionColor: string): void {
+    const { selectedPlayerId, waypointHandles, endpointHandle } = this.overlay;
 
     if (selectedPlayerId !== undefined) {
       const player = this.data.players.find((p) => p.id === selectedPlayerId);
@@ -188,33 +189,9 @@ export class CanvasSurface extends Disposable {
         const r = PLAYER_RADIUS_YARDS * this.geometry.scale + 4;
         this.ctx.beginPath();
         this.ctx.arc(x, y, r, 0, Math.PI * 2);
-        this.ctx.strokeStyle = accent;
+        this.ctx.strokeStyle = selectionColor;
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
-      }
-    }
-
-    if (selectedLineId !== undefined) {
-      const line = this.data.lines.find((l) => l.id === selectedLineId);
-      const anchors = line
-        ? lineAnchorPoints(line, indexPlayersById(this.data.players))
-        : undefined;
-      if (line && anchors) {
-        const polyline = sampleLinePath(anchors, line.interpolation);
-        this.ctx.beginPath();
-        polyline.forEach((pt, i) => {
-          const { x, y } = this.geometry.toCanvas(pt.lateralYard, pt.absoluteYard);
-          if (i === 0) {
-            this.ctx.moveTo(x, y);
-          } else {
-            this.ctx.lineTo(x, y);
-          }
-        });
-        this.ctx.strokeStyle = accent;
-        this.ctx.lineWidth = 6;
-        this.ctx.globalAlpha = 0.35;
-        this.ctx.stroke();
-        this.ctx.globalAlpha = 1;
       }
     }
 
@@ -223,7 +200,7 @@ export class CanvasSurface extends Disposable {
     const handleHalf = Math.max(3, 0.45 * WAYPOINT_HANDLE_RADIUS_YARDS * this.geometry.scale);
     // 現在の path（beginPath 済み）をハンドル共通の塗り・白縁で仕上げる。
     const paintHandle = () => {
-      this.ctx.fillStyle = accent;
+      this.ctx.fillStyle = selectionColor;
       this.ctx.fill();
       this.ctx.lineWidth = 1.5;
       this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";

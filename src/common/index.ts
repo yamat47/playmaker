@@ -85,6 +85,7 @@ export {
   hitTestPlayer,
   LINE_HIT_TOLERANCE_YARDS,
 } from "./geometry/hit-test.js";
+export { trimPolylineEnd } from "./geometry/polyline.js";
 export {
   Disposable,
   DisposableStore,

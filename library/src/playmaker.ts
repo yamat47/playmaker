@@ -193,7 +193,7 @@ export class Playmaker extends Disposable {
     if (this.mode === "edit") {
       this.session.add(new Toolbar(this.root, controller));
       this.session.add(new PropertyPanel(this.root, controller));
-      this.session.add(new PointerInput(this.surface, controller));
+      this.session.add(new PointerInput(this.root, this.surface, controller));
     }
 
     this.surface.setScene(controller.getRenderModel(), controller.getOverlay());

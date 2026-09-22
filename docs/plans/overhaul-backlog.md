@@ -117,15 +117,16 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T2 緊急バグ修正（ポインタ入力）
+### T2 緊急バグ修正（ポインタ入力） (done)
 
 **目的**: タッチ操作や右クリックでドラッグが外れなくなる問題を止める。
 
-- [ ] **T2-1 [must] pointercancel、タッチ、主ボタン以外に対応しておらず、ドラッグが外れない**
+- [x] **T2-1 [must] pointercancel、タッチ、主ボタン以外に対応しておらず、ドラッグが外れない**
   - locations: library/src/browser/input/pointer-input.ts:17-21, library/src/browser/input/pointer-input.ts:25, library/src/browser/input/pointer-input.ts:53-57, library/src/styles.css:57
   - 問題: e.button と isPrimary を見ていない。pointercancel と lostpointercapture を購読しておらず、touch-action もない。実物で確認済み。
-  - 対応: pointerdown は `button===0 && isPrimary` のときだけ処理する。pointercancel と lostpointercapture で cancelInteraction を呼ぶ。`.playmaker-canvas { touch-action: none }` を付ける。
-- [ ] **T2-2 [should] ショートカットが canvas にしか効かず、focus でページがスクロールする**
+  - 対応: pointerdown は `button===0 && isPrimary` のときだけ処理する。pointercancel と lostpointercapture で cancelInteraction を呼ぶ。edit モードの canvas に `touch-action: none` を付ける（view モードでは図の上でもページをスクロールできるよう付けない）。
+  - 補足: pointerup の直後にも lostpointercapture が出るので、押下中のポインタ id を控え、up で先に消してから判定する。そうしないと作図の打点ごとに作図が取り消される。作図は押下をまたぐ操作なので、中断で捨てるのはドラッグだけにした。
+- [x] **T2-2 [should] ショートカットが canvas にしか効かず、focus でページがスクロールする**
   - locations: library/src/browser/input/pointer-input.ts:18, library/src/browser/input/pointer-input.ts:33-51, library/src/browser/input/pointer-input.ts:57
   - 対応: keydown は root に付け、input/select/textarea から来たものは除外する。focus は `{ preventScroll: true }` で呼ぶ。
 
@@ -417,6 +418,10 @@ PR 単位で、依存順に並べる。
 - [ ] **T13-6 [nit] 色未指定の選手でカラー入力の初期色がテーマの塗りと合わない。既定に戻す UI もない**
   - locations: library/src/browser/ui/property-panel.ts:133, library/src/styles.css:35
   - 対応: 既定色はテーマの解決値を使う。D11 が A なら既定ボタンを足す。
+- [ ] **T13-7 [should] 最後の 1 手を戻すと「元に戻す」が無効になってフォーカスが body に落ち、以降のショートカットが効かない**
+  - locations: library/src/browser/ui/toolbar.ts（sync で disabled にする箇所）, library/src/browser/input/pointer-input.ts（keydown を root で受ける箇所）
+  - 問題: keydown は root で受けるが、無効化されたボタンからフォーカスが外れると、キーは root の外（body）に届く。T2 の demo 確認で見つけた。
+  - 対応: ボタンを無効にする前にフォーカスを持っていたら canvas へ移す。または disabled ではなく aria-disabled にしてフォーカスを保つ。
 
 - 依存: T9、T11、T12、D17、D18
 - 完了条件: キーボードだけで連続して編集できる。UI が canvas に重ならない。表示はすべて日本語になる。

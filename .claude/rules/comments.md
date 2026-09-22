@@ -1,8 +1,8 @@
 ---
 description: コードコメント規約。コードで語れることは語らせ、コメントは腐らない価値だけ書く。
 paths:
-  - "src/**"
-  - "demo/**"
+  - "library/src/**"
+  - "library/demo/**"
 ---
 
 # コメント規約

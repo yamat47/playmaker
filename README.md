@@ -8,7 +8,8 @@ TypeScript ライブラリ。商用ソフトウェアに組み込む「図作成
 
 ## インストール
 
-プライベートリポジトリの git 依存として参照する。`prepare` スクリプトが
+プライベートリポジトリの git 依存として参照する。パッケージ本体はリポジトリの
+`library/` にあるので、サブディレクトリを指定する（pnpm の `path:`）。`prepare` スクリプトが
 インストール時に `dist/`（ESM / CJS / 型 / CSS）をビルドするため、ビルド成果物は
 コミットしない。バージョンは **git タグ**で固定する。
 
@@ -16,10 +17,24 @@ TypeScript ライブラリ。商用ソフトウェアに組み込む「図作成
 // 利用側 package.json
 {
   "dependencies": {
-    "playmaker": "git+ssh://git@github.com/yamat47/playmaker.git#v1.0.0"
+    "playmaker": "git+ssh://git@github.com/yamat47/playmaker.git#v1.0.0&path:/library"
   }
 }
 ```
+
+pnpm 11 は依存のビルドスクリプトを既定で実行せず、未承認のものがあると install を
+失敗させる。`prepare` で `dist/` を作るには、利用側の `pnpm-workspace.yaml` の
+`allowBuilds` で playmaker を許可する。キーはタグではなく、**タグが指すコミットの SHA** で
+書く必要がある（`playmaker: true` やタグ名のキーでは許可されない）。
+
+```yaml
+# 利用側 pnpm-workspace.yaml
+allowBuilds:
+  "playmaker@git+ssh://git@github.com/yamat47/playmaker.git#<コミット SHA>&path:/library": true
+```
+
+正確なキーは、許可せずに `pnpm install` したときのエラーメッセージにそのまま表示される。
+タグを上げたら SHA も変わるので、このキーも書き換える。
 
 Node.js 24 以上が必要。プライベートレジストリ（GitHub Packages 等）への昇格は、
 商用リポジトリ着手時に再評価する余地として残している。
@@ -110,14 +125,31 @@ const playmaker = new Playmaker(container, {
 
 ## 開発
 
-```sh
-pnpm install        # 依存解決（prepare で dist もビルド）
-pnpm dev            # demo/ playground をホットリロード起動（ローカル目視確認）
-pnpm test           # Vitest（common 層 100% カバレッジゲート内蔵）
-pnpm typecheck      # tsc --noEmit
-pnpm lint           # Biome
-pnpm build          # Vite library mode → dist/（ESM/CJS/型/CSS）
 ```
+library/     ライブラリ本体（src/・demo/・package.json・各種設定）
+docker/      開発用イメージと compose
+docs/        要件・設計・計画
+Makefile     開発コマンドの入口
+```
+
+Node / pnpm はホストに入れず、Docker コンテナの中で動かす。ホストに必要なのは
+`make` と Docker（Docker Desktop / colima など）だけ。
+
+```sh
+make setup          # イメージをビルドして依存を入れる（初回・Dockerfile 変更時）
+make up             # library/demo/ playground を http://localhost:5173 で起動（make down で停止）
+make test           # Vitest（common 層 100% カバレッジゲート内蔵）。FILE= で 1 ファイルだけ
+make typecheck      # tsc --noEmit
+make lint           # Biome（make fix で自動修正）
+make build          # Vite library mode → library/dist/（ESM/CJS/型/CSS）
+make check          # CI と同じ検証を一通り
+make pnpm ARGS="add -D <pkg>"  # 任意の pnpm コマンド
+make help           # ターゲット一覧
+```
+
+VS Code では「Dev Containers: Reopen in Container」で開くと、`library/` をワークスペースとして
+エディタの型補完・Biome・Vitest Explorer がコンテナ内の `node_modules` を使って動く。
+Dev Containers のターミナルからも同じ `make` ターゲットが使える（`up` / `down` などコンテナ操作系はホストから）。
 
 設計判断の確定経緯は `docs/plans/implementation-roadmap.md`、要件は `docs/prd.md`、
 コーディング規約は `.claude/rules/` を参照。

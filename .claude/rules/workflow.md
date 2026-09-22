@@ -1,10 +1,10 @@
 ---
 description: 実装フロー規約。実装が一段落したら /simplify → /create-pr 確認の順に進める。
 paths:
-  - "src/**"
-  - "demo/**"
-  - "vite.config.ts"
-  - "package.json"
+  - "library/src/**"
+  - "library/demo/**"
+  - "library/vite.config.ts"
+  - "library/package.json"
 ---
 
 # 実装フロー規約
@@ -13,7 +13,7 @@ paths:
 
 ## 1. /simplify を無確認で実行する
 
-実装が一段落したと判断したら、ユーザーに尋ねず `/simplify` を実行する。レビュー指摘のうち **changed コード内・低リスク・規約準拠** のものを反映し、誤検出/スコープ外は理由を添えて見送る。反映後はローカル CI（typecheck / lint / test+coverage / build）が緑であることを確認する。
+実装が一段落したと判断したら、ユーザーに尋ねず `/simplify` を実行する。レビュー指摘のうち **changed コード内・低リスク・規約準拠** のものを反映し、誤検出/スコープ外は理由を添えて見送る。反映後はローカル CI（`make check` = typecheck / lint / test+coverage / build）が緑であることを確認する。
 
 ## 2. /create-pr の実行可否をユーザーに質問する
 

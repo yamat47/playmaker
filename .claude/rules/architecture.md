@@ -1,8 +1,8 @@
 ---
 description: Playmaker のアーキテクチャ規約。VSCode 流レイヤ分離、IF 抽出、コマンドパターン。
 paths:
-  - "src/**/*.ts"
-  - "vite.config.ts"
+  - "library/src/**/*.ts"
+  - "library/vite.config.ts"
 ---
 
 # アーキテクチャ規約
@@ -53,9 +53,9 @@ src/
 
 ## スタイル / ツール
 
-- 言語: TypeScript（strict）。lint/format は Biome（`pnpm run lint` / `lint:fix`）
-- ビルド: Vite library mode（`pnpm run build` → `dist/` に ESM/CJS/CSS/型）
-- ローカル確認: `pnpm run dev`（`demo/` playground、ホットリロード）
+- 言語: TypeScript（strict）。lint/format は Biome（`make lint` / `make fix`）
+- ビルド: Vite library mode（`make build` → `dist/` に ESM/CJS/CSS/型）
+- ローカル確認: `make up`（`demo/` playground、ホットリロード。手順は `run-demo` skill）
 - UI 文言・コメントは日本語（i18n 機構は持たない＝日本語のみ）
 - コメントの規約は `.claude/rules/comments.md`（コードで語れることは語らせ、Why と
   腐らない価値だけ書く。マイルストーン等の実装過程はコードに残さない）

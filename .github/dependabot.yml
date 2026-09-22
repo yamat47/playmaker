@@ -6,9 +6,9 @@
 version: 2
 
 updates:
-  # npm（pnpm） — package.json / pnpm-lock.yaml
+  # npm（pnpm） — library/package.json / library/pnpm-lock.yaml
   - package-ecosystem: npm
-    directory: /
+    directory: /library
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
@@ -28,3 +28,11 @@ updates:
         update-types:
           - minor
           - patch
+
+  # 開発用イメージのベース（node:<major>-<debian>-slim）
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore(deps-dev)

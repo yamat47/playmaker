@@ -1,8 +1,13 @@
 ---
-name: skill-creator
 description: Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.
+license: Apache-2.0
+metadata:
+    github-path: skills/skill-creator
+    github-ref: refs/tags/v1.6.0
+    github-repo: https://github.com/yamat47/github-toolkit
+    github-tree-sha: ea9654969dc507b9e46e617415715caacb4a879d
+name: skill-creator
 ---
-
 # Skill Creator
 
 A skill for creating new skills and iteratively improving them.

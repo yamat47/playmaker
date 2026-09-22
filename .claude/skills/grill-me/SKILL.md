@@ -1,115 +1,130 @@
 ---
+description: Interview the user about a plan or design one question at a time, resolving decisions in dependency order, until both sides share the same picture. Use before implementation whenever the user asks to design something, plan a feature, weigh an architecture, or asks "how should we do this"; also when a plan exists but its decisions have not been agreed one by one.
+license: MIT
+metadata:
+    github-path: skills/grill-me
+    github-ref: refs/tags/v1.6.0
+    github-repo: https://github.com/yamat47/github-toolkit
+    github-tree-sha: 9a0f67b018d9d7215cda8accb03232ed5bb4a0fd
 name: grill-me
-description: 計画や設計について徹底的に質問し、共通認識を築く対話プロセス。設計依頼、計画策定、アーキテクチャ検討に使用。ユーザーが「設計して」「計画を考えて」「どうすべきか」「アーキテクチャを検討して」などと依頼したとき、実装に入る前にこのスキルで認識合わせを行う。
 ---
+# Grill Me
 
-# Grill Me — 設計の徹底質問
+Ask about every side of a plan or design, one question at a time, resolving the dependencies between decisions while building shared understanding.
 
-計画や設計について、あらゆる側面を一つずつ質問し、決定事項間の依存関係を解決しながら共通認識を築く。
+## Why this process exists
 
-## なぜこのプロセスが必要か
+Ambiguity in a design turns into rework during implementation. Walking the decisions in dependency order and agreeing on each one removes the judgment calls that would otherwise be made silently while coding. Questions the codebase can answer are answered by investigation, so the user only spends attention on questions that need their judgment.
 
-設計の曖昧さは実装の手戻りを生む。事前に決定すべきことを依存関係順にたどり、一つずつ合意を取ることで、実装時の判断ブレをなくす。コードベースの調査で答えが出る問いは自分で調べることで、ユーザーの判断が必要な問いだけに集中できる。
+## The process
 
-## 質問のプロセス
+### Phase 1: Understand the whole plan
 
-### Phase 1: 計画の全体像を把握する
+When the user hands over a plan, first build your own understanding.
 
-ユーザーの計画を受け取ったら、まず自分自身で理解を深める。
+1. Read the plan and investigate the parts of the codebase it touches.
+2. List the design decisions it contains.
+3. Analyze the dependencies between those decisions and order them from roots (decisions that depend on nothing) to leaves (decisions that depend on others).
 
-1. 計画の内容を読み込み、関連するコードベースを調査する
-2. 設計上の決定事項を洗い出す
-3. 決定事項間の依存関係を分析し、根本（他に依存しない決定）から葉（他の決定に依存する決定）への順序を組み立てる
+Keep this analysis to yourself; the user does not need to see it.
 
-この分析はユーザーには見せず、内部的に行う。
+### Phase 2: Build agreement one question at a time
 
-### Phase 2: 一問一答で合意を積み上げる
+Starting from the roots of the dependency order, ask exactly one question at a time.
 
-依存関係の根本から順に、一度に一つずつ質問する。
+#### How to ask
 
-各質問は以下の構造で提示する：
+**When the answer is one of a few options, use the AskUserQuestion tool** (one question per call):
 
-```
-**Q: [質問]**
+- Put the question and a short note on why this decision matters in `question`.
+- Make your recommendation the first option and append "(Recommended)" to its label.
+- State the trade-off of each option in its `description`.
+- For options the user should compare visually (an implementation sketch, a schema), attach a `preview` with a code fragment or layout.
+- The user can always answer "Other" in free text, so limit the options to the main candidates.
 
-[質問の背景や、なぜこの決定が必要かの簡潔な説明]
-
-**推奨: [あなたの推奨案]**
-[推奨の理由]
-```
-
-#### 質問すべきもの
-
-設計上の判断が必要な決定事項。複数の選択肢があり、ユーザーの意図やビジネス要件によって答えが変わるもの。
-
-#### 質問せずに調査で解決すべきもの
-
-コードベースの既存パターン、規約、技術的制約など、調査すれば答えが出るもの。ただし、調査結果は質問と同じ形式でユーザーに提示し、確認を取る：
+**When the question is open-ended** (a naming policy, a business requirement to confirm), ask in prose:
 
 ```
-**調査結果: [調べたこと]**
+**Q: [question]**
 
-[コードベースを調査した結果の説明]
+[Background, and why this decision is needed]
 
-**判断: [この結果に基づく推奨]**
-[理由]
-
-この方針で進めてよいですか？
+**Recommendation: [your recommendation]**
+[Why]
 ```
 
-#### 回答への対応
+#### What to ask about
 
-- 明確な回答（「Aで」等）→ そのまま次の質問へ
-- 曖昧さや条件付きの回答 → フォローアップで明確化してから次へ
-- 回答によって新たな決定事項が発生した場合 → 依存関係ツリーに追加し、適切な順番で質問する
+Decisions that need design judgment: there are several viable options and the answer depends on the user's intent or the business requirements.
 
-#### トピックの切り替え
+#### What to settle by investigation instead
 
-異なるトピック（例：DB設計 → モデル設計）に移るとき、一言報告する：
+Existing patterns in the codebase, conventions, and technical constraints. Investigate rather than ask, but present the result in the same shape as a question and get confirmation:
 
 ```
-DB設計の質問は以上です。次はモデル設計に移ります。
+**Finding: [what you looked into]**
+
+[What the codebase shows]
+
+**Decision: [the recommendation that follows]**
+[Why]
+
+Proceed on this basis?
 ```
 
-### Phase 3: 全体像の共有
+#### Handling the answer
 
-全ての質問が解決したら（またはユーザーが打ち切りを宣言したら）、合意内容をツリー構造で共有する。
+- A clear answer ("A", "go with the second one") moves you to the next question.
+- A vague or conditional answer gets a follow-up until it is clear.
+- An answer that creates new decisions adds them to the dependency tree, to be asked in their proper order.
+
+#### Switching topics
+
+When moving to a different topic (for example from database design to model design), say so in one line:
+
+```
+That covers the database design. Next is the model design.
+```
+
+### Phase 3: Share the whole picture
+
+Once every question is resolved (or the user calls a halt), present the agreed design as a tree.
 
 ```markdown
-## 合意した設計
+## Agreed design
 
-### [トピック1]
-- [決定事項A]: [合意内容]
-  - [決定事項B（Aに依存）]: [合意内容]
-    - [決定事項C（Bに依存）]: [合意内容]
+### [Topic 1]
+- [Decision A]: [what was agreed]
+  - [Decision B (depends on A)]: [what was agreed]
+    - [Decision C (depends on B)]: [what was agreed]
 
-### [トピック2]
-- [決定事項D]: [合意内容]
-  - [決定事項E（Dに依存）]: [合意内容]
+### [Topic 2]
+- [Decision D]: [what was agreed]
+  - [Decision E (depends on D)]: [what was agreed]
 ```
 
-依存関係がインデントで表現され、なぜその設計になったかがツリーをたどれば分かる構造にする。
+Indentation carries the dependencies, so reading down the tree explains why the design ended up the way it did.
 
-#### 途中打ち切りの場合
+#### If the user stops early
 
-未解決の項目を明示する：
+List what is still open:
 
 ```markdown
-## 合意した設計
-[上記と同じツリー構造]
+## Agreed design
+[the same tree]
 
-## 未解決の項目
-- [決定事項X]: 未決定（[依存先]が決まれば検討可能）
-- [決定事項Y]: 未決定
+## Open items
+- [Decision X]: undecided (can be settled once [dependency] is decided)
+- [Decision Y]: undecided
 ```
 
-#### plan モードの場合
+#### In plan mode
 
-plan モードで動作しているときは、合意内容をプランファイルとして出力する。
+When running in plan mode, write the agreed design out as the plan file.
 
-## 心構え
+## Attitude
 
-- 質問には必ず推奨案を添える。ユーザーはゼロから考えるのではなく、提案に対して判断を返す形で進める
-- コードベースの調査は積極的に行い、ユーザーの負担を減らす。ただし調査結果の判断は必ず確認を取る
-- 質問は設計判断が必要なものに絞る。実装の詳細（変数名、メソッド名など）は実装時に決めればよい
-- 実装の手が動かせるレベルまで掘り下げるが、それ以上は掘り下げない
+- Every question comes with a recommendation. The user reacts to a proposal instead of thinking from zero.
+- Investigate the codebase generously to reduce the user's load, but always confirm the judgment you draw from what you found.
+- Ask only about design decisions. Implementation details such as variable and method names are decided while implementing.
+- Dig until the design is concrete enough to start coding, and no further.

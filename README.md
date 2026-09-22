@@ -22,6 +22,20 @@ TypeScript ライブラリ。商用ソフトウェアに組み込む「図作成
 }
 ```
 
+pnpm 11 は依存のビルドスクリプトを既定で実行せず、未承認のものがあると install を
+失敗させる。`prepare` で `dist/` を作るには、利用側の `pnpm-workspace.yaml` の
+`allowBuilds` で playmaker を許可する。キーはタグではなく、**タグが指すコミットの SHA** で
+書く必要がある（`playmaker: true` やタグ名のキーでは許可されない）。
+
+```yaml
+# 利用側 pnpm-workspace.yaml
+allowBuilds:
+  "playmaker@git+ssh://git@github.com/yamat47/playmaker.git#<コミット SHA>&path:/library": true
+```
+
+正確なキーは、許可せずに `pnpm install` したときのエラーメッセージにそのまま表示される。
+タグを上げたら SHA も変わるので、このキーも書き換える。
+
 Node.js 24 以上が必要。プライベートレジストリ（GitHub Packages 等）への昇格は、
 商用リポジトリ着手時に再評価する余地として残している。
 

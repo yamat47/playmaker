@@ -232,12 +232,13 @@ PR 単位で、依存順に並べる。
 
 ### T6 model の型と正規化の整理
 
-- [ ] **T6-1 [should] 外部入力の境界の型が、実態の unknown と食い違っている**（内部の部分。公開の部分は T14 で D12 に従う）
+- [x] **T6-1 [should] 外部入力の境界の型が、実態の unknown と食い違っている**（内部の部分。公開の部分は T14 で D12 に従う）
   - locations: library/src/common/model/play-data.ts:43-45, library/src/common/model/play-data.ts:77, library/src/common/model/migration.ts:81, library/src/common/model/play-model.ts:84-85
   - 対応: resolvePlayData と PlayModel constructor の引数を unknown にし、`as` を消す。
-- [ ] **T6-2 [should] 値リストが二重に定義され、as const からの型導出になっていない。ガードと位置の解析も重複している**
+- [x] **T6-2 [should] 値リストが二重に定義され、as const からの型導出になっていない。ガードと位置の解析も重複している**
   - locations: library/src/common/model/line.ts:13, library/src/common/model/line.ts:21, library/src/common/model/line.ts:29-30, library/src/common/model/line.ts:54-80, library/src/common/model/player.ts:9, library/src/common/model/player.ts:14, library/src/common/model/player.ts:52-62, library/src/common/model/player.ts:75-82, library/src/common/model/play-data.ts:13, library/src/common/model/play-data.ts:18, library/src/common/model/play-data.ts:44, library/src/common/formations/formation.ts:11, library/src/common/formations/formation.ts:33-41, library/src/browser/ui/property-panel.ts:19-20, library/src/browser/ui/property-panel.ts:180, library/src/browser/ui/toolbar.ts:16, library/src/browser/ui/toolbar.ts:22, library/src/browser/ui/toolbar.ts:28
   - 対応: `common/model/guards.ts` に isFiniteNumber、isNonEmptyString、`isOneOf`、parseFieldPosition を置く。値リストは `X_VALUES as const` から型を導出する。UI のラベル表は `satisfies Record<…>` で網羅性を検査する。
+  - 結論: `as Record<string, unknown>` を消すため、guards.ts に isRecord も置いた。ゾーンの値リストはフィールドの並び（自陣 RZ、中央、相手 RZ）にして、ツールバーがその順で並べる。形状のパネルは 2 種だけを出す部分集合のままにし、D18 で型を 2 種にするときに揃える（T13-3）。
 - [ ] **T6-3 [should] ドメイン型に readonly がなく、防御的コピーに頼り切っている**（D7）
   - locations: library/src/common/model/player.ts:35, library/src/common/model/player.ts:44, library/src/common/model/line.ts:38, library/src/common/model/play-data.ts:20, library/src/common/model/play-data.ts:34, library/src/common/model/play-model.ts:15, library/src/common/model/play-model.ts:22, library/src/common/editing/editor-controller.ts:65, library/src/common/editing/editor-controller.ts:74, library/src/common/geometry/field.ts:63, library/src/common/geometry/field.ts:130, library/src/common/design/metrics.ts:38, library/src/common/model/migration.ts:19
 - [ ] **T6-4 [should] IPlayModel に軽い読み取り API がなく、深いコピーを多用している**
@@ -248,12 +249,15 @@ PR 単位で、依存順に並べる。
 - [ ] **T6-6 [should] 公開プリセットが共有の可変オブジェクトで、plays が formations の内部に依存している**
   - locations: library/src/common/formations/presets.ts:10, library/src/common/formations/presets.ts:262-282, library/src/common/plays/presets.ts:6-7, library/src/common/plays/presets.ts:666-690, library/src/common/plays/play-preset.ts:6, library/src/common/plays/play-preset.ts:25, library/src/common/formations/formation.ts:23, library/src/playmaker.ts:37-44
   - 対応: deepFreeze し、型を DeepReadonly にし、getter は複製を返す。TeamSide と DEFENSE_COLOR は `common/presets/shared.ts` へ移す。
-- [ ] **T6-7 [should] 件数に上限がなく、大量の要素で描画がフリーズしうる（DoS）**（D8）
+- [x] **T6-7 [should] 件数に上限がなく、大量の要素で描画がフリーズしうる（DoS）**（D8）
   - locations: library/src/common/model/player.ts:103-115, library/src/common/model/line.ts:143-155, library/src/common/geometry/bezier.ts:80-106, library/src/browser/rendering/canvas-surface.ts:142-169, library/src/browser/rendering/line-renderer.ts:34-97
+  - 結論: MAX_PLAYERS = 64、MAX_LINES = 128、MAX_WAYPOINTS_PER_LINE = 32。配列は先頭から上限の個数だけを読み、復元できない要素も読んだ数に入れる（巨大な配列や穴のある配列でも読む量が上限で止まる）。
+  - 残り: 上限は外部データの正規化にしか掛かっていない。編集で超えられる経路は T8-5 に回し、公開 API の JSDoc には切り詰めを書いた。
 
 - 依存: T5、D7、D8
 - 完了条件: common の境界に `as` がない。値リストが 1 か所で定義されている。内部の読み取りが getSnapshot に寄っている。common 100% を維持する。
 - 規模: L。大きければ T6a（T6-1、T6-2、T6-7）と T6b（T6-3〜T6-6）に分ける。
+- 進み具合: T6a（T6-1、T6-2、T6-7）を先に出した。残りは T6b。
 
 ---
 
@@ -292,6 +296,11 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/model/play-model.ts（removePlayers と removePlayerCore）
   - 問題: 1 件ずつ state を書き換えてから次の id を探すので、後ろの id が無いと前の削除だけが残る。onDidChange も出ず、コマンドは履歴に積まれないので Undo でも戻せない。T1-2 で addPlayers は先に全件を検証する形に直したが、removePlayers は変更前からこの挙動のまま。
   - 対応: 書き換える前に全 id の実在を確かめる。T8-1 の「コマンドが throw してもスタックが壊れない」テストと合わせて、状態も変わらないことを確かめる。
+
+- [ ] **T8-5 [should] 件数の上限が外部データの正規化にしか掛かっていない**（T6-7 の残り）
+  - locations: library/src/common/commands/player-commands.ts（AddPlayerCommand）, library/src/common/commands/formation-commands.ts, library/src/common/commands/line-commands.ts（AddLineCommand、SetLineWaypointsCommand）, library/src/common/editing/editor-controller.ts（loadFormation と作図の確定）, library/src/common/model/play-model.ts（addPlayers、addLine）
+  - 問題: 作図での打点、選手の追加、`loadFormation` の繰り返しでは MAX_PLAYERS などを超えられる。超えた図は `getPlayData` から戻したときに黙って切り詰められ、ホストが `loadFormation` を繰り返せば描画の負荷も上限なく増える。公開 API の JSDoc にはこの切り詰めを書いてある。
+  - 対応: 上限を PlayModel の不変条件にし、追加系のコマンドは上限で止める（UI のボタンも無効にする）か、今のまま JSDoc の注記で済ませるかを決める。
 
 - 依存: T6、T7
 - 完了条件: EditorController が ICommandService だけに依存する。履歴の変化で通知が出る。コマンドが throw してもスタックが壊れないことをテストで確かめる。

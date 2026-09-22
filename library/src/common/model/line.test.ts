@@ -9,6 +9,8 @@ import {
   isLineKind,
   type Line,
   lineAnchorPoints,
+  MAX_LINES,
+  MAX_WAYPOINTS_PER_LINE,
   normalizeLines,
 } from "./line.js";
 
@@ -195,6 +197,35 @@ describe("normalizeLines", () => {
     expect(line).not.toBe(input[0]);
     expect(line?.waypoints[0]).not.toBe(input[0]?.waypoints[0]);
     expect(line?.end).not.toBe(input[0]?.end);
+  });
+});
+
+describe("normalizeLines の件数上限", () => {
+  const end = { lateralYard: 5, absoluteYard: 60 };
+
+  it("MAX_LINES 本を超える線は先頭の MAX_LINES 本だけ残す", () => {
+    const raw = Array.from({ length: MAX_LINES + 5 }, (_, i) => ({
+      id: `l${i}`,
+      startPlayerId: "qb",
+      end,
+    }));
+
+    const lines = normalizeLines(raw, PLAYER_IDS);
+
+    expect(lines).toHaveLength(MAX_LINES);
+    expect(lines.at(-1)?.id).toBe(`l${MAX_LINES - 1}`);
+  });
+
+  it("MAX_WAYPOINTS_PER_LINE 個を超える waypoint は先頭から上限の個数だけ残す", () => {
+    const waypoints = Array.from({ length: MAX_WAYPOINTS_PER_LINE + 5 }, (_, i) => ({
+      lateralYard: 5,
+      absoluteYard: i,
+    }));
+
+    const [line] = normalizeLines([{ startPlayerId: "qb", waypoints, end }], PLAYER_IDS);
+
+    expect(line?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
+    expect(line?.waypoints.at(-1)?.absoluteYard).toBe(MAX_WAYPOINTS_PER_LINE - 1);
   });
 });
 

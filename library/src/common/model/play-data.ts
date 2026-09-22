@@ -1,6 +1,7 @@
 // 商用ソフトに保存・復元される唯一のデータ表現（PRD 5.8 / 6.6）。
 // DOM 非依存。field / players / lines を持つ。
 
+import { isOneOf, isRecord } from "./guards.js";
 import { cloneLine, type Line, normalizeLines } from "./line.js";
 import { clonePlayer, normalizePlayers, type Player } from "./player.js";
 
@@ -10,12 +11,12 @@ import { clonePlayer, normalizePlayers, type Player } from "./player.js";
  * - `redzone`: 相手レッドゾーン（相手ゴール側）
  * - `own-redzone`: 自陣レッドゾーン（自ゴール側）
  */
-export type FieldZone = "middle" | "redzone" | "own-redzone";
+export const FIELD_ZONE_VALUES = ["own-redzone", "middle", "redzone"] as const;
+
+export type FieldZone = (typeof FIELD_ZONE_VALUES)[number];
 
 /** ゾーン未指定時の既定。中央が最も汎用的な初期表示。 */
 export const DEFAULT_FIELD_ZONE: FieldZone = "middle";
-
-const FIELD_ZONES: readonly FieldZone[] = ["middle", "redzone", "own-redzone"];
 
 export interface FieldState {
   zone: FieldZone;
@@ -41,7 +42,7 @@ export interface PlayData {
 }
 
 export function isFieldZone(value: unknown): value is FieldZone {
-  return typeof value === "string" && (FIELD_ZONES as readonly string[]).includes(value);
+  return isOneOf(value, FIELD_ZONE_VALUES);
 }
 
 /** 既定状態の新規 PlayData（選手・線なし）。 */
@@ -74,17 +75,18 @@ export function clonePlayData(data: PlayData): PlayData {
  * オブジェクトで入力を共有・変更しない（Model 専有）。version マイグレーション段を
  * 通した後の最終正規化として `migratePlayData` から呼ばれる（PRD 6.6 の往復契約）。
  */
-export function resolvePlayData(data: PlayData | undefined): PlayData {
-  const zone = data?.field?.zone;
+export function resolvePlayData(data: unknown): PlayData {
+  const source: Record<string, unknown> = isRecord(data) ? data : {};
+  const zone = isRecord(source.field) ? source.field.zone : undefined;
   // 線の起点参照を弾けるよう、先に選手を確定してから id 集合を渡す。
   // 重複した選手 id は後ろの方を振り直すので、その id を指す線は先頭の選手に付く。
-  const players = makeIdsUnique(normalizePlayers(data?.players));
+  const players = makeIdsUnique(normalizePlayers(source.players));
   const validPlayerIds = new Set(players.map((p) => p.id));
   return {
     version: CURRENT_PLAY_DATA_VERSION,
     field: { zone: isFieldZone(zone) ? zone : DEFAULT_FIELD_ZONE },
     players,
-    lines: makeIdsUnique(normalizeLines(data?.lines, validPlayerIds)),
+    lines: makeIdsUnique(normalizeLines(source.lines, validPlayerIds)),
   };
 }
 

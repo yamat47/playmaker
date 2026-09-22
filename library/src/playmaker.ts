@@ -52,6 +52,8 @@ export interface PlaymakerOptions {
    * 初期表示するプレー図データ。商用ソフトが永続化した PlayData をそのまま渡せる。
    * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行スキーマへ寄せる
    * （決して投げず復元不能要素のみ除外＝PRD 6.6 の往復契約）。
+   * 選手 64 人、線 128 本、線 1 本あたり waypoint 32 個を超える分は、
+   * 先頭から上限までを残して捨てる。
    */
   initialData?: PlayData;
   /**
@@ -133,6 +135,7 @@ export class Playmaker extends Disposable {
    * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行へ寄せ、決して
    * 投げない。1 セッション = 1 Model なので履歴はリセットされ、再読込は編集では
    * ないため `onChange` は発火しない（編集確定のみが通知契約＝PRD 6.6）。
+   * 件数の上限は `initialData` と同じで、超えた分は捨てる。
    */
   setPlayData(data: PlayData): void {
     this.session.dispose();
@@ -146,6 +149,8 @@ export class Playmaker extends Disposable {
    * 現在のプレー図の正準スナップショット（深い防御的コピー・`version` は現行）。
    * そのまま JSON 化して永続化でき、後で `setPlayData` / `initialData` に戻すと
    * 同値のプレー図に復元される（PRD 5.8 / 6.6 の往復契約）。
+   * ただし編集では件数の上限（`initialData` を参照）を超えられ、
+   * 超えた図は戻したときに切り詰められる。
    */
   getPlayData(): PlayData {
     return this.model.getData();

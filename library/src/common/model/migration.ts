@@ -7,6 +7,7 @@
 // 防御作法を resolvePlayData / normalizeFormation / resolveImageExportSize と揃え、
 // inbound 経路（PlayModel 構築・Playmaker.setPlayData）の唯一の入口にする。
 
+import { isFiniteNumber, isRecord } from "./guards.js";
 import { type PlayData, resolvePlayData } from "./play-data.js";
 
 /**
@@ -36,11 +37,8 @@ export const PLAY_DATA_MIGRATIONS: readonly PlayDataMigration[] = [];
  * 0 を返す＝最初期の未バージョン化データ扱いで現行へ引き上げる対象になる。
  */
 export function readDeclaredVersion(raw: unknown): number {
-  if (typeof raw === "object" && raw !== null) {
-    const value = (raw as { version?: unknown }).version;
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
+  if (isRecord(raw) && isFiniteNumber(raw.version)) {
+    return raw.version;
   }
   return 0;
 }
@@ -56,10 +54,10 @@ export function applyPlayDataMigrations(
   declaredVersion: number,
   steps: readonly PlayDataMigration[],
 ): unknown {
-  if (typeof raw !== "object" || raw === null) {
+  if (!isRecord(raw)) {
     return raw;
   }
-  let acc = raw as Record<string, unknown>;
+  let acc = raw;
   for (const step of steps) {
     if (step.to > declaredVersion) {
       acc = step.migrate(acc);
@@ -73,10 +71,11 @@ export function applyPlayDataMigrations(
  * 版検出 → 旧→現行の段適用 → 構造正規化（resolvePlayData）。決して投げず、
  * version は常に CURRENT_PLAY_DATA_VERSION に確定し、内部状態と切り離した新規
  * オブジェクトを返す（受け手が書き換えても波及しない＝PRD 5.8 の往復契約）。
+ * 選手、線、waypoint は MAX_PLAYERS、MAX_LINES、MAX_WAYPOINTS_PER_LINE の個数までしか読まない。
  */
 export function migratePlayData(raw: unknown): PlayData {
   const declared = readDeclaredVersion(raw);
   const migrated = applyPlayDataMigrations(raw, declared, PLAY_DATA_MIGRATIONS);
   // resolvePlayData は CURRENT を刻むので、未来版も含め version は現行に確定する。
-  return resolvePlayData(migrated as PlayData | undefined);
+  return resolvePlayData(migrated);
 }

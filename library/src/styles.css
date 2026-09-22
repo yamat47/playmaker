@@ -61,6 +61,14 @@
 }
 
 /*
+ * 指でのドラッグをページのスクロールやズームに取られると pointercancel で中断される。
+ * 入力を受けない view モードでは、図の上でもページをスクロールできるよう残す。
+ */
+.playmaker-root[data-mode="edit"] .playmaker-canvas {
+  touch-action: none;
+}
+
+/*
  * 編集 UI は Canvas の上に重ねる HTML オーバーレイ（PRD 6.5。PNG エクスポートで UI を別レイヤとして除外できる）。
  * 配色・サイズは --playmaker-* 由来で商用ソフトのデザインに追従する。
  */

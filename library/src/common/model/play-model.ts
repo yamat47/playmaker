@@ -4,10 +4,10 @@
 
 import { Emitter, type Event } from "../event/emitter.js";
 import { Disposable } from "../lifecycle/disposable.js";
-import { cloneLine, type Line } from "./line.js";
+import type { Line } from "./line.js";
 import { migratePlayData } from "./migration.js";
 import { clonePlayData, type FieldZone, type PlayData } from "./play-data.js";
-import { clonePlayer, type Player } from "./player.js";
+import type { Player } from "./player.js";
 
 /**
  * 選手 1 人の削除を後から正確に巻き戻すためのメメント。
@@ -31,7 +31,7 @@ export interface LineRemoval {
  * 変更系メソッドは戻り値で「巻き戻しに必要な直前状態」を返し、コマンドの undo を支える。
  */
 export interface IPlayModel {
-  /** いずれかの変更後に最新 PlayData のスナップショットを 1 回発火する。 */
+  /** いずれかの変更後に、getSnapshot と同じ値で 1 回発火する。 */
   readonly onDidChange: Event<PlayData>;
   /** 現在状態の深いコピー。内部の読み取りには getSnapshot を使い、これは外へ渡すときだけ使う。 */
   getData(): PlayData;
@@ -42,7 +42,6 @@ export interface IPlayModel {
   getSnapshot(): PlayData;
   getFieldZone(): FieldZone;
   hasPlayer(id: string): boolean;
-  hasLine(id: string): boolean;
   /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
   findPlayer(id: string): Player | undefined;
   /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
@@ -61,7 +60,7 @@ export interface IPlayModel {
   removePlayers(ids: readonly string[]): PlayerRemoval[];
   /** removePlayer の逆操作。選手と従属線を元の並びへ戻す。同じ id の選手が既にあれば throw する。 */
   restorePlayer(removal: PlayerRemoval): void;
-  /** 同 id の選手を差し替え、差し替え前の選手（複製）を返す。 */
+  /** 同 id の選手を差し替え、差し替え前の選手を返す。 */
   updatePlayer(player: Player): Player;
   /** 既にある id の線を渡すと throw する。 */
   addLine(line: Line): void;
@@ -69,7 +68,7 @@ export interface IPlayModel {
   insertLine(line: Line, index: number): void;
   /** 線を削除し、巻き戻し用メメントを返す。 */
   removeLine(id: string): LineRemoval;
-  /** 同 id の線を差し替え、差し替え前の線（複製）を返す。 */
+  /** 同 id の線を差し替え、差し替え前の線を返す。 */
   updateLine(line: Line): Line;
 }
 
@@ -91,7 +90,9 @@ function assertNewId(items: readonly { id: string }[], id: string, message: stri
 
 /**
  * 状態を専有し変更を発火する純粋な Model。
- * すべての変更系メソッドは「入力を複製して取り込み」「変更後に onDidChange を 1 回だけ発火」する。
+ * 変更系メソッドは入力をそのまま取り込み、状態を新しいオブジェクトへ差し替えてから
+ * onDidChange を 1 回だけ発火する。型が読み取り専用なので、入力も状態も後から
+ * 書き換えられない前提で複製しない。
  * 復元不能な参照（未知 id への操作）は契約違反としてその場で throw する（UI は実在対象のみ操作する前提）。
  */
 export class PlayModel extends Disposable implements IPlayModel {
@@ -122,9 +123,6 @@ export class PlayModel extends Disposable implements IPlayModel {
     return this.state.players.some((p) => p.id === id);
   }
 
-  hasLine(id: string): boolean {
-    return this.state.lines.some((l) => l.id === id);
-  }
 
   findPlayer(id: string): Player | undefined {
     return this.state.players.find((p) => p.id === id);
@@ -154,7 +152,7 @@ export class PlayModel extends Disposable implements IPlayModel {
       }
       taken.add(player.id);
     }
-    this.state = { ...this.state, players: [...this.state.players, ...players.map(clonePlayer)] };
+    this.state = { ...this.state, players: [...this.state.players, ...players] };
     this.emitChange();
   }
 
@@ -169,7 +167,7 @@ export class PlayModel extends Disposable implements IPlayModel {
     this.state.lines.forEach((line, i) => {
       if (line.startPlayerId === id) {
         // 起点を失う線は dangling になる＝整合のため一緒に除去（復元用に位置を控える）。
-        removedLines.push({ line: cloneLine(line), index: i });
+        removedLines.push({ line, index: i });
       } else {
         lines.push(line);
       }
@@ -179,7 +177,7 @@ export class PlayModel extends Disposable implements IPlayModel {
       players: this.state.players.filter((p) => p !== target),
       lines,
     };
-    return { player: clonePlayer(target), index, removedLines };
+    return { player: target, index, removedLines };
   }
 
   removePlayer(id: string): PlayerRemoval {
@@ -200,11 +198,11 @@ export class PlayModel extends Disposable implements IPlayModel {
       removal.player.id,
       "PlayModel.restorePlayer: duplicate player id",
     );
-    const players = insertAt(this.state.players, removal.index, clonePlayer(removal.player));
+    const players = insertAt(this.state.players, removal.index, removal.player);
     // 昇順に元インデックスへ挿し戻すと除去前の並びが正確に再現される。
     let lines = this.state.lines;
     for (const { line, index } of [...removal.removedLines].sort((a, b) => a.index - b.index)) {
-      lines = insertAt(lines, index, cloneLine(line));
+      lines = insertAt(lines, index, line);
     }
     this.state = { ...this.state, players, lines };
     this.emitChange();
@@ -215,24 +213,23 @@ export class PlayModel extends Disposable implements IPlayModel {
     if (prev === undefined) {
       throw new Error(`PlayModel.updatePlayer: unknown player id "${player.id}"`);
     }
-    const next = clonePlayer(player);
     this.state = {
       ...this.state,
-      players: this.state.players.map((p) => (p === prev ? next : p)),
+      players: this.state.players.map((p) => (p === prev ? player : p)),
     };
     this.emitChange();
-    return clonePlayer(prev);
+    return prev;
   }
 
   addLine(line: Line): void {
     assertNewId(this.state.lines, line.id, "PlayModel.addLine: duplicate line id");
-    this.state = { ...this.state, lines: [...this.state.lines, cloneLine(line)] };
+    this.state = { ...this.state, lines: [...this.state.lines, line] };
     this.emitChange();
   }
 
   insertLine(line: Line, index: number): void {
     assertNewId(this.state.lines, line.id, "PlayModel.insertLine: duplicate line id");
-    this.state = { ...this.state, lines: insertAt(this.state.lines, index, cloneLine(line)) };
+    this.state = { ...this.state, lines: insertAt(this.state.lines, index, line) };
     this.emitChange();
   }
 
@@ -244,7 +241,7 @@ export class PlayModel extends Disposable implements IPlayModel {
     const index = this.state.lines.indexOf(target);
     this.state = { ...this.state, lines: this.state.lines.filter((l) => l !== target) };
     this.emitChange();
-    return { line: cloneLine(target), index };
+    return { line: target, index };
   }
 
   updateLine(line: Line): Line {
@@ -252,17 +249,15 @@ export class PlayModel extends Disposable implements IPlayModel {
     if (prev === undefined) {
       throw new Error(`PlayModel.updateLine: unknown line id "${line.id}"`);
     }
-    const next = cloneLine(line);
     this.state = {
       ...this.state,
-      lines: this.state.lines.map((l) => (l === prev ? next : l)),
+      lines: this.state.lines.map((l) => (l === prev ? line : l)),
     };
     this.emitChange();
-    return cloneLine(prev);
+    return prev;
   }
 
   private emitChange(): void {
-    // 受け手（onChange / View）が書き換えても内部に波及しないようスナップショットを渡す。
-    this._onDidChange.fire(this.getData());
+    this._onDidChange.fire(this.state);
   }
 }

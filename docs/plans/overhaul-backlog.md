@@ -244,7 +244,7 @@ PR 単位で、依存順に並べる。
 - [x] **T6-4 [should] IPlayModel に軽い読み取り API がなく、深いコピーを多用している**
   - locations: library/src/common/model/play-model.ts:32-42, library/src/common/model/play-model.ts:226-229, library/src/common/editing/editor-controller.ts:220, library/src/common/editing/editor-controller.ts:360, library/src/common/editing/editor-controller.ts:400, library/src/common/editing/editor-controller.ts:430-452, library/src/common/editing/editor-controller.ts:472, library/src/common/editing/editor-controller.ts:506, library/src/common/editing/editor-controller.ts:585, library/src/common/editing/editor-controller.ts:599, library/src/common/editing/editor-controller.ts:631
   - 対応: `getSnapshot(): DeepReadonly<PlayData>`、hasPlayer、hasLine、getPlayerIds、getLineIds を足す。getData（深いコピー）は公開の境界専用にする。
-  - 結論: T6-3 で PlayData そのものを readonly にしたので、getSnapshot は DeepReadonly を使わず PlayData を返す。状態は変更のたびに差し替えるので、コピーせずに返す。findPlayer と findLine も内部の値をそのまま返す。getPlayerIds と getLineIds は getSnapshot から導けるので足さなかった。
+  - 結論: T6-3 で PlayData そのものを readonly にしたので、getSnapshot は DeepReadonly を使わず PlayData を返す。状態は変更のたびに差し替えるので、コピーせずに返す。Model は内部で複製しなくなり、find、update の戻り値、削除のメメント、onDidChange の値も内部の値をそのまま渡す。深いコピーは getData と、playmaker.ts で onChange に渡す直前だけで行う。hasLine、getPlayerIds、getLineIds は使い道がないか getSnapshot から導けるので足さなかった。コマンドの構築時のコピーは、呼び出し側の入力を受ける境界として残した（T8-2 で整理する）。
 - [x] **T6-5 [should] PlayModel が Disposable ではない**
   - locations: library/src/common/model/play-model.ts:32-34, library/src/common/model/play-model.ts:77-79, library/src/playmaker.ts:137-143, library/src/playmaker.ts:178
 - [x] **T6-6 [should] 公開プリセットが共有の可変オブジェクトで、plays が formations の内部に依存している**

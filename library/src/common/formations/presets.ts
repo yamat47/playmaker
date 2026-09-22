@@ -258,7 +258,7 @@ const DEFENSE_3_3_5: Formation = {
  * 組み込みプリセット一覧（攻 7・守 6）。Toolbar はこれを攻守でグループ表示し、
  * 商用ソフトはこの配列を起点に独自テンプレートを足せる（PRD 5.6）。
  */
-export const FORMATION_PRESETS: readonly Formation[] = deepFreeze([
+export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreeze([
   I_FORMATION,
   SINGLEBACK_ACE,
   SHOTGUN_SPREAD,

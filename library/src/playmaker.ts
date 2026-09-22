@@ -193,7 +193,8 @@ export class Playmaker extends Disposable {
     );
     // Model 変更（編集コマンド・Undo/Redo）のたびに最新 PlayData を通知する。
     // 構築時は発火しない＝再読込は edit ではないので onChange を出さない。
-    this.session.add(model.onDidChange((snapshot) => this.options.onChange?.(snapshot)));
+    // 受け手が書き換えても Model に波及しないよう、渡す直前にだけ深いコピーを作る。
+    this.session.add(model.onDidChange(() => this.options.onChange?.(model.getData())));
 
     if (this.mode === "edit") {
       this.session.add(new Toolbar(this.root, controller));

@@ -666,7 +666,7 @@ const COVER_6 = play(
  * 組み込みプレー図一覧（攻 10・守 8）。demo はこれを攻守・タイプで束ねて一覧表示し、
  * 商用ソフトはこの配列を起点に独自プレーを足せる。
  */
-export const PLAY_PRESETS: readonly PlayPreset[] = deepFreeze([
+export const PLAY_PRESETS: readonly PlayPreset[] = /* @__PURE__ */ deepFreeze([
   INSIDE_ZONE,
   OUTSIDE_ZONE,
   POWER,

@@ -526,7 +526,7 @@ export class EditorController extends Disposable implements IEditorController {
    * 配置可能な選手が無ければ no-op。1 コマンド = onChange 1 回。
    */
   loadFormation(formation: Formation): void {
-    const taken = new Set(this.model.getSnapshot().players.map((p) => p.id));
+    const taken = this.playerIds();
     const players: Player[] = formation.players.map((fp) => {
       const id = this.ids.next("player", taken);
       taken.add(id);
@@ -682,7 +682,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private addPlayerAt(pos: FieldPosition): void {
-    const taken = new Set(this.model.getSnapshot().players.map((p) => p.id));
+    const taken = this.playerIds();
     const id = this.ids.next("player", taken);
     const player: Player = {
       id,
@@ -711,6 +711,10 @@ export class EditorController extends Disposable implements IEditorController {
       }
     }
     return undefined;
+  }
+
+  private playerIds(): Set<string> {
+    return new Set(this.model.getSnapshot().players.map((p) => p.id));
   }
 
   private lineIds(): Set<string> {

@@ -144,7 +144,7 @@ export {
 } from "./model/player.js";
 export type { PlayCategory, PlayPreset } from "./plays/play-preset.js";
 export { getPlayPreset, PLAY_PRESETS } from "./plays/presets.js";
-export { isTeamSide, TEAM_SIDE_VALUES, type TeamSide } from "./presets/shared.js";
+export { TEAM_SIDE_VALUES, type TeamSide } from "./presets/shared.js";
 export {
   type IUndoRedoService,
   UndoRedoService,

@@ -41,18 +41,24 @@ export interface IPlayModel {
   /** id に一致する線の複製。無ければ undefined。 */
   findLine(id: string): Line | undefined;
   setFieldZone(zone: FieldZone): void;
+  /** 既にある id の選手を渡すと throw する（id は選択と編集の対象を決める唯一の鍵）。 */
   addPlayer(player: Player): void;
-  /** 複数選手を一括追加し、変更は最後に 1 回だけ発火する（1 操作 = 1 onChange の契約を一括時も保つ）。 */
+  /**
+   * 複数選手を一括追加し、変更は最後に 1 回だけ発火する（1 操作 = 1 onChange の契約を一括時も保つ）。
+   * 既存と重複する id があれば throw する。
+   */
   addPlayers(players: readonly Player[]): void;
   /** 選手を削除し、起点がその選手の線もカスケード除去する。巻き戻し用メメントを返す。 */
   removePlayer(id: string): PlayerRemoval;
   /** 複数選手を一括削除し（各々従属線をカスケード）、変更を 1 回だけ発火する。 */
   removePlayers(ids: readonly string[]): PlayerRemoval[];
-  /** removePlayer の逆操作。選手と従属線を元の並びへ戻す。 */
+  /** removePlayer の逆操作。選手と従属線を元の並びへ戻す。同じ id の選手が既にあれば throw する。 */
   restorePlayer(removal: PlayerRemoval): void;
   /** 同 id の選手を差し替え、差し替え前の選手（複製）を返す。 */
   updatePlayer(player: Player): Player;
+  /** 既にある id の線を渡すと throw する。 */
   addLine(line: Line): void;
+  /** 既にある id の線を渡すと throw する。 */
   insertLine(line: Line, index: number): void;
   /** 線を削除し、巻き戻し用メメントを返す。 */
   removeLine(id: string): LineRemoval;
@@ -67,6 +73,13 @@ function clampIndex(index: number, length: number): number {
 function insertAt<T>(items: readonly T[], index: number, item: T): T[] {
   const at = clampIndex(index, items.length);
   return [...items.slice(0, at), item, ...items.slice(at)];
+}
+
+// id は選択と編集の対象を決める唯一の鍵なので、同じ id の要素を 2 つ持たせない。
+function assertNewId(items: readonly { id: string }[], id: string, message: string): void {
+  if (items.some((item) => item.id === id)) {
+    throw new Error(`${message} "${id}"`);
+  }
 }
 
 /**
@@ -109,21 +122,21 @@ export class PlayModel implements IPlayModel {
     this.emitChange();
   }
 
-  // 変更を発火しない純粋なミューテーション。単発（emit 付き）と一括（最後に 1 回 emit）の
-  // 両方からこのコアを共有し、「1 操作 = onChange 1 回」を一括時も保つ。
-  private addPlayerCore(player: Player): void {
-    this.state = { ...this.state, players: [...this.state.players, clonePlayer(player)] };
-  }
-
   addPlayer(player: Player): void {
-    this.addPlayerCore(player);
-    this.emitChange();
+    this.addPlayers([player]);
   }
 
   addPlayers(players: readonly Player[]): void {
+    // 1 人でも重複があれば何も足さずに throw する。途中まで足してから投げると、
+    // 通知も履歴も伴わない変更が残る。
+    const taken = new Set(this.state.players.map((p) => p.id));
     for (const player of players) {
-      this.addPlayerCore(player);
+      if (taken.has(player.id)) {
+        throw new Error(`PlayModel.addPlayers: duplicate player id "${player.id}"`);
+      }
+      taken.add(player.id);
     }
+    this.state = { ...this.state, players: [...this.state.players, ...players.map(clonePlayer)] };
     this.emitChange();
   }
 
@@ -164,6 +177,11 @@ export class PlayModel implements IPlayModel {
   }
 
   restorePlayer(removal: PlayerRemoval): void {
+    assertNewId(
+      this.state.players,
+      removal.player.id,
+      "PlayModel.restorePlayer: duplicate player id",
+    );
     const players = insertAt(this.state.players, removal.index, clonePlayer(removal.player));
     // 昇順に元インデックスへ挿し戻すと除去前の並びが正確に再現される。
     let lines = this.state.lines;
@@ -189,11 +207,13 @@ export class PlayModel implements IPlayModel {
   }
 
   addLine(line: Line): void {
+    assertNewId(this.state.lines, line.id, "PlayModel.addLine: duplicate line id");
     this.state = { ...this.state, lines: [...this.state.lines, cloneLine(line)] };
     this.emitChange();
   }
 
   insertLine(line: Line, index: number): void {
+    assertNewId(this.state.lines, line.id, "PlayModel.insertLine: duplicate line id");
     this.state = { ...this.state, lines: insertAt(this.state.lines, index, cloneLine(line)) };
     this.emitChange();
   }

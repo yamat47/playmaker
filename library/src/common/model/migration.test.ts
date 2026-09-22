@@ -143,6 +143,26 @@ describe("migratePlayData", () => {
     expect(migrated.players.map((p) => p.id)).toEqual(["qb"]);
   });
 
+  it("id が重複した blob も、選手と線の id を一意にして取り込む", () => {
+    const duplicated = {
+      version: 1,
+      field: { zone: "middle" },
+      players: [
+        { id: "x", position: { lateralYard: 7, absoluteYard: 49 } },
+        { id: "x", position: { lateralYard: 9, absoluteYard: 49 } },
+      ],
+      lines: [
+        { id: "rt", startPlayerId: "x", end: { lateralYard: 7, absoluteYard: 55 } },
+        { id: "rt", startPlayerId: "x", end: { lateralYard: 9, absoluteYard: 55 } },
+      ],
+    } as unknown;
+
+    const migrated = migratePlayData(duplicated);
+
+    expect(migrated.players.map((p) => p.id)).toEqual(["x", "x-2"]);
+    expect(migrated.lines.map((l) => l.id)).toEqual(["rt", "rt-2"]);
+  });
+
   it("getData→JSON→migratePlayData の往復で同値に戻る（PRD 5.8 往復契約）", () => {
     const persisted: PlayData = {
       version: 1,

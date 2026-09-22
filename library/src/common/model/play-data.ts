@@ -77,12 +77,35 @@ export function clonePlayData(data: PlayData): PlayData {
 export function resolvePlayData(data: PlayData | undefined): PlayData {
   const zone = data?.field?.zone;
   // 線の起点参照を弾けるよう、先に選手を確定してから id 集合を渡す。
-  const players = normalizePlayers(data?.players);
+  // 重複した選手 id は後ろの方を振り直すので、その id を指す線は先頭の選手に付く。
+  const players = makeIdsUnique(normalizePlayers(data?.players));
   const validPlayerIds = new Set(players.map((p) => p.id));
   return {
     version: CURRENT_PLAY_DATA_VERSION,
     field: { zone: isFieldZone(zone) ? zone : DEFAULT_FIELD_ZONE },
     players,
-    lines: normalizeLines(data?.lines, validPlayerIds),
+    lines: makeIdsUnique(normalizeLines(data?.lines, validPlayerIds)),
   };
+}
+
+/**
+ * 2 回目以降に現れた id を `${id}-2` のような未使用の id へ振り直す（先頭はそのまま）。
+ * 同じ id が 2 つあると、hit-test は末尾を返すのに更新は先頭に当たり、別の要素が編集される。
+ * 振り直した id は、入力に明示された他の id とも衝突させない。
+ */
+function makeIdsUnique<T extends { id: string }>(items: T[]): T[] {
+  const taken = new Set(items.map((item) => item.id));
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (seen.has(item.id)) {
+      let n = 2;
+      while (taken.has(`${item.id}-${n}`)) {
+        n += 1;
+      }
+      item.id = `${item.id}-${n}`;
+      taken.add(item.id);
+    }
+    seen.add(item.id);
+  }
+  return items;
 }

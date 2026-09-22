@@ -200,6 +200,74 @@ describe("resolvePlayData", () => {
     expect(resolved.lines[0]).not.toBe(input.lines[0]);
   });
 
+  it("重複した選手 id は後ろの方を振り直し、その id を指す線は先頭の選手に付ける", () => {
+    const input = {
+      version: 1,
+      field: { zone: "middle" },
+      players: [
+        { id: "wr", position: { lateralYard: 5, absoluteYard: 50 } },
+        { id: "wr", position: { lateralYard: 9, absoluteYard: 50 } },
+      ],
+      lines: [{ id: "r1", startPlayerId: "wr", end: { lateralYard: 5, absoluteYard: 60 } }],
+    } as unknown as PlayData;
+
+    const resolved = resolvePlayData(input);
+
+    expect(resolved.players.map((p) => [p.id, p.position.lateralYard])).toEqual([
+      ["wr", 5],
+      ["wr-2", 9],
+    ]);
+    expect(resolved.lines.map((l) => l.startPlayerId)).toEqual(["wr"]);
+  });
+
+  it("振り直す id は入力に明示された他の id と衝突させない", () => {
+    const input = {
+      version: 1,
+      field: { zone: "middle" },
+      players: [
+        { id: "a", position: { lateralYard: 1, absoluteYard: 50 } },
+        { id: "a", position: { lateralYard: 2, absoluteYard: 50 } },
+        { id: "a-2", position: { lateralYard: 3, absoluteYard: 50 } },
+      ],
+    } as unknown as PlayData;
+
+    const resolved = resolvePlayData(input);
+
+    expect(resolved.players.map((p) => p.id)).toEqual(["a", "a-3", "a-2"]);
+  });
+
+  it("補完した id が明示 id と衝突したら、補完した側を振り直す", () => {
+    // id の無い 2 番目（index 1）は p1 を補完されるが、先頭が明示的に p1 を持つ。
+    const input = {
+      version: 1,
+      field: { zone: "middle" },
+      players: [
+        { id: "p1", position: { lateralYard: 1, absoluteYard: 50 } },
+        { position: { lateralYard: 2, absoluteYard: 50 } },
+      ],
+    } as unknown as PlayData;
+
+    const resolved = resolvePlayData(input);
+
+    expect(resolved.players.map((p) => p.id)).toEqual(["p1", "p1-2"]);
+  });
+
+  it("重複した線 id は後ろの方を振り直す", () => {
+    const input = {
+      version: 1,
+      field: { zone: "middle" },
+      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 } }],
+      lines: [
+        { id: "r", startPlayerId: "wr", end: { lateralYard: 5, absoluteYard: 60 } },
+        { id: "r", startPlayerId: "wr", end: { lateralYard: 9, absoluteYard: 60 } },
+      ],
+    } as unknown as PlayData;
+
+    const resolved = resolvePlayData(input);
+
+    expect(resolved.lines.map((l) => l.id)).toEqual(["r", "r-2"]);
+  });
+
   it("lines が無い/不正なら空配列にフォールバックする（古い永続データ耐性）", () => {
     const missing = {
       version: 1,

@@ -230,7 +230,7 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T6 model の型と正規化の整理
+### T6 model の型と正規化の整理 (done)
 
 - [x] **T6-1 [should] 外部入力の境界の型が、実態の unknown と食い違っている**（内部の部分。公開の部分は T14 で D12 に従う）
   - locations: library/src/common/model/play-data.ts:43-45, library/src/common/model/play-data.ts:77, library/src/common/model/migration.ts:81, library/src/common/model/play-model.ts:84-85
@@ -239,16 +239,18 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/model/line.ts:13, library/src/common/model/line.ts:21, library/src/common/model/line.ts:29-30, library/src/common/model/line.ts:54-80, library/src/common/model/player.ts:9, library/src/common/model/player.ts:14, library/src/common/model/player.ts:52-62, library/src/common/model/player.ts:75-82, library/src/common/model/play-data.ts:13, library/src/common/model/play-data.ts:18, library/src/common/model/play-data.ts:44, library/src/common/formations/formation.ts:11, library/src/common/formations/formation.ts:33-41, library/src/browser/ui/property-panel.ts:19-20, library/src/browser/ui/property-panel.ts:180, library/src/browser/ui/toolbar.ts:16, library/src/browser/ui/toolbar.ts:22, library/src/browser/ui/toolbar.ts:28
   - 対応: `common/model/guards.ts` に isFiniteNumber、isNonEmptyString、`isOneOf`、parseFieldPosition を置く。値リストは `X_VALUES as const` から型を導出する。UI のラベル表は `satisfies Record<…>` で網羅性を検査する。
   - 結論: `as Record<string, unknown>` を消すため、guards.ts に isRecord も置いた。ゾーンの値リストはフィールドの並び（自陣 RZ、中央、相手 RZ）にして、ツールバーがその順で並べる。形状のパネルは 2 種だけを出す部分集合のままにし、D18 で型を 2 種にするときに揃える（T13-3）。
-- [ ] **T6-3 [should] ドメイン型に readonly がなく、防御的コピーに頼り切っている**（D7）
+- [x] **T6-3 [should] ドメイン型に readonly がなく、防御的コピーに頼り切っている**（D7）
   - locations: library/src/common/model/player.ts:35, library/src/common/model/player.ts:44, library/src/common/model/line.ts:38, library/src/common/model/play-data.ts:20, library/src/common/model/play-data.ts:34, library/src/common/model/play-model.ts:15, library/src/common/model/play-model.ts:22, library/src/common/editing/editor-controller.ts:65, library/src/common/editing/editor-controller.ts:74, library/src/common/geometry/field.ts:63, library/src/common/geometry/field.ts:130, library/src/common/design/metrics.ts:38, library/src/common/model/migration.ts:19
-- [ ] **T6-4 [should] IPlayModel に軽い読み取り API がなく、深いコピーを多用している**
+- [x] **T6-4 [should] IPlayModel に軽い読み取り API がなく、深いコピーを多用している**
   - locations: library/src/common/model/play-model.ts:32-42, library/src/common/model/play-model.ts:226-229, library/src/common/editing/editor-controller.ts:220, library/src/common/editing/editor-controller.ts:360, library/src/common/editing/editor-controller.ts:400, library/src/common/editing/editor-controller.ts:430-452, library/src/common/editing/editor-controller.ts:472, library/src/common/editing/editor-controller.ts:506, library/src/common/editing/editor-controller.ts:585, library/src/common/editing/editor-controller.ts:599, library/src/common/editing/editor-controller.ts:631
   - 対応: `getSnapshot(): DeepReadonly<PlayData>`、hasPlayer、hasLine、getPlayerIds、getLineIds を足す。getData（深いコピー）は公開の境界専用にする。
-- [ ] **T6-5 [should] PlayModel が Disposable ではない**
+  - 結論: T6-3 で PlayData そのものを readonly にしたので、getSnapshot は DeepReadonly を使わず PlayData を返す。状態は変更のたびに差し替えるので、コピーせずに返す。findPlayer と findLine も内部の値をそのまま返す。getPlayerIds と getLineIds は getSnapshot から導けるので足さなかった。
+- [x] **T6-5 [should] PlayModel が Disposable ではない**
   - locations: library/src/common/model/play-model.ts:32-34, library/src/common/model/play-model.ts:77-79, library/src/playmaker.ts:137-143, library/src/playmaker.ts:178
-- [ ] **T6-6 [should] 公開プリセットが共有の可変オブジェクトで、plays が formations の内部に依存している**
+- [x] **T6-6 [should] 公開プリセットが共有の可変オブジェクトで、plays が formations の内部に依存している**
   - locations: library/src/common/formations/presets.ts:10, library/src/common/formations/presets.ts:262-282, library/src/common/plays/presets.ts:6-7, library/src/common/plays/presets.ts:666-690, library/src/common/plays/play-preset.ts:6, library/src/common/plays/play-preset.ts:25, library/src/common/formations/formation.ts:23, library/src/playmaker.ts:37-44
   - 対応: deepFreeze し、型を DeepReadonly にし、getter は複製を返す。TeamSide と DEFENSE_COLOR は `common/presets/shared.ts` へ移す。
+  - 結論: 型は T6-3 で readonly にしたので DeepReadonly は使わない。getter は凍結したプリセットをそのまま返す。型でも実行時でも書き換えられないので、複製しても得るものがない。公開型の FormationSide は TeamSide に改名した。
 - [x] **T6-7 [should] 件数に上限がなく、大量の要素で描画がフリーズしうる（DoS）**（D8）
   - locations: library/src/common/model/player.ts:103-115, library/src/common/model/line.ts:143-155, library/src/common/geometry/bezier.ts:80-106, library/src/browser/rendering/canvas-surface.ts:142-169, library/src/browser/rendering/line-renderer.ts:34-97
   - 結論: MAX_PLAYERS = 64、MAX_LINES = 128、MAX_WAYPOINTS_PER_LINE = 32。配列は先頭から上限の個数だけを読み、復元できない要素も読んだ数に入れる（巨大な配列や穴のある配列でも読む量が上限で止まる）。
@@ -257,7 +259,7 @@ PR 単位で、依存順に並べる。
 - 依存: T5、D7、D8
 - 完了条件: common の境界に `as` がない。値リストが 1 か所で定義されている。内部の読み取りが getSnapshot に寄っている。common 100% を維持する。
 - 規模: L。大きければ T6a（T6-1、T6-2、T6-7）と T6b（T6-3〜T6-6）に分ける。
-- 進み具合: T6a（T6-1、T6-2、T6-7）を先に出した。残りは T6b。
+- 進み具合: T6a（T6-1、T6-2、T6-7）と T6b（T6-3〜T6-6）の 2 本で閉じた。
 
 ---
 

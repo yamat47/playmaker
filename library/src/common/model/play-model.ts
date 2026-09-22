@@ -123,7 +123,6 @@ export class PlayModel extends Disposable implements IPlayModel {
     return this.state.players.some((p) => p.id === id);
   }
 
-
   findPlayer(id: string): Player | undefined {
     return this.state.players.find((p) => p.id === id);
   }

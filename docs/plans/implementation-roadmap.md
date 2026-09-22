@@ -1,5 +1,8 @@
 # Playmaker 実装ロードマップ
 
+> **全体見直し（2026-09）の間は `docs/plans/overhaul-backlog.md` が正**。この文書と食い違うところは台帳に従う。
+> この文書は見直しの最後（T18）で `docs/design.md` に置き換えて削除する。
+
 `docs/prd.md` に基づく実装の進め方。grill-me プロセス（2026-05-16）で根から決定を積み上げ、以下に確定した。
 実装中はこのドキュメントを判断の参照先とする。
 
@@ -23,10 +26,10 @@
 - **環境別レイヤ分離**（下位は上位に依存しない）
   - `src/common/` — DOM 非依存の純ロジック。**node 単体テストで機能カバレッジを全網羅**
   - `src/browser/` — DOM/Canvas 依存。`common` に依存
-  - `src/playmaker.ts` — 公開エントリ。層を結線し options / onChange / view⇄edit を提供
+  - `src/playmaker.ts` — 公開エントリ。層を結線し options / onChange を提供。view と edit を実行時に切り替える機能はまだなく、台帳の T14 で `setMode` を公開する
   - **インターフェース抽出 + Model–View 分離 + コマンドパターン + Emitter/Disposable**
-    - `IPlayModel` `IRenderer` `ICommand` `IUndoRedoService` `ICommandService` を抽出
-    - テストは `IRenderer` 等をフェイク注入し Canvas なしでモデル・コマンド・Undo を完全検証
+    - `IPlayModel` `ICommand` `IUndoRedoService` `ICommandService` を抽出（描画の IF は未実装。台帳 T12 で `ILayerRenderer` を導入する）
+    - テストは IF のフェイクを注入し Canvas なしでモデル・コマンド・Undo を完全検証
     - **DI は手動コンストラクタ注入のみ**（デコレータ / サービスコンテナ / 拡張レジストリは持たない＝MVP・依存最小）
 
 #### 想定ディレクトリ
@@ -41,7 +44,7 @@ src/
     events/      # Emitter/Event, Disposable(自前極小=VSCode base 相当)
     formations/  # フォーメーションテンプレートのデータ
   browser/
-    rendering/   # Canvas レンダラ (IRenderer 実装)
+    rendering/   # Canvas レンダラ
     ui/          # ツールバー/プロパティパネル(バニラDOM)
     input/       # ポインタ→コマンド変換
   playmaker.ts   # 公開エントリ

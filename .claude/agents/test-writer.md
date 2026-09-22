@@ -47,7 +47,7 @@ const subject = new SomeController(model, renderer);
 3. テスト作成（正常系→異常系→境界値）
 4. 実行と確認:
    ```bash
-   pnpm vitest run src/path/to/target.test.ts
+   make test FILE=src/path/to/target.test.ts
    ```
 
 ## 出力形式

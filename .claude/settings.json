@@ -2,11 +2,11 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(pnpm install:*)",
-      "Bash(pnpm run:*)",
-      "Bash(pnpm vitest:*)",
-      "Bash(pnpm exec:*)",
-      "Bash(pnpm dlx:*)",
+      "Bash(make:*)",
+      "Bash(docker compose -f docker/compose.yaml ps:*)",
+      "Bash(docker compose -f docker/compose.yaml logs:*)",
+      "Bash(curl -s http://localhost:5173:*)",
+      "Bash(curl -sf http://localhost:5173:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -33,11 +33,25 @@
       "Bash(date:*)",
       "Bash(ls:*)",
       "Skill(review-pr)",
+      "Skill(run-demo)",
       "Skill(writing-conventions)",
       "Skill(typescript-idioms)",
       "Skill(github-actions-workflows)",
       "WebFetch(domain:github.com)",
       "Edit(.tmp/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-host-node.sh"
+          }
+        ]
+      }
     ]
   },
   "plansDirectory": "./docs/plans"

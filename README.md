@@ -111,15 +111,31 @@ const playmaker = new Playmaker(container, {
 
 ## 開発
 
-```sh
-cd library
-pnpm install        # 依存解決（prepare で dist もビルド）
-pnpm dev            # demo/ playground をホットリロード起動（ローカル目視確認）
-pnpm test           # Vitest（common 層 100% カバレッジゲート内蔵）
-pnpm typecheck      # tsc --noEmit
-pnpm lint           # Biome
-pnpm build          # Vite library mode → library/dist/（ESM/CJS/型/CSS）
 ```
+library/     ライブラリ本体（src/・demo/・package.json・各種設定）
+docker/      開発用イメージと compose
+docs/        要件・設計・計画
+Makefile     開発コマンドの入口
+```
+
+Node / pnpm はホストに入れず、Docker コンテナの中で動かす。ホストに必要なのは
+`make` と Docker（Docker Desktop / colima など）だけ。
+
+```sh
+make setup          # イメージをビルドして依存を入れる（初回・Dockerfile 変更時）
+make up             # library/demo/ playground を http://localhost:5173 で起動（make down で停止）
+make test           # Vitest（common 層 100% カバレッジゲート内蔵）。FILE= で 1 ファイルだけ
+make typecheck      # tsc --noEmit
+make lint           # Biome（make fix で自動修正）
+make build          # Vite library mode → library/dist/（ESM/CJS/型/CSS）
+make check          # CI と同じ検証を一通り
+make pnpm ARGS="add -D <pkg>"  # 任意の pnpm コマンド
+make help           # ターゲット一覧
+```
+
+VS Code では「Dev Containers: Reopen in Container」で開くと、`library/` をワークスペースとして
+エディタの型補完・Biome・Vitest Explorer がコンテナ内の `node_modules` を使って動く。
+Dev Containers のターミナルからも同じ `make` ターゲットが使える（`up` / `down` などコンテナ操作系はホストから）。
 
 設計判断の確定経緯は `docs/plans/implementation-roadmap.md`、要件は `docs/prd.md`、
 コーディング規約は `.claude/rules/` を参照。

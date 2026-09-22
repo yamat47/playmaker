@@ -1,0 +1,45 @@
+# Makefile から docker compose -f docker/compose.yaml で使う。
+# プロジェクト名を固定する。Dev Containers は既定で <フォルダ名>_devcontainer を使うため、
+# 固定しないと volume が別物になり、node_modules がホスト経由とエディタ経由で二重にできる
+name: playmaker
+
+x-base: &base
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+  image: playmaker-dev
+  # リポジトリ全体をマウントする（作業ディレクトリは Dockerfile の WORKDIR = library/）。
+  # 全体をマウントするのは Dev Containers の中から git と docs/ .claude/ を扱うため
+  volumes:
+    - ..:/workspace
+    # node_modules はホストと共有しない。esbuild / Biome のネイティブバイナリが
+    # darwin と linux で別物なのと、バインドマウント越しの大量ファイル I/O が遅いため
+    - node_modules:/workspace/library/node_modules
+    - pnpm-store:/home/node/.local/share/pnpm/store
+
+services:
+  # Makefile のタスク実行（docker compose run --rm）と Dev Containers の attach 先
+  workspace:
+    <<: *base
+    command: sleep infinity
+
+  # demo playground の dev サーバー（make up / make down）
+  dev:
+    <<: *base
+    command: pnpm run dev --host 0.0.0.0 --strictPort
+    ports:
+      - "5173:5173"
+    environment:
+      # ホストでの編集は inotify でコンテナに届かない環境がある（colima の既定など）ので
+      # ポーリングで拾う。Vite が同梱する chokidar がこの変数を読む
+      CHOKIDAR_USEPOLLING: "true"
+    # make up は docker compose up --wait で、これが通るまで待つ
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173/').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 2s
+      start_period: 60s
+      start_interval: 1s
+
+volumes:
+  node_modules:
+  pnpm-store:

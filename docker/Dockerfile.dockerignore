@@ -1,0 +1,4 @@
+# ビルドコンテキストはリポジトリのルート。イメージに入れるのは pnpm の版を読むための
+# library/package.json だけで、ソースは実行時にマウントする
+*
+!library/package.json

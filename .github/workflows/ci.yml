@@ -18,7 +18,8 @@ env:
 permissions:
   contents: read
 
-# ライブラリ本体は library/ にある
+# ライブラリ本体は library/ にある。ローカルは Docker コンテナの中で動かすが（Makefile）、
+# CI は setup-node の pnpm store キャッシュのほうが速いのでランナーで直接動かす
 defaults:
   run:
     working-directory: library
@@ -38,7 +39,7 @@ jobs:
 
       - name: Setup Node.js with pnpm and install dependencies
         # pnpm のバージョンは library/package.json の packageManager から解決され、
-        # pnpm install --frozen-lockfile まで実行される
+        # pnpm install --frozen-lockfile まで実行される。Node のメジャーは docker/Dockerfile と揃える
         uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@main
         with:
           node-version: 26

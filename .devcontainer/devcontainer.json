@@ -1,0 +1,27 @@
+{
+  "name": "playmaker",
+  "dockerComposeFile": "../docker/compose.yaml",
+  "service": "workspace",
+  // library/ を開く。Biome / TypeScript / Vitest の拡張はワークスペース直下の
+  // node_modules と設定ファイルを探すため、リポジトリのルートで開くと動かない
+  "workspaceFolder": "/workspace/library",
+  "remoteUser": "node",
+  "postCreateCommand": "pnpm install",
+  "forwardPorts": [5173],
+  "customizations": {
+    "vscode": {
+      "extensions": ["biomejs.biome", "vitest.explorer"],
+      "settings": {
+        // .git はひとつ上（リポジトリのルート）にある
+        "git.openRepositoryInParentFolders": "always",
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports.biome": "explicit",
+          "quickfix.biome": "explicit"
+        },
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  }
+}

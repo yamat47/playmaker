@@ -139,7 +139,7 @@ Node / pnpm はホストに入れず、Docker コンテナの中で動かす。�
 make setup          # イメージをビルドして依存を入れる（初回・Dockerfile 変更時）
 make up             # library/demo/ playground を http://localhost:5173 で起動（make down で停止）
 make test           # Vitest（common 層 100% カバレッジゲート内蔵）。FILE= で 1 ファイルだけ
-make typecheck      # tsc --noEmit
+make typecheck      # tsc -b（common・browser・test・tooling の 4 つの tsconfig）
 make lint           # Biome（make fix で自動修正）
 make build          # Vite library mode → library/dist/（ESM/型/CSS）
 make check          # CI と同じ検証を一通り

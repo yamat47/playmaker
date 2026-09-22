@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { player } from "../../test-support/fixtures.js";
 import {
   cloneLine,
   DEFAULT_LINE_INTERPOLATION,
@@ -10,11 +11,6 @@ import {
   lineAnchorPoints,
   normalizeLines,
 } from "./line.js";
-import type { Player } from "./player.js";
-
-function player(id: string, lateralYard: number, absoluteYard: number): Player {
-  return { id, position: { lateralYard, absoluteYard }, shape: "circle", label: "" };
-}
 
 const PLAYER_IDS = new Set(["qb", "wr"]);
 

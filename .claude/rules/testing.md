@@ -11,9 +11,9 @@ Playmaker は VSCode 流レイヤ分離を採る。テストは `common` 層（D
 ## 配置・命名
 
 - ソースと同階層に `*.test.ts`（`src/common/event/emitter.ts` → `src/common/event/emitter.test.ts`）
-- Vitest は `src/**/*.test.ts` を **node 環境**で実行（`vite.config.ts` の `test`）
+- Vitest は `src/**/*.test.ts` を **node 環境**で実行（`vite.config.ts` の `test`）。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
 - 実行: `make test`（全体・**カバレッジゲート内蔵**）/ `make test FILE=<file>`（個別）/ `make test-watch`（TDD 内側ループ・カバレッジなし）。いずれもコンテナ内で動く
-- 複数のテストで使う共通の部品（`must` や fixtures）は `src/test-support/` に置く。全体見直しの T5-5 で作り、coverage と build の対象から外す
+- 複数のテストで使う共通の部品は `src/test-support/` に置く（`must.ts` と `fixtures.ts`）。coverage と build の対象外で、型検査は `tsconfig.test.json` がテストと一緒に行う
 
 ## スタイル
 

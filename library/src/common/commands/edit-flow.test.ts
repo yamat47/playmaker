@@ -2,20 +2,13 @@
 // CommandService → PlayModel → onDidChange、UndoRedoService 往復、選手削除のカスケード復元。
 
 import { describe, expect, it, vi } from "vitest";
+import { must } from "../../test-support/must.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import { UndoRedoService } from "../undoRedo/undo-redo-service.js";
 import { CommandService } from "./command-service.js";
 import { AddLineCommand } from "./line-commands.js";
 import { AddPlayerCommand, RemovePlayerCommand } from "./player-commands.js";
-
-// noUncheckedIndexedAccess 下で `!` を使わず型を絞るためのテスト局所ヘルパ。
-function must<T>(value: T | undefined): T {
-  if (value === undefined) {
-    throw new Error("expected a defined value");
-  }
-  return value;
-}
 
 function wire(initial?: PlayData) {
   const model = new PlayModel(initial);

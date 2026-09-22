@@ -153,6 +153,9 @@ export interface CanvasPoint {
  * - 大きい absoluteYard ほど画面上（y 小）= 攻撃方向。
  */
 export class FieldGeometry {
+  readonly viewportWidth: number;
+  readonly viewportHeight: number;
+  readonly zone: FieldZone;
   readonly window: YardWindow;
   /** px / yard。アスペクト維持のため縦横共通。 */
   readonly scale: number;
@@ -162,11 +165,10 @@ export class FieldGeometry {
   readonly offsetX: number;
   readonly offsetY: number;
 
-  constructor(
-    readonly viewportWidth: number,
-    readonly viewportHeight: number,
-    readonly zone: FieldZone,
-  ) {
+  constructor(viewportWidth: number, viewportHeight: number, zone: FieldZone) {
+    this.viewportWidth = viewportWidth;
+    this.viewportHeight = viewportHeight;
+    this.zone = zone;
     this.window = fieldZoneWindow(zone);
     const windowLength = this.window.endYard - this.window.startYard;
     const w = Math.max(0, viewportWidth);

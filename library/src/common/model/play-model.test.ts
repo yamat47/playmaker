@@ -1,31 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Line } from "./line.js";
+import { line, player } from "../../test-support/fixtures.js";
+import { must } from "../../test-support/must.js";
 import type { PlayData } from "./play-data.js";
 import { PlayModel } from "./play-model.js";
-import type { Player } from "./player.js";
-
-// noUncheckedIndexedAccess 下で `!` を使わず型を絞るためのテスト局所ヘルパ。
-function must<T>(value: T | undefined): T {
-  if (value === undefined) {
-    throw new Error("expected a defined value");
-  }
-  return value;
-}
-
-function player(id: string, lateralYard = 5, absoluteYard = 50): Player {
-  return { id, position: { lateralYard, absoluteYard }, shape: "circle", label: id };
-}
-
-function line(id: string, startPlayerId: string): Line {
-  return {
-    id,
-    kind: "route",
-    startPlayerId,
-    waypoints: [],
-    end: { lateralYard: 5, absoluteYard: 60 },
-    interpolation: "straight",
-  };
-}
 
 function seed(): PlayData {
   return {

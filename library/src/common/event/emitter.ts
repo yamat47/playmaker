@@ -3,6 +3,10 @@
 
 import { type IDisposable, toDisposable } from "../lifecycle/disposable.js";
 
+// common は ECMAScript の lib だけで型検査するので、ホストが持つ console には型がない。
+// どのホスト（ブラウザ、Node）にもある console.error だけを、このモジュールの中で宣言して使う。
+declare const console: { error(...data: unknown[]): void };
+
 /**
  * リスナを登録すると購読解除用の IDisposable を返す関数。
  */
@@ -15,12 +19,15 @@ export type Event<T> = (listener: (e: T) => void) => IDisposable;
 export class Emitter<T> implements IDisposable {
   private listeners = new Set<(e: T) => void>();
   private disposed = false;
+  private readonly onListenerError: (err: unknown) => void;
 
   /**
    * リスナが投げた例外の扱い。既定は console.error（VSCode の onUnexpectedError 相当）。
    * 再 throw しないことで 1 つの失敗が他リスナや上流を巻き込まないようにする。
    */
-  constructor(private readonly onListenerError: (err: unknown) => void = console.error) {}
+  constructor(onListenerError: (err: unknown) => void = console.error) {
+    this.onListenerError = onListenerError;
+  }
 
   readonly event: Event<T> = (listener) => {
     if (this.disposed) {

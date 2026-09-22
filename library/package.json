@@ -24,9 +24,9 @@
     "build": "vite build",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build",
-    "lint": "biome check .",
+    "lint": "biome check --error-on-warnings .",
     "lint:fix": "biome check --write .",
     "font": "node scripts/generate-field-font.mjs",
     "prepare": "pnpm run build"

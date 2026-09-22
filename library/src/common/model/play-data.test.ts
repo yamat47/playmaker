@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { must } from "../../test-support/must.js";
 import {
   clonePlayData,
   createEmptyPlayData,
@@ -7,14 +8,6 @@ import {
   type PlayData,
   resolvePlayData,
 } from "./play-data.js";
-
-// noUncheckedIndexedAccess 下で `!` を使わず型を絞るためのテスト局所ヘルパ。
-function must<T>(value: T | undefined): T {
-  if (value === undefined) {
-    throw new Error("expected a defined value");
-  }
-  return value;
-}
 
 describe("createEmptyPlayData", () => {
   it("version 1・既定ゾーン・選手/線なしの新規データを返す", () => {

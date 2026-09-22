@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Line } from "../model/line.js";
+import { line, player } from "../../test-support/fixtures.js";
+import { must } from "../../test-support/must.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import {
@@ -10,32 +11,11 @@ import {
   UpdateLineCommand,
 } from "./line-commands.js";
 
-// noUncheckedIndexedAccess 下で `!` を使わず型を絞るためのテスト局所ヘルパ。
-function must<T>(value: T | undefined): T {
-  if (value === undefined) {
-    throw new Error("expected a defined value");
-  }
-  return value;
-}
-
-function line(id: string, startPlayerId = "a"): Line {
-  return {
-    id,
-    kind: "route",
-    startPlayerId,
-    waypoints: [],
-    end: { lateralYard: 5, absoluteYard: 60 },
-    interpolation: "straight",
-  };
-}
-
 function seed(): PlayData {
   return {
     version: 1,
     field: { zone: "middle" },
-    players: [
-      { id: "a", position: { lateralYard: 5, absoluteYard: 50 }, shape: "circle", label: "a" },
-    ],
+    players: [player("a")],
     lines: [line("l1"), line("l2"), line("l3")],
   };
 }

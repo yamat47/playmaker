@@ -1,5 +1,6 @@
 # Dependabot による依存自動更新設定
 # 方針: 常に最新（メジャー含む）を追随する。
+# GitHub Actions は github-toolkit を @main で参照するため対象外。
 #  - minor / patch はエコシステムごとにまとめて 1 PR（ノイズ削減）
 #  - major は個別 PR（破壊的変更を 1 件ずつレビューするため、あえてグループ化しない）
 version: 2
@@ -27,15 +28,3 @@ updates:
         update-types:
           - minor
           - patch
-
-  # GitHub Actions — .github/workflows/*
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: ci
-    groups:
-      github-actions:
-        patterns:
-          - "*"

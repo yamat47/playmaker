@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isPlayerShape } from "../model/player.js";
-import { isFormationSide, normalizeFormation } from "./formation.js";
+import { isTeamSide } from "../presets/shared.js";
+import { normalizeFormation } from "./formation.js";
 import { FORMATION_PRESETS, getFormationPreset } from "./presets.js";
 
 describe("FORMATION_PRESETS データ健全性", () => {
@@ -14,7 +15,7 @@ describe("FORMATION_PRESETS データ健全性", () => {
 
   it("各プリセットは 11 人・side/shape/位置が妥当・攻守で色付けが分かれる", () => {
     for (const formation of FORMATION_PRESETS) {
-      expect(isFormationSide(formation.side)).toBe(true);
+      expect(isTeamSide(formation.side)).toBe(true);
       expect(formation.name.trim()).not.toBe("");
       expect(formation.players).toHaveLength(11);
       for (const p of formation.players) {
@@ -56,5 +57,15 @@ describe("getFormationPreset", () => {
     expect(getFormationPreset("i-formation")?.name).toBe("I-Formation");
     expect(getFormationPreset("defense-nickel")?.side).toBe("defense");
     expect(getFormationPreset("does-not-exist")).toBeUndefined();
+  });
+});
+
+describe("FORMATION_PRESETS の共有", () => {
+  it("入れ子の値まで凍結されていて、利用者が書き換えられない", () => {
+    const preset = FORMATION_PRESETS[0];
+
+    expect(Object.isFrozen(preset)).toBe(true);
+    expect(Object.isFrozen(preset?.players)).toBe(true);
+    expect(Object.isFrozen(preset?.players[0]?.position)).toBe(true);
   });
 });

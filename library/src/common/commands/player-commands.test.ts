@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
+import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import {
@@ -23,7 +24,7 @@ describe("AddPlayerCommand", () => {
     const model = new PlayModel();
     const input = player("p1");
     const cmd = new AddPlayerCommand(input);
-    input.label = "tampered"; // 構築後の改変は redo に影響しない
+    mutable(input).label = "tampered"; // 構築後の改変は redo に影響しない
 
     cmd.apply(model);
     expect(model.getData().players).toEqual([player("p1")]);

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
+import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "./play-data.js";
 import { PlayModel } from "./play-model.js";
 
@@ -26,7 +27,7 @@ describe("PlayModel 構築", () => {
   });
 
   it("渡された initialData を内部へ取り込み外部入力と切り離す", () => {
-    const input = seed();
+    const input = mutable(seed());
     const model = new PlayModel(input);
 
     must(input.players[0]).label = "tampered";
@@ -55,7 +56,7 @@ describe("PlayModel 参照系", () => {
     const listener = vi.fn();
     model.onDidChange(listener);
 
-    const snap = model.getData();
+    const snap = mutable(model.getData());
     must(snap.players[0]).label = "edited";
 
     expect(model.findPlayer("a")?.label).toBe("a");
@@ -70,14 +71,10 @@ describe("PlayModel 参照系", () => {
     expect(model.getFieldZone()).toBe("redzone");
   });
 
-  it("findPlayer / findLine は一致時に複製を、不在時に undefined を返す", () => {
+  it("findPlayer / findLine は一致した要素を、不在なら undefined を返す", () => {
     const model = new PlayModel(seed());
 
-    const found = model.findPlayer("b");
-    expect(found).toEqual(player("b"));
-    must(found).label = "x";
-    expect(model.findPlayer("b")?.label).toBe("b");
-
+    expect(model.findPlayer("b")).toEqual(player("b"));
     expect(model.findPlayer("zzz")).toBeUndefined();
     expect(model.findLine("la")).toEqual(line("la", "a"));
     expect(model.findLine("zzz")).toBeUndefined();
@@ -103,7 +100,7 @@ describe("PlayModel 選手の追加・更新", () => {
     const model = new PlayModel();
     const listener = vi.fn();
     model.onDidChange(listener);
-    const p = player("new");
+    const p = mutable(player("new"));
 
     model.addPlayer(p);
     p.label = "tampered";
@@ -242,7 +239,7 @@ describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () =
     const model = new PlayModel();
     const listener = vi.fn();
     model.onDidChange(listener);
-    const ps = [player("x", 1, 1), player("y", 2, 2)];
+    const ps = mutable([player("x", 1, 1), player("y", 2, 2)]);
 
     model.addPlayers(ps);
     must(ps[0]).label = "tampered";
@@ -280,7 +277,7 @@ describe("PlayModel 線の追加・挿入・削除・更新", () => {
     const model = new PlayModel({ ...seed(), lines: [] });
     const listener = vi.fn();
     model.onDidChange(listener);
-    const l = line("new", "a");
+    const l = mutable(line("new", "a"));
 
     model.addLine(l);
     l.kind = "block";
@@ -335,11 +332,48 @@ describe("PlayModel の発火スナップショット独立性", () => {
     });
 
     model.setFieldZone("own-redzone");
-    const r = must(received);
+    const r = mutable(must(received));
     r.field.zone = "middle";
     must(r.players[0]).label = "tampered";
 
     expect(model.getData().field.zone).toBe("own-redzone");
     expect(model.findPlayer("a")?.label).toBe("a");
+  });
+});
+
+describe("PlayModel の軽い読み取り", () => {
+  it("getSnapshot は変更までは同じオブジェクトを返し、変更後は新しいものに替わる", () => {
+    const model = new PlayModel(seed());
+    const before = model.getSnapshot();
+
+    expect(model.getSnapshot()).toBe(before);
+
+    model.setFieldZone("redzone");
+
+    expect(model.getSnapshot()).not.toBe(before);
+    expect(before.field.zone).toBe("middle");
+    expect(model.getSnapshot().field.zone).toBe("redzone");
+  });
+
+  it("hasPlayer / hasLine は id の有無を返す", () => {
+    const model = new PlayModel(seed());
+
+    expect(model.hasPlayer("a")).toBe(true);
+    expect(model.hasPlayer("zzz")).toBe(false);
+    expect(model.hasLine("la")).toBe(true);
+    expect(model.hasLine("zzz")).toBe(false);
+  });
+});
+
+describe("PlayModel の破棄", () => {
+  it("dispose 後の変更は購読者へ通知しない", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    model.dispose();
+    model.setFieldZone("redzone");
+
+    expect(listener).not.toHaveBeenCalled();
   });
 });

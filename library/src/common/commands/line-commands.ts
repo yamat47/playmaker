@@ -72,20 +72,15 @@ export class UpdateLineCommand implements ICommand {
     if (current === undefined) {
       throw new Error(`UpdateLineCommand: unknown line id "${this.lineId}"`);
     }
-    const next = cloneLine(current);
-    if (this.patch.kind !== undefined) {
-      next.kind = this.patch.kind;
-    }
-    if (this.patch.interpolation !== undefined) {
-      next.interpolation = this.patch.interpolation;
-    }
-    if (this.patch.color !== undefined) {
-      next.color = this.patch.color;
-    }
-    if (this.patch.thickness !== undefined) {
-      next.thickness = this.patch.thickness;
-    }
-    this.previous = model.updateLine(next);
+    // patch は「指定キーのみ差し替え・未指定は現状維持」。undefined を「クリア」と解釈しない。
+    const { kind, interpolation, color, thickness } = this.patch;
+    this.previous = model.updateLine({
+      ...current,
+      ...(kind === undefined ? {} : { kind }),
+      ...(interpolation === undefined ? {} : { interpolation }),
+      ...(color === undefined ? {} : { color }),
+      ...(thickness === undefined ? {} : { thickness }),
+    });
   }
 
   undo(model: IPlayModel): void {

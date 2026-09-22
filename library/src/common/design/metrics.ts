@@ -37,25 +37,25 @@ const MOTION_DASH_OFF_PER_U = 0.7;
 /** W(フィールド幅px)・U(1ヤードpx) から導く描画寸法（px）。 */
 export interface FieldMetrics {
   /** マーキング層。 */
-  yardLineWidth: number;
+  readonly yardLineWidth: number;
   /** ゴールライン・境界は最重要なので通常ラインの 2 倍。 */
-  goalLineWidth: number;
-  hashTickLength: number;
-  numberHeight: number;
+  readonly goalLineWidth: number;
+  readonly hashTickLength: number;
+  readonly numberHeight: number;
   /** 注釈層の基準直径 D（実マーカー直径）。 */
-  tokenDiameter: number;
+  readonly tokenDiameter: number;
   /** 選手マーカーの枠線幅（D 比）。固定 px を散らさず表示サイズに追従する。 */
-  markerStroke: number;
+  readonly markerStroke: number;
   /** 選手ラベルのフォント px（D 比）。マーカー内に収まる。 */
-  markerLabelFont: number;
-  routeWidth: number;
+  readonly markerLabelFont: number;
+  readonly routeWidth: number;
   /** block も route と同じ太さ。記法（T 字）で区別する。 */
-  blockWidth: number;
-  blockCapLength: number;
-  arrowLength: number;
-  arrowHalfWidth: number;
+  readonly blockWidth: number;
+  readonly blockCapLength: number;
+  readonly arrowLength: number;
+  readonly arrowHalfWidth: number;
   /** モーション破線パターン [on, off]（px）。 */
-  motionDash: readonly [number, number];
+  readonly motionDash: readonly [number, number];
 }
 
 /**

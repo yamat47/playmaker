@@ -23,7 +23,6 @@ export type {
   FieldZone,
   Formation,
   FormationPlayer,
-  FormationSide,
   ImageExportOptions,
   Line,
   LineInterpolation,
@@ -33,6 +32,7 @@ export type {
   Player,
   PlayerShape,
   PlayPreset,
+  TeamSide,
 } from "./common/index.js";
 export {
   CURRENT_PLAY_DATA_VERSION,
@@ -164,7 +164,7 @@ export class Playmaker extends Disposable {
    * `options.width` で出力幅(px)を指定でき、高さは縦横比から導かれる。
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {
-    return this.surface.exportToPngBlob(this.model.getData(), options);
+    return this.surface.exportToPngBlob(this.model.getSnapshot(), options);
   }
 
   override dispose(): void {
@@ -180,7 +180,7 @@ export class Playmaker extends Disposable {
     model: PlayModel;
     controller: EditorController;
   } {
-    const model = new PlayModel(data);
+    const model = this.session.add(new PlayModel(data));
     const undoRedo = new UndoRedoService(model);
     const commands = new CommandService(model, undoRedo);
     const ids = new IdFactory();

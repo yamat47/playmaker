@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
 import type { Player } from "../model/player.js";
-import { type Formation, isFormationSide, normalizeFormation } from "./formation.js";
-
-describe("isFormationSide", () => {
-  it("offense / defense のみ真、それ以外は偽", () => {
-    expect(isFormationSide("offense")).toBe(true);
-    expect(isFormationSide("defense")).toBe(true);
-    expect(isFormationSide("special")).toBe(false);
-    expect(isFormationSide(0)).toBe(false);
-    expect(isFormationSide(undefined)).toBe(false);
-  });
-});
+import { type Formation, normalizeFormation } from "./formation.js";
 
 describe("normalizeFormation: 復元不能", () => {
   it("オブジェクトでない / null は null", () => {

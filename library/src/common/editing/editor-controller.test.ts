@@ -60,20 +60,10 @@ describe("EditorController: 初期状態", () => {
     expect(controller.getSelectedLine()).toBeUndefined();
   });
 
-  it("interaction が無ければ getRenderModel は Model のスナップショットそのまま", () => {
+  it("interaction が無ければ getRenderModel は Model のスナップショットをそのまま返す", () => {
     const { controller, model } = setup();
 
-    const rendered = controller.getRenderModel();
-
-    expect(rendered).toEqual(model.getData());
-    // 返り値を書き換えても Model に波及しない（スナップショット）。
-    rendered.players.push({
-      id: "x",
-      position: { lateralYard: 0, absoluteYard: 0 },
-      shape: "circle",
-      label: "",
-    });
-    expect(model.getData().players).toHaveLength(2);
+    expect(controller.getRenderModel()).toBe(model.getSnapshot());
   });
 });
 

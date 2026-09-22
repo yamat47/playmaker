@@ -100,18 +100,14 @@ export class UpdatePlayerCommand implements ICommand {
     if (current === undefined) {
       throw new Error(`UpdatePlayerCommand: unknown player id "${this.playerId}"`);
     }
-    const next = clonePlayer(current);
     // patch は「指定キーのみ差し替え・未指定は現状維持」。undefined を「クリア」と解釈しない。
-    if (this.patch.label !== undefined) {
-      next.label = this.patch.label;
-    }
-    if (this.patch.shape !== undefined) {
-      next.shape = this.patch.shape;
-    }
-    if (this.patch.color !== undefined) {
-      next.color = this.patch.color;
-    }
-    this.previous = model.updatePlayer(next);
+    const { label, shape, color } = this.patch;
+    this.previous = model.updatePlayer({
+      ...current,
+      ...(label === undefined ? {} : { label }),
+      ...(shape === undefined ? {} : { shape }),
+      ...(color === undefined ? {} : { color }),
+    });
   }
 
   undo(model: IPlayModel): void {

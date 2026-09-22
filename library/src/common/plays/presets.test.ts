@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isFormationSide } from "../formations/formation.js";
 import { isLineInterpolation, isLineKind } from "../model/line.js";
 import { CURRENT_PLAY_DATA_VERSION, resolvePlayData } from "../model/play-data.js";
 import { isPlayerShape } from "../model/player.js";
+import { DEFENSE_COLOR, isTeamSide } from "../presets/shared.js";
 import type { PlayCategory } from "./play-preset.js";
 import { getPlayPreset, PLAY_PRESETS } from "./presets.js";
 
-const DEFENSE_COLOR = "#8f4034";
 const VALID_CATEGORIES: readonly PlayCategory[] = [
   "run-zone",
   "run-gap",
@@ -34,7 +33,7 @@ describe("PLAY_PRESETS データ健全性", () => {
 
   it("各プリセットのメタ情報と field は妥当", () => {
     for (const preset of PLAY_PRESETS) {
-      expect(isFormationSide(preset.side)).toBe(true);
+      expect(isTeamSide(preset.side)).toBe(true);
       expect(VALID_CATEGORIES).toContain(preset.category);
       expect(preset.name.trim()).not.toBe("");
       expect(preset.personnel.trim()).not.toBe("");
@@ -88,5 +87,15 @@ describe("getPlayPreset", () => {
     expect(getPlayPreset("play-inside-zone")?.name).toBe("Inside Zone");
     expect(getPlayPreset("play-cover-3")?.side).toBe("defense");
     expect(getPlayPreset("does-not-exist")).toBeUndefined();
+  });
+});
+
+describe("PLAY_PRESETS の共有", () => {
+  it("入れ子の値まで凍結されていて、利用者が書き換えられない", () => {
+    const preset = PLAY_PRESETS[0];
+
+    expect(Object.isFrozen(preset)).toBe(true);
+    expect(Object.isFrozen(preset?.data.players)).toBe(true);
+    expect(Object.isFrozen(preset?.data.players[0]?.position)).toBe(true);
   });
 });

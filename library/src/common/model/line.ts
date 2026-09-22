@@ -52,19 +52,19 @@ export const MAX_WAYPOINTS_PER_LINE = 32;
  * `color`/`thickness` は任意（未指定はテーマ既定）。
  */
 export interface Line {
-  id: string;
-  kind: LineKind;
+  readonly id: string;
+  readonly kind: LineKind;
   /** 起点となる選手の id。実在しない参照は復元時に除外される。 */
-  startPlayerId: string;
+  readonly startPlayerId: string;
   /** 起点と終点の間の中継点（0 個可）。 */
-  waypoints: FieldPosition[];
+  readonly waypoints: readonly FieldPosition[];
   /** 終点（ヤード空間）。 */
-  end: FieldPosition;
-  interpolation: LineInterpolation;
+  readonly end: FieldPosition;
+  readonly interpolation: LineInterpolation;
   /** CSS カラー文字列（任意）。 */
-  color?: string;
+  readonly color?: string;
   /** 線幅（CSS px。任意・未指定はテーマ既定）。 */
-  thickness?: number;
+  readonly thickness?: number;
 }
 
 export function isLineKind(value: unknown): value is LineKind {
@@ -100,7 +100,7 @@ function normalizeLine(
     return null;
   }
 
-  const line: Line = {
+  return {
     id: isNonEmptyString(raw.id) ? raw.id : `l${index}`,
     kind: isLineKind(raw.kind) ? raw.kind : DEFAULT_LINE_KIND,
     startPlayerId: raw.startPlayerId,
@@ -110,15 +110,10 @@ function normalizeLine(
     interpolation: isLineInterpolation(raw.interpolation)
       ? raw.interpolation
       : DEFAULT_LINE_INTERPOLATION,
+    // exactOptionalPropertyTypes: 値があるときだけ持たせる。
+    ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
+    ...(isFiniteNumber(raw.thickness) && raw.thickness > 0 ? { thickness: raw.thickness } : {}),
   };
-  // exactOptionalPropertyTypes: 値があるときだけ持たせる。
-  if (isNonEmptyString(raw.color)) {
-    line.color = raw.color;
-  }
-  if (isFiniteNumber(raw.thickness) && raw.thickness > 0) {
-    line.thickness = raw.thickness;
-  }
-  return line;
 }
 
 /**
@@ -135,21 +130,16 @@ export function normalizeLines(raw: unknown, validPlayerIds: ReadonlySet<string>
 
 /** Line を深く複製する（waypoints / 位置まで共有しない防御的コピー）。 */
 export function cloneLine(line: Line): Line {
-  const copy: Line = {
+  return {
     id: line.id,
     kind: line.kind,
     startPlayerId: line.startPlayerId,
     waypoints: line.waypoints.map((p) => ({ ...p })),
     end: { ...line.end },
     interpolation: line.interpolation,
+    ...(line.color === undefined ? {} : { color: line.color }),
+    ...(line.thickness === undefined ? {} : { thickness: line.thickness }),
   };
-  if (line.color !== undefined) {
-    copy.color = line.color;
-  }
-  if (line.thickness !== undefined) {
-    copy.thickness = line.thickness;
-  }
-  return copy;
 }
 
 /**

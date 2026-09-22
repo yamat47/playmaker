@@ -3,6 +3,7 @@
 // 選手↔線の整合（起点選手が消えたら従属線も消える）はこの Model が所有する不変条件。
 
 import { Emitter, type Event } from "../event/emitter.js";
+import { Disposable } from "../lifecycle/disposable.js";
 import { cloneLine, type Line } from "./line.js";
 import { migratePlayData } from "./migration.js";
 import { clonePlayData, type FieldZone, type PlayData } from "./play-data.js";
@@ -13,15 +14,15 @@ import { clonePlayer, type Player } from "./player.js";
  * カスケード除去した従属線を「元の配列インデックス付き」で保持し、復元時に同じ並びへ戻す。
  */
 export interface PlayerRemoval {
-  player: Player;
-  index: number;
-  removedLines: { line: Line; index: number }[];
+  readonly player: Player;
+  readonly index: number;
+  readonly removedLines: readonly LineRemoval[];
 }
 
 /** 線 1 本の削除を巻き戻すためのメメント（元のインデックス付き）。 */
 export interface LineRemoval {
-  line: Line;
-  index: number;
+  readonly line: Line;
+  readonly index: number;
 }
 
 /**
@@ -32,13 +33,19 @@ export interface LineRemoval {
 export interface IPlayModel {
   /** いずれかの変更後に最新 PlayData のスナップショットを 1 回発火する。 */
   readonly onDidChange: Event<PlayData>;
-  /** 現在状態の深いスナップショット（内部状態とは別オブジェクト）。 */
+  /** 現在状態の深いコピー。内部の読み取りには getSnapshot を使い、これは外へ渡すときだけ使う。 */
   getData(): PlayData;
-  /** 現在のフィールドゾーン（値型なので getData の深いコピーを伴わない軽量読取）。 */
+  /**
+   * 現在状態をコピーせずに返す。状態は変更のたびに新しいオブジェクトへ差し替えるので、
+   * 受け取った値は後の変更で書き換わらない。
+   */
+  getSnapshot(): PlayData;
   getFieldZone(): FieldZone;
-  /** id に一致する選手の複製。無ければ undefined。 */
+  hasPlayer(id: string): boolean;
+  hasLine(id: string): boolean;
+  /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
   findPlayer(id: string): Player | undefined;
-  /** id に一致する線の複製。無ければ undefined。 */
+  /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
   findLine(id: string): Line | undefined;
   setFieldZone(zone: FieldZone): void;
   /** 既にある id の選手を渡すと throw する（id は選択と編集の対象を決める唯一の鍵）。 */
@@ -87,14 +94,15 @@ function assertNewId(items: readonly { id: string }[], id: string, message: stri
  * すべての変更系メソッドは「入力を複製して取り込み」「変更後に onDidChange を 1 回だけ発火」する。
  * 復元不能な参照（未知 id への操作）は契約違反としてその場で throw する（UI は実在対象のみ操作する前提）。
  */
-export class PlayModel implements IPlayModel {
-  private readonly _onDidChange = new Emitter<PlayData>();
+export class PlayModel extends Disposable implements IPlayModel {
+  private readonly _onDidChange = this._register(new Emitter<PlayData>());
   readonly onDidChange = this._onDidChange.event;
   // migratePlayData が版検出→段適用→構造正規化した深い新規オブジェクトを返す
   // ＝外部入力（旧版・破損含む）と完全に切り離した内部状態（PRD 6.6 の唯一の入口）。
   private state: PlayData;
 
   constructor(initialData?: unknown) {
+    super();
     this.state = migratePlayData(initialData);
   }
 
@@ -102,18 +110,28 @@ export class PlayModel implements IPlayModel {
     return clonePlayData(this.state);
   }
 
+  getSnapshot(): PlayData {
+    return this.state;
+  }
+
   getFieldZone(): FieldZone {
     return this.state.field.zone;
   }
 
+  hasPlayer(id: string): boolean {
+    return this.state.players.some((p) => p.id === id);
+  }
+
+  hasLine(id: string): boolean {
+    return this.state.lines.some((l) => l.id === id);
+  }
+
   findPlayer(id: string): Player | undefined {
-    const found = this.state.players.find((p) => p.id === id);
-    return found === undefined ? undefined : clonePlayer(found);
+    return this.state.players.find((p) => p.id === id);
   }
 
   findLine(id: string): Line | undefined {
-    const found = this.state.lines.find((l) => l.id === id);
-    return found === undefined ? undefined : cloneLine(found);
+    return this.state.lines.find((l) => l.id === id);
   }
 
   setFieldZone(zone: FieldZone): void {
@@ -146,7 +164,7 @@ export class PlayModel implements IPlayModel {
       throw new Error(`PlayModel.removePlayer: unknown player id "${id}"`);
     }
     const index = this.state.players.indexOf(target);
-    const removedLines: { line: Line; index: number }[] = [];
+    const removedLines: LineRemoval[] = [];
     const lines: Line[] = [];
     this.state.lines.forEach((line, i) => {
       if (line.startPlayerId === id) {

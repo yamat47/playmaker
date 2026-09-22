@@ -4,10 +4,8 @@
 // （フィールド上の表記＝英語というプロダクト方針）。戦術的厳密性より組み込みやすさ優先（PRD 4.1）。
 
 import type { PlayerShape } from "../model/player.js";
+import { DEFENSE_COLOR, deepFreeze } from "../presets/shared.js";
 import type { Formation, FormationPlayer } from "./formation.js";
-
-/** ディフェンス選手の既定色（攻守を一目で区別できるよう、くすませた赤）。プレー図プリセットでも共有する。 */
-export const DEFENSE_COLOR = "#8f4034";
 
 /** オフェンス選手テンプレート（色なし＝テーマ既定）。 */
 function off(
@@ -260,7 +258,7 @@ const DEFENSE_3_3_5: Formation = {
  * 組み込みプリセット一覧（攻 7・守 6）。Toolbar はこれを攻守でグループ表示し、
  * 商用ソフトはこの配列を起点に独自テンプレートを足せる（PRD 5.6）。
  */
-export const FORMATION_PRESETS: readonly Formation[] = [
+export const FORMATION_PRESETS: readonly Formation[] = deepFreeze([
   I_FORMATION,
   SINGLEBACK_ACE,
   SHOTGUN_SPREAD,
@@ -274,7 +272,7 @@ export const FORMATION_PRESETS: readonly Formation[] = [
   DEFENSE_DIME,
   DEFENSE_4_2_5,
   DEFENSE_3_3_5,
-];
+]);
 
 /** id でプリセットを引く。未知 id は undefined（呼び出し側で無視する）。 */
 export function getFormationPreset(id: string): Formation | undefined {

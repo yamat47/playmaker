@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
+import { mutable } from "../../test-support/mutable.js";
 import {
   clonePlayData,
   createEmptyPlayData,
@@ -69,7 +70,7 @@ describe("clonePlayData", () => {
   });
 
   it("コピーを書き換えても元データへ波及しない", () => {
-    const copy = clonePlayData(source);
+    const copy = mutable(clonePlayData(source));
 
     copy.field.zone = "middle";
     must(copy.players[0]).label = "WR";

@@ -3,11 +3,10 @@
 // 座標はヤード空間（LOS≈50・ダウンフィールド=abs 増加・センター lat≈26.7）で middle ゾーン窓
 // (abs 35..65) に収まる。主役側のみがルート/ブロック/モーションを持ち、相手側は配置マーカーだけ。
 
-import type { FormationSide } from "../formations/formation.js";
-import { DEFENSE_COLOR } from "../formations/presets.js";
 import type { Line, LineInterpolation, LineKind } from "../model/line.js";
 import { CURRENT_PLAY_DATA_VERSION } from "../model/play-data.js";
 import type { FieldPosition, Player, PlayerShape } from "../model/player.js";
+import { DEFENSE_COLOR, deepFreeze, type TeamSide } from "../presets/shared.js";
 import type { PlayCategory, PlayPreset } from "./play-preset.js";
 
 function pt(lateralYard: number, absoluteYard: number): FieldPosition {
@@ -40,17 +39,21 @@ function ln(
   interpolation: LineInterpolation,
   color?: string,
 ): Line {
-  const line: Line = { id, kind, startPlayerId, waypoints, end, interpolation };
-  if (color !== undefined) {
-    line.color = color;
-  }
-  return line;
+  return {
+    id,
+    kind,
+    startPlayerId,
+    waypoints,
+    end,
+    interpolation,
+    ...(color === undefined ? {} : { color }),
+  };
 }
 
 function play(
   id: string,
   name: string,
-  side: FormationSide,
+  side: TeamSide,
   category: PlayCategory,
   personnel: string,
   summary: string,
@@ -663,7 +666,7 @@ const COVER_6 = play(
  * 組み込みプレー図一覧（攻 10・守 8）。demo はこれを攻守・タイプで束ねて一覧表示し、
  * 商用ソフトはこの配列を起点に独自プレーを足せる。
  */
-export const PLAY_PRESETS: readonly PlayPreset[] = [
+export const PLAY_PRESETS: readonly PlayPreset[] = deepFreeze([
   INSIDE_ZONE,
   OUTSIDE_ZONE,
   POWER,
@@ -682,7 +685,7 @@ export const PLAY_PRESETS: readonly PlayPreset[] = [
   COVER_0,
   DOUBLE_A,
   COVER_6,
-];
+]);
 
 /** id でプレー図プリセットを引く。未知 id は undefined（呼び出し側で無視する）。 */
 export function getPlayPreset(id: string): PlayPreset | undefined {

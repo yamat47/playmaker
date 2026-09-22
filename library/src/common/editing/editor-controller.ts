@@ -67,22 +67,22 @@ const DRAFT_LINE_ID = "__playmaker_draft_line__";
  * 「どこを強調するか」の計算は common 側に閉じ、browser は描くだけにする。
  */
 export interface EditorOverlay {
-  selectedPlayerId?: string;
+  readonly selectedPlayerId?: string;
   /** 選択中の線の waypoint ハンドル位置（ドラッグ対象）。それ以外は空配列。 */
-  waypointHandles: FieldPosition[];
+  readonly waypointHandles: readonly FieldPosition[];
   /** 選択中の線の終点ハンドル位置（ドラッグ対象）。線未選択なら undefined。 */
-  endpointHandle?: FieldPosition;
+  readonly endpointHandle?: FieldPosition;
 }
 
 /** ツールバー/プロパティパネルが描画に使う集約ビュー状態。 */
 export interface EditorViewState {
-  tool: EditorTool;
-  selection: EditorSelection;
-  canUndo: boolean;
-  canRedo: boolean;
-  fieldZone: FieldZone;
+  readonly tool: EditorTool;
+  readonly selection: EditorSelection;
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+  readonly fieldZone: FieldZone;
   /** 線を作図中（確定/キャンセル待ち）か。 */
-  drawing: boolean;
+  readonly drawing: boolean;
 }
 
 /**
@@ -95,9 +95,9 @@ export interface IEditorController {
   setTool(tool: EditorTool): void;
   getSelection(): EditorSelection;
   getViewState(): EditorViewState;
-  /** 選択中の選手（複製）。選手選択でない/対象が消えていれば undefined。 */
+  /** 選手選択でない/対象が消えていれば undefined。 */
   getSelectedPlayer(): Player | undefined;
-  /** 選択中の線（複製）。線選択でない/対象が消えていれば undefined。 */
+  /** 線選択でない/対象が消えていれば undefined。 */
   getSelectedLine(): Line | undefined;
   getRenderModel(): PlayData;
   getOverlay(): EditorOverlay;
@@ -275,7 +275,7 @@ export class EditorController extends Disposable implements IEditorController {
 
   /** Model スナップショットに一時状態（ドラッグ/作図プレビュー）を合成して返す純関数。 */
   getRenderModel(): PlayData {
-    const data = this.model.getData();
+    const data = this.model.getSnapshot();
     const i = this.interaction;
     if (i === null) {
       return data;
@@ -411,7 +411,7 @@ export class EditorController extends Disposable implements IEditorController {
     }
     const final = this.clampToField(moved);
     if (i.type === "drag-player") {
-      if (this.model.findPlayer(i.playerId) === undefined) {
+      if (!this.model.hasPlayer(i.playerId)) {
         this._onDidChange.fire();
         return;
       }
@@ -526,20 +526,11 @@ export class EditorController extends Disposable implements IEditorController {
    * 配置可能な選手が無ければ no-op。1 コマンド = onChange 1 回。
    */
   loadFormation(formation: Formation): void {
-    const taken = new Set(this.model.getData().players.map((p) => p.id));
+    const taken = new Set(this.model.getSnapshot().players.map((p) => p.id));
     const players: Player[] = formation.players.map((fp) => {
       const id = this.ids.next("player", taken);
       taken.add(id);
-      const player: Player = {
-        id,
-        position: { ...fp.position },
-        shape: fp.shape,
-        label: fp.label,
-      };
-      if (fp.color !== undefined) {
-        player.color = fp.color;
-      }
-      return player;
+      return { ...fp, id };
     });
     if (players.length === 0) {
       return;
@@ -597,7 +588,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private selectPointerDown(pos: FieldPosition): void {
-    const data = this.model.getData();
+    const data = this.model.getSnapshot();
     // 1) 選択中の線のハンドルを最優先で掴む（選手/線と重なっても編集可能に）。
     //    終点 → waypoint の順で当てる（先端を動かしたい操作を最後の waypoint に
     //    奪われないよう、終点を先に拾う）。
@@ -676,7 +667,7 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     // 起点は必ず選手（Model の不変条件）。選手以外で始めようとしたら無視する。
-    const player = hitTestPlayer(this.model.getData().players, pos);
+    const player = hitTestPlayer(this.model.getSnapshot().players, pos);
     if (player === undefined) {
       return;
     }
@@ -691,7 +682,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private addPlayerAt(pos: FieldPosition): void {
-    const taken = new Set(this.model.getData().players.map((p) => p.id));
+    const taken = new Set(this.model.getSnapshot().players.map((p) => p.id));
     const id = this.ids.next("player", taken);
     const player: Player = {
       id,
@@ -723,6 +714,6 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private lineIds(): Set<string> {
-    return new Set(this.model.getData().lines.map((l) => l.id));
+    return new Set(this.model.getSnapshot().lines.map((l) => l.id));
   }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { must } from "../../test-support/must.js";
+import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import type { Player } from "../model/player.js";
@@ -54,7 +55,7 @@ describe("LoadFormationCommand", () => {
   });
 
   it("構築後に入力配列・要素を書き換えても保持データは揺れない（redo 安定）", () => {
-    const input = formationPlayers();
+    const input = mutable(formationPlayers());
     const command = new LoadFormationCommand(input);
     must(input[0]).label = "tampered";
     input.length = 0;

@@ -19,7 +19,7 @@ export type FieldZone = (typeof FIELD_ZONE_VALUES)[number];
 export const DEFAULT_FIELD_ZONE: FieldZone = "middle";
 
 export interface FieldState {
-  zone: FieldZone;
+  readonly zone: FieldZone;
 }
 
 /**
@@ -33,12 +33,12 @@ export const CURRENT_PLAY_DATA_VERSION = 1 as const;
  * 旧版・版なし・未来版いずれも現行へ寄せる（PRD 6.6 の往復契約）。
  */
 export interface PlayData {
-  version: typeof CURRENT_PLAY_DATA_VERSION;
-  field: FieldState;
+  readonly version: typeof CURRENT_PLAY_DATA_VERSION;
+  readonly field: FieldState;
   /** 配置済みの選手（描画順 = 配列順。後の要素ほど上に重なる）。 */
-  players: Player[];
+  readonly players: readonly Player[];
   /** 描画する線（描画順 = 配列順。選手の下に敷く＝起点が選手で隠れない）。 */
-  lines: Line[];
+  readonly lines: readonly Line[];
 }
 
 export function isFieldZone(value: unknown): value is FieldZone {
@@ -95,19 +95,21 @@ export function resolvePlayData(data: unknown): PlayData {
  * 同じ id が 2 つあると、hit-test は末尾を返すのに更新は先頭に当たり、別の要素が編集される。
  * 振り直した id は、入力に明示された他の id とも衝突させない。
  */
-function makeIdsUnique<T extends { id: string }>(items: T[]): T[] {
+function makeIdsUnique<T extends { readonly id: string }>(items: readonly T[]): T[] {
   const taken = new Set(items.map((item) => item.id));
   const seen = new Set<string>();
-  for (const item of items) {
-    if (seen.has(item.id)) {
-      let n = 2;
-      while (taken.has(`${item.id}-${n}`)) {
-        n += 1;
-      }
-      item.id = `${item.id}-${n}`;
-      taken.add(item.id);
+  return items.map((item) => {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      return item;
     }
-    seen.add(item.id);
-  }
-  return items;
+    let n = 2;
+    while (taken.has(`${item.id}-${n}`)) {
+      n += 1;
+    }
+    const id = `${item.id}-${n}`;
+    taken.add(id);
+    seen.add(id);
+    return { ...item, id };
+  });
 }

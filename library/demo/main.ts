@@ -545,18 +545,25 @@ need<HTMLButtonElement>("clear").addEventListener(
   { signal },
 );
 
+async function downloadPng(): Promise<void> {
+  const blob = await playmaker.exportToPng();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `playmaker-${mode}-${Date.now()}.png`;
+  a.click();
+  // click() のダウンロードは環境により非同期。同期 revoke で取りこぼす環境があるため遅延する。
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  statusEl.textContent = `PNG 出力（${mode} モード・${Math.round(blob.size / 1024)}KB）`;
+}
+
 need<HTMLButtonElement>("export-png").addEventListener(
   "click",
-  async () => {
-    const blob = await playmaker.exportToPng();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `playmaker-${mode}-${Date.now()}.png`;
-    a.click();
-    // click() のダウンロードは環境により非同期。同期 revoke で取りこぼす環境があるため遅延する。
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    statusEl.textContent = `PNG 出力（${mode} モード・${Math.round(blob.size / 1024)}KB）`;
+  () => {
+    downloadPng().catch((error: unknown) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      statusEl.textContent = `PNG 出力に失敗しました: ${reason}`;
+    });
   },
   { signal },
 );

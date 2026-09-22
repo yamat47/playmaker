@@ -1,0 +1,116 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "root": ".."
+  },
+  "files": {
+    "includes": ["src/**", "demo/**", "*.ts", "*.json", "*.jsonc"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        // 型だけを使う import に type が付いていないことは、tsc が verbatimModuleSyntax で検出する。
+        // Biome でも検査すると同じ指摘が 2 か所から出るので、tsc に任せる。
+        "useImportType": "off",
+        "noParameterProperties": "error"
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "useExhaustiveSwitchCases": "error"
+      }
+    }
+  },
+  // 同じルールの options は override をまたいでマージされないので、禁止する group は override ごとに全部書く。
+  "overrides": [
+    {
+      "includes": ["src/common/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/browser", "**/browser/**", "**/playmaker.js"],
+                    "message": "common から browser と公開エントリは import しない。DOM に触れる処理は browser に置く。"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/common/**", "!src/common/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/browser", "**/browser/**", "**/playmaker.js"],
+                    "message": "common から browser と公開エントリは import しない。DOM に触れる処理は browser に置く。"
+                  },
+                  {
+                    "group": ["**/test-support/**"],
+                    "message": "test-support はテストからだけ使う。build の対象外なので、本体から import すると型定義が壊れる。"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/browser/**", "src/playmaker.ts", "!**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/test-support/**"],
+                    "message": "test-support はテストからだけ使う。build の対象外なので、本体から import すると型定義が壊れる。"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

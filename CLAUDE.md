@@ -35,9 +35,12 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
 | その他の pnpm コマンド | `make pnpm ARGS="exec vitest run --reporter=verbose"` など |
 | demo の dev サーバー | `make up`（http://localhost:5173）/ `make logs` / `make down` |
 | 初回・Dockerfile 変更後 | `make setup` |
+| フィールド用フォントの作り直し | `make font`（`library/src/assets/`） |
 
 - skill や agent の手順が `pnpm run <script>` を指示していたら、上の表の make ターゲットに読み替える
   （例: create-pr の検証ステップは `make check`）
 - `node_modules` は Docker volume の中にある。ホストの `library/node_modules/` は空のマウントポイントなので、
   中身を読みたいときは `make pnpm ARGS="exec ls node_modules/<pkg>"` を使う
+- pnpm 本体と Node は Dependabot が上げない（Node はイメージだけ上がる）。pnpm は `library/package.json` の
+  `packageManager`、Node は `.node-version` と `docker/Dockerfile` を書き換え、イメージに焼き込むので `make setup` する
 - demo をブラウザで確かめる手順は `run-demo` skill にある

@@ -10,11 +10,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# JS アクション(checkout/setup-node 等)を最新の Node 24 ランタイムで動かす
-# （Node 20 ランタイムは非推奨。GitHub 強制移行前に先取りする）
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions:
   contents: read
 
@@ -30,22 +25,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # github-toolkit は自分で管理しているリポジトリなので、タグ固定と Dependabot での更新はやめ、
-      # @main を直接追いかける。toolkit 側で上流 action を更新すると、その内容が次の CI からそのまま入る
+      # action は SHA で固定するのが原則だが、github-toolkit だけは例外として @main を直接追いかける。
+      # 自分で管理しているリポジトリで、上流 action の SHA 固定と Dependabot での更新は toolkit 側で行うため。
+      # toolkit の main の変更は、レビューを通さず次の CI からそのまま入る
       - name: Checkout
         uses: yamat47/github-toolkit/actions/checkout@main
         with:
           persist-credentials: false
 
       - name: Setup Node.js with pnpm and install dependencies
-        # pnpm のバージョンは library/package.json の packageManager から解決され、
-        # pnpm install --frozen-lockfile まで実行される。Node のメジャーは docker/Dockerfile と揃える
+        # pnpm のバージョンは library/package.json の packageManager から、Node は .node-version から読む。
+        # prepare の build を install で走らせると、後の Build と合わせて 2 回ビルドになるので飛ばす
         uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@main
         with:
-          node-version: 26
+          node-version-file: .node-version
           package-json-file: library/package.json
           cache-dependency-path: library/pnpm-lock.yaml
           working-directory: library
+          install-args: --frozen-lockfile --ignore-scripts
 
       - name: Typecheck
         run: pnpm run typecheck

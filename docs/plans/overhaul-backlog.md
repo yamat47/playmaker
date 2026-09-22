@@ -350,7 +350,7 @@ PR 単位で、依存順に並べる。
 
 - [ ] **T10-1 [should] playmaker.ts の公開契約が無テスト**（D13）
   - locations: library/src/playmaker.ts:123, library/src/playmaker.ts:137, library/src/playmaker.ts:174, library/src/playmaker.ts:191
-  - 対応: `common/editing/play-session.ts`（document 束）を作る。Model、履歴、CommandService、IdFactory、Controller の組み立て、onChange の中継、作り直し、normalizeFormation の経由をここに置く。「確定ごとに onChange を 1 回だけ呼ぶ」「構築時と setPlayData では呼ばない」「setPlayData で履歴をリセットする」「不正な Formation は no-op」を it にする。
+  - 対応: `common/editing/play-session.ts`（document 束）を作る。Model、履歴、CommandService、IdFactory、Controller の組み立て、onChange の中継、作り直し、normalizeFormation の経由をここに置く。「確定ごとに onChange を 1 回だけ呼ぶ」「構築時と setPlayData では呼ばない」「setPlayData で履歴をリセットする」「不正な Formation は no-op」「onChange で受け取った PlayData を書き換えても getPlayData の結果は変わらない」を it にする（最後の 1 つは T6b で Model から playmaker.ts へ移った深いコピーの契約）。
 - [ ] **T10-2 [should] barrel が内部関数まで約 70 件出していて、古いマイルストーンのコメントも残っている**
   - locations: library/src/common/index.ts:1-147, library/src/common/index.ts:2
   - 対応: browser と playmaker.ts が使う契約だけに絞る。テストは各モジュールを直接 import する。2 行目は削除する。

@@ -71,6 +71,7 @@ export function applyPlayDataMigrations(
  * 版検出 → 旧→現行の段適用 → 構造正規化（resolvePlayData）。決して投げず、
  * version は常に CURRENT_PLAY_DATA_VERSION に確定し、内部状態と切り離した新規
  * オブジェクトを返す（受け手が書き換えても波及しない＝PRD 5.8 の往復契約）。
+ * 選手、線、waypoint は MAX_PLAYERS、MAX_LINES、MAX_WAYPOINTS_PER_LINE の個数までしか読まない。
  */
 export function migratePlayData(raw: unknown): PlayData {
   const declared = readDeclaredVersion(raw);

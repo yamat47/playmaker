@@ -9,7 +9,7 @@
  * 内部専用名にして商用ソフト側の同名指定と衝突しにくくする。サブセット woff2 は
  * ビルド時に data URI として本 CSS へ inline される（追加ファイル配布が不要）。
  * 元フォント: Saira Condensed Bold（SIL OFL 1.1, assets/fonts/OFL.txt）。
- * 再生成: node scripts/generate-field-font.mjs
+ * 再生成: make font
  */
 @font-face {
   font-family: "Playmaker Saira";

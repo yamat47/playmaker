@@ -10,7 +10,7 @@ TypeScript ライブラリ。商用ソフトウェアに組み込む「図作成
 
 プライベートリポジトリの git 依存として参照する。パッケージ本体はリポジトリの
 `library/` にあるので、サブディレクトリを指定する（pnpm の `path:`）。`prepare` スクリプトが
-インストール時に `dist/`（ESM / CJS / 型 / CSS）をビルドするため、ビルド成果物は
+インストール時に `dist/`（ESM / 型 / CSS）をビルドするため、ビルド成果物は
 コミットしない。バージョンは **git タグ**で固定する。
 
 ```jsonc
@@ -141,7 +141,7 @@ make up             # library/demo/ playground を http://localhost:5173 で起�
 make test           # Vitest（common 層 100% カバレッジゲート内蔵）。FILE= で 1 ファイルだけ
 make typecheck      # tsc --noEmit
 make lint           # Biome（make fix で自動修正）
-make build          # Vite library mode → library/dist/（ESM/CJS/型/CSS）
+make build          # Vite library mode → library/dist/（ESM/型/CSS）
 make check          # CI と同じ検証を一通り
 make pnpm ARGS="add -D <pkg>"  # 任意の pnpm コマンド
 make help           # ターゲット一覧

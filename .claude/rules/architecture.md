@@ -57,7 +57,7 @@ src/
 ## スタイル / ツール
 
 - 言語: TypeScript（strict）。lint/format は Biome（`make lint` / `make fix`）
-- ビルド: Vite library mode（`make build` → `dist/` に ESM/CJS/CSS/型）
+- ビルド: Vite library mode（`make build` → `dist/` に ESM/CSS/型）
 - ローカル確認: `make up`（`demo/` playground、ホットリロード。手順は `run-demo` skill）
 - UI 文言・コメントは日本語（i18n 機構は持たない＝日本語のみ）
 - コメントの規約は `writing-conventions` skill と、その上に足す `.claude/rules/comments.md`

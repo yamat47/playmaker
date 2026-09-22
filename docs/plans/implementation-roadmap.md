@@ -375,6 +375,10 @@ TypeScript 7.0 はネイティブ実装になり、`typescript` パッケージ�
 
 **外す条件**：unplugin-dts が TS 7.1 以降の API に対応し、`typescript` パッケージだけで dts の生成と束ねができるようになったら、`typescriptCompilerFolder` の指定と `@typescript/typescript6` を外す。
 
+エディタ（Dev Container）の型検査も同じ理由で変えた。TS 7 の `typescript` パッケージは tsserver を同梱しないので、`typescript.tsdk` で node_modules を指すと VS Code の言語機能が止まる。そこで `TypeScriptTeam.native-preview` 拡張を入れ、`typescript.experimental.useTsgo` で tsgo を使う。
+
+**見直す条件**：VS Code の組み込み TypeScript 拡張が TS 7 の言語サーバーを標準で使うようになったら、拡張と `useTsgo` の指定を外す。
+
 ### 完了判定（PRD 7 章）
 - 機能要件（PRD 5 章）すべてが仕様通り動作
 - `common` 層の単体テストおよび統合テストが通る

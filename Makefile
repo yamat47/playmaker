@@ -79,8 +79,12 @@ fix: ## Biome で自動修正する
 	$(PNPM) run lint:fix
 
 .PHONY: check
-check: ## CI と同じ検証（lint / test / build。build が typecheck を含む）
+check: ## CI と同じ検証（typecheck / lint / test / build）
 	$(PNPM) run check
+
+.PHONY: font
+font: ## フィールド描画用フォントのサブセットを作り直す（library/src/assets/）
+	$(PNPM) run font
 
 .PHONY: pnpm
 pnpm: ## 任意の pnpm コマンド（例: make pnpm ARGS="add -D foo"）

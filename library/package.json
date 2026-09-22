@@ -8,31 +8,27 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/playmaker.cjs",
-  "module": "./dist/playmaker.js",
-  "types": "./dist/playmaker.d.ts",
   "exports": {
     ".": {
       "types": "./dist/playmaker.d.ts",
-      "import": "./dist/playmaker.js",
-      "require": "./dist/playmaker.cjs"
+      "import": "./dist/playmaker.js"
     },
-    "./styles.css": "./dist/playmaker.css"
+    "./styles.css": "./dist/playmaker.css",
+    "./package.json": "./package.json"
   },
   "sideEffects": [
     "**/*.css"
   ],
   "scripts": {
     "dev": "vite demo --config vite.config.ts",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "build": "vite build",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm run lint && pnpm run test && pnpm run build",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
+    "font": "node scripts/generate-field-font.mjs",
     "prepare": "pnpm run build"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 # 開発用イメージ。ホストに Node / pnpm を入れず、ツールチェーンはすべてこの中で動かす。
-# Node のメジャーは CI（.github/workflows/ci.yml の node-version）と揃える。
+# Node のメジャーはリポジトリのルートの .node-version（CI が読む）と揃える。
+# Dependabot はここだけを上げるので、その PR では .node-version も同じ版に直す。
 # ビルドコンテキストはリポジトリのルート（docker/compose.yaml）。
 FROM node:26-trixie-slim
 

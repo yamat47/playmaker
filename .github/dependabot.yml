@@ -14,6 +14,10 @@ updates:
     open-pull-requests-limit: 10
     # package.json の指定レンジ自体も最新へ引き上げる（lockfile 追従だけにしない）
     versioning-strategy: increase
+    # pnpm 11 は公開から 1 日たたない版を入れない（minimumReleaseAge）。それより先に PR が来ると
+    # install が失敗するので、公開から少し待ってから上げる
+    cooldown:
+      default-days: 3
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)

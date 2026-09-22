@@ -1,5 +1,3 @@
-import type { FieldPosition } from "./player.js";
-
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -17,14 +15,25 @@ export function isOneOf<const T extends string>(value: unknown, values: readonly
   return values.some((candidate) => candidate === value);
 }
 
-/** 座標が有限な数でなければ復元できないので null を返す。返す位置は入力と共有しない。 */
-export function parseFieldPosition(raw: unknown): FieldPosition | null {
-  if (!isRecord(raw)) {
-    return null;
+/**
+ * 配列の先頭 `max` 個だけを読み、`parse` が null を返した要素は捨てる。
+ * 復元できない要素も読んだ数に入れるので、どんな入力でも読むのは `max` 個までで済む。
+ */
+export function parseBoundedArray<T>(
+  raw: unknown,
+  max: number,
+  parse: (entry: unknown, index: number) => T | null,
+): T[] {
+  if (!Array.isArray(raw)) {
+    return [];
   }
-  const { lateralYard, absoluteYard } = raw;
-  if (!isFiniteNumber(lateralYard) || !isFiniteNumber(absoluteYard)) {
-    return null;
+  const parsed: T[] = [];
+  const end = Math.min(raw.length, max);
+  for (let index = 0; index < end; index += 1) {
+    const value = parse(raw[index], index);
+    if (value !== null) {
+      parsed.push(value);
+    }
   }
-  return { lateralYard, absoluteYard };
+  return parsed;
 }

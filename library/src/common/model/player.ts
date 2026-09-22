@@ -2,7 +2,13 @@
 // PlayData に合成され商用ソフトの DB に保存される（PRD 5.8）。
 // 戦術的厳密性より組み込みやすさ優先（PRD 4.1）: 形状は描画しやすい 6 種の幾何図形に絞る。
 
-import { isNonEmptyString, isOneOf, isRecord, parseFieldPosition } from "./guards.js";
+import {
+  isFiniteNumber,
+  isNonEmptyString,
+  isOneOf,
+  isRecord,
+  parseBoundedArray,
+} from "./guards.js";
 
 /**
  * 選手マーカーの形状（6 種・PRD 5.2）。
@@ -61,6 +67,18 @@ export function isPlayerShape(value: unknown): value is PlayerShape {
   return isOneOf(value, PLAYER_SHAPE_VALUES);
 }
 
+/** 座標が有限な数でなければ復元できないので null を返す。返す位置は入力と共有しない。 */
+export function parseFieldPosition(raw: unknown): FieldPosition | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  const { lateralYard, absoluteYard } = raw;
+  if (!isFiniteNumber(lateralYard) || !isFiniteNumber(absoluteYard)) {
+    return null;
+  }
+  return { lateralYard, absoluteYard };
+}
+
 /**
  * 外部（商用ソフト）から渡る 1 要素を内部で安全な Player へ正規化する。
  * 位置が無い/数値でないものは復元不能として null（呼び出し側で除外）。
@@ -94,23 +112,10 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
 /**
  * 外部から渡る players 配列を内部で安全な Player[] へ正規化する。
  * 配列でない/復元不能な要素は捨て、各要素は新規オブジェクトに複製する。
- * 復元できた選手が MAX_PLAYERS 人に達したら、残りは読まずに捨てる。
+ * 先頭の MAX_PLAYERS 個より後ろの要素は読まずに捨てる。
  */
 export function normalizePlayers(raw: unknown): Player[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  const players: Player[] = [];
-  for (const [index, entry] of raw.entries()) {
-    if (players.length >= MAX_PLAYERS) {
-      break;
-    }
-    const player = normalizePlayer(entry, index);
-    if (player !== null) {
-      players.push(player);
-    }
-  }
-  return players;
+  return parseBoundedArray(raw, MAX_PLAYERS, normalizePlayer);
 }
 
 /** Player を深く複製する（配列・位置まで共有しない防御的コピー）。 */

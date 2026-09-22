@@ -7,6 +7,7 @@
 // 公開境界で不正値を既定へ丸め、復元不能なら投げずに安全側へ倒す（PRD 6.6 流）。
 
 import { FIELD_WIDTH_YARDS, zoneWindowLength } from "../geometry/field.js";
+import { isFiniteNumber } from "../model/guards.js";
 import type { FieldZone } from "../model/play-data.js";
 
 /**
@@ -37,9 +38,7 @@ export interface ImageExportSize {
 
 /** 外部由来の幅を安全な整数 px へ正規化する（非有限・1 未満は既定値）。 */
 export function resolveImageExportWidth(width: number | undefined): number {
-  return typeof width === "number" && Number.isFinite(width) && width >= 1
-    ? Math.round(width)
-    : DEFAULT_EXPORT_WIDTH;
+  return isFiniteNumber(width) && width >= 1 ? Math.round(width) : DEFAULT_EXPORT_WIDTH;
 }
 
 /**

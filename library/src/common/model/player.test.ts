@@ -7,6 +7,7 @@ import {
   normalizePlayers,
   PLAYER_RADIUS_YARDS,
   type Player,
+  parseFieldPosition,
 } from "./player.js";
 
 describe("isPlayerShape", () => {
@@ -110,10 +111,32 @@ describe("normalizePlayers の件数上限", () => {
     expect(players.at(-1)?.id).toBe(`p${MAX_PLAYERS - 1}`);
   });
 
-  it("復元できない要素は上限の人数に数えない", () => {
+  it("先頭の MAX_PLAYERS 個に復元できない要素があれば、その分だけ少なくなる", () => {
     const raw = [null, ...Array.from({ length: MAX_PLAYERS }, (_, i) => at(i))];
 
-    expect(normalizePlayers(raw)).toHaveLength(MAX_PLAYERS);
+    expect(normalizePlayers(raw)).toHaveLength(MAX_PLAYERS - 1);
+  });
+});
+
+describe("parseFieldPosition", () => {
+  it("有限な座標を持つオブジェクトを新しい位置として返す", () => {
+    const raw = { lateralYard: 5, absoluteYard: 50, extra: true };
+
+    const position = parseFieldPosition(raw);
+
+    expect(position).toEqual({ lateralYard: 5, absoluteYard: 50 });
+    expect(position).not.toBe(raw);
+  });
+
+  it("座標が欠けているか数でなければ null を返す", () => {
+    expect(parseFieldPosition({ lateralYard: 5 })).toBeNull();
+    expect(parseFieldPosition({ lateralYard: "5", absoluteYard: 50 })).toBeNull();
+    expect(parseFieldPosition({ lateralYard: 5, absoluteYard: Number.NaN })).toBeNull();
+  });
+
+  it("オブジェクトでなければ null を返す", () => {
+    expect(parseFieldPosition(null)).toBeNull();
+    expect(parseFieldPosition("5,50")).toBeNull();
   });
 });
 

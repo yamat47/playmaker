@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   isFiniteNumber,
   isNonEmptyString,
   isOneOf,
   isRecord,
-  parseFieldPosition,
+  parseBoundedArray,
 } from "./guards.js";
 
 describe("isRecord", () => {
@@ -54,24 +54,33 @@ describe("isOneOf", () => {
   });
 });
 
-describe("parseFieldPosition", () => {
-  it("有限な座標を持つオブジェクトを新しい位置として返す", () => {
-    const raw = { lateralYard: 5, absoluteYard: 50, extra: true };
+describe("parseBoundedArray", () => {
+  const parseNumber = (entry: unknown) => (typeof entry === "number" ? entry : null);
 
-    const position = parseFieldPosition(raw);
-
-    expect(position).toEqual({ lateralYard: 5, absoluteYard: 50 });
-    expect(position).not.toBe(raw);
+  it("配列でなければ空配列を返す", () => {
+    expect(parseBoundedArray("1,2", 10, parseNumber)).toEqual([]);
+    expect(parseBoundedArray(undefined, 10, parseNumber)).toEqual([]);
   });
 
-  it("座標が欠けているか数でなければ null を返す", () => {
-    expect(parseFieldPosition({ lateralYard: 5 })).toBeNull();
-    expect(parseFieldPosition({ lateralYard: "5", absoluteYard: 50 })).toBeNull();
-    expect(parseFieldPosition({ lateralYard: 5, absoluteYard: Number.NaN })).toBeNull();
+  it("parse が null を返した要素を捨てる", () => {
+    expect(parseBoundedArray([1, "x", 2], 10, parseNumber)).toEqual([1, 2]);
   });
 
-  it("オブジェクトでなければ null を返す", () => {
-    expect(parseFieldPosition(null)).toBeNull();
-    expect(parseFieldPosition("5,50")).toBeNull();
+  it("先頭の max 個だけを読み、捨てた要素も読んだ数に入れる", () => {
+    expect(parseBoundedArray(["x", 1, 2, 3], 3, parseNumber)).toEqual([1, 2]);
+  });
+
+  it("parse に要素の位置を渡す", () => {
+    expect(parseBoundedArray(["a", "b"], 10, (_, index) => index)).toEqual([0, 1]);
+  });
+
+  it("穴のある長い配列でも max 個しか読まない", () => {
+    const sparse: unknown[] = [];
+    sparse.length = 2 ** 32 - 1;
+    const parse = vi.fn(parseNumber);
+
+    parseBoundedArray(sparse, 5, parse);
+
+    expect(parse).toHaveBeenCalledTimes(5);
   });
 });

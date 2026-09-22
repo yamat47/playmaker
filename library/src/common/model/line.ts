@@ -7,9 +7,9 @@ import {
   isNonEmptyString,
   isOneOf,
   isRecord,
-  parseFieldPosition,
+  parseBoundedArray,
 } from "./guards.js";
-import type { FieldPosition, Player } from "./player.js";
+import { type FieldPosition, type Player, parseFieldPosition } from "./player.js";
 
 /**
  * 線の種別（3 種・PRD 5.3）。
@@ -75,24 +75,6 @@ export function isLineInterpolation(value: unknown): value is LineInterpolation 
   return isOneOf(value, LINE_INTERPOLATION_VALUES);
 }
 
-/** 数でない waypoint は個別に捨て、MAX_WAYPOINTS_PER_LINE 個に達したら残りは読まない。 */
-function normalizeWaypoints(raw: unknown): FieldPosition[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  const waypoints: FieldPosition[] = [];
-  for (const point of raw) {
-    if (waypoints.length >= MAX_WAYPOINTS_PER_LINE) {
-      break;
-    }
-    const resolved = parseFieldPosition(point);
-    if (resolved !== null) {
-      waypoints.push(resolved);
-    }
-  }
-  return waypoints;
-}
-
 /**
  * 外部（商用ソフト）から渡る 1 要素を内部で安全な Line へ正規化する。
  * 復元不能（非オブジェクト / 起点選手が実在しない / 終点が数値でない）は null で除外。
@@ -122,7 +104,8 @@ function normalizeLine(
     id: isNonEmptyString(raw.id) ? raw.id : `l${index}`,
     kind: isLineKind(raw.kind) ? raw.kind : DEFAULT_LINE_KIND,
     startPlayerId: raw.startPlayerId,
-    waypoints: normalizeWaypoints(raw.waypoints),
+    // 数でない waypoint は個別に捨て、線自体は保持する。
+    waypoints: parseBoundedArray(raw.waypoints, MAX_WAYPOINTS_PER_LINE, parseFieldPosition),
     end,
     interpolation: isLineInterpolation(raw.interpolation)
       ? raw.interpolation
@@ -142,23 +125,12 @@ function normalizeLine(
  * 外部から渡る lines 配列を内部で安全な Line[] へ正規化する。
  * 配列でない/復元不能な要素は捨て、各要素は新規オブジェクトに複製する。
  * `validPlayerIds` は正規化済み players の id 集合（dangling な起点参照を弾くため）。
- * 復元できた線が MAX_LINES 本に達したら、残りは読まずに捨てる。
+ * 先頭の MAX_LINES 個より後ろの要素は読まずに捨てる。
  */
 export function normalizeLines(raw: unknown, validPlayerIds: ReadonlySet<string>): Line[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  const lines: Line[] = [];
-  for (const [index, entry] of raw.entries()) {
-    if (lines.length >= MAX_LINES) {
-      break;
-    }
-    const line = normalizeLine(entry, index, validPlayerIds);
-    if (line !== null) {
-      lines.push(line);
-    }
-  }
-  return lines;
+  return parseBoundedArray(raw, MAX_LINES, (entry, index) =>
+    normalizeLine(entry, index, validPlayerIds),
+  );
 }
 
 /** Line を深く複製する（waypoints / 位置まで共有しない防御的コピー）。 */

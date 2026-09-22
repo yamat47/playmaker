@@ -42,7 +42,7 @@ const subject = new SomeController(model, renderer);
 
 ## カバレッジ（common 層 100% ゲート）
 
-- `pnpm run test` = `vitest run --coverage`。**ゲートはこのコマンドに内蔵**され local-ci / CI / create-pr の全経路で強制される。TDD 内側ループは `pnpm run test:watch`（カバレッジなし）
+- `pnpm run test` = `vitest run --coverage`。**ゲートはこのコマンドに内蔵**され ローカル実行 / CI / create-pr の全経路で強制される。TDD 内側ループは `pnpm run test:watch`（カバレッジなし）
 - しきい値は **`src/common/**` のみ** 4 指標すべて 100% / `perFile: true`（`browser/` `playmaker.ts` `index.ts` は測るが落とさない）。設定は `vite.config.ts` の `test.coverage` 1 か所
 - 落ちたら `text` レポーターの「Uncovered Line #s」を見て対処:
   1. **テスト可能な振る舞い** → テスト追加（未カバー行を `test-writer` エージェントに渡すと速い）

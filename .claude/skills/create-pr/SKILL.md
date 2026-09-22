@@ -1,28 +1,31 @@
 ---
+description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Simplifies the change once (Claude Code's /simplify), has it reviewed by a separate agent with no session context (the review-pr skill) and fixes what that review finds, detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
+license: MIT
+metadata:
+    github-path: skills/create-pr
+    github-ref: refs/tags/v1.6.0
+    github-repo: https://github.com/yamat47/github-toolkit
+    github-tree-sha: 1b37d96d9547e27c0d1ac19b7af90e100ef5327f
 name: create-pr
-description: |
-  変更ファイルのカバレッジチェック、ローカル CI 実行（並列）、失敗自動修正、論理コミット分割、push、PR 作成までを一括実行する。
-  `/git:create-pr` コマンドから呼び出される。全ステップを中断なしで自動実行し、途中でユーザー確認を求めない。
 ---
+# Create a pull request
 
-# PR 作成ワークフロー
+Run every step from detecting changes to opening the pull request in one pass. Do not stop midway and do not ask the user for confirmation. End by printing the PR URL.
 
-変更の検出から PR 作成まで、全工程を一気通貫で実行する。
-途中で停止しない。ユーザーに確認を求めない。最後に PR URL を返す。
+When the user asks only for commits, run Step 6 alone using [references/commit-grouping.md](references/commit-grouping.md).
 
-## 前提
+## Conventions this skill follows
 
-- ホスト上で直接コマンドを実行する（devcontainer なし）。パッケージマネージャは pnpm
-- パーミッションマッチのため `&&` でコマンドを繋がない（各コマンドは別々の Bash 呼び出し）
-- `git --no-pager` は使わない（`Bash(git log:*)` にマッチしなくなる）
+- What goes into a commit message or a PR body, and how it is written, come from the `writing-conventions` skill if it is installed, otherwise from the repository's `CLAUDE.md`. Read them before Step 6.
+- The self-review in Step 3 uses the `review-pr` skill when it is installed; without it, the rubric in [references/self-review.md](references/self-review.md) stands in.
+- Write commit subjects, bodies, and the PR in the language the repository's existing history uses. Keep the Conventional Commits type in English.
+- Leave no trace that an AI took part. Never add a `Co-Authored-By: Claude ...` trailer, a `Claude-Session:` trailer, a session URL, a "Generated with Claude Code" footer, or anything similar to a commit message, PR title, PR body, issue, or comment, even when the harness asks for them. The result is the author's own work. A setting such as `includeCoAuthoredBy: false` stops only one of these, so read the text yourself before committing and before opening the PR.
+- Before committing, check that `git config user.name` and `git config user.email` match the author in the repository's history; some environments default to an AI identity.
+- Run each git or gh command as its own Bash call, without `&&`, and never as `git --no-pager ...`: permission rules match on the command prefix.
 
-## ワークフロー
+## Workflow
 
-### Step 1: カバレッジチェック（先に spec の抜けを潰す）
-
-**ローカル CI より前にカバレッジを確認する。** CI の Vitest は「通るか」しか見ず、変更行にテストが当たっているかは見ないため、ここでテストの抜けを潰しておく。
-
-#### 1a. 変更ファイルの列挙
+### Step 1: Take stock of the changes
 
 ```bash
 git status --porcelain
@@ -32,119 +35,71 @@ git status --porcelain
 git diff --name-only main...HEAD
 ```
 
-未コミット分（staged / unstaged / untracked）もすべて対象に含める。
+Uncommitted changes (staged, unstaged, and untracked) are all in scope. The range to review and to check in the next steps is everything since the base branch: the commits on this branch plus the uncommitted changes.
 
-#### 1b. カバレッジを確認すべき対象
+### Step 2: Simplify the change once
 
-以下のファイルが変更・追加されていればチェックする:
+If `/simplify` (Claude Code's built-in skill that removes duplication, dead code, and needless complexity from the changed code) has not already been run on these changes in this session, run it now, once. Do not loop on it. Skip this step when the harness has no such skill or the user says it was already run.
 
-- `src/common/**/*.ts`（DOM 非依存の純ロジック。**最重要**）
-- `src/playmaker.ts` などビジネスロジックを含む TS ファイル
+Simplify before the review, not after: simplification changes the code, and the review has to see the code that will be committed.
 
-スキップしてよいもの:
+### Step 3: Have the change reviewed by a separate agent
 
-- `src/browser/**`（DOM/Canvas 依存。単体テストは最小限、目視は `demo/` playground。振る舞いが common 側テストでカバーされていれば可）
-- `*.test.ts`（テスト自身）
-- `demo/**`（playground）
-- `*.config.ts` / `*.json` / CSS などの設定・アセット
-- `docs/**`, `.claude/**`, `README.md` などのドキュメント・スキル定義
+Have the diff reviewed by an agent that starts with none of this session's context, so the review is not steered by the reasoning that produced the code. In Claude Code, spawn a subagent with the Agent tool. Its whole instruction is three things: the repository path, the range from Step 1, and "run the `review-pr` skill on this range and print its report". Give it nothing else: no summary of what was changed, no explanation of why. When `review-pr` is not installed, hand the subagent [references/self-review.md](references/self-review.md) instead and ask for the same report format.
 
-#### 1c. 対応するテストの有無を確認
+Then act on the report:
 
-ファイル → テストの慣例（ソースと同階層に `*.test.ts`）:
+- Fix every Must.
+- Fix a Should when the fix is clear and stays within the change's scope. Otherwise carry it to the PR body under "where to look".
+- Answer each Question from what you know about the change. If the current code is right, leave it. If it is wrong, fix it. If only the user can decide, carry the question to "where to look".
+- Leave Nits unless the fix is a one-liner.
+- Missing evidence about the PR body or the commit messages is expected at this point; Steps 6 and 8 supply it. Carry any other item to "where to look".
+- Record each Follow-up as a TODO at the spot or an issue before Step 6.
 
-| 変更ファイル | 対応するテスト |
-| --- | --- |
-| `src/common/event/emitter.ts` | `src/common/event/emitter.test.ts` |
-| `src/common/commands/add-player.ts` | `src/common/commands/add-player.test.ts` |
-| `src/common/geometry/bezier.ts` | `src/common/geometry/bezier.test.ts` |
+Do not run the review a second time after fixing; Step 4 catches regressions. Keep a note of what was fixed so the commit messages in Step 6 can say why.
 
-#### 1d. カバレッジを計測
+### Step 4: Run the project's checks and fix failures
 
-関連するテストを走らせる:
+Find the checks the project defines. Look at, in this order:
 
-```bash
-pnpm vitest run <test_paths>
-```
+- `.github/workflows/*.yml` (highest priority: run locally what CI will run)
+- `package.json` scripts (`lint`, `test`, `typecheck`, ...)
+- `Rakefile`, `Makefile`, and check scripts under `bin/`
+- Linter and test framework config files (`.rubocop.yml`, `biome.json`, `eslint.config.*`, ...)
 
-実行後、必要に応じて `pnpm vitest run --coverage` で per-file coverage と未カバー行を確認する。変更行の振る舞いが 1 つ以上のテストから触れられているかを見る。
-
-#### 1e. 足りないテストを追加する
-
-- 対応する `*.test.ts` が**存在しない** → 同階層に新規作成する
-- テストは存在するが**今回の変更行が未カバー** → 該当シナリオの `it` を追加する
-- 条件分岐・エラーパスを追加した場合は**両方のパス**をカバーする
-- 既存テストの慣習（`describe`/`it` の日本語主語、AAA、`vi.fn()`、IF 注入）に合わせる
-- 完全な 100% は目指さない。**新しく追加した分岐・関数は必ず触る**を目安にする
-- カバレッジ埋めのためだけの無意味なテストは書かない
-
-#### 1f. 合格基準
-
-変更行の振る舞いが 1 つ以上の `it` から触れられていれば合格。ここを通過したら Step 2 へ進む。
-
-### Step 2: ローカル CI チェック（並列実行 + 自動修正）
-
-**次に CI を実行する。** 失敗があればコミット前に修正し、綺麗な状態でコミットする。
-
-CI の全チェックを `local-ci-runner` サブエージェントで**並列実行**する。
-最大 **3 サイクル**まで自動修正を試みる。
-
-#### CI チェック一覧
-
-以下の 4 チェックを並列で実行する:
-
-| # | チェック名 | コマンド | 自動修正 |
-|---|-----------|---------|---------|
-| 1 | typecheck | `pnpm run typecheck` | 自動修正不可（型エラーは手動修正） |
-| 2 | biome | `pnpm run lint` | `pnpm run lint:fix` で自動修正可 |
-| 3 | vitest | `pnpm run test` | 自動修正不可 |
-| 4 | build | `pnpm run build` | 自動修正不可 |
-
-#### 修正サイクル
+Run independent checks in parallel and fix failures for at most **three cycles**:
 
 ```
-サイクル 1: 全チェック並列実行
-  ↓ 失敗あり？
-  → 自動修正可能なもの（pnpm run lint:fix）を適用
-  → 自動修正不可能な失敗（型エラー・テスト失敗・ビルド失敗）はコードを読んで手動修正
+Cycle 1: run every check
+  failures?
+  -> apply auto-fixes where the tool has them (linter --fix and the like)
+  -> fix the rest by reading the code
+  -> for failing tests, find the cause and fix it (fix the test when the test is wrong)
 
-サイクル 2: 失敗したチェックのみ再実行
-  ↓ まだ失敗？
-  → 同上
-
-サイクル 3: 失敗したチェックのみ再実行
-  ↓ まだ失敗？
-  → 諦めて Step 3 へ進む（残った失敗は PR に記載）
+Cycle 2: re-run only the checks that failed
+Cycle 3: re-run only the checks that failed
+  still failing?
+  -> give up and continue to Step 5 (remaining failures are listed in the PR)
 ```
 
-サブエージェント呼び出し例:
+If the changed code has no corresponding tests, add them in the project's existing style. Do not write meaningless tests just to raise coverage.
 
-```json
-{
-  "description": "Run CI checks in parallel",
-  "subagent_type": "local-ci-runner",
-  "mode": "bypassPermissions",
-  "prompt": "ローカル CI チェックを実行してください。`.claude/agents/local-ci-runner.md` の Step 1 に従い、4 個の Bash tool 呼び出しを 1 レスポンスで（`run_in_background` を立てずに）並列発行してください。結果は同 Step 2 の『CI検証結果サマリー』フォーマットで返してください。"
-}
-```
+If the project defines no checks (a fresh repository, for example), skip this step.
 
-> **重要**: `run_in_background: true` を指示しないこと。サブエージェント内では非同期 task の結果を回収する手段がなく、確実にハングする。Claude Code は同一レスポンス内の複数 Bash tool_use を並列で実行し、すべての結果が揃ってから返すので、`run_in_background: false`（デフォルト）で十分。
-
-### Step 3: 既存ブランチ・PR の確認
-
-現在のブランチが `main` でなければ、既にオープンな PR があるか確認する。
+### Step 5: Check the current branch and existing PRs
 
 ```bash
 git branch --show-current
 ```
 
+If the branch is not `main`, check whether it already has an open pull request:
+
 ```bash
 gh pr list --state open --head "<current-branch>" --json number,title,url
 ```
 
-- **main 以外 + オープン PR あり** → そのブランチを使い続ける（Step 4 へ）
-- **main 以外 + オープン PR なし** → そのブランチを使い続ける（Step 4 へ）
-- **main** → タイムスタンプで新しいブランチを作成:
+- **Not on main:** keep using this branch (go to Step 6).
+- **On main:** create a branch named from a timestamp:
 
 ```bash
 date +%Y%m%d-%H%M%S
@@ -154,70 +109,31 @@ date +%Y%m%d-%H%M%S
 git switch -c "feature/update-<TIMESTAMP>"
 ```
 
-ブランチ名は以降のステップで使うので記憶する。
+Remember the branch name for the later steps.
 
-### Step 4: 変更の分析とコミット作成
+### Step 6: Group the changes and commit
 
-カバレッジ追加分・CI 修正分を含む全変更をまとめてコミットする。論理グループに分割する。
+Commit everything, including the simplification from Step 2 and the fixes from Steps 3 and 4, split into logical groups. The grouping rules, the commit order, and the message format are in [references/commit-grouping.md](references/commit-grouping.md).
 
-#### 4a. プランファイルの確認
+If the repository keeps plan files (for example under the `plansDirectory` in `.claude/settings.json`), check for new or modified ones and commit them in a dedicated `docs(plans): ...` commit.
 
-`docs/plans/` 配下に未追跡・変更ファイルがあれば、必ずコミットに含める。
-
-```bash
-git status docs/plans/
-```
-
-#### 4b. 論理グループへの分割
-
-全変更を分析し、論理的な単位にグループ化する:
-
-- **グループ化の基準**: 機能単位、レイヤ（common / browser / playmaker entry / demo）、スコープ
-- **コミット順序**: common ロジック → browser（描画・UI）→ 公開エントリ → テスト → demo/設定
-- 各コミットが単独でビルドを壊さないことを意識する
-- プランファイルがあれば専用コミット `docs(plans): ...` を作成
-
-#### 4c. 順次コミット実行
-
-各グループに対して:
-
-```bash
-git add <files>
-```
-
-```bash
-git commit -m "$(cat <<'EOF'
-<type>(<scope>): <Japanese subject>
-
-<body: why のみ。非自明な場合だけ書く。自明なら subject のみで OK>
-EOF
-)"
-```
-
-- Conventional Commits フォーマット（prefix は英語、subject/body は日本語）
-- subject は能動態（「実装する」not「実装されました」）
-- **body は Why のみ**。What は subject と diff で伝わる。ファイル列挙・実装詳細・コミット粒度の説明は書かない
-- Why が自明（機械的な置き換え、明白な typo 修正、トラッキング issue に紐づく小さな step）なら body は省略して subject のみでコミットする
-- **Claude Code のクレジット表記は付けない**（`🤖 Generated with [Claude Code] ...` や `Co-Authored-By: Claude ...` のトレーラーは一切追加しない）。`.claude/settings.local.json` の `attribution` で無効化済み
-
-### Step 5: Push
+### Step 7: Push
 
 ```bash
 git push -u origin "<BRANCH>"
 ```
 
-push 失敗時:
-- エラー内容を確認し、解決を試みる（upstream が先に進んでいる場合は rebase）
-- 解決できなければ中断し、エラーメッセージをユーザーに返す
+If the push fails, read the error and try to resolve it (rebase when the remote branch has moved ahead). If it cannot be resolved, stop and report the error to the user.
 
-### Step 6: PR 作成
+### Step 8: Open the pull request
 
-#### 6a. PR テンプレートの読み込み
+#### 8a. Read the PR template
 
+If `.github/pull_request_template.md` exists, read it. **Keep its headings in the same order with the same names.** Do not add or reorder headings. Delete a heading that has nothing under it instead of writing "none".
 
-Read ツールで `.github/pull_request_template.md` を読む。
+Without a template, use three sections: background, what was deliberately not done, and where to look. Delete any that has nothing to say.
 
-#### 6b. コミット情報の収集
+#### 8b. Collect the commit information
 
 ```bash
 git log main...HEAD --format="%H %s"
@@ -227,112 +143,60 @@ git log main...HEAD --format="%H %s"
 git diff --name-status main...HEAD
 ```
 
-#### 6c. PR タイトル生成
+#### 8c. Write the title
 
-コミットの type と scope から自動生成:
+**Make the user's experience the subject, not the technical change.** Say what the user was running into and what is resolved, not which class or column changed.
 
-- 全コミットが同一 scope → `feat(admin): 管理画面の機能改善`
-- 複数 scope → `feat: 複数の機能改善と修正`
-- 単一 type + 複数 scope → `fix: バグ修正`
+- Bad: `fix(report): fix review_status overwrite from AI review race and exception in the rejection mail` (class and column names are the subject)
+- Good: `fix(report): stop creating duplicate unreviewed submissions that leave the review state inconsistent` (what happens to the user is the subject)
 
-Conventional Commits 形式、Japanese description。
+The prefix (type and scope) is Conventional Commits in English; the description is in the repository's language. Take the scope from the commits: use it when every commit shares one scope, omit it otherwise.
 
-#### 6d. PR 本文生成
+#### 8d. Write the body
 
-**PR テンプレートの構造は必ず維持する。** `.github/pull_request_template.md` の見出し（背景 / モチベーション、詳細、補足情報、チェックリスト）は**勝手に削らない・増やさない・並び替えない**。各セクションを**簡潔に埋める**ことで冗長さを避ける。
+What to include and what to leave out come from the conventions named above. In short:
 
-##### 載せるもの
+Include:
 
-- **背景 / モチベーション**: 関連 issue へのリンク（`Refs #N` / `Fixes #N`）と、issue に書かれていない Why があれば 1〜2 文
-- **詳細**: 何を変えたかを 1〜3 文で。トラッキング issue に紐づく機械的な refactor なら 1 文で十分
-- **補足情報**: レビュアーが注目すべき判断・トレードオフ・既知の制約・破壊的変更の注意。なければ「特になし」か、セクション自体は残して空に近い状態にする
-- **チェックリスト**: テンプレートのチェックボックスをそのまま残す
+- **Background:** the issue link (`Refs #N` / `Fixes #N`) and one or two sentences of Why that the issue does not already state.
+- **Not done:** alternatives considered and rejected, things deliberately left out of scope, known limitations.
+- **Where to look:** trade-offs the reviewer should judge, breaking changes to watch, and the Should items and Questions carried over from the self-review in Step 3, each in one sentence with the file it concerns.
 
-##### 載せないもの
+Leave out:
 
-- diff を見れば分かる実装詳細・追加したファイル一覧・追加したクラス名やメソッドの説明
-- コンポーネント仕様や使い方の例（コードを読めば分かる）
-- ローカルファイルパスのスクリーンショット（GitHub から閲覧不可）
-- CI 結果のコピペ（GitHub Actions のステータスで確認できる）
-- 各コミットのサマリ（コミット一覧で確認できる）
-- 自明な test plan チェックリスト（機械的な「○○を確認する」の羅列）
-- テンプレートの HTML コメント（`<!-- ... -->`）とプレースホルダー文言
+- Implementation detail visible in the diff, lists of added files, descriptions of added classes and methods.
+- Component specs or usage examples (the code shows them).
+- Screenshots referenced by local file path (not viewable on GitHub).
+- Pasted CI results (the status checks show them).
+- Per-commit summaries (the commit list shows them).
+- Self-evident test plan checklists.
+- The template's HTML comments and placeholder text.
+- Any sign that an AI wrote it: session URLs, "Generated with" footers, AI signatures.
 
-##### 書き方
+Write one sentence per line and never use `<br>`; GitHub renders plain line breaks in PR bodies.
 
-- 日本語、能動態
-- 一文ごとに改行（GFM の `<br>`）
-- テンプレートの見出し構造は維持しつつ、各セクションの中身は最小限に
-
-##### 最小例（トラッキング issue に紐づく小さな refactor）
+Only when Step 4 left failures unresolved, add this under "where to look":
 
 ```markdown
-### 背景 / モチベーション
+### ⚠️ Unresolved local check failures
 
-Refs #735
-
-### 詳細
-
-フィールド座標変換を `src/common/geometry` に切り出し、Canvas レンダラから純粋関数として利用するようにする。
-
-### 補足情報
-
-特になし。
-
-### チェックリスト
-
-- [x] このプルリクエストは単一の変更に関連しています。
-- [x] コミットメッセージに変更内容と理由を記載しています。
-- [x] バグ修正や機能追加の場合は、テストが追加または更新されています。
+- [ ] `check_name`: short description of the error
 ```
 
-##### 拡張例（レビュアーに伝える判断がある場合）
+#### 8e. Create the pull request
 
-```markdown
-### 背景 / モチベーション
-
-Fixes #1234
-
-旧 API の v1 を段階的に廃止するため、新しい v2 クライアントに切り替える。
-
-### 詳細
-
-`XxxClient` を v2 に差し替え、feature flag `new_client_enabled` で段階ロールアウトする。
-
-### 補足情報
-
-- retry 挙動を変えた。v1 は 3 回まで冪等だったが v2 は 5xx のみ retry する
-- 既存の呼び出し箇所の挙動は feature flag OFF では変わらない
-
-### チェックリスト
-
-- [x] このプルリクエストは単一の変更に関連しています。
-- [x] コミットメッセージに変更内容と理由を記載しています。
-- [x] バグ修正や機能追加の場合は、テストが追加または更新されています。
-```
-
-CI 失敗が残っている場合のみ補足情報セクションに追記（通常グリーンなら書かない）:
-
-```markdown
-### ⚠️ CI 未解決の失敗
-
-- [ ] `check_name`: エラー概要
-```
-
-#### 6e. PR 作成実行
-
-PR 本文を `.tmp/pr-body.md` に Write ツールで書き出してから:
+Write the body to a file outside version control (for example `.tmp/pr-body.md` in an ignored directory), then:
 
 ```bash
-gh pr create --base main --head "<BRANCH>" --title "<title>" --body-file .tmp/pr-body.md
+gh pr create --draft --base main --head "<BRANCH>" --title "<title>" --body-file <body-file>
 ```
 
-CI 失敗が残っている場合は `--draft` フラグを追加する。
+**Always create the PR as a draft.** Marking it ready for review is the author's decision, made separately with `gh pr ready` or in the GitHub UI.
 
-### Step 7: 結果表示
+### Step 9: Report
 
 ```bash
 gh pr view --web
 ```
 
-PR URL を出力して完了。
+Print the PR URL and finish.

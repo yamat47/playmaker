@@ -10,7 +10,9 @@
   "forwardPorts": [5173],
   "customizations": {
     "vscode": {
-      "extensions": ["biomejs.biome", "vitest.explorer"],
+      // TypeScript 7 の typescript パッケージは tsserver を同梱しないので、エディタの型検査は
+      // Native Preview 拡張の tsgo で動かす。typescript.tsdk で node_modules を指すと言語機能が止まる
+      "extensions": ["biomejs.biome", "vitest.explorer", "TypeScriptTeam.native-preview"],
       "settings": {
         // .git はひとつ上（リポジトリのルート）にある
         "git.openRepositoryInParentFolders": "always",
@@ -20,7 +22,7 @@
           "source.organizeImports.biome": "explicit",
           "quickfix.biome": "explicit"
         },
-        "typescript.tsdk": "node_modules/typescript/lib"
+        "typescript.experimental.useTsgo": true
       }
     }
   }

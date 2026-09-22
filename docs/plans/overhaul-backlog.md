@@ -175,26 +175,26 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T4 ツールチェーンと配布
+### T4 ツールチェーンと配布 (done)
 
-- [ ] **T4-1 [should] prepare が build を呼ぶため、CI で型検査が 3 回走る。check と CI の手順もずれている**
+- [x] **T4-1 [should] prepare が build を呼ぶため、CI で型検査が 3 回走る。check と CI の手順もずれている**
   - locations: library/package.json:27, library/package.json:32, library/package.json:36, .github/workflows/ci.yml:51, .github/workflows/ci.yml:60, Makefile:82
   - 対応: `build` は `vite build` だけにし、`check` を `typecheck && lint && test && build` にする。CI の install では `--ignore-scripts` で prepare を飛ばし、中身は check と揃える。
-- [ ] **T4-2 [should] CJS 利用者に ESM の型が渡る。使われていない script と重複フィールドもある**（D5）
+- [x] **T4-2 [should] CJS 利用者に ESM の型が渡る。使われていない script と重複フィールドもある**（D5）
   - locations: library/package.json:6, library/package.json:11-21, library/package.json:28, library/package.json:35, library/vite.config.ts:31, library/vite.config.ts:36-37
   - 対応: `formats: ["es"]` にし、main、module、require を削除する。exports を types、import、./styles.css、./package.json に絞る。preview と format の script を削除する。
-- [ ] **T4-3 [should] Dev Container の typescript.tsdk が、tsserver を同梱しない TS 7 を指している**
+- [x] **T4-3 [should] Dev Container の typescript.tsdk が、tsserver を同梱しない TS 7 を指している**
   - locations: .devcontainer/devcontainer.json:23
   - 対応: tsdk の指定を削除し、Native Preview 拡張と useTsgo を設定する。見直す条件を設計文書に書く。
-- [ ] **T4-4 [should] toolkit を @main で参照している**（D4）
+- [x] **T4-4 [should] toolkit を @main で参照している**（D4）
   - locations: .github/workflows/ci.yml:34, .github/workflows/ci.yml:36, .github/workflows/ci.yml:43, .github/dependabot.yml:3
-- [ ] **T4-5 [nit] 依存更新の追いかけに穴がある**
+- [x] **T4-5 [nit] 依存更新の追いかけに穴がある**
   - locations: library/package.json:47, library/pnpm-workspace.yaml:5-6, .github/workflows/ci.yml:46, docker/Dockerfile:4, .github/dependabot.yml:10-30
   - 対応: 不要になった minimumReleaseAgeExclude を削除する。Node のバージョンは `.node-version` に書き、CI は node-version-file で読む。npm に cooldown を付ける。pnpm 本体の更新は依存更新の手順に 1 行足す。
-- [ ] **T4-6 [nit] FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 を外す条件がない**
+- [x] **T4-6 [nit] FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 を外す条件がない**
   - locations: .github/workflows/ci.yml:14-16
   - 対応: env を削除して CI の緑を確かめる。
-- [ ] **T4-7 [nit] フォント再生成の手順がホストでの node の直接実行を案内している**
+- [x] **T4-7 [nit] フォント再生成の手順がホストでの node の直接実行を案内している**
   - locations: library/src/styles.css:12, library/scripts/generate-field-font.mjs:6-7, library/vite.config.ts:9
   - 対応: `make font` ターゲットを追加し、コメントを `make font` と `make up` に書き換える。
 

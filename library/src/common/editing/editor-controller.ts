@@ -40,7 +40,9 @@ import type { IUndoRedoService } from "../undoRedo/undo-redo-service.js";
 import type { IIdFactory } from "./id-factory.js";
 
 /** 編集ツール（3 種で PRD 5.4 の操作を賄う）。 */
-export type EditorTool = "select" | "add-player" | "draw-line";
+export const EDITOR_TOOL_VALUES = ["select", "add-player", "draw-line"] as const;
+
+export type EditorTool = (typeof EDITOR_TOOL_VALUES)[number];
 
 /** 現在の選択対象。プロパティパネル・削除・waypoint 編集の対象を決める。 */
 export type EditorSelection =

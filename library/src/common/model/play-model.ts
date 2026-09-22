@@ -94,7 +94,7 @@ export class PlayModel implements IPlayModel {
   // ＝外部入力（旧版・破損含む）と完全に切り離した内部状態（PRD 6.6 の唯一の入口）。
   private state: PlayData;
 
-  constructor(initialData?: PlayData) {
+  constructor(initialData?: unknown) {
     this.state = migratePlayData(initialData);
   }
 

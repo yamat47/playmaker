@@ -4,31 +4,34 @@
 
 import {
   Disposable,
+  EDITOR_TOOL_VALUES,
   type EditorTool,
+  FIELD_ZONE_VALUES,
   type FieldZone,
   FORMATION_PRESETS,
+  FORMATION_SIDE_VALUES,
   type FormationSide,
   getFormationPreset,
   type IEditorController,
   toDisposable,
 } from "../../common/index.js";
 
-const TOOLS: { tool: EditorTool; label: string }[] = [
-  { tool: "select", label: "選択" },
-  { tool: "add-player", label: "選手を追加" },
-  { tool: "draw-line", label: "線を描く" },
-];
+const TOOL_LABELS = {
+  select: "選択",
+  "add-player": "選手を追加",
+  "draw-line": "線を描く",
+} satisfies Record<EditorTool, string>;
 
-const ZONES: { zone: FieldZone; label: string }[] = [
-  { zone: "own-redzone", label: "自陣RZ" },
-  { zone: "middle", label: "中央" },
-  { zone: "redzone", label: "相手RZ" },
-];
+const ZONE_LABELS = {
+  "own-redzone": "自陣RZ",
+  middle: "中央",
+  redzone: "相手RZ",
+} satisfies Record<FieldZone, string>;
 
-const SIDE_GROUPS: { side: FormationSide; label: string }[] = [
-  { side: "offense", label: "オフェンス" },
-  { side: "defense", label: "ディフェンス" },
-];
+const SIDE_LABELS = {
+  offense: "オフェンス",
+  defense: "ディフェンス",
+} satisfies Record<FormationSide, string>;
 
 export class Toolbar extends Disposable {
   readonly element: HTMLElement;
@@ -45,8 +48,8 @@ export class Toolbar extends Disposable {
     this.element = document.createElement("div");
     this.element.className = "playmaker-toolbar";
 
-    for (const { tool, label } of TOOLS) {
-      const btn = this.addButton(label, () => controller.setTool(tool));
+    for (const tool of EDITOR_TOOL_VALUES) {
+      const btn = this.addButton(TOOL_LABELS[tool], () => controller.setTool(tool));
       this.toolButtons.set(tool, btn);
     }
     this.addSeparator();
@@ -54,8 +57,8 @@ export class Toolbar extends Disposable {
     this.redoButton = this.addButton("やり直す", () => controller.redo());
     this.deleteButton = this.addButton("削除", () => controller.deleteSelection());
     this.addSeparator();
-    for (const { zone, label } of ZONES) {
-      const btn = this.addButton(label, () => controller.setFieldZone(zone));
+    for (const zone of FIELD_ZONE_VALUES) {
+      const btn = this.addButton(ZONE_LABELS[zone], () => controller.setFieldZone(zone));
       this.zoneButtons.set(zone, btn);
     }
     this.addSeparator();
@@ -102,9 +105,9 @@ export class Toolbar extends Disposable {
     placeholder.textContent = "フォーメーション読込…";
     select.appendChild(placeholder);
 
-    for (const { side, label } of SIDE_GROUPS) {
+    for (const side of FORMATION_SIDE_VALUES) {
       const group = document.createElement("optgroup");
-      group.label = label;
+      group.label = SIDE_LABELS[side];
       for (const formation of FORMATION_PRESETS.filter((f) => f.side === side)) {
         const option = document.createElement("option");
         option.value = formation.id;

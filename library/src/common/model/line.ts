@@ -2,6 +2,13 @@
 // PlayData に合成され商用ソフトの DB に保存される（PRD 5.8）。
 // 戦術記法の厳密再現より組み込みやすさ優先（PRD 4.1）: 3 種を構造で区別し、見た目磨きは意図的にスコープ外。
 
+import {
+  isFiniteNumber,
+  isNonEmptyString,
+  isOneOf,
+  isRecord,
+  parseFieldPosition,
+} from "./guards.js";
 import type { FieldPosition, Player } from "./player.js";
 
 /**
@@ -10,7 +17,9 @@ import type { FieldPosition, Player } from "./player.js";
  * - `block`: OL 等のブロックアサインメント。太め・矢印なし
  * - `motion`: スナップ前の選手移動。破線
  */
-export type LineKind = "route" | "block" | "motion";
+export const LINE_KIND_VALUES = ["route", "block", "motion"] as const;
+
+export type LineKind = (typeof LINE_KIND_VALUES)[number];
 
 /**
  * 線の補間方法（PRD 5.4 のプロパティ）。
@@ -18,16 +27,15 @@ export type LineKind = "route" | "block" | "motion";
  * - `bezier`: 制御点を滑らかな曲線で通す（route の曲走路）
  * block/motion は実質 straight だが、データとしては保持して往復契約を壊さない。
  */
-export type LineInterpolation = "straight" | "bezier";
+export const LINE_INTERPOLATION_VALUES = ["straight", "bezier"] as const;
+
+export type LineInterpolation = (typeof LINE_INTERPOLATION_VALUES)[number];
 
 /** 種別未指定時の既定。最も汎用的な走路。 */
 export const DEFAULT_LINE_KIND: LineKind = "route";
 
 /** 補間未指定時の既定。直線が最も予測しやすい。 */
 export const DEFAULT_LINE_INTERPOLATION: LineInterpolation = "straight";
-
-const LINE_KINDS: readonly LineKind[] = ["route", "block", "motion"];
-const LINE_INTERPOLATIONS: readonly LineInterpolation[] = ["straight", "bezier"];
 
 /**
  * 1 本の線。起点は常に選手（`startPlayerId`）、終点は `end`、その間に
@@ -52,31 +60,26 @@ export interface Line {
 }
 
 export function isLineKind(value: unknown): value is LineKind {
-  return typeof value === "string" && (LINE_KINDS as readonly string[]).includes(value);
+  return isOneOf(value, LINE_KIND_VALUES);
 }
 
 export function isLineInterpolation(value: unknown): value is LineInterpolation {
-  return typeof value === "string" && (LINE_INTERPOLATIONS as readonly string[]).includes(value);
+  return isOneOf(value, LINE_INTERPOLATION_VALUES);
 }
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim() !== "";
-}
-
-/** 任意値を有限な FieldPosition へ。数値でなければ復元不能として null。 */
-function toFieldPosition(raw: unknown): FieldPosition | null {
-  if (typeof raw !== "object" || raw === null) {
-    return null;
+/** 数でない waypoint は個別に捨てる。 */
+function normalizeWaypoints(raw: unknown): FieldPosition[] {
+  if (!Array.isArray(raw)) {
+    return [];
   }
-  const { lateralYard, absoluteYard } = raw as Record<string, unknown>;
-  if (!isFiniteNumber(lateralYard) || !isFiniteNumber(absoluteYard)) {
-    return null;
+  const waypoints: FieldPosition[] = [];
+  for (const point of raw) {
+    const resolved = parseFieldPosition(point);
+    if (resolved !== null) {
+      waypoints.push(resolved);
+    }
   }
-  return { lateralYard, absoluteYard };
+  return waypoints;
 }
 
 /**
@@ -91,46 +94,35 @@ function normalizeLine(
   index: number,
   validPlayerIds: ReadonlySet<string>,
 ): Line | null {
-  if (typeof raw !== "object" || raw === null) {
+  if (!isRecord(raw)) {
     return null;
   }
-  const source = raw as Record<string, unknown>;
 
   // 起点は実在する選手でなければ描画も hit-test もできない＝復元不能として除外。
-  if (!isNonEmptyString(source.startPlayerId) || !validPlayerIds.has(source.startPlayerId)) {
+  if (!isNonEmptyString(raw.startPlayerId) || !validPlayerIds.has(raw.startPlayerId)) {
     return null;
   }
-  const end = toFieldPosition(source.end);
+  const end = parseFieldPosition(raw.end);
   if (end === null) {
     return null;
   }
 
-  const waypoints: FieldPosition[] = Array.isArray(source.waypoints)
-    ? source.waypoints.reduce<FieldPosition[]>((acc, point) => {
-        const resolved = toFieldPosition(point);
-        if (resolved !== null) {
-          acc.push(resolved);
-        }
-        return acc;
-      }, [])
-    : [];
-
   const line: Line = {
-    id: isNonEmptyString(source.id) ? source.id : `l${index}`,
-    kind: isLineKind(source.kind) ? source.kind : DEFAULT_LINE_KIND,
-    startPlayerId: source.startPlayerId,
-    waypoints,
+    id: isNonEmptyString(raw.id) ? raw.id : `l${index}`,
+    kind: isLineKind(raw.kind) ? raw.kind : DEFAULT_LINE_KIND,
+    startPlayerId: raw.startPlayerId,
+    waypoints: normalizeWaypoints(raw.waypoints),
     end,
-    interpolation: isLineInterpolation(source.interpolation)
-      ? source.interpolation
+    interpolation: isLineInterpolation(raw.interpolation)
+      ? raw.interpolation
       : DEFAULT_LINE_INTERPOLATION,
   };
   // exactOptionalPropertyTypes: 値があるときだけ持たせる。
-  if (isNonEmptyString(source.color)) {
-    line.color = source.color;
+  if (isNonEmptyString(raw.color)) {
+    line.color = raw.color;
   }
-  if (isFiniteNumber(source.thickness) && source.thickness > 0) {
-    line.thickness = source.thickness;
+  if (isFiniteNumber(raw.thickness) && raw.thickness > 0) {
+    line.thickness = raw.thickness;
   }
   return line;
 }
@@ -145,12 +137,12 @@ export function normalizeLines(raw: unknown, validPlayerIds: ReadonlySet<string>
     return [];
   }
   const lines: Line[] = [];
-  raw.forEach((entry, index) => {
+  for (const [index, entry] of raw.entries()) {
     const line = normalizeLine(entry, index, validPlayerIds);
     if (line !== null) {
       lines.push(line);
     }
-  });
+  }
   return lines;
 }
 

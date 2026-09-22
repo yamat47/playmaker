@@ -2,23 +2,25 @@
 // PlayData に合成され商用ソフトの DB に保存される（PRD 5.8）。
 // 戦術的厳密性より組み込みやすさ優先（PRD 4.1）: 形状は描画しやすい 6 種の幾何図形に絞る。
 
+import { isNonEmptyString, isOneOf, isRecord, parseFieldPosition } from "./guards.js";
+
 /**
  * 選手マーカーの形状（6 種・PRD 5.2）。
  * いずれも凸図形で「外接円 = ヒット領域」が成立し、レンダラ/hit-test を一様に保てる。
  */
-export type PlayerShape = "circle" | "square" | "triangle" | "diamond" | "pentagon" | "hexagon";
-
-/** 形状未指定時の既定。最も汎用的な丸。 */
-export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
-
-const PLAYER_SHAPES: readonly PlayerShape[] = [
+export const PLAYER_SHAPE_VALUES = [
   "circle",
   "square",
   "triangle",
   "diamond",
   "pentagon",
   "hexagon",
-];
+] as const;
+
+export type PlayerShape = (typeof PLAYER_SHAPE_VALUES)[number];
+
+/** 形状未指定時の既定。最も汎用的な丸。 */
+export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
 
 /**
  * 選手マーカーの半径（ヤード）。レンダラの描画サイズと hit-test の当たり半径が
@@ -50,15 +52,7 @@ export interface Player {
 }
 
 export function isPlayerShape(value: unknown): value is PlayerShape {
-  return typeof value === "string" && (PLAYER_SHAPES as readonly string[]).includes(value);
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim() !== "";
+  return isOneOf(value, PLAYER_SHAPE_VALUES);
 }
 
 /**
@@ -68,30 +62,25 @@ function isNonEmptyString(value: unknown): value is string {
  * 返り値は常に新規オブジェクトで入力を共有しない（Model 専有のため）。
  */
 function normalizePlayer(raw: unknown, index: number): Player | null {
-  if (typeof raw !== "object" || raw === null) {
+  if (!isRecord(raw)) {
     return null;
   }
-  const source = raw as Record<string, unknown>;
-  const position = source.position;
-  if (typeof position !== "object" || position === null) {
-    return null;
-  }
-  const { lateralYard, absoluteYard } = position as Record<string, unknown>;
-  if (!isFiniteNumber(lateralYard) || !isFiniteNumber(absoluteYard)) {
+  const position = parseFieldPosition(raw.position);
+  if (position === null) {
     return null;
   }
 
   // id が無い/空なら index 由来の決定的な id を割り当てる（再正規化でも安定）。
-  const id = isNonEmptyString(source.id) ? source.id : `p${index}`;
+  const id = isNonEmptyString(raw.id) ? raw.id : `p${index}`;
   const player: Player = {
     id,
-    position: { lateralYard, absoluteYard },
-    shape: isPlayerShape(source.shape) ? source.shape : DEFAULT_PLAYER_SHAPE,
-    label: typeof source.label === "string" ? source.label : "",
+    position,
+    shape: isPlayerShape(raw.shape) ? raw.shape : DEFAULT_PLAYER_SHAPE,
+    label: typeof raw.label === "string" ? raw.label : "",
   };
   // exactOptionalPropertyTypes: color は値があるときだけ持たせる。
-  if (isNonEmptyString(source.color)) {
-    player.color = source.color;
+  if (isNonEmptyString(raw.color)) {
+    player.color = raw.color;
   }
   return player;
 }
@@ -105,12 +94,12 @@ export function normalizePlayers(raw: unknown): Player[] {
     return [];
   }
   const players: Player[] = [];
-  raw.forEach((entry, index) => {
+  for (const [index, entry] of raw.entries()) {
     const player = normalizePlayer(entry, index);
     if (player !== null) {
       players.push(player);
     }
-  });
+  }
   return players;
 }
 

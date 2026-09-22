@@ -27,6 +27,7 @@ export { FIELD_FONT_FAMILY } from "./design/field-font.js";
 export { LINE_COLOR_PALETTE, type LineColorOption } from "./design/line-palette.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
+  EDITOR_TOOL_VALUES,
   EditorController,
   type EditorOverlay,
   type EditorSelection,
@@ -46,6 +47,7 @@ export {
   resolveImageExportWidth,
 } from "./export/image-export.js";
 export {
+  FORMATION_SIDE_VALUES,
   type Formation,
   type FormationPlayer,
   type FormationSide,
@@ -92,6 +94,7 @@ export {
   type IDisposable,
   toDisposable,
 } from "./lifecycle/disposable.js";
+export { isOneOf } from "./model/guards.js";
 export {
   cloneLine,
   DEFAULT_LINE_INTERPOLATION,
@@ -99,6 +102,8 @@ export {
   indexPlayersById,
   isLineInterpolation,
   isLineKind,
+  LINE_INTERPOLATION_VALUES,
+  LINE_KIND_VALUES,
   type Line,
   type LineInterpolation,
   type LineKind,
@@ -117,6 +122,7 @@ export {
   clonePlayData,
   createEmptyPlayData,
   DEFAULT_FIELD_ZONE,
+  FIELD_ZONE_VALUES,
   type FieldState,
   type FieldZone,
   isFieldZone,

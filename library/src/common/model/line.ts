@@ -38,6 +38,14 @@ export const DEFAULT_LINE_KIND: LineKind = "route";
 export const DEFAULT_LINE_INTERPOLATION: LineInterpolation = "straight";
 
 /**
+ * 外部から受け取る線と、1 本あたりの waypoint の上限。実際のプレー図は線 20 本ほどで、
+ * waypoint も数個なので実用は妨げない。壊れたデータや悪意のあるデータで
+ * 描画が止まらないように、超えた分は正規化で捨てる。
+ */
+export const MAX_LINES = 128;
+export const MAX_WAYPOINTS_PER_LINE = 32;
+
+/**
  * 1 本の線。起点は常に選手（`startPlayerId`）、終点は `end`、その間に
  * 任意個の `waypoints` を持つ（PRD 5.3「起点（選手）と終点、任意個の waypoint」）。
  * 起点を選手に紐付けることで、選手が動けば線も追従する。
@@ -67,13 +75,16 @@ export function isLineInterpolation(value: unknown): value is LineInterpolation 
   return isOneOf(value, LINE_INTERPOLATION_VALUES);
 }
 
-/** 数でない waypoint は個別に捨てる。 */
+/** 数でない waypoint は個別に捨て、MAX_WAYPOINTS_PER_LINE 個に達したら残りは読まない。 */
 function normalizeWaypoints(raw: unknown): FieldPosition[] {
   if (!Array.isArray(raw)) {
     return [];
   }
   const waypoints: FieldPosition[] = [];
   for (const point of raw) {
+    if (waypoints.length >= MAX_WAYPOINTS_PER_LINE) {
+      break;
+    }
     const resolved = parseFieldPosition(point);
     if (resolved !== null) {
       waypoints.push(resolved);
@@ -131,6 +142,7 @@ function normalizeLine(
  * 外部から渡る lines 配列を内部で安全な Line[] へ正規化する。
  * 配列でない/復元不能な要素は捨て、各要素は新規オブジェクトに複製する。
  * `validPlayerIds` は正規化済み players の id 集合（dangling な起点参照を弾くため）。
+ * 復元できた線が MAX_LINES 本に達したら、残りは読まずに捨てる。
  */
 export function normalizeLines(raw: unknown, validPlayerIds: ReadonlySet<string>): Line[] {
   if (!Array.isArray(raw)) {
@@ -138,6 +150,9 @@ export function normalizeLines(raw: unknown, validPlayerIds: ReadonlySet<string>
   }
   const lines: Line[] = [];
   for (const [index, entry] of raw.entries()) {
+    if (lines.length >= MAX_LINES) {
+      break;
+    }
     const line = normalizeLine(entry, index, validPlayerIds);
     if (line !== null) {
       lines.push(line);

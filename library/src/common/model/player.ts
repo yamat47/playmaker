@@ -23,6 +23,12 @@ export type PlayerShape = (typeof PLAYER_SHAPE_VALUES)[number];
 export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
 
 /**
+ * 外部から受け取る選手の上限。実際のプレー図は 22 人ほどなので実用は妨げず、
+ * 壊れたデータや悪意のあるデータで描画が止まらないように、超えた分は正規化で捨てる。
+ */
+export const MAX_PLAYERS = 64;
+
+/**
  * 選手マーカーの半径（ヤード）。レンダラの描画サイズと hit-test の当たり半径が
  * 必ず一致するよう common に置き両層で共有する。フィールドは縦横等倍スケールのため、
  * ヤード空間の円形当たり判定がそのまま画面上の円になる。
@@ -88,6 +94,7 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
 /**
  * 外部から渡る players 配列を内部で安全な Player[] へ正規化する。
  * 配列でない/復元不能な要素は捨て、各要素は新規オブジェクトに複製する。
+ * 復元できた選手が MAX_PLAYERS 人に達したら、残りは読まずに捨てる。
  */
 export function normalizePlayers(raw: unknown): Player[] {
   if (!Array.isArray(raw)) {
@@ -95,6 +102,9 @@ export function normalizePlayers(raw: unknown): Player[] {
   }
   const players: Player[] = [];
   for (const [index, entry] of raw.entries()) {
+    if (players.length >= MAX_PLAYERS) {
+      break;
+    }
     const player = normalizePlayer(entry, index);
     if (player !== null) {
       players.push(player);

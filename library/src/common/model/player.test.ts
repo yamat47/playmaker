@@ -3,6 +3,7 @@ import {
   clonePlayer,
   DEFAULT_PLAYER_SHAPE,
   isPlayerShape,
+  MAX_PLAYERS,
   normalizePlayers,
   PLAYER_RADIUS_YARDS,
   type Player,
@@ -94,6 +95,25 @@ describe("normalizePlayers", () => {
 
     expect(normalized).not.toBe(input[0]);
     expect(normalized?.position).not.toBe(input[0]?.position);
+  });
+});
+
+describe("normalizePlayers の件数上限", () => {
+  const at = (i: number) => ({ id: `p${i}`, position: { lateralYard: 5, absoluteYard: i } });
+
+  it("MAX_PLAYERS 人を超える選手は先頭の MAX_PLAYERS 人だけ残す", () => {
+    const raw = Array.from({ length: MAX_PLAYERS + 5 }, (_, i) => at(i));
+
+    const players = normalizePlayers(raw);
+
+    expect(players).toHaveLength(MAX_PLAYERS);
+    expect(players.at(-1)?.id).toBe(`p${MAX_PLAYERS - 1}`);
+  });
+
+  it("復元できない要素は上限の人数に数えない", () => {
+    const raw = [null, ...Array.from({ length: MAX_PLAYERS }, (_, i) => at(i))];
+
+    expect(normalizePlayers(raw)).toHaveLength(MAX_PLAYERS);
   });
 });
 

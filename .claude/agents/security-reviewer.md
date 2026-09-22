@@ -67,7 +67,7 @@ for (const k in input) target[k] = input[k];
 ### 発見事項
 
 #### 🔴 Critical: [CWE-79] DOM ベース XSS
-- **ファイル**: src/browser/ui/property-panel.ts:42
+- **ファイル**: library/src/browser/ui/property-panel.ts:42
 - **問題**: 外部由来の player.label を innerHTML に代入
 - **影響**: 商用ソフト経由の悪意ある PlayData で任意スクリプト実行
 - **修正案**:
@@ -85,4 +85,4 @@ for (const k in input) target[k] = input[k];
 ## ツールの使い方
 - `grep`: 危険パターン検索（`innerHTML`, `insertAdjacentHTML`, `eval`, `new Function`, `document.write`, `__proto__`, `for (const .* in `）
 - `read`: PlayData の復元・マイグレーション・DOM 反映経路を確認
-- `glob`: `src/browser/ui/**`、`src/common/model/**` を一覧
+- `glob`: `library/src/browser/ui/**`、`library/src/common/model/**` を一覧

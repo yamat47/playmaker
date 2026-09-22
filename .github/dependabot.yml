@@ -6,9 +6,9 @@
 version: 2
 
 updates:
-  # npm（pnpm） — package.json / pnpm-lock.yaml
+  # npm（pnpm） — library/package.json / library/pnpm-lock.yaml
   - package-ecosystem: npm
-    directory: /
+    directory: /library
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
@@ -28,3 +28,4 @@ updates:
         update-types:
           - minor
           - patch
+

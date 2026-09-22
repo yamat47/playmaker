@@ -1,10 +1,10 @@
 ---
 description: 実装フロー規約。実装が一段落したら /simplify → /create-pr 確認の順に進める。
 paths:
-  - "src/**"
-  - "demo/**"
-  - "vite.config.ts"
-  - "package.json"
+  - "library/src/**"
+  - "library/demo/**"
+  - "library/vite.config.ts"
+  - "library/package.json"
 ---
 
 # 実装フロー規約

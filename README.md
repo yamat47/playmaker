@@ -8,7 +8,8 @@ TypeScript ライブラリ。商用ソフトウェアに組み込む「図作成
 
 ## インストール
 
-プライベートリポジトリの git 依存として参照する。`prepare` スクリプトが
+プライベートリポジトリの git 依存として参照する。パッケージ本体はリポジトリの
+`library/` にあるので、サブディレクトリを指定する（pnpm の `path:`）。`prepare` スクリプトが
 インストール時に `dist/`（ESM / CJS / 型 / CSS）をビルドするため、ビルド成果物は
 コミットしない。バージョンは **git タグ**で固定する。
 
@@ -16,7 +17,7 @@ TypeScript ライブラリ。商用ソフトウェアに組み込む「図作成
 // 利用側 package.json
 {
   "dependencies": {
-    "playmaker": "git+ssh://git@github.com/yamat47/playmaker.git#v1.0.0"
+    "playmaker": "git+ssh://git@github.com/yamat47/playmaker.git#v1.0.0&path:/library"
   }
 }
 ```
@@ -111,12 +112,13 @@ const playmaker = new Playmaker(container, {
 ## 開発
 
 ```sh
+cd library
 pnpm install        # 依存解決（prepare で dist もビルド）
 pnpm dev            # demo/ playground をホットリロード起動（ローカル目視確認）
 pnpm test           # Vitest（common 層 100% カバレッジゲート内蔵）
 pnpm typecheck      # tsc --noEmit
 pnpm lint           # Biome
-pnpm build          # Vite library mode → dist/（ESM/CJS/型/CSS）
+pnpm build          # Vite library mode → library/dist/（ESM/CJS/型/CSS）
 ```
 
 設計判断の確定経緯は `docs/plans/implementation-roadmap.md`、要件は `docs/prd.md`、

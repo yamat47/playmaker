@@ -1,8 +1,8 @@
 ---
 description: Playmaker のアーキテクチャ規約。VSCode 流レイヤ分離、IF 抽出、コマンドパターン。
 paths:
-  - "src/**/*.ts"
-  - "vite.config.ts"
+  - "library/src/**/*.ts"
+  - "library/vite.config.ts"
 ---
 
 # アーキテクチャ規約

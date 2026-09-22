@@ -1,7 +1,7 @@
 ---
 description: Vitest テスト規約。common 層中心、インターフェース注入、AAA。
 paths:
-  - "src/**/*.test.ts"
+  - "library/src/**/*.test.ts"
 ---
 
 # テスト規約

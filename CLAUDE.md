@@ -19,7 +19,7 @@
 
 Node / pnpm はホストに入っていない。ツールチェーンは Docker コンテナの中にだけあり、
 `Makefile` がホストから `docker compose -f docker/compose.yaml run` で呼び出す（pnpm は `library/` で動く）。
-**`pnpm` `npm` `npx` `node` `vitest` `tsc` `biome` をホストで直接実行しない**（hook が止める）。
+**`pnpm` `npm` `npx` `node` `vitest` `tsc` `biome` をホストで直接実行しない**（`.claude/settings.json` の `permissions.deny` で拒否される）。
 
 | やりたいこと | コマンド |
 |---|---|

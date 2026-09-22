@@ -5,8 +5,6 @@
       "Bash(make:*)",
       "Bash(docker compose -f docker/compose.yaml ps:*)",
       "Bash(docker compose -f docker/compose.yaml logs:*)",
-      "Bash(curl -s http://localhost:5173:*)",
-      "Bash(curl -sf http://localhost:5173:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -39,19 +37,17 @@
       "Skill(github-actions-workflows)",
       "WebFetch(domain:github.com)",
       "Edit(.tmp/**)"
-    ]
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-host-node.sh"
-          }
-        ]
-      }
+    ],
+    "deny": [
+      "Bash(pnpm:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(corepack:*)",
+      "Bash(vitest:*)",
+      "Bash(tsc:*)",
+      "Bash(biome:*)",
+      "Bash(vite:*)"
     ]
   },
   "plansDirectory": "./docs/plans"

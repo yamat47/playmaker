@@ -95,6 +95,18 @@ export function zoneWindowLength(zone: FieldZone): number {
   return endYard - startYard;
 }
 
+/**
+ * 位置をゾーン窓の中（左右はサイドライン間、縦は窓の端から端）へ寄せる。
+ * 画面の外で離したドラッグや余白へのクリックで、見えない位置に選手や点を置かないためのもの。
+ */
+export function clampToZoneWindow(position: FieldPosition, zone: FieldZone): FieldPosition {
+  const { startYard, endYard } = fieldZoneWindow(zone);
+  return {
+    lateralYard: Math.min(Math.max(position.lateralYard, 0), FIELD_WIDTH_YARDS),
+    absoluteYard: Math.min(Math.max(position.absoluteYard, startYard), endYard),
+  };
+}
+
 /** フィールド外（エンドゾーン）か。境界のゴールライン 0/100 は含めない。 */
 export function isEndZone(absoluteYard: number): boolean {
   return absoluteYard < 0 || absoluteYard > 100;

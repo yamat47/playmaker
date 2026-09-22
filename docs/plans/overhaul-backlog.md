@@ -204,20 +204,22 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T5 型と lint の締め付け
+### T5 型と lint の締め付け (done)
 
-- [ ] **T5-1 [should] common に DOM lib、@types/node、vitest globals が効いている**
+- [x] **T5-1 [should] common に DOM lib、@types/node、vitest globals が効いている**
   - locations: library/tsconfig.json:5-7, library/tsconfig.json:25, library/tsconfig.build.json:1, library/vite.config.ts:58, library/biome.json:10-12, library/src/common/event/emitter.ts:23
   - 対応: tsconfig を common（ES2022、types なし）、browser、test、tooling に分け、`tsc -b` で型検査する。vitest/globals と `globals: true` を削除する。biome の overrides で common から browser への import を禁止する。emitter.ts:23 の既定値の console は扱いを決める。
-- [ ] **T5-2 [should] Biome の warn 級ルールが CI を落とさない。Promise と網羅性の検査もない**
+  - 結論: 共通の設定は tsconfig.base.json に置き、tsconfig.json は 4 本を束ねるだけにした。demo は DOM と vite/client を使うので browser に入れた。emitter.ts の console は既定値のまま残し、モジュールの中で `declare const console` に error だけを宣言した。グローバルに宣言すると DOM や @types/node の console とぶつかり、既定値をなくすと common の Emitter すべてにエラー処理を注入することになるため。
+- [x] **T5-2 [should] Biome の warn 級ルールが CI を落とさない。Promise と網羅性の検査もない**
   - locations: library/biome.json:15, library/package.json:17
   - 対応: `--error-on-warnings` を付ける。nursery の noFloatingPromises、noMisusedPromises、useExhaustiveSwitchCases を有効にする。useImportType は off にし、理由をコメントに書く。
-- [ ] **T5-3 [nit] erasableSyntaxOnly を採るか**（D6）
+  - 結論: コメントを書けるよう、設定ファイルを biome.jsonc に改名した。demo の PNG 出力が noMisusedPromises に当たるので、T17-2 もここで片付けた。
+- [x] **T5-3 [nit] erasableSyntaxOnly を採るか**（D6）
   - locations: library/tsconfig.json:3, library/src/common/editing/editor-controller.ts:177, library/src/common/commands/command-service.ts:19, library/src/common/undoRedo/undo-redo-service.ts:26, library/src/common/commands/field-commands.ts:12, library/src/common/commands/player-commands.ts:41, library/src/common/commands/player-commands.ts:62, library/src/common/commands/player-commands.ts:91, library/src/common/commands/line-commands.ts:41, library/src/common/commands/line-commands.ts:62, library/src/common/commands/line-commands.ts:104, library/src/common/commands/line-commands.ts:136, library/src/common/geometry/field.ts:154, library/src/common/emitter.ts:23
-- [ ] **T5-4 [nit] tsconfig の細部**
+- [x] **T5-4 [nit] tsconfig の細部**
   - locations: library/tsconfig.json:3-4, library/tsconfig.json:15-18
   - 対応: `module: "preserve"` と `moduleDetection: "force"` にする。esModuleInterop、declaration、sourceMap、outDir を削除する。noPropertyAccessFromIndexSignature は採らず、その判断を T18 の設計文書に残す。
-- [ ] **T5-5 [should] テスト補助の置き場がなく、共通化するとカバレッジゲートに引っかかる**
+- [x] **T5-5 [should] テスト補助の置き場がなく、共通化するとカバレッジゲートに引っかかる**
   - locations: library/vite.config.ts（coverage.include/exclude）, library/src/common/commands/edit-flow.test.ts:13, library/src/common/commands/formation-commands.test.ts:10, library/src/common/commands/line-commands.test.ts:14, library/src/common/model/play-data.test.ts:12, library/src/common/model/play-model.test.ts:8, library/src/common/formations/formation.test.ts:6, library/src/common/model/line.test.ts:15, library/src/common/geometry/hit-test.test.ts:11, library/src/common/commands/player-commands.test.ts:12
   - 対応: `src/test-support/` に must と fixtures を置き、coverage と build の対象から外す。以降のリファクタで使えるよう、ここで先に入れておく。
   - 規約: `.claude/rules/testing.md` の test-support の行から「T5-5 で作り」を消し、実在する置き場として書き直す。
@@ -523,7 +525,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T17-1 [should] demo が公開 API の手本になっていない**
   - locations: library/demo/main.ts:27, library/demo/main.ts:410-419, library/demo/main.ts:511-523, library/demo/main.ts:534, library/demo/main.ts:579, library/demo/main.ts:598, library/demo/main.ts:602, library/src/playmaker.ts:18, library/vite.config.ts:14-18
   - 対応: フォーメーションの読込は `loadFormation` を使う。モードの切替は `setMode` を使う。空の PlayData の組み立ては 1 関数にまとめ、`as PlayData` をなくす。CSS は `import "playmaker/styles.css"` で明示的に読む。要素の取得は instanceof で確かめる。
-- [ ] **T17-2 [nit] PNG 出力ハンドラにエラー処理がない**
+- [x] **T17-2 [nit] PNG 出力ハンドラにエラー処理がない**（T5-2 の lint に当たるので T5 で対応した）
   - locations: library/demo/main.ts:550-560, library/demo/main.ts:598
   - 対応: try/catch で包み、失敗を status に表示する。catch は `instanceof Error` で狭める。
 - [ ] **T17-3 [nit] 件数のコメントと区切り見出し**
@@ -540,7 +542,7 @@ PR 単位で、依存順に並べる。
 
 - [ ] **T18-1 [should] ロードマップが作業記録になり、現状のコードと食い違っている**（D19）
   - locations: docs/plans/implementation-roadmap.md:8, docs/plans/implementation-roadmap.md:15, docs/plans/implementation-roadmap.md:34-49, docs/plans/implementation-roadmap.md:131, docs/plans/implementation-roadmap.md:141-145, docs/plans/implementation-roadmap.md:143, docs/plans/implementation-roadmap.md:161, docs/plans/implementation-roadmap.md:316, docs/plans/implementation-roadmap.md:347-361
-  - 対応: docs/design.md に、現在の設計をテーマ別に書く。却下した案と外す条件は残す（TS 7 の回避策、noPropertyAccessFromIndexSignature、nursery ルール）。CLAUDE.md、rules、README、agents、`library/vite.config.ts:16`（TS 7 の回避策を外す条件の参照）からの参照先を差し替える。PRD 5.2、5.3、6.5 も実装に合わせて更新する。
+  - 対応: docs/design.md に、現在の設計をテーマ別に書く。tsconfig の分け方（common は ES2022 の lib だけで型検査する）も書く。却下した案と外す条件は残す（TS 7 の回避策、noPropertyAccessFromIndexSignature、nursery ルール）。CLAUDE.md、rules、README、agents、`library/vite.config.ts:16`（TS 7 の回避策を外す条件の参照）からの参照先を差し替える。PRD 5.2、5.3、6.5 も実装に合わせて更新する。
 - [ ] **T18-2 [should] README の公開 API とカスタマイズの説明が実物と合っていない**
   - locations: README.md:56, README.md:67-81, README.md:101, README.md:114-119, library/src/playmaker.ts:19-44, library/src/common/design/field-font.ts:8
   - 対応: 公開 API は T14 の結果に一致させる。プリセットは件数を書かず、取得方法だけ書く。フィールドの文字は同梱フォントに固定であることを書く。変数一覧は THEME_TOKENS と一致させる。上書きは任意の祖先要素でできると書く。

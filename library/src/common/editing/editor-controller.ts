@@ -326,26 +326,26 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   getOverlay(): EditorOverlay {
-    const overlay: EditorOverlay = { waypointHandles: [] };
     const s = this.selection;
     if (s?.kind === "player") {
-      overlay.selectedPlayerId = s.id;
-    } else if (s?.kind === "line") {
-      const line = this.model.findLine(s.id);
-      if (line !== undefined) {
-        const drag = this.interaction;
-        overlay.waypointHandles = line.waypoints.map((w, idx) =>
-          drag?.type === "drag-waypoint" && drag.lineId === s.id && drag.index === idx
-            ? { ...drag.current }
-            : w,
-        );
-        overlay.endpointHandle =
-          drag?.type === "drag-endpoint" && drag.lineId === s.id
-            ? { ...drag.current }
-            : { ...line.end };
-      }
+      return { selectedPlayerId: s.id, waypointHandles: [] };
     }
-    return overlay;
+    const line = s?.kind === "line" ? this.model.findLine(s.id) : undefined;
+    if (line === undefined) {
+      return { waypointHandles: [] };
+    }
+    const drag = this.interaction;
+    return {
+      waypointHandles: line.waypoints.map((w, idx) =>
+        drag?.type === "drag-waypoint" && drag.lineId === line.id && drag.index === idx
+          ? { ...drag.current }
+          : w,
+      ),
+      endpointHandle:
+        drag?.type === "drag-endpoint" && drag.lineId === line.id
+          ? { ...drag.current }
+          : { ...line.end },
+    };
   }
 
   // ツール・選択

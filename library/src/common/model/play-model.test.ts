@@ -156,6 +156,60 @@ describe("PlayModel 選手の追加・更新", () => {
   });
 });
 
+describe("PlayModel の id 重複の拒否", () => {
+  it("addPlayer は既にある id の選手を渡すと throw し、状態も通知も変えない", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    expect(() => model.addPlayer(player("a"))).toThrow('duplicate player id "a"');
+    expect(model.getData().players.map((p) => p.id)).toEqual(["a", "b", "c"]);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("addPlayers は既存と重複する id を含むと、前の選手も足さずに throw する", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    expect(() => model.addPlayers([player("d"), player("b")])).toThrow('duplicate player id "b"');
+    expect(model.getData().players.map((p) => p.id)).toEqual(["a", "b", "c"]);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("addPlayers は渡した選手どうしで id が重なると throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.addPlayers([player("d"), player("d")])).toThrow('duplicate player id "d"');
+    expect(model.getData().players.map((p) => p.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("addLine は既にある id の線を渡すと throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.addLine(line("la", "b"))).toThrow('duplicate line id "la"');
+    expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc"]);
+  });
+
+  it("insertLine は既にある id の線を渡すと throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.insertLine(line("lb", "a"), 0)).toThrow(
+      'PlayModel.insertLine: duplicate line id "lb"',
+    );
+  });
+
+  it("restorePlayer は同じ id の選手が既にあると throw する", () => {
+    const model = new PlayModel(seed());
+    const removal = model.removePlayer("b");
+    model.addPlayer(player("b"));
+
+    expect(() => model.restorePlayer(removal)).toThrow(
+      'PlayModel.restorePlayer: duplicate player id "b"',
+    );
+  });
+});
+
 describe("PlayModel.removePlayer / restorePlayer", () => {
   it("選手と起点が一致する線をカスケード除去し、メメントと位置を返す", () => {
     const model = new PlayModel(seed());

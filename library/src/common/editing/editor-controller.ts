@@ -5,10 +5,10 @@
 // 純粋な合成）で表現する。これにより実データ変更は 1 コマンド = onChange 1 回を保ち、
 // 見た目の追従はコマンドを汚さずに済む（Model–View 分離の徹底）。
 //
-// 選択は「id の希望」であり、対象が消えても自動解除しない（lookup 側が欠落を
-// 許容して空を返す＝stale でも無害）。これで防御分岐がすべて到達可能になり、
-// common 100% を v8 ignore 0 件で維持できる。
+// 選択は「id の希望」であり、対象が消えても自動解除しない。読み取るときに実在を確かめ、
+// 消えていれば無選択として返す。Undo で対象が戻れば、再び選択として読める。
 
+import type { ICommand } from "../commands/command.js";
 import type { ICommandService } from "../commands/command-service.js";
 import { SetFieldZoneCommand } from "../commands/field-commands.js";
 import { LoadFormationCommand } from "../commands/formation-commands.js";
@@ -29,6 +29,7 @@ import {
 } from "../commands/player-commands.js";
 import { Emitter, type Event } from "../event/emitter.js";
 import type { Formation } from "../formations/formation.js";
+import { clampToZoneWindow } from "../geometry/field.js";
 import { distanceToSegment, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
 import { Disposable } from "../lifecycle/disposable.js";
 import { DEFAULT_LINE_INTERPOLATION, DEFAULT_LINE_KIND, type Line } from "../model/line.js";
@@ -50,9 +51,10 @@ export type EditorSelection =
 /** 選択中の線の waypoint / 終点ハンドルをドラッグでき、その当たり半径（ヤード）。 */
 export const WAYPOINT_HANDLE_RADIUS_YARDS = 0.9;
 
-// 作図中、直前点とこの距離（ヤード）以内のクリックは同一点とみなし打点しない。
-// ダブルクリック確定は pointerdown を 2 度発火させ終点直上に重複点（＝不可視の
-// 折れ線）を生むため、それを構造的に防ぐ。手動の意図的な近接打点は実用上ない粒度。
+// 作図中、直前点（点がまだ無ければ起点の選手）とこの距離（ヤード）以内のクリックは
+// 同一点とみなし打点しない。ダブルクリック確定は pointerdown を 2 度発火させ、
+// 直前点の真上に重複点を打つため、それを構造的に防ぐ。全長がこれ以下の線も確定しない。
+// 手動の意図的な近接打点は実用上ない粒度。
 const LINE_POINT_MERGE_RADIUS_YARDS = 0.5;
 
 /** プレビュー専用の合成線 id。Model には決して入らない（getRenderModel の中だけ）。 */
@@ -142,6 +144,8 @@ type Interaction =
   | {
       readonly type: "draw-line";
       readonly startPlayerId: string;
+      /** 作図を始めた時点の起点選手の位置。最初の打点の近接判定に使う。 */
+      readonly start: FieldPosition;
       readonly points: FieldPosition[];
       cursor: FieldPosition;
     }
@@ -155,6 +159,34 @@ function samePosition(a: FieldPosition, b: FieldPosition): boolean {
 // 再利用し、ハンドル当たり・近接判定の距離計算を一本化する。
 function pointDistance(a: FieldPosition, b: FieldPosition): number {
   return distanceToSegment(a, b, b);
+}
+
+// 掴んだ点とポインタのずれを保ったまま、ドラッグ対象を置く位置。
+function dragTarget(
+  drag: { readonly offsetLat: number; readonly offsetAbs: number },
+  pos: FieldPosition,
+): FieldPosition {
+  return {
+    lateralYard: pos.lateralYard + drag.offsetLat,
+    absoluteYard: pos.absoluteYard + drag.offsetAbs,
+  };
+}
+
+function polylineLengthYards(start: FieldPosition, points: readonly FieldPosition[]): number {
+  let length = 0;
+  let previous = start;
+  for (const point of points) {
+    length += pointDistance(previous, point);
+    previous = point;
+  }
+  return length;
+}
+
+// パッチの指定キーのうち、現在値と違うものが 1 つでもあるか。
+function patchChangesAnything<T>(current: T, patch: Partial<T>): boolean {
+  return (Object.keys(patch) as (keyof T)[]).some(
+    (key) => patch[key] !== undefined && patch[key] !== current[key],
+  );
 }
 
 function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
@@ -171,6 +203,11 @@ export class EditorController extends Disposable implements IEditorController {
   private tool: EditorTool = "select";
   private selection: EditorSelection = null;
   private interaction: Interaction = null;
+  // 自分で編集を走らせている間は Model の通知を転送せず、履歴の更新が済んでから 1 回だけ発火する。
+  // Model はコマンドの apply の中で通知するので、そのまま転送すると購読側が
+  // 更新前の canUndo / canRedo を読んでしまう。
+  private editing = false;
+  private modelChangedWhileEditing = false;
 
   // 依存はすべて手動コンストラクタ注入（重い DI 機構は持たない＝MVP・依存最小）。
   constructor(
@@ -181,7 +218,15 @@ export class EditorController extends Disposable implements IEditorController {
   ) {
     super();
     // Model 変更（自分のコマンド・undo/redo・カスケード削除）のたびに再描画を促す。
-    this._register(this.model.onDidChange(() => this._onDidChange.fire()));
+    this._register(
+      this.model.onDidChange(() => {
+        if (this.editing) {
+          this.modelChangedWhileEditing = true;
+        } else {
+          this._onDidChange.fire();
+        }
+      }),
+    );
   }
 
   // 状態の読み取り
@@ -191,13 +236,15 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   getSelection(): EditorSelection {
-    return this.selection;
+    return this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
+      ? null
+      : this.selection;
   }
 
   getViewState(): EditorViewState {
     return {
       tool: this.tool,
-      selection: this.selection,
+      selection: this.getSelection(),
       canUndo: this.undoRedo.canUndo,
       canRedo: this.undoRedo.canRedo,
       fieldZone: this.model.getFieldZone(),
@@ -330,12 +377,9 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     if (i.type === "draw-line") {
-      i.cursor = { ...pos };
+      i.cursor = this.clampToField(pos);
     } else {
-      i.current = {
-        lateralYard: pos.lateralYard + i.offsetLat,
-        absoluteYard: pos.absoluteYard + i.offsetAbs,
-      };
+      i.current = this.clampToField(dragTarget(i, pos));
     }
     this._onDidChange.fire();
   }
@@ -347,21 +391,20 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.interaction = null;
-    const final: FieldPosition = {
-      lateralYard: pos.lateralYard + i.offsetLat,
-      absoluteYard: pos.absoluteYard + i.offsetAbs,
-    };
-    if (samePosition(final, i.origin)) {
+    const moved = dragTarget(i, pos);
+    // 寄せる前の位置で比べる。窓の外にある選手をクリックしただけで、窓の端へ動かさない。
+    if (samePosition(moved, i.origin)) {
       // 動いていない＝ただのクリック。無駄なコマンド/onChange を出さず再描画だけ。
       this._onDidChange.fire();
       return;
     }
+    const final = this.clampToField(moved);
     if (i.type === "drag-player") {
       if (this.model.findPlayer(i.playerId) === undefined) {
         this._onDidChange.fire();
         return;
       }
-      this.commands.execute(new MovePlayerCommand(i.playerId, final));
+      this.execute(new MovePlayerCommand(i.playerId, final));
       return;
     }
     const line = this.model.findLine(i.lineId);
@@ -370,11 +413,11 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     if (i.type === "drag-endpoint") {
-      this.commands.execute(new SetLineEndCommand(i.lineId, final));
+      this.execute(new SetLineEndCommand(i.lineId, final));
       return;
     }
     const waypoints = line.waypoints.map((w, idx) => (idx === i.index ? final : w));
-    this.commands.execute(new SetLineWaypointsCommand(i.lineId, waypoints));
+    this.execute(new SetLineWaypointsCommand(i.lineId, waypoints));
   }
 
   cancelInteraction(): void {
@@ -397,7 +440,13 @@ export class EditorController extends Disposable implements IEditorController {
       this._onDidChange.fire();
       return;
     }
-    if (this.model.findPlayer(i.startPlayerId) === undefined) {
+    const startPlayer = this.model.findPlayer(i.startPlayerId);
+    if (startPlayer === undefined) {
+      this._onDidChange.fire();
+      return;
+    }
+    // 起点の真上に点を重ねただけの線は見えず、選択もしにくいので確定しない。
+    if (polylineLengthYards(startPlayer.position, i.points) <= LINE_POINT_MERGE_RADIUS_YARDS) {
       this._onDidChange.fire();
       return;
     }
@@ -412,7 +461,7 @@ export class EditorController extends Disposable implements IEditorController {
       end: { ...end },
       interpolation: DEFAULT_LINE_INTERPOLATION,
     };
-    this.commands.execute(new AddLineCommand(line));
+    this.execute(new AddLineCommand(line));
     // 作図直後は選択モードへ戻し、引いた線を選択する（連続作図より編集導線を優先）。
     // ツール遷移は setTool に集約する（同値ガード・interaction 破棄・発火を一本化）。
     this.setTool("select");
@@ -422,44 +471,41 @@ export class EditorController extends Disposable implements IEditorController {
   // アクション（ツールバー/パネルから）
 
   deleteSelection(): void {
-    const s = this.selection;
-    if (s === null) {
+    const player = this.getSelectedPlayer();
+    const line = this.getSelectedLine();
+    if (player !== undefined) {
+      this.execute(new RemovePlayerCommand(player.id));
+    } else if (line !== undefined) {
+      this.execute(new RemoveLineCommand(line.id));
+    } else {
       return;
     }
-    if (s.kind === "player") {
-      if (this.model.findPlayer(s.id) !== undefined) {
-        this.commands.execute(new RemovePlayerCommand(s.id));
-        this.setSelection(null);
-      }
-      return;
-    }
-    if (this.model.findLine(s.id) !== undefined) {
-      this.commands.execute(new RemoveLineCommand(s.id));
-      this.setSelection(null);
-    }
+    this.setSelection(null);
   }
 
   updateSelectedPlayer(patch: PlayerPatch): void {
-    const s = this.selection;
-    if (s?.kind !== "player" || this.model.findPlayer(s.id) === undefined) {
+    const player = this.getSelectedPlayer();
+    // 値が変わらないパッチを積むと、何も戻らない Undo 段と onChange が出てしまう。
+    if (player === undefined || !patchChangesAnything(player, patch)) {
       return;
     }
-    this.commands.execute(new UpdatePlayerCommand(s.id, patch));
+    this.execute(new UpdatePlayerCommand(player.id, patch));
   }
 
   updateSelectedLine(patch: LinePatch): void {
-    const s = this.selection;
-    if (s?.kind !== "line" || this.model.findLine(s.id) === undefined) {
+    const line = this.getSelectedLine();
+    if (line === undefined || !patchChangesAnything(line, patch)) {
       return;
     }
-    this.commands.execute(new UpdateLineCommand(s.id, patch));
+    this.execute(new UpdateLineCommand(line.id, patch));
   }
 
   setFieldZone(zone: FieldZone): void {
     if (zone === this.model.getFieldZone()) {
       return;
     }
-    this.commands.execute(new SetFieldZoneCommand(zone));
+    this.cancelInteraction();
+    this.execute(new SetFieldZoneCommand(zone));
   }
 
   /**
@@ -487,20 +533,57 @@ export class EditorController extends Disposable implements IEditorController {
     if (players.length === 0) {
       return;
     }
-    this.commands.execute(new LoadFormationCommand(players));
+    this.cancelInteraction();
+    this.execute(new LoadFormationCommand(players));
     // 読込で局所の選択は意味を失う＝解除（stale な選択を残さない）。
     this.setSelection(null);
   }
 
+  /**
+   * 作図中は最後の打点を取り消す（点が無ければ作図をやめる）。履歴には触れない。
+   * それ以外はドラッグ等の途中状態を捨ててから履歴を戻す。
+   */
   undo(): void {
-    this.undoRedo.undo();
+    const i = this.interaction;
+    if (i?.type === "draw-line") {
+      if (i.points.pop() === undefined) {
+        this.cancelInteraction();
+      } else {
+        this._onDidChange.fire();
+      }
+      return;
+    }
+    this.cancelInteraction();
+    this.runEdit(() => this.undoRedo.undo());
   }
 
   redo(): void {
-    this.undoRedo.redo();
+    this.cancelInteraction();
+    this.runEdit(() => this.undoRedo.redo());
   }
 
   // 内部
+
+  private execute(command: ICommand): void {
+    this.runEdit(() => this.commands.execute(command));
+  }
+
+  private runEdit(edit: () => void): void {
+    this.editing = true;
+    try {
+      edit();
+    } finally {
+      this.editing = false;
+    }
+    if (this.modelChangedWhileEditing) {
+      this.modelChangedWhileEditing = false;
+      this._onDidChange.fire();
+    }
+  }
+
+  private clampToField(pos: FieldPosition): FieldPosition {
+    return clampToZoneWindow(pos, this.model.getFieldZone());
+  }
 
   private selectPointerDown(pos: FieldPosition): void {
     const data = this.model.getData();
@@ -571,13 +654,13 @@ export class EditorController extends Disposable implements IEditorController {
     const i = this.interaction;
     if (i?.type === "draw-line") {
       // 作図中: クリックごとに中継点を打つ（最後の点が終点になる）。直前点と
-      // ほぼ同座標なら打点せずカーソルだけ進める（ダブルクリック確定で生じる
-      // 終点直上の重複点＝不可視の折れ線を防ぐ）。
-      const last = i.points[i.points.length - 1];
-      if (last === undefined || !this.nearPoint(last, pos)) {
-        i.points.push({ ...pos });
+      // ほぼ同座標なら打点せずカーソルだけ進める。
+      const point = this.clampToField(pos);
+      const last = i.points[i.points.length - 1] ?? i.start;
+      if (!this.nearPoint(last, point)) {
+        i.points.push(point);
       }
-      i.cursor = { ...pos };
+      i.cursor = { ...point };
       this._onDidChange.fire();
       return;
     }
@@ -589,6 +672,7 @@ export class EditorController extends Disposable implements IEditorController {
     this.interaction = {
       type: "draw-line",
       startPlayerId: player.id,
+      start: { ...player.position },
       points: [],
       cursor: { ...player.position },
     };
@@ -600,11 +684,11 @@ export class EditorController extends Disposable implements IEditorController {
     const id = this.ids.next("player", taken);
     const player: Player = {
       id,
-      position: { ...pos },
+      position: this.clampToField(pos),
       shape: DEFAULT_PLAYER_SHAPE,
       label: "",
     };
-    this.commands.execute(new AddPlayerCommand(player));
+    this.execute(new AddPlayerCommand(player));
     this.setSelection({ kind: "player", id });
   }
 

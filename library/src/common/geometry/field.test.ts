@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  clampToZoneWindow,
   DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
   FIELD_WIDTH_YARDS,
@@ -209,5 +210,31 @@ describe("FieldGeometry", () => {
 
     expect(Number.isNaN(back.lateralYard)).toBe(false);
     expect(Number.isNaN(back.absoluteYard)).toBe(false);
+  });
+});
+
+describe("clampToZoneWindow", () => {
+  it("窓の中の位置はそのまま返す", () => {
+    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 50 }, "middle")).toEqual({
+      lateralYard: 10,
+      absoluteYard: 50,
+    });
+  });
+
+  it("サイドラインの外はサイドライン上へ寄せる", () => {
+    expect(clampToZoneWindow({ lateralYard: -3, absoluteYard: 50 }, "middle").lateralYard).toBe(0);
+    expect(clampToZoneWindow({ lateralYard: 99, absoluteYard: 50 }, "middle").lateralYard).toBe(
+      FIELD_WIDTH_YARDS,
+    );
+  });
+
+  it("窓の手前と奥の外は、そのゾーンの窓の端へ寄せる", () => {
+    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 0 }, "middle").absoluteYard).toBe(35);
+    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 90 }, "middle").absoluteYard).toBe(
+      65,
+    );
+    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 200 }, "redzone").absoluteYard).toBe(
+      110,
+    );
   });
 });

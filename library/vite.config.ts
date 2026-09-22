@@ -63,7 +63,7 @@ export default defineConfig({
       // include に一致するファイルは未テストでも 0% として表に出る（Vitest 4 既定）。
       // include 漏れで見かけ上 100% に見える事故を防ぐため src 配下を明示列挙する。
       include: ["src/**/*.ts"],
-      exclude: ["**/*.test.ts", "**/*.d.ts"],
+      exclude: ["**/*.test.ts", "**/*.d.ts", "src/test-support/**"],
       // text=Claude/CI ログ用(未カバー行が見える), html=人間用, json-summary=将来連携用
       reporter: ["text", "html", "json-summary"],
       thresholds: {

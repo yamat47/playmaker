@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { must } from "../../test-support/must.js";
 import type { Player } from "../model/player.js";
 import { type Formation, isFormationSide, normalizeFormation } from "./formation.js";
-
-// noUncheckedIndexedAccess / null 返しを `!` 無しで絞るためのテスト局所ヘルパ。
-function must<T>(value: T | null | undefined): T {
-  if (value === null || value === undefined) {
-    throw new Error("expected a defined value");
-  }
-  return value;
-}
 
 describe("isFormationSide", () => {
   it("offense / defense のみ真、それ以外は偽", () => {

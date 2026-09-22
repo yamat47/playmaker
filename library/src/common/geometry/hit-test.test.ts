@@ -1,16 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { player } from "../../test-support/fixtures.js";
 import type { Line } from "../model/line.js";
-import type { Player } from "../model/player.js";
 import {
   distanceToSegment,
   hitTestLine,
   hitTestPlayer,
   LINE_HIT_TOLERANCE_YARDS,
 } from "./hit-test.js";
-
-function player(id: string, lateralYard: number, absoluteYard: number): Player {
-  return { id, position: { lateralYard, absoluteYard }, shape: "circle", label: "" };
-}
 
 describe("hitTestPlayer", () => {
   it("当たり半径の内側を指せばその選手を返す", () => {

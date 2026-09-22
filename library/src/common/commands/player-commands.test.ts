@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { line, player } from "../../test-support/fixtures.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
-import type { Player } from "../model/player.js";
 import {
   AddPlayerCommand,
   MovePlayerCommand,
@@ -9,25 +9,12 @@ import {
   UpdatePlayerCommand,
 } from "./player-commands.js";
 
-function player(id: string, lateralYard = 5, absoluteYard = 50): Player {
-  return { id, position: { lateralYard, absoluteYard }, shape: "circle", label: id };
-}
-
 function seed(): PlayData {
   return {
     version: 1,
     field: { zone: "middle" },
     players: [player("a")],
-    lines: [
-      {
-        id: "la",
-        kind: "route",
-        startPlayerId: "a",
-        waypoints: [],
-        end: { lateralYard: 5, absoluteYard: 60 },
-        interpolation: "straight",
-      },
-    ],
+    lines: [line("la")],
   };
 }
 

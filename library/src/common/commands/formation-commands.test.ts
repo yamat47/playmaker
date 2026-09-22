@@ -1,18 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { must } from "../../test-support/must.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import type { Player } from "../model/player.js";
 import { UndoRedoService } from "../undoRedo/undo-redo-service.js";
 import { CommandService } from "./command-service.js";
 import { LoadFormationCommand } from "./formation-commands.js";
-
-// noUncheckedIndexedAccess 下で `!` を使わず型を絞るためのテスト局所ヘルパ。
-function must<T>(value: T | undefined): T {
-  if (value === undefined) {
-    throw new Error("expected a defined value");
-  }
-  return value;
-}
 
 function formationPlayers(): Player[] {
   return [

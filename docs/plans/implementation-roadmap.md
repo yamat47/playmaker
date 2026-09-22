@@ -361,6 +361,17 @@ PRD 6.3 UI フレームワーク非依存・6.4 ランタイム依存最小・6.
 - **テスト通過**：`pnpm run test` で 254 tests 全緑、`src/common/**` カバレッジゲート（lines/branches/functions/statements = 100% / `perFile: true`）通過、`src/` 内の `v8 ignore` は **0 件**。`pnpm typecheck` / `pnpm lint` / `pnpm build` も全緑
 - **`docs/prd.md` 7 章の完了判定**＝「機能要件すべてが仕様通り動作する／ユニットテストおよび統合テストが通る」を満たす。実使用評価・事業性は商用ソフト側 PRD の責務（本ライブラリの範囲外）
 
+### 実装メモ：TypeScript 7 移行と dts 生成の回避策（2026-09-22）
+
+TypeScript 7.0 はネイティブ実装になり、`typescript` パッケージが JS API（`ts.createProgram` など）と `lib.*.d.ts` を同梱しなくなった。新しい API は 7.1 で入る予定。
+
+- 型検査（`tsc --noEmit`）は TS 7 本体で動く
+- dts 生成（vite-plugin-dts / unplugin-dts）は JS API が要るため、TypeScript 公式の互換パッケージ `@typescript/typescript6` を devDependencies に置く。unplugin-dts は `typescript` に API がなければこちらを読む
+- `bundleTypes` で呼ぶ api-extractor には、unplugin-dts が `typescript` パッケージの場所を標準型定義の置き場として渡す。TS 7 には `lib.*.d.ts` がなく `Omit` などを解決できないため、`vite.config.ts` の `bundleTypes.invokeOptions.typescriptCompilerFolder` で `@typescript/old`（`@typescript/typescript6` の依存先 = typescript@6）に向ける。main で TS 6 を使っていたときと同じ lib なので、`dist/playmaker.d.ts` は変わらない
+- 却下した案：pnpm overrides で unplugin-dts の `typescript` を 6 に差し替える（互換パッケージと回避策は消えるが、回避策が pnpm 設定に隠れて見つけにくい）／TS 7.0 の告知にある npm alias（`typescript` を `@typescript/typescript6` にする）（`typescript` の名前が実際に型検査で使う TS 7 と食い違ううえ、互換パッケージにも `lib.*.d.ts` がないので同じ回避策が要る）
+
+**外す条件**：unplugin-dts が TS 7.1 以降の API に対応し、`typescript` パッケージだけで dts の生成と束ねができるようになったら、`typescriptCompilerFolder` の指定と `@typescript/typescript6` を外す。
+
 ### 完了判定（PRD 7 章）
 - 機能要件（PRD 5 章）すべてが仕様通り動作
 - `common` 層の単体テストおよび統合テストが通る

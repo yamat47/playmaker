@@ -252,7 +252,7 @@ PR 単位で、依存順に並べる。
 - [x] **T6-7 [should] 件数に上限がなく、大量の要素で描画がフリーズしうる（DoS）**（D8）
   - locations: library/src/common/model/player.ts:103-115, library/src/common/model/line.ts:143-155, library/src/common/geometry/bezier.ts:80-106, library/src/browser/rendering/canvas-surface.ts:142-169, library/src/browser/rendering/line-renderer.ts:34-97
   - 結論: MAX_PLAYERS = 64、MAX_LINES = 128、MAX_WAYPOINTS_PER_LINE = 32。配列は先頭から上限の個数だけを読み、復元できない要素も読んだ数に入れる（巨大な配列や穴のある配列でも読む量が上限で止まる）。
-  - 残り: 上限は外部データの正規化にしか掛かっていない。作図での打点、選手の追加、`loadFormation` の繰り返しでは上限を超えられ、超えた分は次の復元で黙って捨てられる。ホストが `loadFormation` を繰り返し呼べば描画の負荷も上限なく増える。上限を PlayModel の不変条件にし、追加系のコマンドでも止めるかを T8 で決める。
+  - 残り: 上限は外部データの正規化にしか掛かっていない。編集で超えられる経路は T8-5 に回し、公開 API の JSDoc には切り詰めを書いた。
 
 - 依存: T5、D7、D8
 - 完了条件: common の境界に `as` がない。値リストが 1 か所で定義されている。内部の読み取りが getSnapshot に寄っている。common 100% を維持する。
@@ -296,6 +296,11 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/model/play-model.ts（removePlayers と removePlayerCore）
   - 問題: 1 件ずつ state を書き換えてから次の id を探すので、後ろの id が無いと前の削除だけが残る。onDidChange も出ず、コマンドは履歴に積まれないので Undo でも戻せない。T1-2 で addPlayers は先に全件を検証する形に直したが、removePlayers は変更前からこの挙動のまま。
   - 対応: 書き換える前に全 id の実在を確かめる。T8-1 の「コマンドが throw してもスタックが壊れない」テストと合わせて、状態も変わらないことを確かめる。
+
+- [ ] **T8-5 [should] 件数の上限が外部データの正規化にしか掛かっていない**（T6-7 の残り）
+  - locations: library/src/common/commands/player-commands.ts（AddPlayerCommand）, library/src/common/commands/formation-commands.ts, library/src/common/commands/line-commands.ts（AddLineCommand、SetLineWaypointsCommand）, library/src/common/editing/editor-controller.ts（loadFormation と作図の確定）, library/src/common/model/play-model.ts（addPlayers、addLine）
+  - 問題: 作図での打点、選手の追加、`loadFormation` の繰り返しでは MAX_PLAYERS などを超えられる。超えた図は `getPlayData` から戻したときに黙って切り詰められ、ホストが `loadFormation` を繰り返せば描画の負荷も上限なく増える。公開 API の JSDoc にはこの切り詰めを書いてある。
+  - 対応: 上限を PlayModel の不変条件にし、追加系のコマンドは上限で止める（UI のボタンも無効にする）か、今のまま JSDoc の注記で済ませるかを決める。
 
 - 依存: T6、T7
 - 完了条件: EditorController が ICommandService だけに依存する。履歴の変化で通知が出る。コマンドが throw してもスタックが壊れないことをテストで確かめる。

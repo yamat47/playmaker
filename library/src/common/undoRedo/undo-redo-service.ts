@@ -21,9 +21,12 @@ export interface IUndoRedoService {
 export class UndoRedoService implements IUndoRedoService {
   private readonly undoStack: ICommand[] = [];
   private readonly redoStack: ICommand[] = [];
+  private readonly model: IPlayModel;
 
   // Model は手動コンストラクタ注入（重い DI 機構は持たない）。
-  constructor(private readonly model: IPlayModel) {}
+  constructor(model: IPlayModel) {
+    this.model = model;
+  }
 
   get canUndo(): boolean {
     return this.undoStack.length > 0;

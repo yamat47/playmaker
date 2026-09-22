@@ -197,6 +197,11 @@ function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
 }
 
 export class EditorController extends Disposable implements IEditorController {
+  private readonly model: IPlayModel;
+  private readonly commands: ICommandService;
+  private readonly undoRedo: IUndoRedoService;
+  private readonly ids: IIdFactory;
+
   private readonly _onDidChange = this._register(new Emitter<void>());
   readonly onDidChange = this._onDidChange.event;
 
@@ -211,12 +216,16 @@ export class EditorController extends Disposable implements IEditorController {
 
   // 依存はすべて手動コンストラクタ注入（重い DI 機構は持たない＝MVP・依存最小）。
   constructor(
-    private readonly model: IPlayModel,
-    private readonly commands: ICommandService,
-    private readonly undoRedo: IUndoRedoService,
-    private readonly ids: IIdFactory,
+    model: IPlayModel,
+    commands: ICommandService,
+    undoRedo: IUndoRedoService,
+    ids: IIdFactory,
   ) {
     super();
+    this.model = model;
+    this.commands = commands;
+    this.undoRedo = undoRedo;
+    this.ids = ids;
     // Model 変更（自分のコマンド・undo/redo・カスケード削除）のたびに再描画を促す。
     this._register(
       this.model.onDidChange(() => {

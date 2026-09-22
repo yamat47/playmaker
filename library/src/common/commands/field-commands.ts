@@ -7,9 +7,12 @@ import type { ICommand } from "./command.js";
 /** フィールドゾーンを切り替える。undo は切替前ゾーンへ差し戻す。 */
 export class SetFieldZoneCommand implements ICommand {
   readonly label = "フィールドゾーンの切替";
+  private readonly zone: FieldZone;
   private previous: FieldZone | undefined;
 
-  constructor(private readonly zone: FieldZone) {}
+  constructor(zone: FieldZone) {
+    this.zone = zone;
+  }
 
   apply(model: IPlayModel): void {
     // 直前ゾーンを捕捉（redo 時も最新を再捕捉して整合）。値型読取なので深いコピーは不要。

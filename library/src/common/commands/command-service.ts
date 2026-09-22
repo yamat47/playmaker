@@ -14,11 +14,14 @@ export interface ICommandService {
 }
 
 export class CommandService implements ICommandService {
+  private readonly model: IPlayModel;
+  private readonly undoRedo: IUndoRedoService;
+
   // Model / UndoRedo は手動コンストラクタ注入（重い DI 機構は持たない）。
-  constructor(
-    private readonly model: IPlayModel,
-    private readonly undoRedo: IUndoRedoService,
-  ) {}
+  constructor(model: IPlayModel, undoRedo: IUndoRedoService) {
+    this.model = model;
+    this.undoRedo = undoRedo;
+  }
 
   execute(command: ICommand): void {
     command.apply(this.model);

@@ -36,9 +36,12 @@ export class AddPlayerCommand implements ICommand {
 /** 選手を 1 人削除する（従属線もカスケード）。undo はメメントから完全復元。 */
 export class RemovePlayerCommand implements ICommand {
   readonly label = "選手の削除";
+  private readonly playerId: string;
   private removal: PlayerRemoval | undefined;
 
-  constructor(private readonly playerId: string) {}
+  constructor(playerId: string) {
+    this.playerId = playerId;
+  }
 
   apply(model: IPlayModel): void {
     this.removal = model.removePlayer(this.playerId);
@@ -55,13 +58,12 @@ export class RemovePlayerCommand implements ICommand {
 /** 選手を移動する（位置のみ変更）。undo は移動前の選手へ差し戻す。 */
 export class MovePlayerCommand implements ICommand {
   readonly label = "選手の移動";
+  private readonly playerId: string;
   private readonly to: FieldPosition;
   private previous: Player | undefined;
 
-  constructor(
-    private readonly playerId: string,
-    to: FieldPosition,
-  ) {
+  constructor(playerId: string, to: FieldPosition) {
+    this.playerId = playerId;
     this.to = { ...to };
   }
 
@@ -84,13 +86,12 @@ export class MovePlayerCommand implements ICommand {
 /** 選手のプロパティ（ラベル・形状・色）を編集する。undo は編集前へ差し戻す。 */
 export class UpdatePlayerCommand implements ICommand {
   readonly label = "選手プロパティの編集";
+  private readonly playerId: string;
   private readonly patch: PlayerPatch;
   private previous: Player | undefined;
 
-  constructor(
-    private readonly playerId: string,
-    patch: PlayerPatch,
-  ) {
+  constructor(playerId: string, patch: PlayerPatch) {
+    this.playerId = playerId;
     this.patch = { ...patch };
   }
 

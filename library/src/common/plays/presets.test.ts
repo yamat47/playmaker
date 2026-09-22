@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { must } from "../../test-support/must.js";
 import { isLineInterpolation, isLineKind } from "../model/line.js";
 import { CURRENT_PLAY_DATA_VERSION, resolvePlayData } from "../model/play-data.js";
 import { isPlayerShape } from "../model/player.js";
@@ -92,10 +93,10 @@ describe("getPlayPreset", () => {
 
 describe("PLAY_PRESETS の共有", () => {
   it("入れ子の値まで凍結されていて、利用者が書き換えられない", () => {
-    const preset = PLAY_PRESETS[0];
+    const preset = must(PLAY_PRESETS[0]);
 
     expect(Object.isFrozen(preset)).toBe(true);
-    expect(Object.isFrozen(preset?.data.players)).toBe(true);
-    expect(Object.isFrozen(preset?.data.players[0]?.position)).toBe(true);
+    expect(Object.isFrozen(preset.data.players)).toBe(true);
+    expect(Object.isFrozen(must(preset.data.players[0]).position)).toBe(true);
   });
 });

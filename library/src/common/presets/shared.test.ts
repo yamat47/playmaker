@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { must } from "../../test-support/must.js";
 import { deepFreeze, isTeamSide } from "./shared.js";
 
 describe("isTeamSide", () => {
@@ -18,7 +19,7 @@ describe("deepFreeze", () => {
 
     expect(Object.isFrozen(value)).toBe(true);
     expect(Object.isFrozen(value.players)).toBe(true);
-    expect(Object.isFrozen(value.players[0]?.position)).toBe(true);
+    expect(Object.isFrozen(must(value.players[0]).position)).toBe(true);
   });
 
   it("共有された子を 2 回たどっても、渡した値をそのまま返す", () => {

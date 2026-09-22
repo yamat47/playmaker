@@ -71,7 +71,7 @@ describe("PlayModel 参照系", () => {
     expect(model.getFieldZone()).toBe("redzone");
   });
 
-  it("findPlayer / findLine は一致した要素を、不在なら undefined を返す", () => {
+  it("id が一致する選手と線を返し、なければ undefined を返す", () => {
     const model = new PlayModel(seed());
 
     expect(model.findPlayer("b")).toEqual(player("b"));
@@ -96,7 +96,7 @@ describe("PlayModel.setFieldZone", () => {
 });
 
 describe("PlayModel 選手の追加・更新", () => {
-  it("addPlayer は末尾へ足して発火する", () => {
+  it("追加した選手は末尾に並び、1 回だけ通知する", () => {
     const model = new PlayModel();
     const listener = vi.fn();
     model.onDidChange(listener);
@@ -107,7 +107,7 @@ describe("PlayModel 選手の追加・更新", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it("updatePlayer は同 id を差し替え、直前の選手を返して発火する", () => {
+  it("選手を更新すると同じ id を差し替え、差し替え前の選手を返して通知する", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn();
     model.onDidChange(listener);
@@ -233,7 +233,7 @@ describe("PlayModel.removePlayer / restorePlayer", () => {
 });
 
 describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () => {
-  it("addPlayers は全選手を末尾へ足し、1 回だけ発火する", () => {
+  it("複数の選手をまとめて追加しても、末尾に並べて 1 回だけ通知する", () => {
     const model = new PlayModel();
     const listener = vi.fn();
     model.onDidChange(listener);
@@ -268,7 +268,7 @@ describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () =
 });
 
 describe("PlayModel 線の追加・挿入・削除・更新", () => {
-  it("addLine は末尾へ足して発火する", () => {
+  it("追加した線は末尾に並び、1 回だけ通知する", () => {
     const model = new PlayModel({ ...seed(), lines: [] });
     const listener = vi.fn();
     model.onDidChange(listener);
@@ -303,7 +303,7 @@ describe("PlayModel 線の追加・挿入・削除・更新", () => {
     expect(() => model.removeLine("ghost")).toThrow(/unknown line id "ghost"/);
   });
 
-  it("updateLine は同 id を差し替えて直前の線を返し、未知 id は throw", () => {
+  it("線を更新すると同じ id を差し替えて差し替え前の線を返し、未知の id は throw する", () => {
     const model = new PlayModel(seed());
 
     const prev = model.updateLine({ ...line("lb", "b"), kind: "motion" });
@@ -331,7 +331,7 @@ describe("PlayModel の発火", () => {
 });
 
 describe("PlayModel の軽い読み取り", () => {
-  it("getSnapshot は変更までは同じオブジェクトを返し、変更後は新しいものに替わる", () => {
+  it("変更がなければ同じスナップショットを返し、変更すると新しいものに替わる", () => {
     const model = new PlayModel(seed());
     const before = model.getSnapshot();
 
@@ -344,7 +344,7 @@ describe("PlayModel の軽い読み取り", () => {
     expect(model.getSnapshot().field.zone).toBe("redzone");
   });
 
-  it("hasPlayer は id の有無を返す", () => {
+  it("選手の id があるかどうかを返す", () => {
     const model = new PlayModel(seed());
 
     expect(model.hasPlayer("a")).toBe(true);

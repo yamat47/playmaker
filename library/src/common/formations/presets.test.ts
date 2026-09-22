@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { must } from "../../test-support/must.js";
 import { isPlayerShape } from "../model/player.js";
 import { isTeamSide } from "../presets/shared.js";
 import { normalizeFormation } from "./formation.js";
@@ -62,10 +63,10 @@ describe("getFormationPreset", () => {
 
 describe("FORMATION_PRESETS の共有", () => {
   it("入れ子の値まで凍結されていて、利用者が書き換えられない", () => {
-    const preset = FORMATION_PRESETS[0];
+    const preset = must(FORMATION_PRESETS[0]);
 
     expect(Object.isFrozen(preset)).toBe(true);
-    expect(Object.isFrozen(preset?.players)).toBe(true);
-    expect(Object.isFrozen(preset?.players[0]?.position)).toBe(true);
+    expect(Object.isFrozen(preset.players)).toBe(true);
+    expect(Object.isFrozen(must(preset.players[0]).position)).toBe(true);
   });
 });

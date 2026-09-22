@@ -4,7 +4,7 @@
 //
 // 収録文字は「ヤード数字 + 選手ラベル」で実際に出る英数字と基本記号に限定する
 // （サブセット B）。未収録グリフは @font-face の sans-serif フォールバックへ逃がす。
-// 再生成: `node scripts/generate-field-font.mjs`
+// 再生成: `make font`（コンテナの中で動く）
 
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";

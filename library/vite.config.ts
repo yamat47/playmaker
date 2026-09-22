@@ -6,7 +6,7 @@ import dts from "vite-plugin-dts";
 
 // build: ライブラリモードで dist を生成する。
 // test: src 配下の *.test.ts を node 環境で実行する（common 層中心）。
-// dev playground は `pnpm dev`（= vite demo）で demo/ を root に起動する。
+// demo の dev サーバーは `make up` で起動する（中身は vite demo）。
 const root = import.meta.dirname;
 
 // TypeScript 7 の typescript パッケージは JS API も lib.*.d.ts も同梱しない。vite-plugin-dts は
@@ -31,8 +31,10 @@ export default defineConfig({
     lib: {
       entry: resolve(root, "src/playmaker.ts"),
       name: "Playmaker",
-      formats: ["es", "cjs"],
-      fileName: (format) => (format === "es" ? "playmaker.js" : "playmaker.cjs"),
+      // 利用側はバンドラ経由の ESM だけなので CJS は出さない。CJS を出すと、
+      // require した利用者にも ESM 用の型が渡って型と実体がずれる。
+      formats: ["es"],
+      fileName: "playmaker",
       cssFileName: "playmaker",
     },
     // 同梱フォント（woff2）は data URI として playmaker.css へ inline する＝利用側は

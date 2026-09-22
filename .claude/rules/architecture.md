@@ -18,16 +18,19 @@ Playmaker はアメフトのプレー図を作成・表示する UI フレーム
 src/
   common/    # DOM 非依存の純ロジック。node 単体テストで機能カバレッジを全網羅
   browser/   # DOM / Canvas 依存。common に依存
-  playmaker.ts  # 公開エントリ。層を結線し options / onChange / view⇄edit を提供
+  playmaker.ts  # 公開エントリ。層を結線し options と onChange を提供する
 ```
 
 - **新しいロジックは原則 `common/` に置く**。DOM API（`document` `window` `Canvas`）を `common/` に持ち込まない
 - `browser/` は `common/` の**インターフェース**に依存し、描画・入力・UI を担う
+- view と edit は今は `options.mode` で構築時に決めるだけで、あとから切り替えられない。
+  全体見直しの T14 で、履歴を保ったまま UI と入力だけを付け外しする `setMode` を公開する
 
 ## 守るべきパターン
 
 ### 1. インターフェース抽出
-`IPlayModel` `IRenderer` `ICommand` `IUndoRedoService` `ICommandService` 等を抽出し、実装を差し替え・モック可能にする。`browser` は具象でなく IF に依存する。
+`IPlayModel` `ICommand` `ICommandService` `IUndoRedoService` `IEditorController` `IIdFactory` 等を抽出し、実装を差し替え・モック可能にする。`browser` は具象でなく IF に依存する。
+描画の IF はまだない。全体見直しの T12 で `ILayerRenderer { draw(ctx, frame) }` を導入し、CanvasSurface に注入する。
 
 ### 2. Model–View 分離
 純粋な `PlayModel`（`common`）が状態を持ち、`onChange` / イベントを発火。View（`browser`）は購読して描画。View からモデルを直接書き換えない。
@@ -57,5 +60,4 @@ src/
 - ビルド: Vite library mode（`make build` → `dist/` に ESM/CJS/CSS/型）
 - ローカル確認: `make up`（`demo/` playground、ホットリロード。手順は `run-demo` skill）
 - UI 文言・コメントは日本語（i18n 機構は持たない＝日本語のみ）
-- コメントの規約は `.claude/rules/comments.md`（コードで語れることは語らせ、Why と
-  腐らない価値だけ書く。マイルストーン等の実装過程はコードに残さない）
+- コメントの規約は `writing-conventions` skill と、その上に足す `.claude/rules/comments.md`

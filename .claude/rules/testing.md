@@ -6,17 +6,20 @@ paths:
 
 # テスト規約
 
-Playmaker は VSCode 流レイヤ分離を採る。テストは `common` 層（DOM 非依存の純ロジック）を厚く、`browser` 層は最小限にする。詳細方針は `docs/plans/implementation-roadmap.md`。
+Playmaker は VSCode 流レイヤ分離を採る。テストは `common` 層（DOM 非依存の純ロジック）を厚く、`browser` 層は最小限にする。
 
 ## 配置・命名
 
 - ソースと同階層に `*.test.ts`（`src/common/event/emitter.ts` → `src/common/event/emitter.test.ts`）
 - Vitest は `src/**/*.test.ts` を **node 環境**で実行（`vite.config.ts` の `test`）
 - 実行: `make test`（全体・**カバレッジゲート内蔵**）/ `make test FILE=<file>`（個別）/ `make test-watch`（TDD 内側ループ・カバレッジなし）。いずれもコンテナ内で動く
+- 複数のテストで使う共通の部品（`must` や fixtures）は `src/test-support/` に置く。全体見直しの T5-5 で作り、coverage と build の対象から外す
 
 ## スタイル
 
-- `describe` でユニット、`it` の主語は日本語で振る舞いを明確に
+- `describe` でユニット、`it` は日本語で「どういう入力のとき、どうなるか」を書く
+  （例: `it("id が重複した選手は後ろの方の id を振り直す")`）。メソッド名で始めない。
+  「正しく動く」「正常系」のように結果を言わない名前にしない
 - AAA（Arrange / Act / Assert）。1 つの `it` は論理的に 1 振る舞い
 - 正常系 → 異常系 → 境界値の順で網羅
 - スパイは `vi.fn()`、`toHaveBeenCalledExactlyOnceWith` / `toHaveBeenCalledOnce` を活用
@@ -24,12 +27,12 @@ Playmaker は VSCode 流レイヤ分離を採る。テストは `common` 層（D
 ## テスト容易性の原則
 
 - **ロジックは common に置き、DOM 非依存で単体テストする**。`document` 等を common のテストに持ち込まない
-- 実装差し替えは**インターフェース注入**（`IRenderer` 等のフェイクをコンストラクタに渡す）。モンキーパッチ / 全インスタンス差し替えを避ける
+- 実装差し替えは**インターフェース注入**（`IIdFactory` や `ICommandService` 等のフェイクをコンストラクタに渡す）。モンキーパッチ / 全インスタンス差し替えを避ける
 
 ```ts
 // GOOD
-const renderer: IRenderer = { render: vi.fn(), dispose: vi.fn() };
-const subject = new SomeController(model, renderer);
+const ids: IIdFactory = { next: vi.fn(() => "player-1") };
+const controller = new EditorController(model, commands, undoRedo, ids);
 ```
 
 ## 重点的に網羅する対象（common 層）

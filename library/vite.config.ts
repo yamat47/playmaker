@@ -57,7 +57,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
-    globals: true,
     coverage: {
       // v8 ネイティブ計測 + AST-aware リマッピング。計装なしで速く、精度は istanbul 同等
       provider: "v8",

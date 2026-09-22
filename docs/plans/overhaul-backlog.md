@@ -251,8 +251,8 @@ PR 単位で、依存順に並べる。
   - 対応: deepFreeze し、型を DeepReadonly にし、getter は複製を返す。TeamSide と DEFENSE_COLOR は `common/presets/shared.ts` へ移す。
 - [x] **T6-7 [should] 件数に上限がなく、大量の要素で描画がフリーズしうる（DoS）**（D8）
   - locations: library/src/common/model/player.ts:103-115, library/src/common/model/line.ts:143-155, library/src/common/geometry/bezier.ts:80-106, library/src/browser/rendering/canvas-surface.ts:142-169, library/src/browser/rendering/line-renderer.ts:34-97
-  - 結論: MAX_PLAYERS = 64、MAX_LINES = 128、MAX_WAYPOINTS_PER_LINE = 32。復元できた要素が上限に達したら、残りは読まずに捨てる。
-  - 残り: 編集では上限を超えて追加できるので、超えた分は次の復元で黙って捨てられる。実際の図は 22 人・20 本ほどで届かないため、D8 の「正規化で切り詰める」のままにした。追加操作で止めるかは T9 の分割のときに決める。
+  - 結論: MAX_PLAYERS = 64、MAX_LINES = 128、MAX_WAYPOINTS_PER_LINE = 32。配列は先頭から上限の個数だけを読み、復元できない要素も読んだ数に入れる（巨大な配列や穴のある配列でも読む量が上限で止まる）。
+  - 残り: 上限は外部データの正規化にしか掛かっていない。作図での打点、選手の追加、`loadFormation` の繰り返しでは上限を超えられ、超えた分は次の復元で黙って捨てられる。ホストが `loadFormation` を繰り返し呼べば描画の負荷も上限なく増える。上限を PlayModel の不変条件にし、追加系のコマンドでも止めるかを T8 で決める。
 
 - 依存: T5、D7、D8
 - 完了条件: common の境界に `as` がない。値リストが 1 か所で定義されている。内部の読み取りが getSnapshot に寄っている。common 100% を維持する。

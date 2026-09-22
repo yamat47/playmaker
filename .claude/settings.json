@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(pnpm install:*)",
@@ -6,33 +7,38 @@
       "Bash(pnpm vitest:*)",
       "Bash(pnpm exec:*)",
       "Bash(pnpm dlx:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git blame:*)",
+      "Bash(git branch:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git config user.name)",
+      "Bash(git config user.email)",
       "Bash(git checkout:*)",
       "Bash(git switch:*)",
+      "Bash(git restore:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git log:*)",
-      "Bash(git diff:*)",
-      "Bash(git status:*)",
-      "Bash(git branch:*)",
-      "Bash(git rev-parse:*)",
-      "Bash(git restore:*)",
-      "Bash(date:*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr view:*)",
-      "Bash(gh pr:*)",
-      "Bash(gh issue:*)",
-      "Bash(gh api:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(date:*)",
       "Bash(ls:*)",
-      "Skill(git:commit)",
-      "Skill(git:commits)",
-      "Skill(git:create-pr)",
+      "Skill(review-pr)",
+      "Skill(writing-conventions)",
+      "Skill(typescript-idioms)",
+      "Skill(github-actions-workflows)",
       "WebFetch(domain:github.com)",
-      "Write(/tmp/pr-body.md)"
+      "Edit(.tmp/**)"
     ]
   },
-  "plansDirectory": "./docs/plans",
-  "enabledPlugins": {
-    "frontend-design@claude-plugins-official": true
-  }
+  "plansDirectory": "./docs/plans"
 }

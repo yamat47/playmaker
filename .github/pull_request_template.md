@@ -1,29 +1,11 @@
-### Summary
+## 背景
 
-This pull request introduces commit `${NEW_COMMIT}` on branch `${BRANCH}`.
+<!-- 利用者から見て何が起きていて、この PR で何が変わるか。Issue や台帳の項目があればリンクする。書くことがなければ節ごと消す。 -->
 
-### Checklist
+## やらなかったこと
 
-- [ ] Code builds and unit tests pass locally
-- [ ] Relevant documentation updated
-- [ ] Reviewer has sufficient context
+<!-- 検討して採らなかった案、意図して範囲から外したこと、分かっている制約。書くことがなければ節ごと消す。 -->
 
-### Motivation and Context
+## 見てほしいところ
 
-<!-- Explain *why* the change is necessary, link issues if applicable -->
-
-### Implementation Details
-
-<!-- Briefly describe *what* was done and any important decisions -->
-
-### Testing Instructions
-
-<!-- Provide clear, repeatable steps so reviewers can verify the change -->
-
-### Related Issues
-
-<!-- e.g. Closes #123, Relates to #456 -->
-
-### Notes for Release
-
-<!-- Optional: user-facing details for the changelog -->
+<!-- レビューで判断してほしいトレードオフ、破壊的変更、確かめきれていないこと。1 文 1 行で。書くことがなければ節ごと消す。 -->

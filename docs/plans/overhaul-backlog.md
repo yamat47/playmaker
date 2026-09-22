@@ -136,17 +136,17 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T3 規約とドキュメントの整合
+### T3 規約とドキュメントの整合 (done)
 
 **目的**: 以降の PR が従う基準を先に正す。
 
-- [ ] **T3-1 [should] 規約、agent、roadmap が存在しない IRenderer を前提にしている**（D1）
+- [x] **T3-1 [should] 規約、agent、roadmap が存在しない IRenderer を前提にしている**（D1）
   - locations: .claude/rules/architecture.md:30, .claude/rules/testing.md:27, .claude/rules/testing.md:31, .claude/agents/test-writer.md:16, .claude/agents/test-writer.md:34-35, docs/plans/implementation-roadmap.md:28-29, docs/plans/implementation-roadmap.md:44
   - 対応: D1 が (a) なら「導入予定、T12 で実装」と書き、例は実在する IF にする。(b) なら記述ごと削除する。
-- [ ] **T3-2 [should] view⇄edit の切替を「提供する」と書いてあるが、実装がない**（D14）
+- [x] **T3-2 [should] view⇄edit の切替を「提供する」と書いてあるが、実装がない**（D14）
   - locations: .claude/rules/architecture.md:21, docs/plans/implementation-roadmap.md:26
   - 対応: D14 の結論に合わせて書き直す。
-- [ ] **T3-3 [should] comments.md に不足している規定を足し、skill との衝突を解消する**（D2）
+- [x] **T3-3 [should] comments.md に不足している規定を足し、skill との衝突を解消する**（D2）
   - locations: .claude/rules/comments.md:16-26
   - 対応: 次を追記する。
     - 公開 API の JSDoc の扱い
@@ -159,13 +159,13 @@ PR 単位で、依存順に並べる。
     - カバレッジの数字を Why にしないこと
     - skill の TODO Preference はこのリポジトリでは適用しないこと
     - 見出し記法と em dash の修正
-- [ ] **T3-4 [nit] testing.md の命名基準が writing-conventions より緩く、test-writer が規約を丸ごと複製している**
+- [x] **T3-4 [nit] testing.md の命名基準が writing-conventions より緩く、test-writer が規約を丸ごと複製している**
   - locations: .claude/rules/testing.md:1-60, .claude/agents/test-writer.md:10-44, .claude/agents/test-writer.md:59
   - 対応: 命名は「入力と結果を書く。メソッド名で始めない」にする。test-support の置き場を 1 行足す。agent は rules を参照させる形にし、例のパスは実在するものにする。
-- [ ] **T3-5 [should] 完了済みのプラン文書が残り、docs/plans の運用ルールがない**（D3）
+- [x] **T3-5 [should] 完了済みのプラン文書が残り、docs/plans の運用ルールがない**（D3）
   - locations: docs/plans/https-github-com-yamat47-playmaker-pulls-distributed-cocke.md:1, .claude/settings.json:53
   - 対応: cocke.md を削除し、CLAUDE.md に docs/plans の運用ルールを 1 行足す。roadmap の冒頭には「全体見直し中はこの台帳が正」と注記する。
-- [ ] **T3-6 [should] PR テンプレートが writing-conventions とぶつかっている**
+- [x] **T3-6 [should] PR テンプレートが writing-conventions とぶつかっている**
   - locations: .github/pull_request_template.md:3, .github/pull_request_template.md:5-9, .github/pull_request_template.md:15
   - 対応: 背景、やらなかったこと、見てほしいところの 3 節で、日本語で書き直す。
 
@@ -220,6 +220,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T5-5 [should] テスト補助の置き場がなく、共通化するとカバレッジゲートに引っかかる**
   - locations: library/vite.config.ts（coverage.include/exclude）, library/src/common/commands/edit-flow.test.ts:13, library/src/common/commands/formation-commands.test.ts:10, library/src/common/commands/line-commands.test.ts:14, library/src/common/model/play-data.test.ts:12, library/src/common/model/play-model.test.ts:8, library/src/common/formations/formation.test.ts:6, library/src/common/model/line.test.ts:15, library/src/common/geometry/hit-test.test.ts:11, library/src/common/commands/player-commands.test.ts:12
   - 対応: `src/test-support/` に must と fixtures を置き、coverage と build の対象から外す。以降のリファクタで使えるよう、ここで先に入れておく。
+  - 規約: `.claude/rules/testing.md` の test-support の行から「T5-5 で作り」を消し、実在する置き場として書き直す。
 
 - 依存: T4、D6
 - 完了条件: common で `document` を書くと型エラーになる。warning があると CI が落ちる。make check が通る。
@@ -375,6 +376,7 @@ PR 単位で、依存順に並べる。
 
 - [ ] **T12-1 [should] IRenderer がない（規約と実装の衝突）**（D1）
   - locations: library/src/browser/rendering/canvas-surface.ts:30-32, library/src/browser/rendering/canvas-surface.ts:38, library/src/browser/rendering/field-renderer.ts, library/src/browser/rendering/line-renderer.ts:34-41, library/src/browser/rendering/player-renderer.ts:54-60, library/src/browser/input/pointer-input.ts:6-9
+  - 規約: `.claude/rules/architecture.md` の「描画の IF はまだない」の行を、導入した `ILayerRenderer` の説明に書き換え、IF の一覧に足す。
 - [ ] **T12-2 [should] CanvasSurface の責務が多すぎ、DPR の変化にも追従しない**
   - locations: library/src/browser/rendering/canvas-surface.ts:38-59, library/src/browser/rendering/canvas-surface.ts:53, library/src/browser/rendering/canvas-surface.ts:67-83, library/src/browser/rendering/canvas-surface.ts:101-110, library/src/browser/rendering/canvas-surface.ts:120-140, library/src/browser/rendering/canvas-surface.ts:179-226, library/src/browser/rendering/canvas-surface.ts:232-269
   - 対応: 次のように分ける。
@@ -437,6 +439,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T14-2 [should] mode が構築時に固定されている**（D14）
   - locations: library/src/playmaker.ts:74, library/src/playmaker.ts:86-90, library/src/playmaker.ts:137-143, library/src/playmaker.ts:193-197
   - 対応: document 束（T10 の session）と ui 束に分け、`setMode` と `get mode` を足す。
+  - 規約: `.claude/rules/architecture.md` の「view と edit は今は構築時に決めるだけ」の行を、`setMode` の説明に書き換える。
 - [ ] **T14-3 [should] onChange が options でしか受け取れない**（D15）
   - locations: library/src/playmaker.ts:63, library/src/playmaker.ts:77, library/src/playmaker.ts:85, library/src/playmaker.ts:191, library/src/playmaker.ts:104-114
   - 対応: options は構築時に値を取り出す。購読 API を公開し、Event と IDisposable の型も export する。
@@ -537,7 +540,7 @@ PR 単位で、依存順に並べる。
 
 - [ ] **T18-1 [should] ロードマップが作業記録になり、現状のコードと食い違っている**（D19）
   - locations: docs/plans/implementation-roadmap.md:8, docs/plans/implementation-roadmap.md:15, docs/plans/implementation-roadmap.md:34-49, docs/plans/implementation-roadmap.md:131, docs/plans/implementation-roadmap.md:141-145, docs/plans/implementation-roadmap.md:143, docs/plans/implementation-roadmap.md:161, docs/plans/implementation-roadmap.md:316, docs/plans/implementation-roadmap.md:347-361
-  - 対応: docs/design.md に、現在の設計をテーマ別に書く。却下した案と外す条件は残す（TS 7 の回避策、noPropertyAccessFromIndexSignature、nursery ルール）。CLAUDE.md、rules、README、agents からの参照先を差し替える。PRD 5.2、5.3、6.5 も実装に合わせて更新する。
+  - 対応: docs/design.md に、現在の設計をテーマ別に書く。却下した案と外す条件は残す（TS 7 の回避策、noPropertyAccessFromIndexSignature、nursery ルール）。CLAUDE.md、rules、README、agents、`library/vite.config.ts:16`（TS 7 の回避策を外す条件の参照）からの参照先を差し替える。PRD 5.2、5.3、6.5 も実装に合わせて更新する。
 - [ ] **T18-2 [should] README の公開 API とカスタマイズの説明が実物と合っていない**
   - locations: README.md:56, README.md:67-81, README.md:101, README.md:114-119, library/src/playmaker.ts:19-44, library/src/common/design/field-font.ts:8
   - 対応: 公開 API は T14 の結果に一致させる。プリセットは件数を書かず、取得方法だけ書く。フィールドの文字は同梱フォントに固定であることを書く。変数一覧は THEME_TOKENS と一致させる。上書きは任意の祖先要素でできると書く。

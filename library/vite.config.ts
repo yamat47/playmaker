@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
-import { resolve } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
@@ -7,6 +8,17 @@ import dts from "vite-plugin-dts";
 // test: src 配下の *.test.ts を node 環境で実行する（common 層中心）。
 // dev playground は `pnpm dev`（= vite demo）で demo/ を root に起動する。
 const root = import.meta.dirname;
+
+// TypeScript 7 の typescript パッケージは JS API も lib.*.d.ts も同梱しない。vite-plugin-dts は
+// JS API を @typescript/typescript6 から読むが、api-extractor に渡す lib の場所は typescript
+// パッケージのままなので、Omit などの標準型を解決できず dts の束ねに失敗する。lib の場所は
+// @typescript/typescript6 が依存する @typescript/old（= typescript@6）に向ける。
+// 外す条件は docs/plans/implementation-roadmap.md の「TypeScript 7 移行」に置く。
+const requireFromRoot = createRequire(import.meta.url);
+const typescript6 = requireFromRoot.resolve("@typescript/typescript6/package.json");
+const typescriptLibFolder = dirname(
+  createRequire(typescript6).resolve("@typescript/old/package.json"),
+);
 
 export default defineConfig({
   resolve: {
@@ -35,7 +47,9 @@ export default defineConfig({
       // 出てしまうため build 用は分離する
       tsconfigPath: "tsconfig.build.json",
       // v5: 全型定義を api-extractor で単一 dist/playmaker.d.ts に束ねる
-      bundleTypes: true,
+      bundleTypes: {
+        invokeOptions: { typescriptCompilerFolder: typescriptLibFolder },
+      },
     }),
   ],
   test: {

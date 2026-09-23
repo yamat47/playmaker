@@ -42,6 +42,8 @@ export type {
 } from "./common/index.js";
 export {
   CURRENT_PLAY_DATA_VERSION,
+  FIELD_ZONE_LABELS,
+  FIELD_ZONE_VALUES,
   FORMATION_PRESETS,
   getFormationPreset,
   getPlayPreset,
@@ -98,6 +100,7 @@ export class Playmaker implements IDisposable {
   private readonly surface: CanvasSurface;
   private readonly session: PlaySession;
   private currentMode: PlaymakerMode;
+  private panel: PropertyPanel | undefined;
   // 今の controller に付けた描画の購読、UI、入力。controller かモードが変わると付け直す。
   private ui: DisposableStore;
 
@@ -224,6 +227,18 @@ export class Playmaker implements IDisposable {
     return this.surface.exportToPngBlob(this.session.getSnapshot(), options);
   }
 
+  /**
+   * 図とパネルの色を、テーマの CSS 変数から読み直す。CSS 変数を変えてもブラウザは知らせてこないので、
+   * ホストが祖先の要素で変数を変えたあとに呼ぶ。
+   */
+  refresh(): void {
+    if (this.ignoreAfterDispose("refresh")) {
+      return;
+    }
+    this.surface.refresh();
+    this.panel?.refresh();
+  }
+
   dispose(): void {
     this.ui.dispose();
     this.store.dispose();
@@ -252,9 +267,10 @@ export class Playmaker implements IDisposable {
     const ui = new DisposableStore();
     const controller = this.session.controller;
     ui.add(controller.onDidChangeScene(() => this.draw()));
+    this.panel = undefined;
     if (this.currentMode === "edit") {
       ui.add(new Toolbar(this.root, controller));
-      ui.add(new PropertyPanel(this.root, controller, this.surface.canvas));
+      this.panel = ui.add(new PropertyPanel(this.root, controller, this.surface.canvas));
       ui.add(new PointerInput(this.root, this.surface, controller));
     }
     return ui;

@@ -29,7 +29,7 @@ paths:
 モジュールとしての約束を書けるものだけ、ソースと同じ階層に `*.test.ts` を置く。
 
 - 対象は、bezier、polyline、field の座標変換、hit-test、color、keymap、base の Event と lifecycle、
-  PlayData の正規化と `migratePlayData`、プリセット
+  PlayData の正規化と `migratePlayData`、プリセット、PlayModel の契約（無い id、重複した id、件数の上限で throw する）
 - 公開の入口から観測できない数値計算は、単体テストで確かめる
 - 仕様テストで確かめられる振る舞いを、内部のモジュールの単体テストで重ねて確かめない
 

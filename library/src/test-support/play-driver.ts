@@ -16,7 +16,7 @@ export interface PlayDriver {
   readonly editor: IEditorController;
   /** session の onDidChange に渡った図。 */
   readonly onChange: Mock<(data: PlayData) => void>;
-  /** controller が出した通知を、出た順に記録する。setPlayData のあとも記録し続ける。 */
+  /** session が出した描き直しと表示状態の通知を、出た順に記録する。 */
   readonly notified: Mock<(kind: EditorNotification) => void>;
   /** 同じ位置で押して離す。 */
   click(at: FieldPosition): void;
@@ -32,12 +32,8 @@ export function openPlay(data: unknown): PlayDriver {
   const onChange = vi.fn<(data: PlayData) => void>();
   session.onDidChange(onChange);
   const notified = vi.fn<(kind: EditorNotification) => void>();
-  const listen = (): void => {
-    session.controller.onDidChangeScene(() => notified("scene"));
-    session.controller.onDidChangeViewState(() => notified("view"));
-  };
-  listen();
-  session.onDidReset(listen);
+  session.onDidChangeScene(() => notified("scene"));
+  session.onDidChangeViewState(() => notified("view"));
 
   return {
     session,

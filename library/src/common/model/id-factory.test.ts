@@ -8,7 +8,7 @@ describe("IdFactory", () => {
     expect(factory.next("player", new Set())).toBe("player-1");
   });
 
-  it("連続呼び出しで単調増加した id を返す", () => {
+  it("払い出した番号は、taken に無くても使わずに次の番号を返す", () => {
     const factory = new IdFactory();
 
     expect(factory.next("line", new Set())).toBe("line-1");
@@ -28,13 +28,5 @@ describe("IdFactory", () => {
     expect(factory.next("player", new Set())).toBe("player-1");
     expect(factory.next("line", new Set())).toBe("line-1");
     expect(factory.next("player", new Set())).toBe("player-2");
-  });
-
-  it("一度払い出した番号は taken から消えても再利用しない", () => {
-    const factory = new IdFactory();
-
-    // p-1 を採番 → その要素を削除（taken から外れる）しても次は p-2。
-    expect(factory.next("p", new Set())).toBe("p-1");
-    expect(factory.next("p", new Set())).toBe("p-2");
   });
 });

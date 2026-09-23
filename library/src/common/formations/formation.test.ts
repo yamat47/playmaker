@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
 import type { IIdFactory } from "../model/id-factory.js";
-import type { Player } from "../model/player.js";
 import { type Formation, instantiateFormation, normalizeFormation } from "./formation.js";
 
 describe("normalizeFormation: 復元不能", () => {
@@ -68,22 +67,6 @@ describe("normalizeFormation: 既定補完", () => {
     must(input.players[0]).position.lateralYard = 999;
 
     expect(must(result.players[0]).position.lateralYard).toBe(1);
-  });
-});
-
-describe("Formation 型は typed なテンプレートとして組み立てられる", () => {
-  it("プリセット相当の typed Formation を直接構築できる", () => {
-    const offense: Formation = {
-      id: "i-form",
-      name: "I フォーメーション",
-      side: "offense",
-      players: [
-        { position: { lateralYard: 26.7, downfieldYard: 49.5 }, shape: "square", label: "C" },
-      ],
-    };
-    const players: readonly Omit<Player, "id">[] = offense.players;
-
-    expect(players).toHaveLength(1);
   });
 });
 

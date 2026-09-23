@@ -1,7 +1,3 @@
-// プレー図の唯一の状態保持者（Model–View 分離の Model）。DOM 非依存。
-// 変更のたびに onDidChange で PlayData のスナップショットを発火する（PRD 5.8 の onChange 土台）。
-// 選手↔線の整合（起点選手が消えたら従属線も消える）はこの Model が所有する不変条件。
-
 import { Emitter, type Event } from "../base/event.js";
 import { Disposable } from "../base/lifecycle.js";
 import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
@@ -10,8 +6,8 @@ import { clonePlayData, type FieldZone, fieldStateForZone, type PlayData } from 
 import { MAX_PLAYERS, type Player } from "./player.js";
 
 /**
- * 選手 1 人の削除を後から正確に巻き戻すためのメメント。
- * カスケード除去した従属線を「元の配列インデックス付き」で保持し、復元時に同じ並びへ戻す。
+ * 選手 1 人の削除を戻すのに要る値。選手と一緒に消えた線を元の添字付きで持ち、
+ * 戻すときに同じ並びへ差し込む。
  */
 export interface PlayerRemoval {
   readonly player: Player;
@@ -19,16 +15,15 @@ export interface PlayerRemoval {
   readonly removedLines: readonly LineRemoval[];
 }
 
-/** 線 1 本の削除を巻き戻すためのメメント（元のインデックス付き）。 */
+/** 線 1 本の削除を戻すのに要る値。 */
 export interface LineRemoval {
   readonly line: Line;
   readonly index: number;
 }
 
 /**
- * Model の公開面。コマンド層（common）と View 層（browser）はこの IF にのみ依存し、
- * 具象 PlayModel を差し替え・モックできる（インターフェース抽出）。
- * 変更系メソッドは戻り値で「巻き戻しに必要な直前状態」を返し、コマンドの undo を支える。
+ * プレー図の状態。起点の選手が消えた線を残さないことはこの型が守る。
+ * 削除と差し替えは、戻すのに要る変更前の値を返す。
  */
 export interface IPlayModel {
   /** いずれかの変更後に、getSnapshot と同じ値で 1 回発火する。 */
@@ -57,23 +52,23 @@ export interface IPlayModel {
    */
   addPlayer(player: Player): void;
   /**
-   * 複数選手を一括追加し、変更は最後に 1 回だけ発火する（1 操作 = 1 onChange の契約を一括時も保つ）。
+   * 何人足しても onDidChange は最後に 1 回だけ発火する。
    * 既存と重複する id があるか、MAX_PLAYERS 人を超えるときは、1 人も足さずに throw する。
    */
   addPlayers(players: readonly Player[]): void;
-  /** 選手を削除し、起点がその選手の線もカスケード除去する。巻き戻し用メメントを返す。 */
+  /** 起点がその選手の線も一緒に消す。 */
   removePlayer(id: string): PlayerRemoval;
   /**
-   * 複数選手を一括削除し（各々従属線をカスケード）、変更を 1 回だけ発火する。
+   * 起点が消える選手の線も一緒に消し、onDidChange は最後に 1 回だけ発火する。
    * 無い id か重複した id があれば、1 人も消さずに throw する。
    */
   removePlayers(ids: readonly string[]): PlayerRemoval[];
   /**
-   * removePlayer の逆操作。選手と従属線を元の並びへ戻す。
+   * removePlayer で消した選手と線を、元の並びへ戻す。
    * 同じ id の選手が既にあるか、戻すと上限を超えるときは throw する。
    */
   restorePlayer(removal: PlayerRemoval): void;
-  /** 同 id の選手を差し替え、差し替え前の選手を返す。 */
+  /** 同じ id の選手を差し替え、差し替える前の選手を返す。 */
   updatePlayer(player: Player): Player;
   /**
    * 既にある id の線を渡すと throw する。線が MAX_LINES 本を超えるときと、
@@ -82,9 +77,8 @@ export interface IPlayModel {
   addLine(line: Line): void;
   /** index は 0 から線の本数までで渡す。addLine と同じ条件で throw する。 */
   insertLine(line: Line, index: number): void;
-  /** 線を削除し、巻き戻し用メメントを返す。 */
   removeLine(id: string): LineRemoval;
-  /** 同 id の線を差し替え、差し替え前の線を返す。waypoint が MAX_WAYPOINTS_PER_LINE 個を超えると throw する。 */
+  /** 同じ id の線を差し替え、差し替える前の線を返す。waypoint が MAX_WAYPOINTS_PER_LINE 個を超えると throw する。 */
   updateLine(line: Line): Line;
 }
 
@@ -116,17 +110,13 @@ function assertWithinLimits(data: PlayData): void {
 }
 
 /**
- * 状態を専有し変更を発火する純粋な Model。
- * 変更系メソッドは入力をそのまま取り込み、状態を新しいオブジェクトへ差し替えてから
- * onDidChange を 1 回だけ発火する。型が読み取り専用なので、入力も状態も後から
- * 書き換えられない前提で複製しない。
- * 復元不能な参照（未知 id への操作）は契約違反としてその場で throw する（UI は実在対象のみ操作する前提）。
+ * 変更系メソッドは、状態を新しいオブジェクトへ差し替えてから onDidChange を 1 回だけ発火する。
+ * 入力は複製せずに取り込む。型が読み取り専用なので、入力も状態もあとから書き換えられない。
+ * 無い id を指す操作は、編集の組み立て違いなのでその場で throw する。
  */
 export class PlayModel extends Disposable implements IPlayModel {
   private readonly _onDidChange = this._register(new Emitter<PlayData>());
   readonly onDidChange = this._onDidChange.event;
-  // migratePlayData が版検出→段適用→構造正規化した深い新規オブジェクトを返す
-  // ＝外部入力（旧版・破損含む）と完全に切り離した内部状態（PRD 6.6 の唯一の入口）。
   private state: PlayData;
 
   constructor(initialData?: unknown) {
@@ -171,7 +161,7 @@ export class PlayModel extends Disposable implements IPlayModel {
   }
 
   setFieldZone(zone: FieldZone): void {
-    // no-op（同値）抑止はコマンド/UI 層の責務。Model は決定的に set して発火する。
+    // 同じゾーンでも発火する。変わらない操作を履歴に積まないのは編集の側で決める。
     this.commit({ ...this.state, field: fieldStateForZone(zone) });
   }
 
@@ -202,7 +192,7 @@ export class PlayModel extends Disposable implements IPlayModel {
     const lines: Line[] = [];
     this.state.lines.forEach((line, i) => {
       if (line.startPlayerId === id) {
-        // 起点を失う線は dangling になる＝整合のため一緒に除去（復元用に位置を控える）。
+        // 起点を失う線は描けないので一緒に消し、戻すときのために添字を控える。
         removedLines.push({ line, index: i });
       } else {
         lines.push(line);
@@ -244,7 +234,7 @@ export class PlayModel extends Disposable implements IPlayModel {
       "PlayModel.restorePlayer: duplicate player id",
     );
     const players = insertAt(this.state.players, removal.index, removal.player);
-    // 昇順に元インデックスへ挿し戻すと除去前の並びが正確に再現される。
+    // 元の添字の小さい順に差し込むと、消す前の並びに戻る。
     let lines = this.state.lines;
     for (const { line, index } of [...removal.removedLines].sort((a, b) => a.index - b.index)) {
       lines = insertAt(lines, index, line);

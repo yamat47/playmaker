@@ -1,24 +1,20 @@
-// 商用ソフトに保存・復元される唯一のデータ表現（PRD 5.8 / 6.6）。
-// DOM 非依存。field / players / lines を持つ。
-
 import { isOneOf, isRecord } from "./guards.js";
 import { cloneLine, type Line, normalizeLines } from "./line.js";
 import { clonePlayer, normalizePlayers, type Player } from "./player.js";
 
 /**
- * フィールドのどの 30 ヤード窓を映すか（PRD 5.1）。
- * - `middle`: 中央（センター付近）
- * - `redzone`: 相手レッドゾーン（相手ゴール側）
- * - `own-redzone`: 自陣レッドゾーン（自ゴール側）
+ * フィールドのどの範囲を映すか。
+ * - `middle`: センター付近
+ * - `redzone`: 相手のゴール側
+ * - `own-redzone`: 自陣のゴール側
  */
 export const FIELD_ZONE_VALUES = ["own-redzone", "middle", "redzone"] as const;
 
 export type FieldZone = (typeof FIELD_ZONE_VALUES)[number];
 
-/** ゾーン未指定時の既定。中央が最も汎用的な初期表示。 */
+/** ゾーンを指定しないときの既定。LOS の位置を選ばない図が多いので中央にする。 */
 export const DEFAULT_FIELD_ZONE: FieldZone = "middle";
 
-/** ゾーンの表示名。 */
 export const FIELD_ZONE_LABELS = {
   "own-redzone": "自陣RZ",
   middle: "中央",
@@ -48,21 +44,21 @@ export interface FieldState {
 }
 
 /**
- * 現在の PlayData スキーマ版。スキーマを変えるたびに +1 し、`migratePlayData` の
- * 段（`PLAY_DATA_MIGRATIONS`）に旧→新の変換を 1 つ足す。version の真実源はここ 1 か所。
+ * 今の PlayData のスキーマの版。スキーマを変えるときは 1 上げ、`PLAY_DATA_MIGRATIONS` に
+ * 1 つ前の版から変換する段を足す。
  */
 export const CURRENT_PLAY_DATA_VERSION = 2 as const;
 
 /**
- * プレー図データ。`version` でスキーマ進化に備え、復元時は `migratePlayData` が
- * 旧版・版なし・未来版いずれも現行へ寄せる（PRD 6.6 の往復契約）。
+ * プレー図のデータ。保存したものを `restorePlayData` に渡すと、古い版や版の無いもの、
+ * 新しい版のものも今の版に寄せて読む。
  */
 export interface PlayData {
   readonly version: typeof CURRENT_PLAY_DATA_VERSION;
   readonly field: FieldState;
-  /** 配置済みの選手（描画順 = 配列順。後の要素ほど上に重なる）。 */
+  /** 後の要素ほど上に重ねて描く。 */
   readonly players: readonly Player[];
-  /** 描画する線（描画順 = 配列順。選手の下に敷く＝起点が選手で隠れない）。 */
+  /** 後の要素ほど上に重ねて描く。線はすべて選手より下に描く。 */
   readonly lines: readonly Line[];
 }
 
@@ -82,11 +78,7 @@ export function fieldStateForZone(zone: FieldZone): FieldState {
   return { zone, losYard: LOS_YARD_BY_ZONE[zone] };
 }
 
-/**
- * PlayData を深く複製する（field / 各 player / 各 line まで共有しない）。
- * Model が外へ渡すスナップショット（onChange 通知・getData）を入力と切り離すための一手。
- * 商用ソフトが受け取ったデータを書き換えても内部状態に波及しない（PRD 5.8 の往復契約準備）。
- */
+/** field、選手、線まで複製し、元のデータと参照を共有しない。 */
 export function clonePlayData(data: PlayData): PlayData {
   return {
     version: CURRENT_PLAY_DATA_VERSION,
@@ -97,10 +89,9 @@ export function clonePlayData(data: PlayData): PlayData {
 }
 
 /**
- * blob を現行スキーマの構造へ正規化する（version 検出・段適用は `migratePlayData`）。
- * 永続化された古い／不完全なデータでも落とさず既定で補完する。返り値は常に新規
- * オブジェクトで入力を共有・変更しない（Model 専有）。version マイグレーション段を
- * 通した後の最終正規化として `migratePlayData` から呼ばれる（PRD 6.6 の往復契約）。
+ * 今の版の形をしている値を PlayData に正規化する。版を見て変換する段は通さないので、
+ * 古い版のデータは `migratePlayData` に渡す。
+ * 欠けた項目は既定で補い、読めない要素は捨てる。返り値は新しいオブジェクトで、入力と参照を共有しない。
  */
 export function resolvePlayData(data: unknown): PlayData {
   const source: Record<string, unknown> = isRecord(data) ? data : {};

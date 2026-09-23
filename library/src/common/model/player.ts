@@ -14,7 +14,7 @@ export const PLAYER_SHAPE_VALUES = ["circle", "square"] as const;
 
 export type PlayerShape = (typeof PLAYER_SHAPE_VALUES)[number];
 
-/** 形状未指定時の既定。最も汎用的な丸。 */
+/** 形状を指定しないときの既定。 */
 export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
 
 /**
@@ -24,9 +24,8 @@ export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
 export const MAX_PLAYERS = 64;
 
 /**
- * 選手マーカーの半径（ヤード）。レンダラの描画サイズと hit-test の当たり半径が
- * 必ず一致するよう common に置き両層で共有する。フィールドは縦横等倍スケールのため、
- * ヤード空間の円形当たり判定がそのまま画面上の円になる。
+ * 選手マーカーの半径（ヤード）。描く大きさと当たり判定の半径に同じ値を使う。
+ * フィールドは縦横を同じ縮尺で描くので、ヤードでの円がそのまま画面上の円になる。
  */
 export const PLAYER_RADIUS_YARDS = 0.93;
 
@@ -41,10 +40,7 @@ export interface FieldPosition {
   readonly downfieldYard: number;
 }
 
-/**
- * 1 人の選手。`id` は選択/編集コマンドの安定識別子。
- * `color` は CSS カラー文字列（任意・未指定はテーマ既定）。
- */
+/** 1 人の選手。`color` は CSS の色の文字列で、省くとテーマの色で描く。 */
 export interface Player {
   readonly id: string;
   readonly position: FieldPosition;
@@ -70,10 +66,9 @@ export function parseFieldPosition(raw: unknown): FieldPosition | null {
 }
 
 /**
- * 外部（商用ソフト）から渡る 1 要素を内部で安全な Player へ正規化する。
- * 位置が無い/数値でないものは復元不能として null（呼び出し側で除外）。
- * 形状・ラベル・色は欠落しても落とさず既定で補完する（PRD 6.6 の古い永続データ耐性）。
- * 返り値は常に新規オブジェクトで入力を共有しない（Model 専有のため）。
+ * 外から受け取った 1 要素を Player に正規化する。位置が座標でないものは null を返して捨てる。
+ * 形状、ラベル、色が欠けていても捨てずに既定で補う。古い版で保存したデータを読めなくしないため。
+ * 返り値は新しいオブジェクトで、入力と参照を共有しない。
  */
 function normalizePlayer(raw: unknown, index: number): Player | null {
   if (!isRecord(raw)) {
@@ -84,7 +79,7 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
     return null;
   }
 
-  // id が無い/空なら index 由来の決定的な id を割り当てる（再正規化でも安定）。
+  // id が無ければ配列の中の位置から決まる id を振り、同じデータを何度読んでも同じ id になるようにする。
   const id = isNonEmptyString(raw.id) ? raw.id : `p${index}`;
   return {
     id,
@@ -97,15 +92,14 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
 }
 
 /**
- * 外部から渡る players 配列を内部で安全な Player[] へ正規化する。
- * 配列でない/復元不能な要素は捨て、各要素は新規オブジェクトに複製する。
+ * 外から受け取った players を Player[] に正規化する。配列でなければ空配列を返す。
  * 先頭の MAX_PLAYERS 個より後ろの要素は読まずに捨てる。
  */
 export function normalizePlayers(raw: unknown): Player[] {
   return parseBoundedArray(raw, MAX_PLAYERS, normalizePlayer);
 }
 
-/** Player を深く複製する（配列・位置まで共有しない防御的コピー）。 */
+/** 位置まで複製し、元の選手と参照を共有しない。 */
 export function clonePlayer(player: Player): Player {
   return {
     id: player.id,

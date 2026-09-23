@@ -47,7 +47,7 @@ export interface IPlayModel {
   /** LOS もゾーンの既定の位置へ移す。選手と線は LOS からの位置なので、図ごと一緒に動く。 */
   setFieldZone(zone: FieldZone): void;
   /**
-   * 既にある id の選手を渡すと throw する（id は選択と編集の対象を決める唯一の鍵）。
+   * 既にある id の選手を渡すと throw する。
    * 選手が MAX_PLAYERS 人を超える追加も throw する。
    */
   addPlayer(player: Player): void;
@@ -86,7 +86,7 @@ function insertAt<T>(items: readonly T[], index: number, item: T): T[] {
   return [...items.slice(0, index), item, ...items.slice(index)];
 }
 
-// id は選択と編集の対象を決める唯一の鍵なので、同じ id の要素を 2 つ持たせない。
+// 選択と編集は id で対象を決めるので、同じ id の要素を 2 つ持たせない。
 function assertNewId(items: readonly { id: string }[], id: string, message: string): void {
   if (items.some((item) => item.id === id)) {
     throw new Error(`${message} "${id}"`);

@@ -39,7 +39,7 @@ export interface SurfaceLayers {
   readonly editor: readonly ILayerRenderer<EditorRenderFrame>[];
 }
 
-/** 線は選手の下に敷く。起点がマーカーに隠れ、線の根元がきれいに見える。 */
+/** 線は選手の下に描く。上に描くと、線の根元が選手のマーカーに重なって見える。 */
 export function createDefaultLayers(): SurfaceLayers {
   return {
     play: [new FieldRenderer(), new LineRenderer(), new PlayerRenderer()],

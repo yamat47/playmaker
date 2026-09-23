@@ -18,7 +18,7 @@ export type PlayerShape = (typeof PLAYER_SHAPE_VALUES)[number];
 export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
 
 /**
- * 外部から受け取る選手の上限。実際のプレー図は 22 人ほどなので実用は妨げず、
+ * 外から受け取る選手の上限。実際のプレー図は 22 人ほどなので、この上限に届くことは無い。
  * 壊れたデータや悪意のあるデータで描画が止まらないように、超えた分は正規化で捨てる。
  */
 export const MAX_PLAYERS = 64;

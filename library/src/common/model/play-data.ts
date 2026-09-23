@@ -111,7 +111,7 @@ export function resolvePlayData(data: unknown): PlayData {
 /**
  * 2 回目以降に現れた id を `${id}-2` のような未使用の id へ振り直す（先頭はそのまま）。
  * 同じ id が 2 つあると、hit-test は末尾を返すのに更新は先頭に当たり、別の要素が編集される。
- * 振り直した id は、入力に明示された他の id とも衝突させない。
+ * 振り直した id は、入力にあるほかの id とも重ねない。
  */
 function makeIdsUnique<T extends { readonly id: string }>(items: readonly T[]): T[] {
   const taken = new Set(items.map((item) => item.id));

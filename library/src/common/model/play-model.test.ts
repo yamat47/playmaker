@@ -38,7 +38,7 @@ describe("PlayModel 構築", () => {
   });
 
   it("版の無い旧来の図も、今の版に移して取り込む", () => {
-    // 商用ソフトが永続化した未バージョン化データの再読込（PRD 6.6 唯一の入口）。
+    // version を書かずに、v1 の形で保存したデータ。
     const legacy = {
       field: { zone: "redzone" },
       players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 90 }, shape: "square" }],

@@ -32,7 +32,7 @@ const OFFENSIVE_LINE: FormationPlayer[] = [
   off("RT", 31.3, -0.5, "square"),
 ];
 
-// 4 ダウンの守備ライン（オーバーフロント）。4-3 系・ニッケル・ダイム・4-2-5 で共通。
+// 4 ダウンの守備ライン（オーバーフロント）。4-3、ニッケル、ダイム、4-2-5 で使う。
 const FRONT_4: FormationPlayer[] = [
   def("", 21.5, 1, "circle"),
   def("", 24.4, 1, "circle"),
@@ -40,7 +40,7 @@ const FRONT_4: FormationPlayer[] = [
   def("", 31.9, 1, "circle"),
 ];
 
-// 3 ダウンの守備ライン（オッドフロント）。3-4・3-3-5 で共通。
+// 3 ダウンの守備ライン（オッドフロント）。3-4 と 3-3-5 で使う。
 const FRONT_3: FormationPlayer[] = [
   def("", 23, 1, "circle"),
   def("", 26.7, 1, "circle"),

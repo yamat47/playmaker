@@ -26,18 +26,18 @@ export const LINE_INTERPOLATION_VALUES = ["straight", "bezier"] as const;
 
 export type LineInterpolation = (typeof LINE_INTERPOLATION_VALUES)[number];
 
-/** 種別未指定時の既定。最も汎用的な走路。 */
+/** 種別を指定しないときの既定。 */
 export const DEFAULT_LINE_KIND: LineKind = "route";
 
-/** 補間未指定時の既定。直線が最も予測しやすい。 */
+/** 補間を指定しないときの既定。 */
 export const DEFAULT_LINE_INTERPOLATION: LineInterpolation = "straight";
 
 /** 太さ未指定時の倍率。種別ごとの既定の太さでそのまま描く。 */
 export const DEFAULT_LINE_THICKNESS = 1;
 
 /**
- * 外部から受け取る線と、1 本あたりの waypoint の上限。実際のプレー図は線 20 本ほどで、
- * waypoint も数個なので実用は妨げない。壊れたデータや悪意のあるデータで
+ * 外から受け取る線と、1 本あたりの waypoint の上限。実際のプレー図は線 20 本ほどで、
+ * waypoint も数個なので、この上限に届くことは無い。壊れたデータや悪意のあるデータで
  * 描画が止まらないように、超えた分は正規化で捨てる。
  */
 export const MAX_LINES = 128;
@@ -57,7 +57,7 @@ export interface Line {
   /** 終点（ヤード空間）。 */
   readonly end: FieldPosition;
   readonly interpolation: LineInterpolation;
-  /** CSS カラー文字列（任意）。 */
+  /** CSS の色の文字列。 */
   readonly color?: string;
   /** 種別ごとの既定の太さに対する倍率。省くと DEFAULT_LINE_THICKNESS。 */
   readonly thickness?: number;

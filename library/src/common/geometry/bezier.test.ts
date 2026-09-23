@@ -91,7 +91,7 @@ describe("sampleLinePath", () => {
   it("bezier の点数は 1 + samples*(区間数)", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 0), at(15, 5)], "bezier", 10);
 
-    // 4 点 = 3 区間 → 1 + 10*3
+    // 4 点で 3 区間なので、1 + 10 * 3。
     expect(out).toHaveLength(31);
   });
 
@@ -110,7 +110,7 @@ describe("sampleLinePath", () => {
   it("samplesPerSegment は 1 未満なら 1 に丸める", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 0)], "bezier", 0);
 
-    // 2 区間 × 1 + 始点
+    // 始点と、2 区間を 1 分割ずつした点。
     expect(out).toHaveLength(3);
   });
 

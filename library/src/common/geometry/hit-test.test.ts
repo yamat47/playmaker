@@ -123,12 +123,12 @@ describe("hitTestLine", () => {
       end: { lateralYard: 15, downfieldYard: 60 },
     });
 
-    // 起点(5,50)→waypoint(15,50) の水平区間上。
+    // 起点 (5, 50) から waypoint (15, 50) への水平な区間の上。
     expect(hitTestLine([l], players, { lateralYard: 10, downfieldYard: 50 })).toBe(l);
   });
 
   it("bezier 線は曲線（サンプル後ポリライン）で判定する", () => {
-    // 起点 wr(5,50)→waypoint(5,60)→end(25,60) の L 字。
+    // 起点 wr (5, 50)、waypoint (5, 60)、終点 (25, 60) を結ぶ L 字。
     const shape: Partial<Line> = {
       waypoints: [{ lateralYard: 5, downfieldYard: 60 }],
       end: { lateralYard: 25, downfieldYard: 60 },

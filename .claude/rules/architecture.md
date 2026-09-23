@@ -8,7 +8,7 @@ paths:
 # アーキテクチャ規約
 
 Playmaker はアメフトのプレー図を作成・表示する UI フレームワーク非依存の TypeScript ライブラリ。
-最優先価値は **商用ソフトへの組み込みやすさ**。設計判断の確定経緯は `docs/plans/implementation-roadmap.md`、要件は `docs/prd.md`。
+最優先価値は **商用ソフトへの組み込みやすさ**。今の設計とその理由は `docs/design.md`、要件は `docs/prd.md`。
 
 ## 核心原則：VSCode 流レイヤ分離の軽量適用
 

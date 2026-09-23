@@ -165,5 +165,5 @@ VS Code では「Dev Containers: Reopen in Container」で開くと、`library/`
 エディタの型補完・Biome・Vitest Explorer がコンテナ内の `node_modules` を使って動く。
 Dev Containers のターミナルからも同じ `make` ターゲットが使える（`up` / `down` などコンテナ操作系はホストから）。
 
-設計判断の確定経緯は `docs/plans/implementation-roadmap.md`、要件は `docs/prd.md`、
+今の設計とその理由は `docs/design.md`、要件は `docs/prd.md`、
 コーディング規約は `.claude/rules/` を参照。

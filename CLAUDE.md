@@ -1,7 +1,7 @@
 # Playmaker
 
 アメフトのプレー図を作成・表示する、UI フレームワーク非依存の TypeScript ライブラリ。
-要件は `docs/prd.md`、設計判断の経緯は `docs/plans/implementation-roadmap.md`、
+要件は `docs/prd.md`、今の設計とその理由は `docs/design.md`、
 コーディング規約は `.claude/rules/`（対象ファイルを触ると自動で読み込まれる）。
 
 ## ディレクトリ

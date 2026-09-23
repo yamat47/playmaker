@@ -12,7 +12,7 @@ const root = import.meta.dirname;
 // JS API を @typescript/typescript6 から読むが、api-extractor に渡す lib の場所は typescript
 // パッケージのままなので、Omit などの標準型を解決できず dts の束ねに失敗する。lib の場所は
 // @typescript/typescript6 が依存する @typescript/old（= typescript@6）に向ける。
-// 外す条件は docs/plans/implementation-roadmap.md の「TypeScript 7 移行」に置く。
+// 外す条件は docs/design.md の「TypeScript 7 の回避策」に置く。
 const requireFromRoot = createRequire(import.meta.url);
 const typescript6 = requireFromRoot.resolve("@typescript/typescript6/package.json");
 const typescriptLibFolder = dirname(

@@ -33,9 +33,21 @@ paths:
 - 公開の入口から観測できない数値計算は、単体テストで確かめる
 - 仕様テストで確かめられる振る舞いを、内部のモジュールの単体テストで重ねて確かめない
 
+## ブラウザテスト
+
+`new Playmaker(container)` が DOM、canvas、ツールバー、パネル、ポインタとキーの入力をつないでいることを、
+Vitest の Browser Mode（Playwright の Chromium）で確かめる。
+
+- 置き場は `src/specs/<機能>.test.ts`。`src/specs/` の下だけを Chromium で動かし、ほかは node で動かす
+- 入口は `src/test-support/dom/mount-playmaker.ts` の `mountPlaymaker`。操作は `vitest/browser` の
+  `userEvent` と `page` で行い、canvas の上の位置は `at(yd(lateral, downfield))` で求める
+- 観測するのは、Playmaker の公開 API の戻り値と、ホストから見える DOM（要素の有無、ボタンの状態）だけにする
+- 確かめるのは結線だけで、10〜20 本に収める。編集の振る舞いの細部は仕様テストに置く
+- スクリーンショットは比べない。カバレッジも測らない
+
 ## 書き方
 
-- Vitest は `src/**/*.test.ts` を node 環境で実行する。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
+- Vitest は `src/specs/` の外の `*.test.ts` を node 環境で実行する。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
 - `describe` は機能か、単体テストならモジュールの名前にする。`it` は日本語で「どういう入力のとき、どうなるか」を書く
   （例: `it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ")`）。
   メソッド名で始めない。「正しく動く」「正常系」のように結果を言わない名前にしない
@@ -44,13 +56,14 @@ paths:
 - スパイは `vi.fn()` で作り、`toHaveBeenCalledOnce` や `toHaveBeenCalledExactlyOnceWith` で確かめる。
   モンキーパッチやモジュールの差し替え（`vi.mock`）はしない
 - 複数のテストで使う部品は `src/test-support/` に置く。coverage と build の対象外で、
-  型検査は `tsconfig.test.json` がテストと一緒に行う
+  型検査は `tsconfig.test.json` がテストと一緒に行う。DOM を使う `src/test-support/dom/` とブラウザテストは `tsconfig.browser-test.json` が見る
 
 ## 実行
 
-- `make test`（全体、カバレッジゲート込み）、`make test FILE=<file>`（1 ファイル、ゲートなし）、
+- `make test`（ブラウザテストを除く全体、カバレッジゲート込み）、`make test FILE=<file>`（1 ファイル、ゲートなし）、
   `make test-watch`（カバレッジなし）
-- `browser/` と `playmaker.ts` の結線は、今は demo で目視する（`run-demo` skill）
+- `make test-browser`（ブラウザテスト。`make check` には入らず、CI では別のジョブで動く）
+- 描いた図の見た目は、demo で目視する（`run-demo` skill）
 
 ## カバレッジ（common 層 100% ゲート）
 

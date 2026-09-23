@@ -26,9 +26,10 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
 
 | やりたいこと | コマンド |
 |---|---|
-| CI と同じ検証を全部 | `make check` |
+| CI の verify ジョブと同じ検証を全部 | `make check`（ブラウザテストは入らない） |
 | テスト（カバレッジゲート込み） | `make test` |
 | テストを 1 ファイルだけ | `make test FILE=library/src/common/base/event.test.ts` |
+| Playmaker の結線のブラウザテスト | `make test-browser`（Chromium で `library/src/specs/` を動かす） |
 | 型検査 / lint / 自動修正 | `make typecheck` / `make lint` / `make fix` |
 | ライブラリのビルド | `make build`（`library/dist/`） |
 | 依存の追加・更新 | `make pnpm ARGS="add -D <pkg>"` → lockfile もホストに反映される |
@@ -38,12 +39,15 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
 | フィールド用フォントの作り直し | `make font`（`library/src/assets/`） |
 
 - skill や agent の手順が `pnpm run <script>` を指示していたら、上の表の make ターゲットに読み替える
-  （例: create-pr の検証ステップは `make check`）
+  （例: create-pr の検証ステップは `make check`。`src/browser`、`src/playmaker.ts`、`src/specs` を変えたときは `make test-browser` も）
 - `node_modules` は Docker volume の中にある。ホストの `library/node_modules/` は空のマウントポイントなので、
   中身を読みたいときは `make pnpm ARGS="exec ls node_modules/<pkg>"` を使う
 - pnpm 本体と Node は Dependabot が上げない（Node はイメージだけ上がる）。pnpm は `library/package.json` の
   `packageManager`、Node は `.node-version` と `docker/Dockerfile` を書き換え、イメージに焼き込むので `make setup` する
+- ブラウザテストの Chromium は `library/pnpm-lock.yaml` の `playwright` の版に合わせてイメージに焼き込む。
+  playwright が上がったら `make setup` する
 - demo をブラウザで確かめる手順は `run-demo` skill にある
 - cloud 版の Claude Code では Docker が動かない。SessionStart hook（`docker/cloud-session-setup.sh`）が
   `.node-version` の Node と pnpm、依存を入れて `IN_CONTAINER=1` にするので、make はそのまま使える。
-  ただし Docker を操作するホスト専用のターゲット（`setup` `up` `down` `logs` `sh` `clean`）は使えない
+  ただし Docker を操作するホスト専用のターゲット（`setup` `up` `down` `logs` `sh` `clean`）は使えない。
+  ブラウザテストは、コンテナに置いてある Chromium を hook が `PLAYMAKER_CHROMIUM_PATH` で指して動かす

@@ -100,8 +100,8 @@ export default defineConfig({
       // include 漏れで見かけ上 100% に見える事故を防ぐため src 配下を明示列挙する。
       include: ["src/**/*.ts"],
       exclude: ["**/*.test.ts", "**/*.d.ts", "src/test-support/**"],
-      // text=Claude/CI ログ用(未カバー行が見える), html=人間用, json-summary=将来連携用
-      reporter: ["text", "html", "json-summary"],
+      // text=Claude/CI ログ用(未カバー行が見える), html=人間用
+      reporter: ["text", "html"],
       thresholds: {
         // 集計平均でごまかせないようファイル単位で判定する
         perFile: true,

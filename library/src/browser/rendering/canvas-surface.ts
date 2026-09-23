@@ -31,6 +31,7 @@ export class CanvasSurface extends Disposable {
   private scene: SceneData;
   private overlay: EditorOverlay = { kind: "none" };
   private frameRequest: number | undefined;
+  private dpr = 0;
   // 破棄するときに、DPR の見張りをまとめて外す。
   private readonly lifetime = new AbortController();
 
@@ -134,8 +135,16 @@ export class CanvasSurface extends Disposable {
   private resize(): void {
     const dpr = window.devicePixelRatio || 1;
     const { clientWidth, clientHeight } = this.host;
-    this.canvas.width = Math.max(1, Math.round(clientWidth * dpr));
-    this.canvas.height = Math.max(1, Math.round(clientHeight * dpr));
+    const width = Math.max(1, Math.round(clientWidth * dpr));
+    const height = Math.max(1, Math.round(clientHeight * dpr));
+    // ResizeObserver は observe した直後にも 1 回呼ぶ。大きさも DPR も変わっていなければ、
+    // 構築したときに描いた図がそのまま使えるので、バッファを作り直さない。
+    if (width === this.canvas.width && height === this.canvas.height && dpr === this.dpr) {
+      return;
+    }
+    this.dpr = dpr;
+    this.canvas.width = width;
+    this.canvas.height = height;
     // 以降は CSS px の座標で描く。geometry も CSS px で求める。
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // バッファを作り直すと中身が消えるので、次のフレームを待たずに描く。

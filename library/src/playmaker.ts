@@ -90,7 +90,7 @@ export class Playmaker implements IDisposable {
   private readonly surface: CanvasSurface;
   private readonly session: PlaySession;
   // 今の controller に付けた描画の購読、UI、入力。setPlayData で controller が変わると付け直す。
-  private ui = new DisposableStore();
+  private ui: DisposableStore;
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
     this.mode = options.mode ?? "edit";
@@ -110,8 +110,9 @@ export class Playmaker implements IDisposable {
     stage.className = "playmaker-stage";
     this.root.appendChild(stage);
     this.surface = this.store.add(new CanvasSurface(stage, this.session.getSnapshot()));
+    // CanvasSurface は構築したときに同じ図を描くので、ここでは描き直さない。
+    this.ui = this.createUi();
     this.store.add(this.session.onDidReset(() => this.attachUi()));
-    this.attachUi();
   }
 
   /** 現在のフィールドゾーン。 */

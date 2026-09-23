@@ -93,7 +93,7 @@ export class CanvasSurface extends Disposable {
    * 指定したプレー図を PNG（Blob）として書き出す。図の層だけで描くので、選択の強調と
    * ハンドルは入らない。配色は画面と同じテーマ変数から読む。
    */
-  exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
+  async exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
     const { width, height } = resolveImageExportSize(data.field.zone, options);
     const canvas = document.createElement("canvas");
     canvas.width = width;

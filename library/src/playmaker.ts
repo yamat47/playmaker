@@ -135,11 +135,10 @@ export class Playmaker extends Disposable {
   }
 
   /**
-   * 現在のプレー図を PNG 画像（Blob）として書き出す（PRD 5.7）。
-   * エクスポート元はコミット済みの PlayData なので、選択強調・waypoint
-   * ハンドル・作図中プレビュー・ツールバー/パネルといった編集 UI は
-   * 含まれない。view / edit どちらのモードでも利用できる。
-   * `options.width` で出力幅(px)を指定でき、高さは縦横比から導かれる。
+   * 呼んだ時点で確定しているプレー図を PNG 画像（Blob）として書き出す。
+   * 選択の強調、waypoint のハンドル、ドラッグや作図の途中の形、ツールバーとパネルは入らない。
+   * view と edit のどちらのモードでも使える。
+   * canvas を確保できないときや PNG に変換できないときは、例外を投げずに reject する。
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {
     return this.surface.exportToPngBlob(this.session.getSnapshot(), options);

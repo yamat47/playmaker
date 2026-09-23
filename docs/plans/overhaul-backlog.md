@@ -59,7 +59,7 @@
 | D6 | erasableSyntaxOnly | **採用**。引数プロパティ約 13 箇所を明示フィールドにし、biome の noParameterProperties も有効にする |
 | D7 | readonly 化 | **公開 PlayData まで全部 readonly** にする |
 | D8 | 件数上限 | **正規化で切り詰める**（MAX_PLAYERS / MAX_LINES / MAX_WAYPOINTS_PER_LINE） |
-| D9 | ゾーンと座標 | **LOS 相対にする**。`field.losYard` を持ち、選手・線は LOS からの相対座標にする（スキーマ v2） |
+| D9 | ゾーンと座標 | **LOS 相対にする**。`field.losYard` を持ち、選手・線は LOS からの相対座標にする（スキーマ v2）。縦軸のキーは `downfieldYard`（正が攻撃方向）。ゾーンを切り替えると LOS をそのゾーンの既定の位置へ移し、図ごと動かす。losYard は今は内部だけで、利用者が直接指定する API は要望が出てから（2026-09-23 に決着） |
 | D10 | 線の太さの単位 | **既定幅に対する倍率**（1 = 既定）。v2 migration で入れる |
 | D11 | 既定に戻す操作 | **持つ**。パッチ型に `null` = クリアを入れ、パネルに既定ボタンを足す |
 | D12 | 公開 API の入力型 | **2 本に分ける**。型付きの `setPlayData(data: PlayData)` と、`restorePlayData(raw: unknown)` |
@@ -263,19 +263,22 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T7 スキーマ v2（ゾーン、太さ、色のクリア）
+### T7 スキーマ v2（ゾーン、太さ、色のクリア） (done)
 
-- [ ] **T7-1 [must] ゾーン窓と絶対ヤード座標が噛み合わず、レッドゾーンでフォーメーションを読むと画面外に置かれる**（D9）
+- [x] **T7-1 [must] ゾーン窓と絶対ヤード座標が噛み合わず、レッドゾーンでフォーメーションを読むと画面外に置かれる**（D9）
   - locations: library/src/common/formations/presets.ts:2, library/src/common/editing/editor-controller.ts:471-493, library/src/common/geometry/field.ts:76-89, library/src/browser/ui/toolbar.ts:57, library/demo/main.ts:410-414
   - 問題: プリセットは LOS≈50 で置かれていて middle の窓（35..65）にしか映らないが、loadFormation は平行移動しない。実物で確認済み。
   - 対応: D9 の結論どおりにする。推奨は B で、`field.losYard` と LOS からの相対座標を v2 migration で入れる。
-- [ ] **T7-2 [should] 線の太さが拡大縮小されない px で、画面と PNG で見え方が変わる。パネルの `?? 2` も実際の描画と違う**（D10）
+  - 結論: ゾーンの既定の LOS は中央 50、相手 RZ 85（相手 15 ヤード）、自陣 RZ 10（自陣 10 ヤード）。v1 から v2 への段は、v1 のゾーンの LOS を引いて画面上の位置を変えない。読み込んだ losYard は使わず、ゾーンから決め直す。
+- [x] **T7-2 [should] 線の太さが拡大縮小されない px で、画面と PNG で見え方が変わる。パネルの `?? 2` も実際の描画と違う**（D10）
   - locations: library/src/browser/rendering/line-renderer.ts:60, library/src/common/model/line.ts:50-51, library/src/browser/ui/property-panel.ts:76, library/src/common/design/metrics.ts:70
-- [ ] **T7-3 [nit] パッチ型で「既定に戻す」を表現できない**（D11）
+  - 結論: v1 の px は、パネルが未指定の線に表示していた 2 px を倍率 1 として割り戻す。描画側（T12-6）も同じ PR で倍率にした。スキーマと描画がずれた状態を main に残さないため。
+- [x] **T7-3 [nit] パッチ型で「既定に戻す」を表現できない**（D11）
   - locations: library/src/common/commands/line-commands.ts:11, library/src/common/commands/line-commands.ts:80, library/src/common/commands/player-commands.ts:10, library/src/common/commands/player-commands.ts:110
-- [ ] **T7-4 [nit] ゾーン一覧の値とラベルが common にない**
+- [x] **T7-4 [nit] ゾーン一覧の値とラベルが common にない**
   - locations: library/src/browser/ui/toolbar.ts:28, library/src/playmaker.ts:20-44
   - 対応: common に `FIELD_ZONES` を定義する。
+  - 結論: 値は T6-2 の FIELD_ZONE_VALUES、表示名は FIELD_ZONE_LABELS として common に置いた。公開は T14-6。
 
 - 依存: T6、D9、D10、D11
 - 完了条件: v1 のデータが v2 に移行するテストが緑になる。どのゾーンでプリセットを読んでも選手が窓内に置かれる。
@@ -406,7 +409,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T12-5 [should] DOM に依存しない描画の計算が browser 層にあり、テストされていない**
   - locations: library/src/browser/rendering/line-renderer.ts:99, library/src/browser/rendering/line-renderer.ts:119, library/src/browser/rendering/line-renderer.ts:141, library/src/browser/rendering/line-renderer.ts:168, library/src/browser/rendering/player-renderer.ts:100, library/src/browser/rendering/canvas-surface.ts:262
   - 対応: `common/geometry/line-decoration.ts`、playerPolygonVertices、変数が空のときのフォールバック規則を common へ移し、node でテストする。
-- [ ] **T12-6 [should] 太さの倍率を描画に反映する**（T7-2 の描画側）
+- [x] **T12-6 [should] 太さの倍率を描画に反映する**（T7-2 の描画側。T7 で一緒に対応した）
   - locations: library/src/browser/rendering/line-renderer.ts:60
 
 - 依存: T11、T7、D1
@@ -424,7 +427,8 @@ PR 単位で、依存順に並べる。
   - locations: library/src/browser/ui/property-panel.ts:18-20, library/src/browser/ui/property-panel.ts:172-178
 - [ ] **T13-3 [should] 形状を 2 種に確定し、残り 4 種を型・レンダラから削除する**（D18）
   - locations: library/src/browser/ui/property-panel.ts:16-18, library/src/common/model/player.ts:9, library/src/common/model/player.ts:14, library/src/browser/rendering/player-renderer.ts
-  - 対応: PlayerShape を circle / square だけにし、多角形描画のコードを消す。未知の形状は既定へ寄せる正規化だけ残す。v2 migration で旧形状を circle に寄せる（T7 と同じ段で行う）。PRD 5.2 の更新は T18。
+  - 対応: PlayerShape を circle / square だけにし、多角形描画のコードを消す。未知の形状は既定へ寄せる正規化だけ残す。PRD 5.2 の更新は T18。
+  - 補足: 型を 2 種にすれば、旧形状は正規化で既定（circle）へ寄るので、migration の段は要らない（T7 で確かめた）。
 - [ ] **T13-4 [should] ツールバーとパネルが canvas に重なり、フィールドを隠す**（D17）
   - locations: library/src/styles.css:67-81, library/src/styles.css:129-142, library/src/playmaker.ts:193-197
 - [ ] **T13-5 [should] キー割り当てが browser 層にあり、テストされていない**

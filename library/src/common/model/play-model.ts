@@ -46,6 +46,10 @@ export interface IPlayModel {
   findPlayer(id: string): Player | undefined;
   /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
   findLine(id: string): Line | undefined;
+  /** findPlayer と同じ値を返す。無い id は契約違反として throw する。 */
+  requirePlayer(id: string): Player;
+  /** findLine と同じ値を返す。無い id は契約違反として throw する。 */
+  requireLine(id: string): Line;
   /** LOS もゾーンの既定の位置へ移す。選手と線は LOS からの位置なので、図ごと一緒に動く。 */
   setFieldZone(zone: FieldZone): void;
   /**
@@ -158,6 +162,22 @@ export class PlayModel extends Disposable implements IPlayModel {
 
   findLine(id: string): Line | undefined {
     return this.state.lines.find((l) => l.id === id);
+  }
+
+  requirePlayer(id: string): Player {
+    const player = this.findPlayer(id);
+    if (player === undefined) {
+      throw new Error(`PlayModel: unknown player id "${id}"`);
+    }
+    return player;
+  }
+
+  requireLine(id: string): Line {
+    const line = this.findLine(id);
+    if (line === undefined) {
+      throw new Error(`PlayModel: unknown line id "${id}"`);
+    }
+    return line;
   }
 
   setFieldZone(zone: FieldZone): void {

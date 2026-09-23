@@ -84,6 +84,25 @@ describe("PlayModel 参照系", () => {
     expect(model.findLine("la")).toEqual(line("la", "a"));
     expect(model.findLine("zzz")).toBeUndefined();
   });
+
+  it("requirePlayer と requireLine は、id が一致する選手と線を返す", () => {
+    const model = new PlayModel(seed());
+
+    expect(model.requirePlayer("b")).toEqual(player("b"));
+    expect(model.requireLine("la")).toEqual(line("la", "a"));
+  });
+
+  it("requirePlayer に無い id を渡すと throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.requirePlayer("zzz")).toThrow('PlayModel: unknown player id "zzz"');
+  });
+
+  it("requireLine に無い id を渡すと throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.requireLine("zzz")).toThrow('PlayModel: unknown line id "zzz"');
+  });
 });
 
 describe("PlayModel.setFieldZone", () => {

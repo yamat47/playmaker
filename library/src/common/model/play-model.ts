@@ -41,7 +41,6 @@ export interface IPlayModel {
    */
   getSnapshot(): PlayData;
   getFieldZone(): FieldZone;
-  hasPlayer(id: string): boolean;
   /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
   findPlayer(id: string): Player | undefined;
   /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
@@ -150,10 +149,6 @@ export class PlayModel extends Disposable implements IPlayModel {
 
   getFieldZone(): FieldZone {
     return this.state.field.zone;
-  }
-
-  hasPlayer(id: string): boolean {
-    return this.state.players.some((p) => p.id === id);
   }
 
   findPlayer(id: string): Player | undefined {

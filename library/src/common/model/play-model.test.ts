@@ -278,12 +278,3 @@ describe("PlayModel.insertLine", () => {
     expect(model.getData().lines.map((l) => l.id)).toEqual(["head", "x", "y", "tail"]);
   });
 });
-
-describe("PlayModel の軽い読み取り", () => {
-  it("選手の id があるかどうかを返す", () => {
-    const model = new PlayModel(seed());
-
-    expect(model.hasPlayer("a")).toBe(true);
-    expect(model.hasPlayer("zzz")).toBe(false);
-  });
-});

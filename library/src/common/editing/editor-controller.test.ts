@@ -806,6 +806,19 @@ describe("EditorController: loadFormation（フォーメーション読込）", 
     expect(controller.getSelection()).toEqual({ kind: "player", id: "p-a" });
   });
 
+  it("選手を置いた読み込みは true を返す", () => {
+    const { controller } = setup();
+
+    expect(controller.loadFormation(formation)).toBe(true);
+  });
+
+  it("選手が 1 人もいない隊形の読み込みは false を返す", () => {
+    const { controller } = setup();
+    const empty: Formation = { id: "empty", name: "空", side: "offense", players: [] };
+
+    expect(controller.loadFormation(empty)).toBe(false);
+  });
+
   it("配置可能な選手が無ければ no-op（コマンドも発火も出ない）", () => {
     const { controller, model, commands, changes } = setup();
     changes.mockClear();
@@ -1227,6 +1240,12 @@ describe("EditorController: 件数の上限", () => {
 
     expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS - 1);
     expect(commands.canUndo).toBe(false);
+  });
+
+  it("読み込むと MAX_PLAYERS 人を超えるフォーメーションは false を返す", () => {
+    const { controller } = setup(withPlayers(MAX_PLAYERS - 1));
+
+    expect(controller.loadFormation(pair)).toBe(false);
   });
 
   it("読み込んでちょうど MAX_PLAYERS 人になるフォーメーションは置く", () => {

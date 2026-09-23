@@ -25,8 +25,8 @@ src/
   `tsconfig.common.json` は ES2022 の lib だけで型検査するので、持ち込むと型エラーになる。
   `common/` から `browser/` と `playmaker.ts` への import は Biome が拒否する
 - `browser/` は `common/` の**インターフェース**に依存し、描画・入力・UI を担う
-- view と edit は今は `options.mode` で構築時に決めるだけで、あとから切り替えられない。
-  全体見直しの T14 で、履歴を保ったまま UI と入力だけを付け外しする `setMode` を公開する
+- view と edit は `setMode` で切り替える。図と履歴を持つ `PlaySession` はそのまま残し、
+  編集 UI とポインタ、キーの入力の束だけを付け外しする
 
 ## 守るべきパターン
 

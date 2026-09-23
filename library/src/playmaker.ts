@@ -1,28 +1,40 @@
-import { CanvasSurface, PointerInput, PropertyPanel, Toolbar } from "./browser/index.js";
 import {
-  Disposable,
+  CanvasSurface,
+  PointerInput,
+  PropertyPanel,
+  replaceKeepingFocus,
+  Toolbar,
+} from "./browser/index.js";
+import {
   DisposableStore,
+  type EditorOverlay,
+  type Event,
   type FieldZone,
   type Formation,
+  type IDisposable,
   type ImageExportOptions,
   type PlayData,
+  type PlayDataInput,
   PlaySession,
   toDisposable,
 } from "./common/index.js";
 import "./styles.css";
 
 export type {
+  Event,
   FieldPosition,
   FieldState,
   FieldZone,
   Formation,
   FormationPlayer,
+  IDisposable,
   ImageExportOptions,
   Line,
   LineInterpolation,
   LineKind,
   PlayCategory,
   PlayData,
+  PlayDataInput,
   Player,
   PlayerShape,
   PlayPreset,
@@ -30,6 +42,8 @@ export type {
 } from "./common/index.js";
 export {
   CURRENT_PLAY_DATA_VERSION,
+  FIELD_ZONE_LABELS,
+  FIELD_ZONE_VALUES,
   FORMATION_PRESETS,
   getFormationPreset,
   getPlayPreset,
@@ -39,54 +53,97 @@ export {
 
 export type PlaymakerMode = "view" | "edit";
 
+const NO_OVERLAY: EditorOverlay = { kind: "none" };
+
+// バンドラは process.env.NODE_ENV を文字列に置き換える。置き換えずにブラウザで読み込むと
+// process が無く ReferenceError になるので、そのときは本番とみなす。
+declare const process: { readonly env: { readonly NODE_ENV?: string } };
+
+function isDevelopment(): boolean {
+  try {
+    return process.env.NODE_ENV !== "production";
+  } catch {
+    return false;
+  }
+}
+
 export interface PlaymakerOptions {
-  /** 既定は "edit"。"view" は読み取り専用（編集 UI を出さない・PRD 5.5）。 */
-  mode?: PlaymakerMode;
   /**
-   * 初期表示するプレー図データ。商用ソフトが永続化した PlayData をそのまま渡せる。
-   * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行スキーマへ寄せる
-   * （決して投げず復元不能要素のみ除外＝PRD 6.6 の往復契約）。
-   * 選手 64 人、線 128 本、線 1 本あたり waypoint 32 個を超える分は、
-   * 先頭から上限までを残して捨てる。
+   * 最初のモード。既定は "edit"。"view" は編集 UI を置かず、ポインタとキーの操作も受けない。
+   * あとから `setMode` で切り替えられる。
    */
-  initialData?: PlayData;
-  /**
-   * 編集確定契約（PRD 5.8）：編集コマンドおよび Undo/Redo の確定ごとに **1 回**、
-   * 最新 PlayData の深いスナップショット（`version` は常に現行・内部状態と分離）を渡す。
-   * 受け手はそのまま永続化でき、書き換えても内部に波及しない。構築時・`setPlayData`
-   * での再読込・PNG 出力では発火しない（再読込は編集ではない）。
-   */
-  onChange?: (data: PlayData) => void;
+  mode?: PlaymakerMode | undefined;
+  /** 最初に表示する図。`restorePlayData` と同じく、形を確かめずに受け取って今のスキーマへ寄せる。 */
+  initialData?: unknown;
+  /** 構築時に `onDidChange` へ登録するリスナ。解除するには Playmaker を dispose する。 */
+  onChange?: ((data: PlayData) => void) | undefined;
 }
 
 /**
  * container の中にプレー図を描き、edit モードでは編集 UI も置く。
  * dispose すると、置いた要素をすべて取り除く。
+ * dispose したあとの変更は例外を投げずに何もせず、開発時だけ console.warn で知らせる。
+ * getPlayData と fieldZone は、dispose した時点の図を返す。
  */
-export class Playmaker extends Disposable {
-  readonly mode: PlaymakerMode;
+export class Playmaker implements IDisposable {
+  /**
+   * 編集コマンドと Undo / Redo の確定ごとに 1 回、最新の図の深いコピーを渡す。
+   * `version` は常に現行なので、受け取った値をそのまま永続化できる。
+   * 構築時、`setPlayData` と `restorePlayData` での読み込み、PNG の書き出しでは発火しない
+   * （読み込みは編集ではないため）。
+   * コピーはリスナごとに作るので、受け手が書き換えても、この図とほかのリスナには波及しない。
+   * 返り値を dispose すると購読をやめる。
+   */
+  readonly onDidChange: Event<PlayData>;
+  private readonly store = new DisposableStore();
   private readonly root: HTMLElement;
   private readonly surface: CanvasSurface;
   private readonly session: PlaySession;
-  // 今の controller に付けた描画の購読、UI、入力。setPlayData で controller が変わると付け直す。
-  private ui = new DisposableStore();
+  private currentMode: PlaymakerMode;
+  private panel: PropertyPanel | undefined;
+  // 今の controller に付けた描画の購読、UI、入力。controller かモードが変わると付け直す。
+  private ui: DisposableStore;
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
-    super();
-    this.mode = options.mode ?? "edit";
-    this.session = this._register(new PlaySession(options.initialData, options.onChange));
+    this.currentMode = options.mode ?? "edit";
+    this.session = this.store.add(new PlaySession(options.initialData));
+    this.onDidChange = this.session.onDidChange;
+    if (options.onChange !== undefined) {
+      this.store.add(this.session.onDidChange(options.onChange));
+    }
 
     this.root = document.createElement("div");
     this.root.className = "playmaker-root";
-    this.root.dataset.mode = this.mode;
+    this.root.dataset.mode = this.currentMode;
     container.appendChild(this.root);
-    this._register(toDisposable(() => this.root.remove()));
+    this.store.add(toDisposable(() => this.root.remove()));
 
     const stage = document.createElement("div");
     stage.className = "playmaker-stage";
     this.root.appendChild(stage);
-    this.surface = this._register(new CanvasSurface(stage, this.session.getSnapshot()));
-    this._register(this.session.onDidReset(() => this.attachUi()));
+    this.surface = this.store.add(new CanvasSurface(stage, this.session.getSnapshot()));
+    // CanvasSurface は最初の大きさが決まったときに今の図を描くので、ここでは描かない。
+    this.ui = this.createUi();
+    this.store.add(this.session.onDidReset(() => this.attachUi()));
+  }
+
+  get mode(): PlaymakerMode {
+    return this.currentMode;
+  }
+
+  /**
+   * モードを切り替える。図と Undo の履歴は残し、編集 UI とポインタ、キーの入力だけを付け外しする。
+   * view にすると、ドラッグや作図の途中の操作は取り消し、選択の強調も描かない。
+   */
+  setMode(mode: PlaymakerMode): void {
+    if (this.ignoreAfterDispose("setMode") || mode === this.currentMode) {
+      return;
+    }
+    this.currentMode = mode;
+    this.root.dataset.mode = mode;
+    if (mode === "view") {
+      this.session.controller.cancelInteraction();
+    }
     this.attachUi();
   }
 
@@ -100,38 +157,56 @@ export class Playmaker extends Disposable {
    * view モードでもプログラム API としては有効（編集 UI は出さないだけ）。
    */
   setFieldZone(zone: FieldZone): void {
+    if (this.ignoreAfterDispose("setFieldZone")) {
+      return;
+    }
     this.session.setFieldZone(zone);
   }
 
   /**
-   * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
-   * 既存のプレー図へ追記する（攻守プリセットを順に重ねられる）。外部の
-   * カスタム隊形は正規化してから読み、配置可能な選手が無ければ no-op。
-   * 置くと選手が 64 人を超えるときも、1 人も置かずに no-op。
-   * 編集操作なので Undo/onChange の対象（view モードでも API としては有効）。
-   * プリセットは公開 `FORMATION_PRESETS` / `getFormationPreset` から取得できる。
+   * 隊形の選手を今の図に追記し、置いたら true を返す。攻守の隊形を順に重ねられる。
+   * 選手の位置は LOS からの相対（`lateralYard` と `downfieldYard`）で書く。
+   * 外から渡した隊形は正規化してから読むので、位置の読めない選手は捨てる。
+   * 置ける選手が 1 人もいないときと、置くと選手が 64 人を超えるときは、1 人も置かずに false を返す。
+   * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
    */
-  loadFormation(formation: Formation): void {
-    this.session.loadFormation(formation);
+  loadFormation(formation: Formation): boolean {
+    if (this.ignoreAfterDispose("loadFormation")) {
+      return false;
+    }
+    return this.session.loadFormation(formation);
   }
 
   /**
-   * 商用ソフトが永続化した PlayData を後から丸ごと再読込する（PRD 5.8）。
-   * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行へ寄せ、決して
-   * 投げない。1 セッション = 1 Model なので履歴はリセットされ、再読込は編集では
-   * ないため `onChange` は発火しない（編集確定のみが通知契約＝PRD 6.6）。
-   * 件数の上限は `initialData` と同じで、超えた分は捨てる。
+   * 型付きで組み立てた図を読み込み、今の図と置き換える。`getPlayData` の戻り値や、
+   * プリセットの `data` もそのまま渡せる。
+   * 型に合っていても、重複した id と件数の上限を超えた分は `restorePlayData` と同じく正規化する。
+   * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
    */
-  setPlayData(data: PlayData): void {
+  setPlayData(data: PlayDataInput): void {
+    if (this.ignoreAfterDispose("setPlayData")) {
+      return;
+    }
     this.session.setPlayData(data);
   }
 
   /**
-   * 現在のプレー図の正準スナップショット（深い防御的コピー・`version` は現行）。
-   * そのまま JSON 化して永続化でき、後で `setPlayData` / `initialData` に戻すと
-   * 同値のプレー図に復元される（PRD 5.8 / 6.6 の往復契約）。
-   * 編集でも件数の上限（`initialData` を参照）は超えられず、上限に達すると
-   * 選手の追加、フォーメーションの読み込み、作図は何もしない。
+   * 永続化しておいた値を、形を確かめずに受け取って読み込み、今の図と置き換える。
+   * 旧版、版の無いもの、未来版、壊れたデータも、例外を投げずに今のスキーマへ寄せ、読めない要素だけを捨てる。
+   * 選手 64 人、線 128 本、線 1 本あたり waypoint 32 個を超える分は、先頭から上限までを残して捨てる。
+   * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
+   */
+  restorePlayData(raw: unknown): void {
+    if (this.ignoreAfterDispose("restorePlayData")) {
+      return;
+    }
+    this.session.setPlayData(raw);
+  }
+
+  /**
+   * 今の図の深いコピー。`version` は常に現行で、そのまま JSON にして永続化できる。
+   * `restorePlayData` か `initialData` に戻すと、同じ図になる。
+   * 編集でも件数の上限は超えられず、上限に達すると選手の追加、フォーメーションの読み込み、作図は何もしない。
    */
   getPlayData(): PlayData {
     return this.session.getPlayData();
@@ -143,31 +218,66 @@ export class Playmaker extends Disposable {
    * view と edit のどちらのモードでも使える。
    * 同梱フォントを読み込み終えてから描くので、構築の直後に呼んでもヤードの数字と選手のラベルは同梱フォントになる。
    * フォントを読み込めなかったときは代わりのフォントで描く。
-   * canvas を確保できないときや PNG に変換できないときは、例外を投げずに reject する。
+   * canvas を確保できないとき、PNG に変換できないとき、dispose したあとは、例外を投げずに reject する。
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {
+    if (this.store.isDisposed) {
+      return Promise.reject(new Error("Playmaker: dispose したあとは PNG を書き出せません。"));
+    }
     return this.surface.exportToPngBlob(this.session.getSnapshot(), options);
   }
 
-  override dispose(): void {
+  /**
+   * 図とパネルの色を、テーマの CSS 変数から読み直す。CSS 変数を変えてもブラウザは知らせてこないので、
+   * ホストが祖先の要素で変数を変えたあとに呼ぶ。
+   */
+  refresh(): void {
+    if (this.ignoreAfterDispose("refresh")) {
+      return;
+    }
+    this.surface.refresh();
+    this.panel?.refresh();
+  }
+
+  dispose(): void {
     this.ui.dispose();
-    super.dispose();
+    this.store.dispose();
+  }
+
+  private ignoreAfterDispose(method: string): boolean {
+    if (!this.store.isDisposed) {
+      return false;
+    }
+    if (isDevelopment()) {
+      console.warn(`Playmaker: dispose したあとに ${method} を呼んだので、何もしません。`);
+    }
+    return true;
   }
 
   private attachUi(): void {
-    this.ui.dispose();
-    this.ui = new DisposableStore();
+    // view では canvas がフォーカスを受けないので、消えたフォーカスは body に落ちたままになる。
+    replaceKeepingFocus(this.root, this.surface.canvas, () => {
+      this.ui.dispose();
+      this.ui = this.createUi();
+    });
+    this.draw();
+  }
+
+  private createUi(): DisposableStore {
+    const ui = new DisposableStore();
     const controller = this.session.controller;
-    const draw = (): void => {
-      const { scene, overlay } = controller.getFrame();
-      this.surface.setScene(scene, overlay);
-    };
-    this.ui.add(controller.onDidChangeScene(draw));
-    if (this.mode === "edit") {
-      this.ui.add(new Toolbar(this.root, controller));
-      this.ui.add(new PropertyPanel(this.root, controller));
-      this.ui.add(new PointerInput(this.root, this.surface, controller));
+    ui.add(controller.onDidChangeScene(() => this.draw()));
+    this.panel = undefined;
+    if (this.currentMode === "edit") {
+      ui.add(new Toolbar(this.root, controller));
+      this.panel = ui.add(new PropertyPanel(this.root, controller, this.surface.canvas));
+      ui.add(new PointerInput(this.root, this.surface, controller));
     }
-    draw();
+    return ui;
+  }
+
+  private draw(): void {
+    const { scene, overlay } = this.session.controller.getFrame();
+    this.surface.setScene(scene, this.currentMode === "edit" ? overlay : NO_OVERLAY);
   }
 }

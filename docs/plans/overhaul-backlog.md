@@ -496,26 +496,26 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T14 公開 API の再設計
+### T14 公開 API の再設計 (done)
 
-- [ ] **T14-1 [should] Playmaker が Disposable を継承して内部型が d.ts に漏れ、dispose 後の方針も決まっていない**（D16）
+- [x] **T14-1 [should] Playmaker が Disposable を継承して内部型が d.ts に漏れ、dispose 後の方針も決まっていない**（D16）
   - locations: library/src/playmaker.ts:73, library/src/playmaker.ts:123-129, library/src/playmaker.ts:137-143, library/src/playmaker.ts:161, library/src/playmaker.ts:165-168, library/src/common/lifecycle/disposable.ts:49-63
   - 対応: `implements IDisposable` にし、内部の store は private で持つ。loadFormation は読み込めたかを boolean で返す。
-- [ ] **T14-2 [should] mode が構築時に固定されている**（D14）
+- [x] **T14-2 [should] mode が構築時に固定されている**（D14）
   - locations: library/src/playmaker.ts:74, library/src/playmaker.ts:86-90, library/src/playmaker.ts:137-143, library/src/playmaker.ts:193-197
   - 対応: document 束（T10 の session）と ui 束に分け、`setMode` と `get mode` を足す。
   - 規約: `.claude/rules/architecture.md` の「view と edit は今は構築時に決めるだけ」の行を、`setMode` の説明に書き換える。
-- [ ] **T14-3 [should] onChange が options でしか受け取れない**（D15）
+- [x] **T14-3 [should] onChange が options でしか受け取れない**（D15）
   - locations: library/src/playmaker.ts:63, library/src/playmaker.ts:77, library/src/playmaker.ts:85, library/src/playmaker.ts:191, library/src/playmaker.ts:104-114
   - 対応: options は構築時に値を取り出す。購読 API を公開し、Event と IDisposable の型も export する。
-- [ ] **T14-4 [should] initialData を二重に migrate・二重に描画していて、入力の型も実際の契約と合わない**（D12）
+- [x] **T14-4 [should] initialData を二重に migrate・二重に描画していて、入力の型も実際の契約と合わない**（D12）
   - locations: library/src/playmaker.ts:56, library/src/playmaker.ts:94-100, library/src/playmaker.ts:123, library/src/playmaker.ts:137, library/src/playmaker.ts:174, library/src/browser/rendering/canvas-surface.ts:38-58
   - 補足（T7 で判明）: 公開型 FieldState に losYard が必須で増えたが、読み込み時には使わずゾーンから決め直す。型付きで PlayData を組み立てるホストは、意味のない losYard を渡す必要がある。入力側の型では losYard を省略可能にするか、fieldStateForZone を公開するかを、D12 の setPlayData / restorePlayData の型と一緒に決める。また v1 形式（absoluteYard）のカスタム Formation は版を持たず移行されないので、loadFormation で全選手が捨てられ何も起きない。受け付ける形を公開 API の JSDoc に書くか、Formation にも移行を掛けるかを決める。
-- [ ] **T14-5 [nit] 公開オプションの optional に `| undefined` がない**
+- [x] **T14-5 [nit] 公開オプションの optional に `| undefined` がない**
   - locations: library/src/playmaker.ts:50, library/src/playmaker.ts:56, library/src/playmaker.ts:63, library/src/common/export/image-export.ts:30
-- [ ] **T14-6 [nit] FIELD_ZONES、refresh、Event 型の公開と、公開面の過不足の整理**
+- [x] **T14-6 [nit] FIELD_ZONES、refresh、Event 型の公開と、公開面の過不足の整理**
   - locations: library/src/playmaker.ts:20-44
-- [ ] **T14-7 [nit] パネルが作り直されると、パネルの中にあったフォーカスが body へ落ちる**（T13c で追加）
+- [x] **T14-7 [nit] パネルが作り直されると、パネルの中にあったフォーカスが body へ落ちる**（T13c で追加）
   - locations: library/src/browser/ui/property-panel.ts（rebuild の replaceChildren）, library/src/browser/input/pointer-input.ts（keydown を root で受ける箇所）
   - 問題: パネルの「既定」ボタンやスウォッチにフォーカスがある状態で Cmd+Z を押し、選択中の要素が消えると、パネルは中身を作り直してフォーカスが body へ落ちる。以降のショートカットは root に届かない。setMode で UI を外すときも同じことが起きる。
   - 対応: 編集 UI の要素が消える直前にフォーカスを持っていたら、canvas へ移す仕組みを 1 か所に置く。T14-2 の UI の付け外しと一緒に決める。
@@ -523,6 +523,9 @@ PR 単位で、依存順に並べる。
 - 依存: T10〜T13、D12、D14、D15、D16
 - 完了条件: dist の d.ts に Disposable_2 などの内部型が出ない。setMode で履歴が残る。購読と解除ができる。構築時の migrate と描画が 1 回ずつになる。
 - 規模: M
+- 結論（2026-09-23 にユーザーと決着）: T14-4 の losYard は、setPlayData の入力型 `PlayDataInput` で省略可にする。getPlayData の出力は losYard を持ったまま。v1 形式（absoluteYard）のカスタム Formation には移行を掛けず、loadFormation の JSDoc に LOS 相対で書くことを明記する。読み込めなければ false が返る。
+- 結論（実装で決めたこと）: dispose 後の exportToPng は reject する（Blob を返せないため）。開発時の判定はバンドラが置き換える `process.env.NODE_ENV` で行い、置き換えないで読み込んだときは警告しない。initialData は restorePlayData と同じ契約なので `unknown` で受ける。view に切り替えると途中の操作を取り消し、選択の強調は描かないが、選択そのものは残す（edit に戻すと強調が戻る）。
+- 進み具合: 1 本で閉じた。setPlayData で controller ごと作り直すので、編集 UI も付け直してフォーカスを canvas へ移している。controller を 1 つに保ってリセット時に UI を残す案は、T10 の設計を変えるので見送った。README の公開 API の表は、この PR で変えたメンバーだけ合わせた（残りは T18-2）。
 
 ---
 

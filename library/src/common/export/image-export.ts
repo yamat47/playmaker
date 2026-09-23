@@ -24,7 +24,7 @@ export interface ImageExportOptions {
    * 出力 PNG の横幅(px)。高さはゾーン窓のアスペクト比から導く。
    * 未指定、有限でない値、1 未満は 1600 にし、4096 を超える幅は 4096 に切り詰める。
    */
-  width?: number;
+  width?: number | undefined;
 }
 
 export interface ImageExportSize {

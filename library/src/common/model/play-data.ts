@@ -66,6 +66,14 @@ export interface PlayData {
   readonly lines: readonly Line[];
 }
 
+/**
+ * 型付きで組み立てて読み込む図。LOS の位置は読み込むときにゾーンから決め直すので、
+ * `field.losYard` は省略できる。
+ */
+export interface PlayDataInput extends Omit<PlayData, "field"> {
+  readonly field: Omit<FieldState, "losYard"> & { readonly losYard?: number | undefined };
+}
+
 export function isFieldZone(value: unknown): value is FieldZone {
   return isOneOf(value, FIELD_ZONE_VALUES);
 }

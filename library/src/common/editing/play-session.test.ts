@@ -24,11 +24,12 @@ const formation: Formation = {
 
 function setup(data: unknown = initialData()) {
   const onChange = vi.fn<(data: PlayData) => void>();
-  const session = new PlaySession(data, onChange);
+  const session = new PlaySession(data);
+  session.onDidChange(onChange);
   return { session, onChange };
 }
 
-describe("PlaySession の onChange", () => {
+describe("PlaySession の onDidChange", () => {
   it("編集を確定するたびに、最新の図を渡して 1 回だけ呼ぶ", () => {
     const { session, onChange } = setup();
 
@@ -65,6 +66,38 @@ describe("PlaySession の onChange", () => {
     received.players.length = 0;
 
     expect(session.getPlayData().players).toHaveLength(1);
+  });
+
+  it("リスナごとに別のコピーを渡すので、先のリスナの書き換えは後のリスナに届かない", () => {
+    const session = new PlaySession(initialData());
+    session.onDidChange((data) => {
+      mutable(data).players.length = 0;
+    });
+    const later = vi.fn<(data: PlayData) => void>();
+    session.onDidChange(later);
+
+    session.setFieldZone("redzone");
+
+    expect(must(later.mock.lastCall)[0].players).toHaveLength(1);
+  });
+
+  it("購読を解除したあとの編集では呼ばない", () => {
+    const session = new PlaySession(initialData());
+    const onChange = vi.fn<(data: PlayData) => void>();
+    session.onDidChange(onChange).dispose();
+
+    session.setFieldZone("redzone");
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("読み直したあとの編集でも、読み直す前からのリスナを呼ぶ", () => {
+    const { session, onChange } = setup();
+    session.setPlayData(initialData());
+
+    session.setFieldZone("redzone");
+
+    expect(onChange).toHaveBeenCalledOnce();
   });
 });
 
@@ -112,12 +145,18 @@ describe("PlaySession の loadFormation", () => {
     expect(onChange).toHaveBeenCalledOnce();
   });
 
-  it("置ける選手が無い隊形は何もしない", () => {
+  it("隊形の選手を置いたら true を返す", () => {
+    const { session } = setup();
+
+    expect(session.loadFormation(formation)).toBe(true);
+  });
+
+  it("置ける選手が無い隊形は何もせず false を返す", () => {
     const { session, onChange } = setup();
     // 型を持たない外部の JSON から来た、位置の無い選手だけの隊形。
     const broken: Formation = JSON.parse('{ "players": [{ "shape": "circle" }] }');
 
-    session.loadFormation(broken);
+    expect(session.loadFormation(broken)).toBe(false);
 
     expect(session.getPlayData()).toEqual(initialData());
     expect(onChange).not.toHaveBeenCalled();
@@ -136,7 +175,7 @@ describe("PlaySession の dispose", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("onChange を渡さなくても編集できる", () => {
+  it("購読していなくても編集できる", () => {
     const session = new PlaySession(initialData());
 
     session.setFieldZone("redzone");

@@ -256,9 +256,9 @@ export class EditorController extends Disposable implements IEditorController {
     });
   }
 
-  loadFormation(formation: Formation): void {
+  loadFormation(formation: Formation): boolean {
     if (!canLoadFormation(formation, this.getViewState())) {
-      return;
+      return false;
     }
     const { players } = this.model.getSnapshot();
     const added = instantiateFormation(
@@ -266,12 +266,14 @@ export class EditorController extends Disposable implements IEditorController {
       this.ids,
       players.map((p) => p.id),
     );
-    this.notifier.batch(() => {
-      if (this.commands.execute(new LoadFormationCommand(added))) {
+    return this.notifier.batch(() => {
+      const loaded = this.commands.execute(new LoadFormationCommand(added));
+      if (loaded) {
         // 読み込んだあとは、途中の操作と元の選択に意味が無いので外す。
         this.setInteraction(undefined);
         this.setSelection(null);
       }
+      return loaded;
     });
   }
 

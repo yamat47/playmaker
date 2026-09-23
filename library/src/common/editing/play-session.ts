@@ -1,4 +1,4 @@
-import { Emitter } from "../base/event.js";
+import { Emitter, type Event } from "../base/event.js";
 import { Disposable, DisposableStore } from "../base/lifecycle.js";
 import { CommandService } from "../commands/command-service.js";
 import { UndoRedoService } from "../commands/undo-redo-service.js";
@@ -9,31 +9,25 @@ import { PlayModel } from "../model/play-model.js";
 import type { IEditorController } from "./editor.js";
 import { EditorController } from "./editor-controller.js";
 
-type ChangeListener = (data: PlayData) => void;
-
 interface PlayDocument {
   readonly store: DisposableStore;
   readonly model: PlayModel;
   readonly controller: EditorController;
 }
 
-function openDocument(data: unknown, onChange: ChangeListener | undefined): PlayDocument {
+function openDocument(data: unknown, onDidEdit: () => void): PlayDocument {
   const store = new DisposableStore();
   const model = store.add(new PlayModel(data));
   const history = store.add(new UndoRedoService());
   const controller = store.add(
     new EditorController(model, new CommandService(model, history), new IdFactory()),
   );
-  // 受け手が書き換えても Model に波及しないよう、渡す直前にだけ深いコピーを作る。
-  store.add(model.onDidChange(() => onChange?.(model.getData())));
+  store.add(model.onDidChange(onDidEdit));
   return { store, model, controller };
 }
 
 /**
  * 1 つのプレー図の編集を受け持つ。
- *
- * onChange は編集の確定ごとに 1 回だけ呼び、構築時と setPlayData では呼ばない
- * （読み込みは編集ではないため）。
  * setPlayData は履歴ごと作り直すので、controller も別のオブジェクトになる。
  */
 export class PlaySession extends Disposable {
@@ -41,13 +35,20 @@ export class PlaySession extends Disposable {
   /** setPlayData で controller が作り直されたあとに発火する。 */
   readonly onDidReset = this._onDidReset.event;
 
-  private readonly onChange: ChangeListener | undefined;
+  private readonly _onDidEdit = this._register(new Emitter<void>());
+  /**
+   * 編集の確定ごとに 1 回、最新の図の深いコピーを渡す。構築時と setPlayData では発火しない
+   * （読み込みは編集ではないため）。
+   * コピーはリスナごとに作るので、受け手が書き換えても、ほかのリスナとこの図には波及しない。
+   */
+  readonly onDidChange: Event<PlayData> = (listener) =>
+    this._onDidEdit.event(() => listener(this.getPlayData()));
+
   private document: PlayDocument;
 
-  constructor(data: unknown, onChange?: ChangeListener) {
+  constructor(data: unknown) {
     super();
-    this.onChange = onChange;
-    this.document = openDocument(data, onChange);
+    this.document = this.open(data);
   }
 
   get controller(): IEditorController {
@@ -72,18 +73,20 @@ export class PlaySession extends Disposable {
     this.document.controller.setFieldZone(zone);
   }
 
-  /** 外から来た隊形を正規化してから読む。置ける選手が 1 人もいなければ何もしない。 */
-  loadFormation(formation: Formation): void {
+  /** 外から来た隊形を正規化してから読む。置ける選手が 1 人もいなければ何もせず false を返す。 */
+  loadFormation(formation: Formation): boolean {
     const normalized = normalizeFormation(formation);
-    if (normalized !== null) {
-      this.document.controller.loadFormation(normalized);
-    }
+    return normalized !== null && this.document.controller.loadFormation(normalized);
   }
 
   setPlayData(data: unknown): void {
     this.document.store.dispose();
-    this.document = openDocument(data, this.onChange);
+    this.document = this.open(data);
     this._onDidReset.fire();
+  }
+
+  private open(data: unknown): PlayDocument {
+    return openDocument(data, () => this._onDidEdit.fire());
   }
 
   override dispose(): void {

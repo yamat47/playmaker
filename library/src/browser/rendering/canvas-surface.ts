@@ -31,6 +31,7 @@ export class CanvasSurface extends Disposable {
   private scene: SceneData;
   private overlay: EditorOverlay = { kind: "none" };
   private frameRequest: number | undefined;
+  private dpr = 0;
   // 破棄するときに、DPR の見張りをまとめて外す。
   private readonly lifetime = new AbortController();
 
@@ -64,8 +65,9 @@ export class CanvasSurface extends Disposable {
       }),
     );
 
+    // 最初の描画は、observe した直後の ResizeObserver の通知で行う。構築した時点ではホストが
+    // ツールバーやパネルをまだ並べておらず、ここで描くとすぐに大きさが変わって描き直しになる。
     this.watchDevicePixelRatio();
-    this.resize();
     this.redrawWhenFontLoads();
   }
 
@@ -134,8 +136,15 @@ export class CanvasSurface extends Disposable {
   private resize(): void {
     const dpr = window.devicePixelRatio || 1;
     const { clientWidth, clientHeight } = this.host;
-    this.canvas.width = Math.max(1, Math.round(clientWidth * dpr));
-    this.canvas.height = Math.max(1, Math.round(clientHeight * dpr));
+    const width = Math.max(1, Math.round(clientWidth * dpr));
+    const height = Math.max(1, Math.round(clientHeight * dpr));
+    // 要素の大きさが変わっても、バッファの大きさと DPR が同じなら描いた図がそのまま使える。
+    if (width === this.canvas.width && height === this.canvas.height && dpr === this.dpr) {
+      return;
+    }
+    this.dpr = dpr;
+    this.canvas.width = width;
+    this.canvas.height = height;
     // 以降は CSS px の座標で描く。geometry も CSS px で求める。
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // バッファを作り直すと中身が消えるので、次のフレームを待たずに描く。
@@ -158,7 +167,8 @@ export class CanvasSurface extends Disposable {
   }
 
   private invalidate(): void {
-    if (this.frameRequest !== undefined) {
+    // 最初の大きさが決まる前は描かない。決まったときに resize が描く。
+    if (this.frameRequest !== undefined || this.dpr === 0) {
       return;
     }
     this.frameRequest = requestAnimationFrame(() => {

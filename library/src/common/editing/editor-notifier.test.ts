@@ -72,6 +72,12 @@ describe("EditorNotifier", () => {
     expect(changes.mock.calls).toEqual([["view"]]);
   });
 
+  it("batch は渡した処理の戻り値を返す", () => {
+    const { notifier } = setup();
+
+    expect(notifier.batch(() => 42)).toBe(42);
+  });
+
   it("batch の中で例外が出ても、あとの batch は通知できる", () => {
     const { notifier, changes } = setup();
 

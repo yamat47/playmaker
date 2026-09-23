@@ -51,13 +51,16 @@ const container = document.getElementById("play")!;
 
 const playmaker = new Playmaker(container, {
   mode: "edit", // "edit"（既定・編集 UI あり）/ "view"（読み取り専用）
-  initialData: savedPlayData, // 商用ソフトが永続化した PlayData（省略可）
+  initialData: savedPlayData, // 商用ソフトが永続化した値（省略可・形は確かめずに受け取る）
   onChange: (data: PlayData) => {
     // 編集コマンド・Undo/Redo の確定ごとに 1 回、最新の深いスナップショットが届く。
     // そのまま JSON 化して永続化できる。
     persist(JSON.stringify(data));
   },
 });
+
+// 構築したあとでも購読できる。戻り値を dispose すると購読をやめる。
+const subscription = playmaker.onDidChange((data) => preview(data));
 ```
 
 ### 公開 API
@@ -65,17 +68,22 @@ const playmaker = new Playmaker(container, {
 | メンバー | 説明 |
 |---|---|
 | `new Playmaker(container, options?)` | 生成。`options` は `mode` / `initialData` / `onChange` |
+| `onDidChange(listener): IDisposable` | 編集の確定を購読する。`options.onChange` と同じ値が届く |
 | `getPlayData(): PlayData` | 現在のプレー図の正準スナップショット（深いコピー・`version` は現行） |
-| `setPlayData(data)` | 永続化済み PlayData を丸ごと再読込（履歴はリセット・`onChange` は出ない） |
-| `loadFormation(formation)` | フォーメーションを既存図へ追記（攻守プリセットを順に重ねられる） |
+| `restorePlayData(raw: unknown)` | 永続化しておいた値を丸ごと再読込（履歴はリセット・`onChange` は出ない） |
+| `setPlayData(data: PlayDataInput)` | 型付きで組み立てた図を丸ごと読み込む（`field.losYard` は省略可） |
+| `loadFormation(formation): boolean` | フォーメーションを既存図へ追記し、置けたかを返す（攻守プリセットを順に重ねられる） |
+| `get mode` / `setMode(mode)` | `edit` / `view` の切替。図と Undo の履歴は残る |
 | `get fieldZone` / `setFieldZone(zone)` | フィールドゾーン（`middle` / `redzone` / `own-redzone`） |
 | `exportToPng(options?): Promise<Blob>` | 編集 UI を含まない PNG を出力。`options.width` で出力幅(px)。上限は 4096 |
-| `dispose()` | DOM・購読・リソースを解放 |
+| `refresh()` | テーマの CSS 変数を変えたあとに、図とパネルの色を読み直す |
+| `dispose()` | DOM・購読・リソースを解放。以降の変更は何もせず、開発時だけ警告を出す |
 
-再エクスポート: 型 `PlayData` `Player` `Line` `FieldPosition` `Formation`
+再エクスポート: 型 `PlayData` `PlayDataInput` `Player` `Line` `FieldPosition` `Formation`
 `ImageExportOptions` `PlayerShape`(`circle`/`square`) `LineKind`(`route`/`block`/`motion`)
-`LineInterpolation`(`straight`/`bezier`) ほか、値 `FORMATION_PRESETS`
-`getFormationPreset(id)` `migratePlayData(raw)` `CURRENT_PLAY_DATA_VERSION`。
+`LineInterpolation`(`straight`/`bezier`) `Event` `IDisposable` ほか、値 `FORMATION_PRESETS`
+`getFormationPreset(id)` `FIELD_ZONE_VALUES` `FIELD_ZONE_LABELS` `migratePlayData(raw)`
+`CURRENT_PLAY_DATA_VERSION`。
 
 プリセット id: `i-formation` / `shotgun-spread`（攻）、`defense-4-3` /
 `defense-nickel`（守）。商用ソフト側のカスタム隊形も `loadFormation` に渡せる。
@@ -83,8 +91,8 @@ const playmaker = new Playmaker(container, {
 ### データ連携とバージョニング
 
 - `onChange` は**編集コマンドおよび Undo/Redo の確定ごとに 1 回**、最新 PlayData の
-  深いスナップショットを渡す。構築時・`setPlayData` 再読込・PNG 出力では発火しない
-- `getPlayData()` はそのまま永続化でき、`setPlayData` / `initialData` に戻すと
+  深いスナップショットを渡す。構築時・`restorePlayData` / `setPlayData` 再読込・PNG 出力では発火しない
+- `getPlayData()` はそのまま永続化でき、`restorePlayData` / `initialData` に戻すと
   同値のプレー図に復元される（往復契約）
 - 旧版・版なし・未来版・破損データを渡しても `migratePlayData` が現行スキーマへ
   寄せ、決して投げない（復元不能な要素のみ除外）。`PlayData.version` の真実源は
@@ -96,12 +104,14 @@ const playmaker = new Playmaker(container, {
   Redo = `Shift` 併用 / `Y`。ツールバーは図の上、パネルは図の右に置き、図とは重ねない。
   図は container からそれらを除いた領域に収まる大きさで描く
 - `view`: 読み取り専用。編集 UI は出さない
+- `setMode` で切り替えると、編集 UI と入力だけを付け外しし、図と Undo の履歴は残る
 
 ### スタイルのカスタマイズ
 
 配色と UI のフォントは、CSS カスタムプロパティ `--playmaker-*` で上書きできる。
 Playmaker を置いた要素か、その祖先の要素に指定する。
 ヤード数字と選手ラベルのフォントは同梱のものに固定していて、上書きできない。
+構築したあとに変数を変えたときは、`refresh()` を呼ぶと図とパネルに反映される。
 
 ```css
 .my-app {

@@ -82,7 +82,10 @@ export class Playmaker extends Disposable {
     container.appendChild(this.root);
     this._register(toDisposable(() => this.root.remove()));
 
-    this.surface = this._register(new CanvasSurface(this.root, this.session.getSnapshot()));
+    const stage = document.createElement("div");
+    stage.className = "playmaker-stage";
+    this.root.appendChild(stage);
+    this.surface = this._register(new CanvasSurface(stage, this.session.getSnapshot()));
     this._register(this.session.onDidReset(() => this.attachUi()));
     this.attachUi();
   }

@@ -19,6 +19,11 @@
   overflow: hidden;
 }
 
+.playmaker-stage {
+  width: 100%;
+  height: 100%;
+}
+
 .playmaker-canvas {
   display: block;
   width: 100%;

@@ -32,8 +32,9 @@ describe("CommandService", () => {
   it("execute はコマンドを Model に当て、undo できるようにする", () => {
     const { model, commands } = wire();
 
-    commands.execute(new AddPlayerCommand(player("a")));
+    const changed = commands.execute(new AddPlayerCommand(player("a")));
 
+    expect(changed).toBe(true);
     expect(model.findPlayer("a")).toEqual(player("a"));
     expect(commands.canUndo).toBe(true);
   });
@@ -56,8 +57,13 @@ describe("CommandService", () => {
     const history = vi.fn();
     commands.onDidChangeHistory(history);
 
-    commands.execute({ label: "何も変えないコマンド", apply: () => false, undo: vi.fn() });
+    const changed = commands.execute({
+      label: "何も変えないコマンド",
+      apply: () => false,
+      undo: vi.fn(),
+    });
 
+    expect(changed).toBe(false);
     expect(commands.canUndo).toBe(false);
     expect(history).not.toHaveBeenCalled();
   });

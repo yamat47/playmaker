@@ -695,6 +695,16 @@ describe("EditorController: アクション", () => {
     expect(() => controller.updateSelectedLine({ kind: "route" })).not.toThrow();
   });
 
+  it("作図の途中で今と同じゾーンを選び直しても、作図は続く", () => {
+    const { controller } = setup();
+    controller.setTool("draw-line");
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a
+
+    controller.setFieldZone("middle");
+
+    expect(controller.getViewState().isDrawing).toBe(true);
+  });
+
   it("setFieldZone: 同値は無視、変更はコマンド化して undo 可能", () => {
     const { controller, model, commands } = setup();
     controller.setFieldZone("middle"); // 同値
@@ -780,6 +790,16 @@ describe("EditorController: loadFormation（フォーメーション読込）", 
     const ids = model.getData().players.map((p) => p.id);
     expect(ids).toEqual(["player-1", "player-2", "player-3"]);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("選手が 1 人もいない隊形を読んでも、選択は外れない", () => {
+    const { controller } = setup();
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
+    controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
+
+    controller.loadFormation({ id: "empty", name: "空", side: "offense", players: [] });
+
+    expect(controller.getSelection()).toEqual({ kind: "player", id: "p-a" });
   });
 
   it("配置可能な選手が無ければ no-op（コマンドも発火も出ない）", () => {
@@ -1249,13 +1269,13 @@ describe("EditorController: 件数の上限", () => {
 });
 
 describe("EditorController: 履歴の通知", () => {
-  it("Model が変わらず履歴だけが変わっても通知する", () => {
+  it("controller を通さずに編集しても、履歴が変わったあとに表示状態を通知する", () => {
     const { commands, changes } = setup();
-    const untouched = { label: "Model に触れないコマンド", apply: () => true, undo: () => {} };
 
-    commands.execute(untouched);
+    commands.execute(new RemoveLineCommand("l-1"));
 
-    expect(changes.mock.calls).toEqual([["view"]]);
+    // Model の通知の時点では履歴がまだ変わっていないので、表示状態は履歴の通知で出る。
+    expect(changes.mock.calls).toEqual([["scene"], ["view"]]);
   });
 });
 

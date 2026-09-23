@@ -39,6 +39,7 @@ src/
 
 ### 3. コマンドパターン
 すべての編集操作を `ICommand`（apply / undo）として表現し、Undo/Redo を単一機構に統一。UI なしで `common` 単体テストできる形にする。
+`apply` は Model を変えたかを返し、何も変えなかった操作は `CommandService` が履歴に積まない。
 
 ### 4. ライフサイクル
 `Disposable` / `DisposableStore` / `Emitter`（`src/common`）でリソースとイベント購読を束ねる。`_register` で従属リソースを登録し、`dispose()` で確実に解放（リーク防止）。

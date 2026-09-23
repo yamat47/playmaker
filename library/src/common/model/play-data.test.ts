@@ -3,36 +3,12 @@ import { must } from "../../test-support/must.js";
 import { mutable } from "../../test-support/mutable.js";
 import {
   clonePlayData,
-  createEmptyPlayData,
   DEFAULT_FIELD_ZONE,
   isFieldZone,
   LOS_YARD_BY_ZONE,
   type PlayData,
   resolvePlayData,
 } from "./play-data.js";
-
-describe("createEmptyPlayData", () => {
-  it("現行 version・既定ゾーン・選手と線なしの新規データを返す", () => {
-    const data = createEmptyPlayData();
-
-    expect(data).toEqual({
-      version: 2,
-      field: { zone: DEFAULT_FIELD_ZONE, losYard: 50 },
-      players: [],
-      lines: [],
-    });
-  });
-
-  it("呼ぶたびに独立したオブジェクトを返す（共有しない）", () => {
-    const a = createEmptyPlayData();
-    const b = createEmptyPlayData();
-
-    expect(a).not.toBe(b);
-    expect(a.field).not.toBe(b.field);
-    expect(a.players).not.toBe(b.players);
-    expect(a.lines).not.toBe(b.lines);
-  });
-});
 
 describe("clonePlayData", () => {
   const source: PlayData = {

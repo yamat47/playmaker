@@ -373,12 +373,12 @@ PR 単位で、依存順に並べる。
 - [x] **T10-3 [should] 使われていないフィールド定数に、描画で使われているかのような説明がある**
   - locations: library/src/common/geometry/field.ts:18, library/src/common/geometry/field.ts:40, library/src/common/geometry/field.ts:46, library/src/common/design/metrics.ts:17
   - 対応: 3 つの定数を削除する。
-  - 結論: 消したのは HASH_FROM_SIDELINE_YARDS、NEAR_SIDELINE_TICK_YARDS、HASH_TICK_YARDS。
+  - 結論: 消したのは HASH_FROM_SIDELINE_YARDS、NEAR_SIDELINE_TICK_YARDS、HASH_TICK_YARDS。barrel を絞ったら自分のテストからしか使われなくなった isEndZone と createEmptyPlayData も消した。
 - [x] **T10-4 [should] 何も変えないコマンドを履歴に積まない判定が EditorController にしかない**（T8 の見直しで追加）
   - locations: library/src/common/editing/editor-controller.ts（updateSelectedPlayer、updateSelectedLine、setFieldZone、pointerUp）, library/src/common/commands/command-service.ts（execute）
   - 問題: patchChangesAnything、ゾーンの同値判定、動かさなかったドラッグの判定を、編集の経路ごとに書いている。CommandService.execute は何でも積むので、公開されたコマンドを直に実行すると空の Undo 段ができる。
   - 対応: コマンドが「変化なし」を報告できるようにし（`apply` が boolean を返すなど）、CommandService が積むかどうかを 1 か所で決める。
-  - 結論: `ICommand.apply` は Model を変えたら true を返し、何も変えないときは Model に触れずに false を返す。CommandService は false なら積まない。EditorController のパッチとゾーンの同値判定は消した。ドラッグの「動かさずに離した」判定は、窓の外の選手をクリックしただけで窓の端へ寄せないためのものなので残した。
+  - 結論: `ICommand.apply` は Model を変えたら true を返し、何も変えないときは Model に触れずに false を返す。CommandService は false なら積まず、execute の戻り値で積んだかを返す。EditorController のパッチとゾーンの同値判定、空の隊形の判定は消し、途中の操作や選択を外すのは execute が true を返したときだけにした。ドラッグの「動かさずに離した」判定は、窓の外の選手をクリックしただけで窓の端へ寄せないためのものなので残した。
 
 - 依存: T9、D13、D14
 - 完了条件: セッションの契約テストが node で緑になる。barrel が必要最小限になる。

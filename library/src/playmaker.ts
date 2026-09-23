@@ -103,7 +103,7 @@ export class Playmaker extends Disposable {
   /**
    * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
    * 既存のプレー図へ追記する（攻守プリセットを順に重ねられる）。外部の
-   * カスタム隊形は normalizeFormation で正規化し、配置可能な選手が無ければ no-op。
+   * カスタム隊形は正規化してから読み、配置可能な選手が無ければ no-op。
    * 置くと選手が 64 人を超えるときも、1 人も置かずに no-op。
    * 編集操作なので Undo/onChange の対象（view モードでも API としては有効）。
    * プリセットは公開 `FORMATION_PRESETS` / `getFormationPreset` から取得できる。

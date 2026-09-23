@@ -12,8 +12,11 @@ export interface ICommandService {
   readonly onDidChangeHistory: Event<void>;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  /** 適用が throw したときと、何も変えなかったときは、コマンドを履歴に積まない。 */
-  execute(command: ICommand): void;
+  /**
+   * コマンドを適用し、Model を変えたら履歴に積んで true を返す。何も変えなかったときは
+   * 積まずに false を返す。適用が throw したときも積まない。
+   */
+  execute(command: ICommand): boolean;
   /** 取り消しが throw したら、履歴は動かさない。戻す対象が無ければ何もしない。 */
   undo(): void;
   /** やり直しが throw したら、履歴は動かさない。やり直す対象が無ければ何もしない。 */
@@ -41,10 +44,12 @@ export class CommandService implements ICommandService {
     return this.history.canRedo;
   }
 
-  execute(command: ICommand): void {
-    if (command.apply(this.model)) {
+  execute(command: ICommand): boolean {
+    const changed = command.apply(this.model);
+    if (changed) {
       this.history.push(command);
     }
+    return changed;
   }
 
   undo(): void {

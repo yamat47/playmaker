@@ -245,14 +245,16 @@ export class EditorController extends Disposable implements IEditorController {
 
   setFieldZone(zone: FieldZone): void {
     this.notifier.batch(() => {
-      this.setInteraction(undefined);
-      this.commands.execute(new SetFieldZoneCommand(zone));
+      // 同じゾーンを選び直しただけなら、途中のドラッグや作図は残す。
+      if (this.commands.execute(new SetFieldZoneCommand(zone))) {
+        this.setInteraction(undefined);
+      }
     });
   }
 
   loadFormation(formation: Formation): void {
     const { players } = this.model.getSnapshot();
-    if (formation.players.length === 0 || players.length + formation.players.length > MAX_PLAYERS) {
+    if (players.length + formation.players.length > MAX_PLAYERS) {
       return;
     }
     const added = instantiateFormation(
@@ -261,10 +263,11 @@ export class EditorController extends Disposable implements IEditorController {
       players.map((p) => p.id),
     );
     this.notifier.batch(() => {
-      this.setInteraction(undefined);
-      this.commands.execute(new LoadFormationCommand(added));
-      // 読み込んだあとは、元の選択に意味が無いので外す。
-      this.setSelection(null);
+      if (this.commands.execute(new LoadFormationCommand(added))) {
+        // 読み込んだあとは、途中の操作と元の選択に意味が無いので外す。
+        this.setInteraction(undefined);
+        this.setSelection(null);
+      }
     });
   }
 

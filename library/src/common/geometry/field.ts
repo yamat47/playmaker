@@ -103,11 +103,6 @@ export function clampToZoneWindow(position: FieldPosition, field: FieldState): F
   };
 }
 
-/** フィールド外（エンドゾーン）か。境界のゴールライン 0/100 は含めない。 */
-export function isEndZone(absoluteYard: number): boolean {
-  return absoluteYard < 0 || absoluteYard > 100;
-}
-
 /**
  * 絶対ヤード → フィールド上の表示番号(1..50)。両ゴールから数える（…40,50,40…）。
  * ゴールラインとエンドゾーンには番号を書かないので null を返す。

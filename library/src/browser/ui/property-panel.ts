@@ -108,12 +108,15 @@ export class PropertyPanel extends Disposable {
   private addPlayerFields(): (player: Player) => void {
     const controller = this.controller;
     this.addTitle("選手");
-    const setLabel = this.addText("ラベル", (v) => controller.updateSelectedPlayer({ label: v }));
+    const setLabel = this.addInput("ラベル", "text", (v) =>
+      controller.updateSelectedPlayer({ label: v }),
+    );
     const setShape = this.addSelect("形状", PLAYER_SHAPE_VALUES, SHAPE_LABELS, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
-    const setColor = this.addColor(
+    const setColor = this.addInput(
       "色",
+      "color",
       (v) => controller.updateSelectedPlayer({ color: v }),
       () => controller.updateSelectedPlayer({ color: null }),
     );
@@ -212,11 +215,16 @@ export class PropertyPanel extends Disposable {
     this.element.appendChild(row);
   }
 
-  private addText(labelText: string, onChange: (v: string) => void): (value: string) => void {
+  private addInput(
+    labelText: string,
+    type: "text" | "color",
+    onChange: (v: string) => void,
+    onReset?: () => void,
+  ): (value: string) => void {
     const input = document.createElement("input");
-    input.type = "text";
+    input.type = type;
     input.addEventListener("change", () => onChange(input.value));
-    this.addRow(labelText, input);
+    this.addRow(labelText, input, onReset);
     return (value) => {
       input.value = value;
     };
@@ -240,20 +248,6 @@ export class PropertyPanel extends Disposable {
     this.addRow(labelText, input, onReset);
     return (value) => {
       input.value = String(value);
-    };
-  }
-
-  private addColor(
-    labelText: string,
-    onChange: (v: string) => void,
-    onReset: () => void,
-  ): (hex: string) => void {
-    const input = document.createElement("input");
-    input.type = "color";
-    input.addEventListener("change", () => onChange(input.value));
-    this.addRow(labelText, input, onReset);
-    return (hex) => {
-      input.value = hex;
     };
   }
 

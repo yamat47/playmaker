@@ -77,10 +77,8 @@ export class LineRenderer {
         ? path
         : trimPolylineEnd(path, metrics.arrowLength, ARROW_TRIM_MAX_FRACTION);
       ctx.beginPath();
-      const head = strokePath[0] as CanvasPoint;
-      ctx.moveTo(head.x, head.y);
-      for (let i = 1; i < strokePath.length; i++) {
-        const pt = strokePath[i] as CanvasPoint;
+      // 空のパスへの最初の lineTo は moveTo として働く。
+      for (const pt of strokePath) {
         ctx.lineTo(pt.x, pt.y);
       }
       ctx.stroke();
@@ -113,15 +111,21 @@ export class LineRenderer {
   }
 
   /**
-   * 終点と一致しない直近点を遡り、終端の進行方向（角度）を得る。
+   * 終点と、終点と一致しない直近点から見た終端の進行方向（角度）。
    * 曲線末尾の微小区間で方向が出ない事故を避ける。終端飾りの共通前処理。
    */
-  private endAngle(path: readonly CanvasPoint[]): number | undefined {
-    const tip = path[path.length - 1] as CanvasPoint;
+  private endDirection(
+    path: readonly CanvasPoint[],
+  ): { readonly tip: CanvasPoint; readonly angle: number } | undefined {
+    const tip = path.at(-1);
+    if (tip === undefined) {
+      return undefined;
+    }
+    // 毎フレーム線ごとに呼ぶので、配列を複製せずに終点側から探す。
     for (let i = path.length - 2; i >= 0; i--) {
-      const p = path[i] as CanvasPoint;
-      if (p.x !== tip.x || p.y !== tip.y) {
-        return Math.atan2(tip.y - p.y, tip.x - p.x);
+      const from = path[i];
+      if (from !== undefined && (from.x !== tip.x || from.y !== tip.y)) {
+        return { tip, angle: Math.atan2(tip.y - from.y, tip.x - from.x) };
       }
     }
     return undefined;
@@ -134,11 +138,11 @@ export class LineRenderer {
     color: string,
     metrics: FieldMetrics,
   ): void {
-    const angle = this.endAngle(path);
-    if (angle === undefined) {
+    const direction = this.endDirection(path);
+    if (direction === undefined) {
       return;
     }
-    const tip = path[path.length - 1] as CanvasPoint;
+    const { tip, angle } = direction;
     const baseX = tip.x - metrics.arrowLength * Math.cos(angle);
     const baseY = tip.y - metrics.arrowLength * Math.sin(angle);
     const nx = -Math.sin(angle);
@@ -161,11 +165,11 @@ export class LineRenderer {
     metrics: FieldMetrics,
     width: number,
   ): void {
-    const angle = this.endAngle(path);
-    if (angle === undefined) {
+    const direction = this.endDirection(path);
+    if (direction === undefined) {
       return;
     }
-    const tip = path[path.length - 1] as CanvasPoint;
+    const { tip, angle } = direction;
     const nx = -Math.sin(angle);
     const ny = Math.cos(angle);
     const half = metrics.blockCapLength / 2;

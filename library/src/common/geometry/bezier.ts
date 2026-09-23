@@ -4,6 +4,7 @@
 
 import type { LineInterpolation } from "../model/line.js";
 import type { FieldPosition } from "../model/player.js";
+import { segments } from "./polyline.js";
 
 /** ベジェ 1 区間あたりのサンプル分割数。図用途では十分滑らかで安価。 */
 export const DEFAULT_BEZIER_SAMPLES_PER_SEGMENT = 16;
@@ -89,12 +90,9 @@ export function sampleLinePath(
   const steps = Math.max(1, Math.floor(samplesPerSegment));
 
   // 端点は自身を複製して接線の参照に使う（曲線が端点を通るようにする）。
-  const first = pts[0] as FieldPosition;
-  const result: FieldPosition[] = [{ ...first }];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? (pts[i] as FieldPosition);
-    const p1 = pts[i] as FieldPosition;
-    const p2 = pts[i + 1] as FieldPosition;
+  const result: FieldPosition[] = pts.slice(0, 1);
+  for (const [i, [p1, p2]] of [...segments(pts)].entries()) {
+    const p0 = pts[i - 1] ?? p1;
     const p3 = pts[i + 2] ?? p2;
     const [c1, c2] = catmullRomBezierControls(p0, p1, p2, p3);
     // t=0 は前区間の終端と重複するので (0,1] を刻む。

@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 import type { CanvasPoint } from "./field.js";
-import { polylineLength, trimPolylineEnd } from "./polyline.js";
+import { polylineLength, segments, trimPolylineEnd } from "./polyline.js";
+
+describe("segments", () => {
+  it("隣り合う 2 点の組を先頭から順に返す", () => {
+    expect([...segments([1, 2, 3])]).toEqual([
+      [1, 2],
+      [2, 3],
+    ]);
+  });
+
+  it("点が 2 つ未満なら何も返さない", () => {
+    expect([...segments([1])]).toEqual([]);
+    expect([...segments([])]).toEqual([]);
+  });
+
+  it("undefined を含む点列でも組を落とさない", () => {
+    expect([...segments([undefined, 1])]).toEqual([[undefined, 1]]);
+  });
+});
 
 describe("polylineLength", () => {
   it("隣接点間の距離を足し上げる", () => {

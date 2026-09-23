@@ -117,9 +117,8 @@ export class Toolbar extends Disposable {
   }
 
   /**
-   * フォーメーション読込のプルダウン（PRD 5.4 の操作・5.6）。攻守で optgroup 化。
-   * 読込は controller 経由＝Undo/onChange の対象。選択後はプレースホルダへ戻し、
-   * 同じ隊形を続けて重ねられる（追記セマンティクス）ようにする。
+   * 選んだあとはプレースホルダへ戻す。選んだ隊形を表示したままにすると、
+   * 同じ隊形をもう一度選んでも change が起きず、続けて重ねられない。
    */
   private addFormationPicker(controller: IEditorUi): HTMLSelectElement {
     const select = document.createElement("select");
@@ -144,7 +143,6 @@ export class Toolbar extends Disposable {
     }
 
     select.addEventListener("change", () => {
-      // 未知 id ガード込みの取得は公開ヘルパに委譲（再実装しない）。
       const preset = getFormationPreset(select.value);
       if (preset !== undefined) {
         controller.loadFormation(preset);

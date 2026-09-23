@@ -22,7 +22,7 @@ import {
 
 /**
  * Canvas の大きさ、DPR、再描画の時機を受け持ち、渡された図を層ごとに描く。
- * 何を描くか（プレビューの合成、選択の強調）は EditorController が決める。
+ * 何を描くか（プレビューの合成、選択の強調）は、図を渡す側が決める。
  */
 export class CanvasSurface extends Disposable {
   readonly canvas: HTMLCanvasElement;

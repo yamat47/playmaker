@@ -13,12 +13,14 @@ import {
   yardLinesInWindow,
 } from "../../common/index.js";
 import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
+import type { ThemeReader } from "../theme/tokens.js";
+import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 /**
  * 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。
  * フォントは同梱フォント固定でテーマ対象外（FIELD_FONT_FAMILY）。
  */
-export interface FieldTheme {
+interface FieldTheme {
   fieldColor: string;
   /** 刈り込みストライプの濃い帯（芝ベースとの明度差はごく僅か）。 */
   stripeColor: string;
@@ -43,17 +45,25 @@ const NUMBER_FROM_SIDELINE_YARDS = 6;
 // （実フィールド同様、数字がラインに食い込まない）。数字高に比例させ表示サイズに追従。
 const NUMBER_DIGIT_SPACING_PER_HEIGHT = 0.18;
 
-export class FieldRenderer {
-  /**
-   * geometry の窓に従って 1 フレーム分のフィールドを描く。
-   * ctx は CanvasSurface 側で DPR 変換済み（CSS px 空間で描いてよい）。
-   */
-  draw(
-    ctx: CanvasRenderingContext2D,
-    geometry: FieldGeometry,
-    theme: FieldTheme,
-    metrics: FieldMetrics,
-  ): void {
+function fieldTheme(read: ThemeReader): FieldTheme {
+  return {
+    fieldColor: read("fieldGrass"),
+    stripeColor: read("fieldStripe"),
+    oobColor: read("fieldOob"),
+    endzoneColor: read("fieldEndzone"),
+    lineColor: read("fieldLine"),
+    goalLineColor: read("fieldGoalLine"),
+    numberColor: read("fieldNumber"),
+    pylonColor: read("fieldPylon"),
+    goalpostColor: read("fieldGoalpost"),
+  };
+}
+
+export class FieldRenderer implements ILayerRenderer {
+  /** geometry の窓に従って、1 フレーム分のフィールドを描く。 */
+  draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
+    const { geometry, metrics } = frame;
+    const theme = fieldTheme(frame.theme);
     const { viewportWidth, viewportHeight, yardWindow } = geometry;
 
     const left = geometry.xForLateralYard(0);

@@ -6,40 +6,30 @@
 import {
   type CanvasPoint,
   DEFAULT_LINE_THICKNESS,
-  type FieldGeometry,
   type FieldMetrics,
   indexPlayersById,
-  type Line,
   type LineKind,
   lineAnchorPoints,
-  type Player,
   sampleLinePath,
   trimPolylineEnd,
 } from "../../common/index.js";
-
-/** 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。 */
-export interface LineTheme {
-  routeColor: string;
-  blockColor: string;
-  motionColor: string;
-}
+import type { ThemeTokenName } from "../theme/tokens.js";
+import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 // 線が矢じりより短くても消えないよう、切り詰めは全長のこの割合までに留める（残りは矢じりが覆う）。
 const ARROW_TRIM_MAX_FRACTION = 0.9;
 
-export class LineRenderer {
-  /**
-   * lines を配列順（後の要素ほど上）に描く。起点選手が見つからない線は描かない。
-   * ctx は CanvasSurface 側で DPR 変換済み（CSS px 空間で描いてよい）。
-   */
-  draw(
-    ctx: CanvasRenderingContext2D,
-    geometry: FieldGeometry,
-    lines: readonly Line[],
-    players: readonly Player[],
-    theme: LineTheme,
-    metrics: FieldMetrics,
-  ): void {
+const LINE_COLOR_TOKENS = {
+  route: "lineRoute",
+  block: "lineBlock",
+  motion: "lineMotion",
+} as const satisfies Record<LineKind, ThemeTokenName>;
+
+export class LineRenderer implements ILayerRenderer {
+  /** lines を配列順（後の要素ほど上）に描く。起点選手が見つからない線は描かない。 */
+  draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
+    const { geometry, metrics } = frame;
+    const { lines, players } = frame.scene;
     if (geometry.scale <= 0 || lines.length === 0) {
       return;
     }
@@ -55,7 +45,7 @@ export class LineRenderer {
         continue;
       }
 
-      const color = line.color ?? this.colorFor(line.kind, theme);
+      const color = line.color ?? frame.theme(LINE_COLOR_TOKENS[line.kind]);
       // thickness は既定の太さに対する倍率なので、画面と PNG のどちらの縮尺でも見え方が揃う。
       const width = this.widthFor(line.kind, metrics) * (line.thickness ?? DEFAULT_LINE_THICKNESS);
       const isBlock = line.kind === "block";
@@ -91,17 +81,6 @@ export class LineRenderer {
         this.drawArrowHead(ctx, path, color, metrics);
       }
       ctx.restore();
-    }
-  }
-
-  private colorFor(kind: LineKind, theme: LineTheme): string {
-    switch (kind) {
-      case "route":
-        return theme.routeColor;
-      case "block":
-        return theme.blockColor;
-      case "motion":
-        return theme.motionColor;
     }
   }
 

@@ -31,8 +31,9 @@ src/
 ## 守るべきパターン
 
 ### 1. インターフェース抽出
-`IPlayModel` `ICommand` `ICommandService` `IUndoRedoService` `IEditorController` `IIdFactory` 等を抽出し、実装を差し替え・モック可能にする。`browser` は具象でなく IF に依存する。
-描画の IF はまだない。全体見直しの T12 で `ILayerRenderer { draw(ctx, frame) }` を導入し、CanvasSurface に注入する。
+`IPlayModel` `ICommand` `ICommandService` `IUndoRedoService` `IEditorController` `IIdFactory` `ILayerRenderer` 等を抽出し、実装を差し替え・モック可能にする。`browser` は具象でなく IF に依存する。
+描画は `ILayerRenderer { draw(ctx, frame) }` の層に分け、CanvasSurface に注入する。図の層は `RenderFrame`（geometry、metrics、図、テーマ）だけを読み、オーバーレイは編集の層だけが `EditorRenderFrame` で受け取る。
+PNG の書き出しは図の層だけで描くので、選択の強調やハンドルは入らない。
 
 ### 2. Model–View 分離
 純粋な `PlayModel`（`common`）が状態を持ち、`onChange` / イベントを発火。View（`browser`）は購読して描画。View からモデルを直接書き換えない。

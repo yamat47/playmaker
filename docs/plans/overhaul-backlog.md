@@ -548,7 +548,8 @@ PR 単位で、依存順に並べる。
   - T15b2 線の編集（done）。作図、ハンドルのドラッグ、線の削除と値の編集、上限を `drawing.test.ts` と `lines.test.ts` に移し、line-commands、interaction、preview の単体テストを消した。打点を waypoint と終点に分ける関数の「点が無い」分岐は届かなかったので、確定のときに長さを測る前に分けるようにした。ツール切替で作図をやめるときの通知の順序は、ツール切替のテストと一緒に T15b3 で移す。
   - T15b3 履歴、ゾーン、隊形と通知（done）。Undo と Redo、ゾーンの切替、ツールの切替を `history.test.ts`、`field-zone.test.ts`、`tools.test.ts` に移し、隊形の読み込みを `loading.test.ts` に足した。editor-controller、undo-redo-service、command-service、edit-flow、field-commands、formation-commands、editor-notifier の単体テストを消した。どこからも呼ばれていなかった `getTool` は消した。T8-1 で足した履歴の通知（`onDidChangeHistory`）も消した。controller の編集はすべて batch の中で起き、batch の終わりに canUndo と canRedo を読み直すので、購読しても何も変わらなかった。controller を通さない編集の経路ができたら足し直す。apply の前に undo されたときの throw は、履歴が apply 済みのコマンドしか積まないので届かず、理由付きの `v8 ignore` にした。コマンドが throw したときに履歴を動かさない約束も、編集の操作からは届かないのでテストを持たない。
   - T15b4 残した単体テストの書き方（done）。T15-1、T15-2、T15-5〜T15-7 を片付けた。プリセットはプリセットごとの `it.each` にし、件数の固定をやめた。形状、種別、起点の選手の検査は、正規化しても変わらないことで確かめる（正規化はどれも弾くか既定に寄せるので、壊れていれば差が出る）。寸法は係数を写さず、幅と 1 ヤードの px のどちらに比例するかで確かめる。
-- T15c ブラウザテスト。Browser Mode を入れ、Docker イメージにも Chromium を入れる。Chromium は Dockerfile と CI の両方で、lockfile の playwright と同じ版の `playwright install --with-deps chromium` で入れる（2026-09-23 に決着）。Debian の chromium は版が playwright の想定とずれるので使わない。cloud 版のセッションでは `/opt/pw-browsers` の Chromium を環境変数で指す。
+- T15c ブラウザテスト（done）。Browser Mode を入れ、Docker イメージにも Chromium を入れる。Chromium は Dockerfile と CI の両方で、lockfile の playwright と同じ版の `playwright install --with-deps chromium` で入れる（2026-09-23 に決着）。Debian の chromium は版が playwright の想定とずれるので使わない。cloud 版のセッションでは `/opt/pw-browsers` の Chromium を環境変数で指す。
+  - 結果: `src/specs/` の 20 本で、構築とモード、ポインタ、ツールバー、キー、パネル、読み直し、PNG の書き出しの結線を確かめる。`make test-browser` と CI の `browser test` ジョブで動かし、`make check` には入れない。Dockerfile は lockfile から playwright の版を読む。Chromium は headless shell だけを入れる。cloud 版のセッションは cdn.playwright.dev に届かないので、SessionStart hook が `PLAYMAKER_CHROMIUM_PATH` で置いてある Chromium を指す。Docker イメージのビルドは cloud 版のセッションでは確かめられていない。
 
 controller の構造は分けない（2026-09-23 に決着）。ジェスチャの途中の状態は interaction.ts と preview.ts に出ていて、controller に残るのはツール、選択、コマンドの組み立てだけである。行数のほかに分ける理由が無い。
 
@@ -579,7 +580,7 @@ controller の構造は分けない（2026-09-23 に決着）。ジェスチャ�
 - 依存: T5-5、T9、T10（コードの形が固まってから）
 - 完了条件: 編集の振る舞いが仕様テストで確かめられ、実装に依存するテストが残っていない。Playmaker の結線をブラウザテストで確かめている。common 100% を維持する。
 - 規模: L（T15-0、T15a、T15b、T15c）
-- 進み具合: T15-0、T15a、T15b1〜T15b4、T15-8 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。残りは T15-9 と T15c。
+- 進み具合: T15-0、T15a、T15b1〜T15b4、T15c、T15-8 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。残りは T15-9。
 
 ---
 

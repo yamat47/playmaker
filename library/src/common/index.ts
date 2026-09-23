@@ -96,6 +96,7 @@ export {
   cloneLine,
   DEFAULT_LINE_INTERPOLATION,
   DEFAULT_LINE_KIND,
+  DEFAULT_LINE_THICKNESS,
   indexPlayersById,
   isLineInterpolation,
   isLineKind,

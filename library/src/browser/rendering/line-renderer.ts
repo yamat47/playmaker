@@ -5,6 +5,7 @@
 
 import {
   type CanvasPoint,
+  DEFAULT_LINE_THICKNESS,
   type FieldGeometry,
   type FieldMetrics,
   indexPlayersById,
@@ -56,7 +57,7 @@ export class LineRenderer {
 
       const color = line.color ?? this.colorFor(line.kind, theme);
       // thickness は既定の太さに対する倍率なので、画面と PNG のどちらの縮尺でも見え方が揃う。
-      const width = this.widthFor(line.kind, metrics) * (line.thickness ?? 1);
+      const width = this.widthFor(line.kind, metrics) * (line.thickness ?? DEFAULT_LINE_THICKNESS);
       const isBlock = line.kind === "block";
 
       ctx.save();

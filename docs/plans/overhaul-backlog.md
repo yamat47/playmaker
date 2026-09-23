@@ -294,6 +294,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T8-2 [should] コマンドの定型（apply 未実行の throw と、find→差し替え→previous 保持）が 8 回繰り返されている**
   - locations: library/src/common/commands/field-commands.ts:20-24, library/src/common/commands/line-commands.ts:47-52, library/src/common/commands/line-commands.ts:68-94, library/src/common/commands/line-commands.ts:110-126, library/src/common/commands/line-commands.ts:142-155, library/src/common/commands/player-commands.ts:47-52, library/src/common/commands/player-commands.ts:68-81, library/src/common/commands/player-commands.ts:97-121
   - 対応: `requireApplied` を置く。コマンドは UpdateLine と UpdatePlayer に統合し、SetLineWaypoints、SetLineEnd、MovePlayer は削除する。パッチの適用は `applyLinePatch` と `applyPlayerPatch` の純関数にする。
+  - 補足: T7 で null による「既定に戻す」を入れたので、UpdateLine と UpdatePlayer は今、Line と Player のフィールドを 1 つずつ書き写して組み立てている。フィールドを足すとパッチの適用で黙って落ちるので、applyLinePatch と applyPlayerPatch では `...current` を起点にし、「undefined は現状維持、null は消す」の規則を 1 か所にまとめる（EditorController の patchChangesAnything も同じ規則を持つ）。
 - [ ] **T8-3 [nit] ディレクトリ名 `undoRedo/` だけがキャメルケース**
   - locations: library/src/common/undoRedo/undo-redo-service.ts:1
   - 対応: commands/ に統合する。

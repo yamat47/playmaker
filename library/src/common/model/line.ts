@@ -37,6 +37,9 @@ export const DEFAULT_LINE_KIND: LineKind = "route";
 /** 補間未指定時の既定。直線が最も予測しやすい。 */
 export const DEFAULT_LINE_INTERPOLATION: LineInterpolation = "straight";
 
+/** 太さ未指定時の倍率。種別ごとの既定の太さでそのまま描く。 */
+export const DEFAULT_LINE_THICKNESS = 1;
+
 /**
  * 外部から受け取る線と、1 本あたりの waypoint の上限。実際のプレー図は線 20 本ほどで、
  * waypoint も数個なので実用は妨げない。壊れたデータや悪意のあるデータで
@@ -63,7 +66,7 @@ export interface Line {
   readonly interpolation: LineInterpolation;
   /** CSS カラー文字列（任意）。 */
   readonly color?: string;
-  /** 線幅（CSS px。任意・未指定はテーマ既定）。 */
+  /** 種別ごとの既定の太さに対する倍率（任意・未指定は DEFAULT_LINE_THICKNESS）。 */
   readonly thickness?: number;
 }
 

@@ -3,6 +3,7 @@
 // （DOM が小さく、編集はコマンド確定時に走るので作り直しても支障ない）。
 
 import {
+  DEFAULT_LINE_THICKNESS,
   Disposable,
   type IEditorController,
   isOneOf,
@@ -74,8 +75,7 @@ export class PropertyPanel extends Disposable {
         controller.updateSelectedLine({ interpolation: v }),
       );
       this.addLineColor(line.color, (v) => controller.updateSelectedLine({ color: v }));
-      // 太さは既定の太さに対する倍率。未指定の線は既定（倍率 1）で描いている。
-      this.addNumber("太さ", line.thickness ?? 1, (v) =>
+      this.addNumber("太さ", line.thickness ?? DEFAULT_LINE_THICKNESS, (v) =>
         controller.updateSelectedLine({ thickness: v }),
       );
       return;

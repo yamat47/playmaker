@@ -2,7 +2,13 @@
 // 座標規約（px→ヤード）は CanvasSurface に集約し、編集判断は common 側が持つ。
 // ここは「DOM イベントを意味のある操作に翻訳する」だけの薄い層（browser・最小限）。
 
-import { Disposable, type IEditorController, toDisposable } from "../../common/index.js";
+import {
+  Disposable,
+  type IEditorActions,
+  type IEditorGestures,
+  type IEditorScene,
+  toDisposable,
+} from "../../common/index.js";
 import type { CanvasSurface } from "../rendering/canvas-surface.js";
 
 // フォーム部品に来たキーは、その部品の標準動作（テキストの Undo など）に任せる。
@@ -19,7 +25,11 @@ export class PointerInput extends Disposable {
    * @param root ショートカットを受ける要素。ツールバーのボタンを押した直後でも
    *   Cmd+Z が効くよう、canvas ではなく UI 全体を包む要素に付ける。
    */
-  constructor(root: HTMLElement, surface: CanvasSurface, controller: IEditorController) {
+  constructor(
+    root: HTMLElement,
+    surface: CanvasSurface,
+    controller: IEditorGestures & IEditorActions & Pick<IEditorScene, "getViewState">,
+  ) {
     super();
     const canvas = surface.canvas;
     // Esc / Enter / Undo・Redo を受け取れるようフォーカス可能にする。

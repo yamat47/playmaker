@@ -5,7 +5,7 @@
 import {
   DEFAULT_LINE_THICKNESS,
   Disposable,
-  type IEditorController,
+  type IEditorUi,
   isOneOf,
   LINE_COLOR_PALETTE,
   LINE_INTERPOLATION_VALUES,
@@ -30,7 +30,7 @@ export class PropertyPanel extends Disposable {
   // （ドラッグ中の onDidChange 連打で DOM 破棄＝入力フォーカス喪失を防ぐ）。
   private lastKey: string | null = null;
 
-  constructor(parent: HTMLElement, controller: IEditorController) {
+  constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
     this.element = document.createElement("div");
     this.element.className = "playmaker-panel";
@@ -41,7 +41,7 @@ export class PropertyPanel extends Disposable {
     this.rebuild(controller);
   }
 
-  private rebuild(controller: IEditorController): void {
+  private rebuild(controller: IEditorUi): void {
     const player = controller.getSelectedPlayer();
     const line = controller.getSelectedLine();
     // 確定済みプロパティのスナップショットでキー化＝ドラッグの transient 連打では不変。

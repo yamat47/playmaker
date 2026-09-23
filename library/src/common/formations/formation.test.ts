@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
+import type { IIdFactory } from "../editing/id-factory.js";
 import type { Player } from "../model/player.js";
-import { type Formation, normalizeFormation } from "./formation.js";
+import { type Formation, instantiateFormation, normalizeFormation } from "./formation.js";
 
 describe("normalizeFormation: 復元不能", () => {
   it("オブジェクトでない / null は null", () => {
@@ -83,5 +84,41 @@ describe("Formation 型は typed なテンプレートとして組み立てら�
     const players: readonly Omit<Player, "id">[] = offense.players;
 
     expect(players).toHaveLength(1);
+  });
+});
+
+describe("instantiateFormation", () => {
+  const formation: Formation = {
+    id: "pair",
+    name: "2 人",
+    side: "offense",
+    players: [
+      { position: { lateralYard: 1, downfieldYard: 0 }, shape: "circle", label: "A" },
+      { position: { lateralYard: 2, downfieldYard: 0 }, shape: "square", label: "B" },
+    ],
+  };
+
+  it("テンプレートの順に id を振った選手を返す", () => {
+    let n = 0;
+    const ids: IIdFactory = { next: () => `id-${++n}` };
+
+    expect(instantiateFormation(formation, ids, [])).toEqual([
+      { ...formation.players[0], id: "id-1" },
+      { ...formation.players[1], id: "id-2" },
+    ]);
+  });
+
+  it("既にある id と、先に振った id の両方を採番で避ける", () => {
+    const seen: string[][] = [];
+    const ids: IIdFactory = {
+      next: (_, taken) => {
+        seen.push([...taken].sort());
+        return `id-${seen.length}`;
+      },
+    };
+
+    instantiateFormation(formation, ids, ["x"]);
+
+    expect(seen).toEqual([["x"], ["id-1", "x"]]);
   });
 });

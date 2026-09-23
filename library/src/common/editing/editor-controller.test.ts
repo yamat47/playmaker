@@ -56,7 +56,7 @@ describe("EditorController: 初期状態", () => {
       fieldZone: "middle",
       drawing: false,
     });
-    expect(controller.getOverlay()).toEqual({ waypointHandles: [] });
+    expect(controller.getOverlay()).toEqual({ kind: "none" });
     expect(controller.getSelectedPlayer()).toBeUndefined();
     expect(controller.getSelectedLine()).toBeUndefined();
   });
@@ -356,8 +356,9 @@ describe("EditorController: waypoint 編集", () => {
 
     controller.pointerDown({ lateralYard: 15, downfieldYard: 2 }); // waypoint 0 を掴む
     controller.pointerMove({ lateralYard: 16, downfieldYard: 4 });
-    const handles = controller.getOverlay().waypointHandles;
-    expect(handles).toEqual([{ lateralYard: 16, downfieldYard: 4 }]);
+    expect(controller.getOverlay()).toMatchObject({
+      waypointHandles: [{ lateralYard: 16, downfieldYard: 4 }],
+    });
     controller.pointerUp({ lateralYard: 16, downfieldYard: 4 });
 
     expect(model.findLine("l-1")?.waypoints).toEqual([{ lateralYard: 16, downfieldYard: 4 }]);
@@ -463,7 +464,7 @@ describe("EditorController: waypoint 編集", () => {
     controller.pointerMove({ lateralYard: 15, downfieldYard: 3 });
 
     // ドラッグ中の点だけ current、他 waypoint・他線は不変。
-    expect(controller.getOverlay().waypointHandles).toEqual([
+    expect(controller.getOverlay()).toHaveProperty("waypointHandles", [
       { lateralYard: 15, downfieldYard: 3 },
       { lateralYard: 18, downfieldYard: 6 },
     ]);
@@ -517,7 +518,10 @@ describe("EditorController: 終点（endpoint）編集", () => {
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // 終点ハンドルを掴む
     controller.pointerMove({ lateralYard: 28, downfieldYard: 8 });
     // overlay/プレビューに drag-endpoint が反映され、他線は不変。
-    expect(controller.getOverlay().endpointHandle).toEqual({ lateralYard: 28, downfieldYard: 8 });
+    expect(controller.getOverlay()).toHaveProperty("endpointHandle", {
+      lateralYard: 28,
+      downfieldYard: 8,
+    });
     const rendered = controller.getRenderModel();
     expect(rendered.lines.find((l) => l.id === "l-1")?.end).toEqual({
       lateralYard: 28,
@@ -794,7 +798,7 @@ describe("EditorController: getOverlay / getSelected*", () => {
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
 
-    expect(controller.getOverlay()).toEqual({ selectedPlayerId: "p-a", waypointHandles: [] });
+    expect(controller.getOverlay()).toEqual({ kind: "player", playerId: "p-a" });
     expect(controller.getSelectedPlayer()).toMatchObject({ id: "p-a" });
     expect(controller.getSelectedLine()).toBeUndefined();
   });
@@ -804,13 +808,14 @@ describe("EditorController: getOverlay / getSelected*", () => {
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1
 
     expect(controller.getOverlay()).toEqual({
+      kind: "line",
       waypointHandles: [{ lateralYard: 15, downfieldYard: 2 }],
       endpointHandle: { lateralYard: 25, downfieldYard: 5 },
     });
     expect(controller.getSelectedLine()).toMatchObject({ id: "l-1" });
 
     commands.execute(new RemoveLineCommand("l-1")); // stale 選択
-    expect(controller.getOverlay()).toEqual({ waypointHandles: [] });
+    expect(controller.getOverlay()).toEqual({ kind: "none" });
     expect(controller.getSelectedLine()).toBeUndefined();
   });
 });

@@ -5,7 +5,6 @@ import {
   committableDraft,
   dragPosition,
   MAX_DRAFT_POINTS,
-  splitDraftPoints,
   startDrag,
   startDrawing,
 } from "./interaction.js";
@@ -33,19 +32,6 @@ describe("startDrag と dragPosition", () => {
     });
 
     expect(drag.current).toEqual(origin);
-  });
-});
-
-describe("splitDraftPoints", () => {
-  it("最後の点を終点、残りを waypoint に分ける", () => {
-    const a = { lateralYard: 1, downfieldYard: 1 };
-    const b = { lateralYard: 2, downfieldYard: 2 };
-
-    expect(splitDraftPoints([a, b])).toEqual({ waypoints: [a], end: b });
-  });
-
-  it("点が無ければ undefined", () => {
-    expect(splitDraftPoints([])).toBeUndefined();
   });
 });
 

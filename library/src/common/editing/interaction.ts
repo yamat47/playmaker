@@ -108,14 +108,6 @@ export function dragPatch(
   }
 }
 
-/** 打った点を、確定する線の waypoint と終点に分ける。点が無ければ undefined。 */
-export function splitDraftPoints(
-  points: readonly FieldPosition[],
-): { readonly waypoints: readonly FieldPosition[]; readonly end: FieldPosition } | undefined {
-  const end = points.at(-1);
-  return end === undefined ? undefined : { waypoints: points.slice(0, -1), end };
-}
-
 /** 線の起点は必ず選手なので、選手から作図を始める。 */
 export function startDrawing(player: Player): DrawInteraction {
   return {
@@ -148,11 +140,17 @@ export function committableDraft(
   draw: DrawInteraction,
   anchor: FieldPosition,
 ): { readonly waypoints: readonly FieldPosition[]; readonly end: FieldPosition } | undefined {
+  const end = draw.points.at(-1);
+  if (end === undefined) {
+    return undefined;
+  }
   let length = 0;
   for (const [a, b] of segments([anchor, ...draw.points])) {
     length += pointDistance(a, b);
   }
-  return length <= LINE_POINT_MERGE_RADIUS_YARDS ? undefined : splitDraftPoints(draw.points);
+  return length <= LINE_POINT_MERGE_RADIUS_YARDS
+    ? undefined
+    : { waypoints: draw.points.slice(0, -1), end };
 }
 
 /** 作図から線を組み立てる。プレビューと確定で同じ既定値を使う。 */

@@ -9,7 +9,6 @@ import {
   dragPatch,
   type Interaction,
   MAX_DRAFT_POINTS,
-  splitDraftPoints,
 } from "./interaction.js";
 
 /** 作図中の線の id。Model には入らず、プレビューの中だけで使う。 */
@@ -35,8 +34,14 @@ function applyDragPatch(data: SceneData, drop: DragPatch): SceneData {
 
 function draftLine(draw: DrawInteraction): Line {
   // 打点が上限に達したら、確定される線と同じく最後の打点を終点として描く。
-  const full = draw.points.length >= MAX_DRAFT_POINTS ? splitDraftPoints(draw.points) : undefined;
-  return draftToLine(draw, DRAFT_LINE_ID, full ?? { waypoints: draw.points, end: draw.cursor });
+  const end = draw.points.length >= MAX_DRAFT_POINTS ? draw.points.at(-1) : undefined;
+  return draftToLine(
+    draw,
+    DRAFT_LINE_ID,
+    end === undefined
+      ? { waypoints: draw.points, end: draw.cursor }
+      : { waypoints: draw.points.slice(0, -1), end },
+  );
 }
 
 /** 確定済みの図に、ドラッグや作図の途中の状態を重ねる。data は書き換えない。 */

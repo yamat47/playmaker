@@ -10,3 +10,11 @@ export interface ICommand {
   apply(model: IPlayModel): void;
   undo(model: IPlayModel): void;
 }
+
+/** apply で捕まえた、戻すための値を取り出す。apply より先に undo を呼ぶのは呼び出し側の誤り。 */
+export function requireApplied<T>(value: T | undefined, command: string): T {
+  if (value === undefined) {
+    throw new Error(`${command}.undo: apply 未実行`);
+  }
+  return value;
+}

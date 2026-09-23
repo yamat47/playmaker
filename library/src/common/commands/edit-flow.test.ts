@@ -5,14 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 import { must } from "../../test-support/must.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
-import { UndoRedoService } from "../undoRedo/undo-redo-service.js";
 import { CommandService } from "./command-service.js";
 import { AddLineCommand } from "./line-commands.js";
 import { AddPlayerCommand, RemovePlayerCommand } from "./player-commands.js";
+import { UndoRedoService } from "./undo-redo-service.js";
 
 function wire(initial?: PlayData) {
   const model = new PlayModel(initial);
-  const undoRedo = new UndoRedoService(model);
+  const undoRedo = new UndoRedoService();
   const commands = new CommandService(model, undoRedo);
   const onChange = vi.fn<(data: PlayData) => void>();
   model.onDidChange(onChange);
@@ -54,7 +54,7 @@ describe("編集フロー統合", () => {
         },
       ],
     };
-    const { commands, undoRedo, onChange } = wire(seed);
+    const { commands, onChange } = wire(seed);
 
     commands.execute(new RemovePlayerCommand("wr"));
     expect(onChange).toHaveBeenCalledTimes(1); // 選手+線の除去でも 1 回
@@ -65,11 +65,11 @@ describe("編集フロー統合", () => {
       lines: [],
     });
 
-    undoRedo.undo();
+    commands.undo();
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(must(onChange.mock.lastCall)[0]).toEqual(seed);
 
-    undoRedo.redo();
+    commands.redo();
     expect(onChange).toHaveBeenCalledTimes(3);
     expect(must(onChange.mock.lastCall)[0].lines).toEqual([]);
   });
@@ -95,20 +95,20 @@ describe("編集フロー統合", () => {
       }),
     );
 
-    undoRedo.undo(); // 線を取り消し
+    commands.undo(); // 線を取り消し
     expect(model.getData().lines).toEqual([]);
     expect(model.getData().players.map((p) => p.id)).toEqual(["p"]);
-    undoRedo.undo(); // 選手を取り消し
+    commands.undo(); // 選手を取り消し
     expect(model.getData().players).toEqual([]);
     expect(undoRedo.canUndo).toBe(false);
     expect(undoRedo.canRedo).toBe(true);
 
-    undoRedo.redo();
-    undoRedo.redo();
+    commands.redo();
+    commands.redo();
     expect(model.getData().lines.map((l) => l.id)).toEqual(["l"]);
 
     // 新規編集で redo 履歴が破棄される
-    undoRedo.undo(); // 線を取り消し → redo スタックに AddLineCommand が乗る
+    commands.undo(); // 線を取り消し → redo スタックに AddLineCommand が乗る
     expect(undoRedo.canRedo).toBe(true);
     commands.execute(
       new AddPlayerCommand({

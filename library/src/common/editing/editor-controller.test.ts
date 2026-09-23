@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { must } from "../../test-support/must.js";
 import { CommandService } from "../commands/command-service.js";
-import { MovePlayerCommand } from "../commands/player-commands.js";
+import { UpdatePlayerCommand } from "../commands/player-commands.js";
+import { UndoRedoService } from "../commands/undo-redo-service.js";
 import type { Formation } from "../formations/formation.js";
 import { RemoveLineCommand, RemovePlayerCommand } from "../index.js";
+import { MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
-import { UndoRedoService } from "../undoRedo/undo-redo-service.js";
+import { MAX_PLAYERS, type Player } from "../model/player.js";
 import { EditorController } from "./editor-controller.js";
 import { IdFactory } from "./id-factory.js";
 
@@ -32,10 +35,10 @@ function initialData(): PlayData {
 
 function setup(data: PlayData = initialData()) {
   const model = new PlayModel(data);
-  const undoRedo = new UndoRedoService(model);
+  const undoRedo = new UndoRedoService();
   const commands = new CommandService(model, undoRedo);
   const ids = new IdFactory();
-  const controller = new EditorController(model, commands, undoRedo, ids);
+  const controller = new EditorController(model, commands, ids);
   const changes = vi.fn();
   controller.onDidChange(changes);
   return { model, undoRedo, commands, ids, controller, changes };
@@ -264,7 +267,7 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
     expect(controller.getSelectedPlayer()).toMatchObject({ id: "p-a" });
   });
 
-  it("ドラッグするとプレビューが追従し、離すと MovePlayerCommand を実行する", () => {
+  it("ドラッグするとプレビューが追従し、離すと選手を移動する", () => {
     const { controller, model } = setup();
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a（offset 0）
@@ -348,7 +351,7 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
 });
 
 describe("EditorController: waypoint 編集", () => {
-  it("選択中の線の waypoint をドラッグして SetLineWaypointsCommand を実行する", () => {
+  it("選択中の線の waypoint をドラッグすると、その waypoint を動かす", () => {
     const { controller, model } = setup();
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 を選択（終点側）
     expect(controller.getSelection()).toEqual({ kind: "line", id: "l-1" });
@@ -486,7 +489,7 @@ describe("EditorController: waypoint 編集", () => {
 
 describe("EditorController: 終点（endpoint）編集", () => {
   it("終点を掴んでドラッグし、end だけ更新・他線/waypoint 不変・undo 可", () => {
-    const { controller, model, undoRedo } = setup({
+    const { controller, model, commands } = setup({
       version: 2,
       field: { zone: "middle", losYard: 50 },
       players: [
@@ -531,7 +534,7 @@ describe("EditorController: 終点（endpoint）編集", () => {
     expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 28, downfieldYard: 8 });
     expect(model.findLine("l-1")?.waypoints).toEqual([{ lateralYard: 15, downfieldYard: 2 }]);
 
-    undoRedo.undo();
+    commands.undo();
     expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 25, downfieldYard: 5 });
   });
 
@@ -916,7 +919,9 @@ describe("EditorController: 長さ 0 の線を作らない", () => {
     controller.setTool("draw-line");
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
     controller.pointerDown({ lateralYard: 14, downfieldYard: 0 });
-    commands.execute(new MovePlayerCommand("p-a", { lateralYard: 14, downfieldYard: 0 }));
+    commands.execute(
+      new UpdatePlayerCommand("p-a", { position: { lateralYard: 14, downfieldYard: 0 } }),
+    );
 
     controller.commitLine();
 
@@ -1134,5 +1139,72 @@ describe("EditorController: 値が変わらないパッチ", () => {
     controller.updateSelectedLine({ kind: "route", interpolation: "bezier" });
 
     expect(model.findLine("l-1")?.interpolation).toBe("bezier");
+  });
+});
+
+describe("EditorController: 件数の上限", () => {
+  function fullOfPlayers(): PlayData {
+    const players: Player[] = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
+      id: `p-${i}`,
+      position: { lateralYard: 10, downfieldYard: 0 },
+      shape: "circle",
+      label: "",
+    }));
+    return { ...initialData(), players, lines: [] };
+  }
+
+  it("選手が上限の人数に達していると、選手の追加ツールで押しても何も足さない", () => {
+    const { controller, model, commands } = setup(fullOfPlayers());
+    controller.setTool("add-player");
+
+    controller.pointerDown({ lateralYard: 30, downfieldYard: -5 });
+
+    expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS);
+    expect(commands.canUndo).toBe(false);
+  });
+
+  it("読むと上限の人数を超えるフォーメーションは、入る分だけ置くこともせず何もしない", () => {
+    const data = fullOfPlayers();
+    const { controller, model, commands } = setup({ ...data, players: data.players.slice(1) });
+
+    controller.loadFormation({
+      id: "two",
+      name: "2 人",
+      side: "offense",
+      players: [
+        { position: { lateralYard: 30, downfieldYard: -5 }, shape: "circle", label: "A" },
+        { position: { lateralYard: 32, downfieldYard: -5 }, shape: "circle", label: "B" },
+      ],
+    });
+
+    expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS - 1);
+    expect(commands.canUndo).toBe(false);
+  });
+
+  it("線が上限の本数に達していると、選手から作図を始められない", () => {
+    const base = initialData();
+    const template = must(base.lines[0]);
+    const lines = Array.from({ length: MAX_LINES }, (_, i) => ({ ...template, id: `l-${i}` }));
+    const { controller } = setup({ ...base, lines });
+    controller.setTool("draw-line");
+
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a
+
+    expect(controller.getViewState().drawing).toBe(false);
+  });
+
+  it("作図中は waypoint と終点を合わせた上限の点数より先の打点を無視する", () => {
+    const { controller, model } = setup();
+    controller.setTool("draw-line");
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a
+
+    for (let k = 0; k < MAX_WAYPOINTS_PER_LINE + 5; k++) {
+      controller.pointerDown({ lateralYard: k % 2 === 0 ? 20 : 30, downfieldYard: 5 });
+    }
+    controller.commitLine();
+
+    const added = model.getSnapshot().lines[1];
+    expect(added?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
+    expect(added?.end).toEqual({ lateralYard: 20, downfieldYard: 5 });
   });
 });

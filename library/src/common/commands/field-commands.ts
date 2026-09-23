@@ -2,7 +2,7 @@
 
 import type { FieldZone } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
-import type { ICommand } from "./command.js";
+import { type ICommand, requireApplied } from "./command.js";
 
 /** フィールドゾーンを切り替える。undo は切替前ゾーンへ差し戻す。 */
 export class SetFieldZoneCommand implements ICommand {
@@ -21,9 +21,6 @@ export class SetFieldZoneCommand implements ICommand {
   }
 
   undo(model: IPlayModel): void {
-    if (this.previous === undefined) {
-      throw new Error("SetFieldZoneCommand.undo: apply 未実行");
-    }
-    model.setFieldZone(this.previous);
+    model.setFieldZone(requireApplied(this.previous, "SetFieldZoneCommand"));
   }
 }

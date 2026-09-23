@@ -2,16 +2,10 @@
 // 各コマンドは apply 時に逆操作用の状態を自分で捕捉する（redo でも再捕捉され整合する）。
 
 import type { IPlayModel, PlayerRemoval } from "../model/play-model.js";
-import type { FieldPosition, Player, PlayerShape } from "../model/player.js";
+import type { Player } from "../model/player.js";
 import { clonePlayer } from "../model/player.js";
-import type { ICommand } from "./command.js";
-
-/** 指定したキーだけを差し替える。色は null で値を消し、既定に戻す。 */
-export interface PlayerPatch {
-  readonly label?: string;
-  readonly shape?: PlayerShape;
-  readonly color?: string | null;
-}
+import { type ICommand, requireApplied } from "./command.js";
+import { applyPlayerPatch, type PlayerPatch } from "./patch.js";
 
 /** 選手を 1 人追加する。undo は同 id の削除。 */
 export class AddPlayerCommand implements ICommand {
@@ -48,44 +42,13 @@ export class RemovePlayerCommand implements ICommand {
   }
 
   undo(model: IPlayModel): void {
-    if (this.removal === undefined) {
-      throw new Error("RemovePlayerCommand.undo: apply 未実行");
-    }
-    model.restorePlayer(this.removal);
+    model.restorePlayer(requireApplied(this.removal, "RemovePlayerCommand"));
   }
 }
 
-/** 選手を移動する（位置のみ変更）。undo は移動前の選手へ差し戻す。 */
-export class MovePlayerCommand implements ICommand {
-  readonly label = "選手の移動";
-  private readonly playerId: string;
-  private readonly to: FieldPosition;
-  private previous: Player | undefined;
-
-  constructor(playerId: string, to: FieldPosition) {
-    this.playerId = playerId;
-    this.to = { ...to };
-  }
-
-  apply(model: IPlayModel): void {
-    const current = model.findPlayer(this.playerId);
-    if (current === undefined) {
-      throw new Error(`MovePlayerCommand: unknown player id "${this.playerId}"`);
-    }
-    this.previous = model.updatePlayer({ ...current, position: { ...this.to } });
-  }
-
-  undo(model: IPlayModel): void {
-    if (this.previous === undefined) {
-      throw new Error("MovePlayerCommand.undo: apply 未実行");
-    }
-    model.updatePlayer(this.previous);
-  }
-}
-
-/** 選手のプロパティ（ラベル・形状・色）を編集する。undo は編集前へ差し戻す。 */
+/** 選手の位置やプロパティを編集する。undo は編集前の選手へ差し戻す。 */
 export class UpdatePlayerCommand implements ICommand {
-  readonly label = "選手プロパティの編集";
+  readonly label = "選手の編集";
   private readonly playerId: string;
   private readonly patch: PlayerPatch;
   private previous: Player | undefined;
@@ -100,22 +63,10 @@ export class UpdatePlayerCommand implements ICommand {
     if (current === undefined) {
       throw new Error(`UpdatePlayerCommand: unknown player id "${this.playerId}"`);
     }
-    // undefined は現状維持、null は値を消して既定に戻す。
-    const { label, shape, color } = this.patch;
-    const nextColor = color === undefined ? current.color : (color ?? undefined);
-    this.previous = model.updatePlayer({
-      id: current.id,
-      position: current.position,
-      shape: shape ?? current.shape,
-      label: label ?? current.label,
-      ...(nextColor === undefined ? {} : { color: nextColor }),
-    });
+    this.previous = model.updatePlayer(applyPlayerPatch(current, this.patch));
   }
 
   undo(model: IPlayModel): void {
-    if (this.previous === undefined) {
-      throw new Error("UpdatePlayerCommand.undo: apply 未実行");
-    }
-    model.updatePlayer(this.previous);
+    model.updatePlayer(requireApplied(this.previous, "UpdatePlayerCommand"));
   }
 }

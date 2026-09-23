@@ -3,12 +3,7 @@ import { line, player } from "../../test-support/fixtures.js";
 import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
-import {
-  AddPlayerCommand,
-  MovePlayerCommand,
-  RemovePlayerCommand,
-  UpdatePlayerCommand,
-} from "./player-commands.js";
+import { AddPlayerCommand, RemovePlayerCommand, UpdatePlayerCommand } from "./player-commands.js";
 
 function seed(): PlayData {
   return {
@@ -60,29 +55,19 @@ describe("RemovePlayerCommand", () => {
   });
 });
 
-describe("MovePlayerCommand", () => {
-  it("apply で位置変更、undo で元位置へ戻す", () => {
+describe("UpdatePlayerCommand の移動", () => {
+  it("位置だけを差し替え、undo で元の位置へ戻す", () => {
     const model = new PlayModel(seed());
-    const dest = { lateralYard: 20, downfieldYard: 70 };
-    const cmd = new MovePlayerCommand("a", dest);
-    dest.lateralYard = 999; // 構築後の改変は影響しない
+    const cmd = new UpdatePlayerCommand("a", { position: { lateralYard: 20, downfieldYard: 70 } });
 
     cmd.apply(model);
-    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 20, downfieldYard: 70 });
+    expect(model.findPlayer("a")).toEqual({
+      ...player("a"),
+      position: { lateralYard: 20, downfieldYard: 70 },
+    });
 
     cmd.undo(model);
-    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 5, downfieldYard: 50 });
-  });
-
-  it("未知 id の apply と apply 前 undo は throw する", () => {
-    const model = new PlayModel(seed());
-
-    expect(() => new MovePlayerCommand("ghost", player("x").position).apply(model)).toThrow(
-      /unknown player id "ghost"/,
-    );
-    expect(() => new MovePlayerCommand("a", player("a").position).undo(model)).toThrow(
-      /apply 未実行/,
-    );
+    expect(model.findPlayer("a")).toEqual(player("a"));
   });
 });
 

@@ -12,18 +12,10 @@ import type { ICommand } from "../commands/command.js";
 import type { ICommandService } from "../commands/command-service.js";
 import { SetFieldZoneCommand } from "../commands/field-commands.js";
 import { LoadFormationCommand } from "../commands/formation-commands.js";
-import {
-  AddLineCommand,
-  type LinePatch,
-  RemoveLineCommand,
-  SetLineEndCommand,
-  SetLineWaypointsCommand,
-  UpdateLineCommand,
-} from "../commands/line-commands.js";
+import { AddLineCommand, RemoveLineCommand, UpdateLineCommand } from "../commands/line-commands.js";
+import { type LinePatch, type PlayerPatch, patchChangesAnything } from "../commands/patch.js";
 import {
   AddPlayerCommand,
-  MovePlayerCommand,
-  type PlayerPatch,
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "../commands/player-commands.js";
@@ -32,11 +24,21 @@ import type { Formation } from "../formations/formation.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { distanceToSegment, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
 import { Disposable } from "../lifecycle/disposable.js";
-import { DEFAULT_LINE_INTERPOLATION, DEFAULT_LINE_KIND, type Line } from "../model/line.js";
+import {
+  DEFAULT_LINE_INTERPOLATION,
+  DEFAULT_LINE_KIND,
+  type Line,
+  MAX_LINES,
+  MAX_WAYPOINTS_PER_LINE,
+} from "../model/line.js";
 import type { FieldZone, PlayData } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
-import { DEFAULT_PLAYER_SHAPE, type FieldPosition, type Player } from "../model/player.js";
-import type { IUndoRedoService } from "../undoRedo/undo-redo-service.js";
+import {
+  DEFAULT_PLAYER_SHAPE,
+  type FieldPosition,
+  MAX_PLAYERS,
+  type Player,
+} from "../model/player.js";
 import type { IIdFactory } from "./id-factory.js";
 
 /** 編集ツール（3 種で PRD 5.4 の操作を賄う）。 */
@@ -184,18 +186,6 @@ function polylineLengthYards(start: FieldPosition, points: readonly FieldPositio
   return length;
 }
 
-// パッチの指定キーのうち、現在値と違うものが 1 つでもあるか。
-function patchChangesAnything<T>(
-  current: T,
-  patch: { readonly [K in keyof T]?: T[K] | null },
-): boolean {
-  return (Object.keys(patch) as (keyof T)[]).some((key) => {
-    const value = patch[key];
-    // null は値を消して既定に戻す指定なので、値のない現状とは同じとみなす。
-    return value !== undefined && (value ?? undefined) !== current[key];
-  });
-}
-
 function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
   if (a === null || b === null) {
     return a === b;
@@ -206,7 +196,6 @@ function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
 export class EditorController extends Disposable implements IEditorController {
   private readonly model: IPlayModel;
   private readonly commands: ICommandService;
-  private readonly undoRedo: IUndoRedoService;
   private readonly ids: IIdFactory;
 
   private readonly _onDidChange = this._register(new Emitter<void>());
@@ -222,16 +211,10 @@ export class EditorController extends Disposable implements IEditorController {
   private modelChangedWhileEditing = false;
 
   // 依存はすべて手動コンストラクタ注入（重い DI 機構は持たない＝MVP・依存最小）。
-  constructor(
-    model: IPlayModel,
-    commands: ICommandService,
-    undoRedo: IUndoRedoService,
-    ids: IIdFactory,
-  ) {
+  constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
     super();
     this.model = model;
     this.commands = commands;
-    this.undoRedo = undoRedo;
     this.ids = ids;
     // Model 変更（自分のコマンド・undo/redo・カスケード削除）のたびに再描画を促す。
     this._register(
@@ -261,8 +244,8 @@ export class EditorController extends Disposable implements IEditorController {
     return {
       tool: this.tool,
       selection: this.getSelection(),
-      canUndo: this.undoRedo.canUndo,
-      canRedo: this.undoRedo.canRedo,
+      canUndo: this.commands.canUndo,
+      canRedo: this.commands.canRedo,
       fieldZone: this.model.getFieldZone(),
       drawing: this.interaction?.type === "draw-line",
     };
@@ -420,7 +403,7 @@ export class EditorController extends Disposable implements IEditorController {
         this._onDidChange.fire();
         return;
       }
-      this.execute(new MovePlayerCommand(i.playerId, final));
+      this.execute(new UpdatePlayerCommand(i.playerId, { position: final }));
       return;
     }
     const line = this.model.findLine(i.lineId);
@@ -429,11 +412,11 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     if (i.type === "drag-endpoint") {
-      this.execute(new SetLineEndCommand(i.lineId, final));
+      this.execute(new UpdateLineCommand(i.lineId, { end: final }));
       return;
     }
     const waypoints = line.waypoints.map((w, idx) => (idx === i.index ? final : w));
-    this.execute(new SetLineWaypointsCommand(i.lineId, waypoints));
+    this.execute(new UpdateLineCommand(i.lineId, { waypoints }));
   }
 
   cancelInteraction(): void {
@@ -528,18 +511,20 @@ export class EditorController extends Disposable implements IEditorController {
    * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
    * 既存選手・線は保持し追記する。id は IdFactory で採番し既存と衝突させない
    * （バッチ内重複も taken に積んで回避＝採番直後の再衝突を防ぐ）。
-   * 配置可能な選手が無ければ no-op。1 コマンド = onChange 1 回。
+   * 配置可能な選手が無いときと、読むと MAX_PLAYERS 人を超えるときは no-op。
+   * 入る分だけ置くと隊形が欠けるので、一部だけは読まない。1 コマンド = onChange 1 回。
    */
   loadFormation(formation: Formation): void {
+    const count = formation.players.length;
+    if (count === 0 || this.model.getSnapshot().players.length + count > MAX_PLAYERS) {
+      return;
+    }
     const taken = this.playerIds();
     const players: Player[] = formation.players.map((fp) => {
       const id = this.ids.next("player", taken);
       taken.add(id);
       return { ...fp, id };
     });
-    if (players.length === 0) {
-      return;
-    }
     this.cancelInteraction();
     this.execute(new LoadFormationCommand(players));
     // 読込で局所の選択は意味を失う＝解除（stale な選択を残さない）。
@@ -561,12 +546,12 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.cancelInteraction();
-    this.runEdit(() => this.undoRedo.undo());
+    this.runEdit(() => this.commands.undo());
   }
 
   redo(): void {
     this.cancelInteraction();
-    this.runEdit(() => this.undoRedo.redo());
+    this.runEdit(() => this.commands.redo());
   }
 
   // 内部
@@ -661,10 +646,11 @@ export class EditorController extends Disposable implements IEditorController {
     const i = this.interaction;
     if (i?.type === "draw-line") {
       // 作図中: クリックごとに中継点を打つ（最後の点が終点になる）。直前点と
-      // ほぼ同座標なら打点せずカーソルだけ進める。
+      // ほぼ同座標なら打点せずカーソルだけ進める。終点の 1 点を足した数が上限なので、
+      // それ以上のクリックも打点しない。
       const point = this.clampToField(pos);
       const last = i.points[i.points.length - 1] ?? i.start;
-      if (!this.nearPoint(last, point)) {
+      if (!this.nearPoint(last, point) && i.points.length <= MAX_WAYPOINTS_PER_LINE) {
         i.points.push(point);
       }
       i.cursor = { ...point };
@@ -672,8 +658,10 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     // 起点は必ず選手（Model の不変条件）。選手以外で始めようとしたら無視する。
-    const player = hitTestPlayer(this.model.getSnapshot().players, pos);
-    if (player === undefined) {
+    // 線が上限の本数に達していれば、確定できない作図は始めない。
+    const data = this.model.getSnapshot();
+    const player = hitTestPlayer(data.players, pos);
+    if (player === undefined || data.lines.length >= MAX_LINES) {
       return;
     }
     this.interaction = {
@@ -687,6 +675,9 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private addPlayerAt(pos: FieldPosition): void {
+    if (this.model.getSnapshot().players.length >= MAX_PLAYERS) {
+      return;
+    }
     const taken = this.playerIds();
     const id = this.ids.next("player", taken);
     const player: Player = {

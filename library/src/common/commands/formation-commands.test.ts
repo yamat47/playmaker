@@ -4,9 +4,9 @@ import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import type { Player } from "../model/player.js";
-import { UndoRedoService } from "../undoRedo/undo-redo-service.js";
 import { CommandService } from "./command-service.js";
 import { LoadFormationCommand } from "./formation-commands.js";
+import { UndoRedoService } from "./undo-redo-service.js";
 
 function formationPlayers(): Player[] {
   return [
@@ -35,7 +35,7 @@ describe("LoadFormationCommand", () => {
       ],
       lines: [],
     });
-    const undoRedo = new UndoRedoService(model);
+    const undoRedo = new UndoRedoService();
     const commands = new CommandService(model, undoRedo);
     const onChange = vi.fn<(data: PlayData) => void>();
     model.onDidChange(onChange);
@@ -45,11 +45,11 @@ describe("LoadFormationCommand", () => {
     expect(model.getData().players.map((p) => p.id)).toEqual(["e-1", "f-1", "f-2"]);
     expect(model.findPlayer("f-2")?.color).toBe("#c62828");
 
-    undoRedo.undo();
+    commands.undo();
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(model.getData().players.map((p) => p.id)).toEqual(["e-1"]);
 
-    undoRedo.redo();
+    commands.redo();
     expect(onChange).toHaveBeenCalledTimes(3);
     expect(model.getData().players.map((p) => p.id)).toEqual(["e-1", "f-1", "f-2"]);
   });

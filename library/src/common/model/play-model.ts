@@ -4,10 +4,10 @@
 
 import { Emitter, type Event } from "../event/emitter.js";
 import { Disposable } from "../lifecycle/disposable.js";
-import type { Line } from "./line.js";
+import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
 import { migratePlayData } from "./migration.js";
 import { clonePlayData, type FieldZone, fieldStateForZone, type PlayData } from "./play-data.js";
-import type { Player } from "./player.js";
+import { MAX_PLAYERS, type Player } from "./player.js";
 
 /**
  * 選手 1 人の削除を後から正確に巻き戻すためのメメント。
@@ -48,28 +48,34 @@ export interface IPlayModel {
   findLine(id: string): Line | undefined;
   /** LOS もゾーンの既定の位置へ移す。選手と線は LOS からの位置なので、図ごと一緒に動く。 */
   setFieldZone(zone: FieldZone): void;
-  /** 既にある id の選手を渡すと throw する（id は選択と編集の対象を決める唯一の鍵）。 */
+  /**
+   * 既にある id の選手を渡すと throw する（id は選択と編集の対象を決める唯一の鍵）。
+   * MAX_PLAYERS 人を超える追加も throw する。
+   */
   addPlayer(player: Player): void;
   /**
    * 複数選手を一括追加し、変更は最後に 1 回だけ発火する（1 操作 = 1 onChange の契約を一括時も保つ）。
-   * 既存と重複する id があれば throw する。
+   * 既存と重複する id があるか、MAX_PLAYERS 人を超えるなら何も足さずに throw する。
    */
   addPlayers(players: readonly Player[]): void;
   /** 選手を削除し、起点がその選手の線もカスケード除去する。巻き戻し用メメントを返す。 */
   removePlayer(id: string): PlayerRemoval;
   /** 複数選手を一括削除し（各々従属線をカスケード）、変更を 1 回だけ発火する。 */
   removePlayers(ids: readonly string[]): PlayerRemoval[];
-  /** removePlayer の逆操作。選手と従属線を元の並びへ戻す。同じ id の選手が既にあれば throw する。 */
+  /**
+   * removePlayer の逆操作。選手と従属線を元の並びへ戻す。
+   * 同じ id の選手が既にあるか、戻すと件数の上限を超えるなら throw する。
+   */
   restorePlayer(removal: PlayerRemoval): void;
   /** 同 id の選手を差し替え、差し替え前の選手を返す。 */
   updatePlayer(player: Player): Player;
-  /** 既にある id の線を渡すと throw する。 */
+  /** 既にある id の線、MAX_LINES 本を超える追加、waypoint の多すぎる線は throw する。 */
   addLine(line: Line): void;
-  /** 既にある id の線を渡すと throw する。 */
+  /** addLine と同じ条件で throw する。 */
   insertLine(line: Line, index: number): void;
   /** 線を削除し、巻き戻し用メメントを返す。 */
   removeLine(id: string): LineRemoval;
-  /** 同 id の線を差し替え、差し替え前の線を返す。 */
+  /** 同 id の線を差し替え、差し替え前の線を返す。waypoint の多すぎる線は throw する。 */
   updateLine(line: Line): Line;
 }
 
@@ -86,6 +92,23 @@ function insertAt<T>(items: readonly T[], index: number, item: T): T[] {
 function assertNewId(items: readonly { id: string }[], id: string, message: string): void {
   if (items.some((item) => item.id === id)) {
     throw new Error(`${message} "${id}"`);
+  }
+}
+
+// 件数の上限は外部データを読むときにも掛けている。編集で超えさせると、getData で
+// 書き出した図を読み戻したときに黙って切り詰められ、描画の負荷にも歯止めがなくなる。
+function assertWithinLimits(players: number, lines: number, message: string): void {
+  if (players > MAX_PLAYERS) {
+    throw new Error(`${message}: players exceed MAX_PLAYERS (${MAX_PLAYERS})`);
+  }
+  if (lines > MAX_LINES) {
+    throw new Error(`${message}: lines exceed MAX_LINES (${MAX_LINES})`);
+  }
+}
+
+function assertWaypointLimit(line: Line, message: string): void {
+  if (line.waypoints.length > MAX_WAYPOINTS_PER_LINE) {
+    throw new Error(`${message}: line "${line.id}" exceeds MAX_WAYPOINTS_PER_LINE waypoints`);
   }
 }
 
@@ -145,6 +168,11 @@ export class PlayModel extends Disposable implements IPlayModel {
   addPlayers(players: readonly Player[]): void {
     // 1 人でも重複があれば何も足さずに throw する。途中まで足してから投げると、
     // 通知も履歴も伴わない変更が残る。
+    assertWithinLimits(
+      this.state.players.length + players.length,
+      this.state.lines.length,
+      "PlayModel.addPlayers",
+    );
     const taken = new Set(this.state.players.map((p) => p.id));
     for (const player of players) {
       if (taken.has(player.id)) {
@@ -187,6 +215,12 @@ export class PlayModel extends Disposable implements IPlayModel {
   }
 
   removePlayers(ids: readonly string[]): PlayerRemoval[] {
+    // 1 件ずつ消しながら未知の id で throw すると、通知も履歴もない削除が途中まで残る。
+    // 先に全件の実在を確かめ、どれか欠けていれば何も消さない。
+    const missing = ids.find((id) => !this.hasPlayer(id));
+    if (missing !== undefined) {
+      throw new Error(`PlayModel.removePlayer: unknown player id "${missing}"`);
+    }
     const removals = ids.map((id) => this.removePlayerCore(id));
     this.emitChange();
     return removals;
@@ -197,6 +231,11 @@ export class PlayModel extends Disposable implements IPlayModel {
       this.state.players,
       removal.player.id,
       "PlayModel.restorePlayer: duplicate player id",
+    );
+    assertWithinLimits(
+      this.state.players.length + 1,
+      this.state.lines.length + removal.removedLines.length,
+      "PlayModel.restorePlayer",
     );
     const players = insertAt(this.state.players, removal.index, removal.player);
     // 昇順に元インデックスへ挿し戻すと除去前の並びが正確に再現される。
@@ -222,13 +261,17 @@ export class PlayModel extends Disposable implements IPlayModel {
   }
 
   addLine(line: Line): void {
-    assertNewId(this.state.lines, line.id, "PlayModel.addLine: duplicate line id");
-    this.state = { ...this.state, lines: [...this.state.lines, line] };
-    this.emitChange();
+    this.insertLineCore(line, this.state.lines.length, "PlayModel.addLine");
   }
 
   insertLine(line: Line, index: number): void {
-    assertNewId(this.state.lines, line.id, "PlayModel.insertLine: duplicate line id");
+    this.insertLineCore(line, index, "PlayModel.insertLine");
+  }
+
+  private insertLineCore(line: Line, index: number, caller: string): void {
+    assertNewId(this.state.lines, line.id, `${caller}: duplicate line id`);
+    assertWithinLimits(this.state.players.length, this.state.lines.length + 1, caller);
+    assertWaypointLimit(line, caller);
     this.state = { ...this.state, lines: insertAt(this.state.lines, index, line) };
     this.emitChange();
   }
@@ -249,6 +292,7 @@ export class PlayModel extends Disposable implements IPlayModel {
     if (prev === undefined) {
       throw new Error(`PlayModel.updateLine: unknown line id "${line.id}"`);
     }
+    assertWaypointLimit(line, "PlayModel.updateLine");
     this.state = {
       ...this.state,
       lines: this.state.lines.map((l) => (l === prev ? line : l)),

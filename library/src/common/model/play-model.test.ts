@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { mutable } from "../../test-support/mutable.js";
+import { MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
 import { CURRENT_PLAY_DATA_VERSION, LOS_YARD_BY_ZONE, type PlayData } from "./play-data.js";
 import { PlayModel } from "./play-model.js";
+import { MAX_PLAYERS } from "./player.js";
 
 function seed(): PlayData {
   return {
@@ -194,6 +196,64 @@ describe("PlayModel の id 重複の拒否", () => {
   });
 });
 
+describe("PlayModel の件数の上限", () => {
+  function tooManyWaypoints(id: string) {
+    const waypoints = Array.from({ length: MAX_WAYPOINTS_PER_LINE + 1 }, () => ({
+      lateralYard: 0,
+      downfieldYard: 5,
+    }));
+    return { ...line(id, "a"), waypoints };
+  }
+
+  it("addPlayers は上限ちょうどまでは足せるが、超える分を含むと何も足さずに throw する", () => {
+    const model = new PlayModel({ ...seed(), lines: [] });
+    const fill = Array.from({ length: MAX_PLAYERS - 3 }, (_, i) => player(`p${i}`));
+    model.addPlayers(fill);
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    expect(() => model.addPlayer(player("over"))).toThrow(/exceed MAX_PLAYERS/);
+    expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("addLine と insertLine は上限の本数に達していると throw する", () => {
+    const lines = Array.from({ length: MAX_LINES }, (_, i) => line(`l${i}`, "a"));
+    const model = new PlayModel({ ...seed(), lines });
+
+    expect(() => model.addLine(line("over", "a"))).toThrow(
+      /PlayModel.addLine: lines exceed MAX_LINES/,
+    );
+    expect(() => model.insertLine(line("over", "a"), 0)).toThrow(
+      /PlayModel.insertLine: lines exceed MAX_LINES/,
+    );
+    expect(model.getSnapshot().lines).toHaveLength(MAX_LINES);
+  });
+
+  it("waypoint が上限を超える線は、追加も差し替えも throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.addLine(tooManyWaypoints("over"))).toThrow(
+      /line "over" exceeds MAX_WAYPOINTS_PER_LINE/,
+    );
+    expect(() => model.updateLine(tooManyWaypoints("la"))).toThrow(
+      /PlayModel.updateLine: line "la" exceeds/,
+    );
+    expect(model.getData()).toEqual(seed());
+  });
+
+  it("restorePlayer は戻すと上限を超えるなら throw する", () => {
+    const players = Array.from({ length: MAX_PLAYERS }, (_, i) => player(`p${i}`));
+    const model = new PlayModel({ ...seed(), players, lines: [] });
+    const removal = model.removePlayer("p0");
+    model.addPlayer(player("other"));
+
+    expect(() => model.restorePlayer(removal)).toThrow(
+      /PlayModel.restorePlayer: players exceed MAX_PLAYERS/,
+    );
+  });
+});
+
 describe("PlayModel.removePlayer / restorePlayer", () => {
   it("選手と起点が一致する線をカスケード除去し、メメントと位置を返す", () => {
     const model = new PlayModel(seed());
@@ -276,6 +336,18 @@ describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () =
     const model = new PlayModel(seed());
 
     expect(() => model.removePlayers(["a", "ghost"])).toThrow(/unknown player id "ghost"/);
+  });
+
+  it("未知の id を含む一括削除は、前にある id の選手も消さない", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    expect(() => model.removePlayers(["a", "ghost"])).toThrow();
+
+    expect(model.hasPlayer("a")).toBe(true);
+    expect(model.getData().lines).toHaveLength(3);
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 

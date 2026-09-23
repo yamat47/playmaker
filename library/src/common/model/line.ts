@@ -12,20 +12,19 @@ import {
 import { type FieldPosition, type Player, parseFieldPosition } from "./player.js";
 
 /**
- * 線の種別（3 種・PRD 5.3）。
- * - `route`: レシーバー/ランナーの走路。矢印付き。直線・ベジェ曲線の双方を取れる
- * - `block`: OL 等のブロックアサインメント。太め・矢印なし
- * - `motion`: スナップ前の選手移動。破線
+ * 線の種別。色ではなく終点の記法と線種で見分ける。
+ * - `route`: レシーバーやランナーの走路。終点に矢印を描く
+ * - `block`: ブロックの割り当て。route と同じ太さで、終点に T 字のバーを描く
+ * - `motion`: スナップ前の選手の移動。破線で、終点に矢印を描く
  */
 export const LINE_KIND_VALUES = ["route", "block", "motion"] as const;
 
 export type LineKind = (typeof LINE_KIND_VALUES)[number];
 
 /**
- * 線の補間方法（PRD 5.4 のプロパティ）。
+ * 線の補間方法。どの種別の線にも効く。
  * - `straight`: 制御点を直線で結ぶ
- * - `bezier`: 制御点を滑らかな曲線で通す（route の曲走路）
- * block/motion は実質 straight だが、データとしては保持して往復契約を壊さない。
+ * - `bezier`: 制御点をすべて通る滑らかな曲線で結ぶ
  */
 export const LINE_INTERPOLATION_VALUES = ["straight", "bezier"] as const;
 

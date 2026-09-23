@@ -1,4 +1,5 @@
-export { Disposable, DisposableStore, toDisposable } from "./base/lifecycle.js";
+export type { Event } from "./base/event.js";
+export { Disposable, DisposableStore, type IDisposable, toDisposable } from "./base/lifecycle.js";
 export { isHexColor } from "./design/color.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {

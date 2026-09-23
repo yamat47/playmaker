@@ -1,9 +1,9 @@
 import { CanvasSurface, PointerInput, PropertyPanel, Toolbar } from "./browser/index.js";
 import {
-  Disposable,
   DisposableStore,
   type FieldZone,
   type Formation,
+  type IDisposable,
   type ImageExportOptions,
   type PlayData,
   PlaySession,
@@ -63,8 +63,9 @@ export interface PlaymakerOptions {
  * container の中にプレー図を描き、edit モードでは編集 UI も置く。
  * dispose すると、置いた要素をすべて取り除く。
  */
-export class Playmaker extends Disposable {
+export class Playmaker implements IDisposable {
   readonly mode: PlaymakerMode;
+  private readonly store = new DisposableStore();
   private readonly root: HTMLElement;
   private readonly surface: CanvasSurface;
   private readonly session: PlaySession;
@@ -72,24 +73,23 @@ export class Playmaker extends Disposable {
   private ui = new DisposableStore();
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
-    super();
     this.mode = options.mode ?? "edit";
-    this.session = this._register(new PlaySession(options.initialData));
+    this.session = this.store.add(new PlaySession(options.initialData));
     if (options.onChange !== undefined) {
-      this._register(this.session.onDidChange(options.onChange));
+      this.store.add(this.session.onDidChange(options.onChange));
     }
 
     this.root = document.createElement("div");
     this.root.className = "playmaker-root";
     this.root.dataset.mode = this.mode;
     container.appendChild(this.root);
-    this._register(toDisposable(() => this.root.remove()));
+    this.store.add(toDisposable(() => this.root.remove()));
 
     const stage = document.createElement("div");
     stage.className = "playmaker-stage";
     this.root.appendChild(stage);
-    this.surface = this._register(new CanvasSurface(stage, this.session.getSnapshot()));
-    this._register(this.session.onDidReset(() => this.attachUi()));
+    this.surface = this.store.add(new CanvasSurface(stage, this.session.getSnapshot()));
+    this.store.add(this.session.onDidReset(() => this.attachUi()));
     this.attachUi();
   }
 
@@ -152,9 +152,9 @@ export class Playmaker extends Disposable {
     return this.surface.exportToPngBlob(this.session.getSnapshot(), options);
   }
 
-  override dispose(): void {
+  dispose(): void {
     this.ui.dispose();
-    super.dispose();
+    this.store.dispose();
   }
 
   private attachUi(): void {

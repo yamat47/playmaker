@@ -19,6 +19,7 @@ import { normalizeCssColor } from "../theme/css-color.js";
 import { LINE_COLOR_PALETTE } from "../theme/line-palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
 import { THEME_TOKENS, type ThemeReader } from "../theme/tokens.js";
+import { replaceKeepingFocus } from "./focus.js";
 
 /** 色の入力に渡せる hex にする。半透明の色と読めない値は hex にできないので undefined。 */
 function toHex(value: string | undefined): string | undefined {
@@ -51,13 +52,18 @@ type ShownFields =
 export class PropertyPanel extends Disposable {
   readonly element: HTMLElement;
   private readonly controller: IEditorUi;
+  private readonly focusFallback: HTMLElement;
   // 選択中の要素が同じあいだは入力を作り直さず、値だけを書き込む。作り直すと、
   // 値を確定して Tab で次の入力へ移った直後に、移った先の入力ごと消えてフォーカスが外れる。
   private shown: ShownFields | undefined;
 
-  constructor(parent: HTMLElement, controller: IEditorUi) {
+  /**
+   * @param focusFallback 選択が変わって入力を作り直したときに、消えた入力にあったフォーカスを移す先。
+   */
+  constructor(parent: HTMLElement, controller: IEditorUi, focusFallback: HTMLElement) {
     super();
     this.controller = controller;
+    this.focusFallback = focusFallback;
     this.element = document.createElement("div");
     this.element.className = "playmaker-panel";
 
@@ -82,7 +88,9 @@ export class PropertyPanel extends Disposable {
     } else if (line !== undefined && shown?.kind === "line" && shown.id === line.id) {
       shown.update(line);
     } else if (player !== undefined || line !== undefined || shown?.kind !== "hint") {
-      this.shown = this.rebuild(player, line);
+      replaceKeepingFocus(this.element, this.focusFallback, () => {
+        this.shown = this.rebuild(player, line);
+      });
     }
   }
 

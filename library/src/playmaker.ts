@@ -1,4 +1,10 @@
-import { CanvasSurface, PointerInput, PropertyPanel, Toolbar } from "./browser/index.js";
+import {
+  CanvasSurface,
+  PointerInput,
+  PropertyPanel,
+  replaceKeepingFocus,
+  Toolbar,
+} from "./browser/index.js";
 import {
   DisposableStore,
   type EditorOverlay,
@@ -227,8 +233,11 @@ export class Playmaker implements IDisposable {
   }
 
   private attachUi(): void {
-    this.ui.dispose();
-    this.ui = this.createUi();
+    // view では canvas がフォーカスを受けないので、消えたフォーカスは body に落ちたままになる。
+    replaceKeepingFocus(this.root, this.surface.canvas, () => {
+      this.ui.dispose();
+      this.ui = this.createUi();
+    });
     this.draw();
   }
 
@@ -238,7 +247,7 @@ export class Playmaker implements IDisposable {
     ui.add(controller.onDidChangeScene(() => this.draw()));
     if (this.currentMode === "edit") {
       ui.add(new Toolbar(this.root, controller));
-      ui.add(new PropertyPanel(this.root, controller));
+      ui.add(new PropertyPanel(this.root, controller, this.surface.canvas));
       ui.add(new PointerInput(this.root, this.surface, controller));
     }
     return ui;

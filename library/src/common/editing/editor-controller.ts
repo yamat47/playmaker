@@ -266,16 +266,15 @@ export class EditorController extends Disposable implements IEditorController {
       this.ids,
       players.map((p) => p.id),
     );
-    let loaded = false;
-    this.notifier.batch(() => {
-      loaded = this.commands.execute(new LoadFormationCommand(added));
+    return this.notifier.batch(() => {
+      const loaded = this.commands.execute(new LoadFormationCommand(added));
       if (loaded) {
         // 読み込んだあとは、途中の操作と元の選択に意味が無いので外す。
         this.setInteraction(undefined);
         this.setSelection(null);
       }
+      return loaded;
     });
-    return loaded;
   }
 
   undo(): void {

@@ -66,14 +66,16 @@ export class EditorNotifier extends Disposable {
     this.lastView = readView();
   }
 
-  batch(action: () => void): void {
+  batch<T>(action: () => T): T {
     this.depth++;
+    let result: T;
     try {
-      action();
+      result = action();
     } finally {
       this.depth--;
     }
     this.flushIfIdle();
+    return result;
   }
 
   markSceneChanged(): void {

@@ -286,27 +286,31 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T8 コマンドと履歴の再編
+### T8 コマンドと履歴の再編 (done)
 
-- [ ] **T8-1 [should] UndoRedoService と CommandService がどちらも model を持ち、apply の経路が 2 本ある。履歴イベントもない**（T1-1 の恒久策）
+- [x] **T8-1 [should] UndoRedoService と CommandService がどちらも model を持ち、apply の経路が 2 本ある。履歴イベントもない**（T1-1 の恒久策）
   - locations: library/src/common/commands/command-service.ts:16-26, library/src/common/undoRedo/undo-redo-service.ts:11-19, library/src/common/undoRedo/undo-redo-service.ts:26, library/src/common/undoRedo/undo-redo-service.ts:42-59, library/src/common/editing/editor-controller.ts:176-181, library/src/common/editing/editor-controller.ts:495-501
   - 対応: IUndoRedoService は model を持たない純粋なスタックにし、onDidChange を持たせる。ICommandService を execute、undo、redo、canUndo、canRedo の唯一の実行者にする。実行は「先に実行し、成功したらスタックを移す」順にする。clear は削除する。
-- [ ] **T8-2 [should] コマンドの定型（apply 未実行の throw と、find→差し替え→previous 保持）が 8 回繰り返されている**
+  - 結論: IUndoRedoService の undo と redo は実行する関数を受け取り、それが戻ってから積み替える。ICommandService は履歴の通知を onDidChangeHistory として中継し、EditorController は Model と履歴の両方の通知を編集の間まとめて 1 回にする。
+- [x] **T8-2 [should] コマンドの定型（apply 未実行の throw と、find→差し替え→previous 保持）が 8 回繰り返されている**
   - locations: library/src/common/commands/field-commands.ts:20-24, library/src/common/commands/line-commands.ts:47-52, library/src/common/commands/line-commands.ts:68-94, library/src/common/commands/line-commands.ts:110-126, library/src/common/commands/line-commands.ts:142-155, library/src/common/commands/player-commands.ts:47-52, library/src/common/commands/player-commands.ts:68-81, library/src/common/commands/player-commands.ts:97-121
   - 対応: `requireApplied` を置く。コマンドは UpdateLine と UpdatePlayer に統合し、SetLineWaypoints、SetLineEnd、MovePlayer は削除する。パッチの適用は `applyLinePatch` と `applyPlayerPatch` の純関数にする。
   - 補足: T7 で null による「既定に戻す」を入れたので、UpdateLine と UpdatePlayer は今、Line と Player のフィールドを 1 つずつ書き写して組み立てている。フィールドを足すとパッチの適用で黙って落ちるので、applyLinePatch と applyPlayerPatch では `...current` を起点にし、「undefined は現状維持、null は消す」の規則を 1 か所にまとめる（EditorController の patchChangesAnything も同じ規則を持つ）。
-- [ ] **T8-3 [nit] ディレクトリ名 `undoRedo/` だけがキャメルケース**
+  - 結論: 規則は `commands/patch.ts` の applyPatch と patchChangesAnything に置いた。exactOptionalPropertyTypes でパッチに undefined は入らないので、「指定しないキーは現状維持」とした。LinePatch と PlayerPatch は Line と Player から `Patch<Omit<…>>` で導き、null は省略できるキーにだけ許す。readonly 化の後なので、コマンドの構築時の複製もやめた。
+- [x] **T8-3 [nit] ディレクトリ名 `undoRedo/` だけがキャメルケース**
   - locations: library/src/common/undoRedo/undo-redo-service.ts:1
   - 対応: commands/ に統合する。
-- [ ] **T8-4 [should] removePlayers が途中の未知 id で throw すると、それまでの削除が通知なしで状態に残る**
+- [x] **T8-4 [should] removePlayers が途中の未知 id で throw すると、それまでの削除が通知なしで状態に残る**
   - locations: library/src/common/model/play-model.ts（removePlayers と removePlayerCore）
   - 問題: 1 件ずつ state を書き換えてから次の id を探すので、後ろの id が無いと前の削除だけが残る。onDidChange も出ず、コマンドは履歴に積まれないので Undo でも戻せない。T1-2 で addPlayers は先に全件を検証する形に直したが、removePlayers は変更前からこの挙動のまま。
   - 対応: 書き換える前に全 id の実在を確かめる。T8-1 の「コマンドが throw してもスタックが壊れない」テストと合わせて、状態も変わらないことを確かめる。
+  - 結論: 同じ id が 2 度ある場合も、何も消さずに throw する。
 
-- [ ] **T8-5 [should] 件数の上限が外部データの正規化にしか掛かっていない**（T6-7 の残り）
+- [x] **T8-5 [should] 件数の上限が外部データの正規化にしか掛かっていない**（T6-7 の残り）
   - locations: library/src/common/commands/player-commands.ts（AddPlayerCommand）, library/src/common/commands/formation-commands.ts, library/src/common/commands/line-commands.ts（AddLineCommand、SetLineWaypointsCommand）, library/src/common/editing/editor-controller.ts（loadFormation と作図の確定）, library/src/common/model/play-model.ts（addPlayers、addLine）
   - 問題: 作図での打点、選手の追加、`loadFormation` の繰り返しでは MAX_PLAYERS などを超えられる。超えた図は `getPlayData` から戻したときに黙って切り詰められ、ホストが `loadFormation` を繰り返せば描画の負荷も上限なく増える。公開 API の JSDoc にはこの切り詰めを書いてある。
   - 対応: 上限を PlayModel の不変条件にし、追加系のコマンドは上限で止める（UI のボタンも無効にする）か、今のまま JSDoc の注記で済ませるかを決める。
+  - 結論: PlayModel の不変条件にした（2026-09-23 にユーザーと決着）。PlayModel は件数が増えうる変更を 1 つの commit に通し、上限を超える状態を throw で拒む。EditorController は上限に達したら選手の追加、作図の開始、打点をしない。フォーメーションは入り切らなければ 1 人も置かない。UI の無効化は T13-8 に回した。
 
 - 依存: T6、T7
 - 完了条件: EditorController が ICommandService だけに依存する。履歴の変化で通知が出る。コマンドが throw してもスタックが壊れないことをテストで確かめる。
@@ -442,6 +446,10 @@ PR 単位で、依存順に並べる。
   - locations: library/src/browser/ui/toolbar.ts（sync で disabled にする箇所）, library/src/browser/input/pointer-input.ts（keydown を root で受ける箇所）
   - 問題: keydown は root で受けるが、無効化されたボタンからフォーカスが外れると、キーは root の外（body）に届く。T2 の demo 確認で見つけた。
   - 対応: ボタンを無効にする前にフォーカスを持っていたら canvas へ移す。または disabled ではなく aria-disabled にしてフォーカスを保つ。
+- [ ] **T13-8 [nit] 件数の上限に達しても、選手の追加ツールとフォーメーションの読み込みが押せる**（T8-5 の残り）
+  - locations: library/src/browser/ui/toolbar.ts
+  - 問題: 上限に達すると EditorController は何もしないが、ボタンは押せるままで、押しても反応がない理由が分からない。
+  - 対応: EditorViewState に上限に達したかを足し、ボタンを無効にするか理由を示す。
 
 - 依存: T9、T11、T12、D17、D18
 - 完了条件: キーボードだけで連続して編集できる。UI が canvas に重ならない。表示はすべて日本語になる。

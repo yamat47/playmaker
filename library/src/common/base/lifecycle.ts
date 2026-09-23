@@ -1,6 +1,3 @@
-// VSCode の base/common/lifecycle 相当の極小実装。
-// DOM 非依存。リソース解放のライフサイクルを統一する。
-
 export interface IDisposable {
   dispose(): void;
 }
@@ -9,15 +6,12 @@ export function toDisposable(fn: () => void): IDisposable {
   return { dispose: fn };
 }
 
-/**
- * 複数の IDisposable をまとめて管理し、一括解放する。
- * 解放後に add されたものは即座に解放される（リーク防止）。
- */
+/** まとめて解放する。解放したあとに add したものは、その場で解放する。 */
 export class DisposableStore implements IDisposable {
   private readonly items = new Set<IDisposable>();
   private disposed = false;
 
-  /** 破棄済みか。非同期完了時に「破棄後の作用」を抑止する判定に使う。 */
+  /** 非同期の処理が終わったとき、破棄したあとなら何もしないための判定に使える。 */
   get isDisposed(): boolean {
     return this.disposed;
   }
@@ -43,13 +37,11 @@ export class DisposableStore implements IDisposable {
   }
 }
 
-/**
- * IDisposable を持つオブジェクトの基底。`_register` で従属リソースを束ねる。
- */
+/** `_register` に渡したものを、dispose のときに一緒に解放する。 */
 export abstract class Disposable implements IDisposable {
   protected readonly _store = new DisposableStore();
 
-  /** 破棄済みか。非同期完了コールバックが破棄後に作用しないようガードするのに使う。 */
+  /** 非同期の処理が終わったとき、破棄したあとなら何もしないための判定に使える。 */
   protected get isDisposed(): boolean {
     return this._store.isDisposed;
   }

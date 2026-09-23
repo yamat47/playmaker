@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
-import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import {
   AddPlayerCommand,
-  MovePlayerCommand,
+  applyPlayerPatch,
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "./player-commands.js";
@@ -20,11 +19,9 @@ function seed(): PlayData {
 }
 
 describe("AddPlayerCommand", () => {
-  it("apply で追加し undo で除去、redo で復帰する", () => {
+  it("apply で選手を足し、undo で除き、もう一度 apply すると同じ選手が戻る", () => {
     const model = new PlayModel();
-    const input = player("p1");
-    const cmd = new AddPlayerCommand(input);
-    mutable(input).label = "tampered"; // 構築後の改変は redo に影響しない
+    const cmd = new AddPlayerCommand(player("p1"));
 
     cmd.apply(model);
     expect(model.getData().players).toEqual([player("p1")]);
@@ -32,7 +29,7 @@ describe("AddPlayerCommand", () => {
     cmd.undo(model);
     expect(model.getData().players).toEqual([]);
 
-    cmd.apply(model); // redo
+    cmd.apply(model);
     expect(model.getData().players).toEqual([player("p1")]);
   });
 });
@@ -49,54 +46,50 @@ describe("RemovePlayerCommand", () => {
     cmd.undo(model);
     expect(model.getData()).toEqual(seed());
 
-    cmd.apply(model); // redo
+    cmd.apply(model);
     expect(model.getData().players).toEqual([]);
   });
 
-  it("apply 前の undo は throw する", () => {
+  it("apply より前に undo すると throw する", () => {
     const model = new PlayModel(seed());
 
-    expect(() => new RemovePlayerCommand("a").undo(model)).toThrow(/apply 未実行/);
+    expect(() => new RemovePlayerCommand("a").undo(model)).toThrow(
+      "選手の削除: apply より前に undo された",
+    );
   });
 });
 
-describe("MovePlayerCommand", () => {
-  it("apply で位置変更、undo で元位置へ戻す", () => {
-    const model = new PlayModel(seed());
-    const dest = { lateralYard: 20, downfieldYard: 70 };
-    const cmd = new MovePlayerCommand("a", dest);
-    dest.lateralYard = 999; // 構築後の改変は影響しない
+describe("applyPlayerPatch", () => {
+  it("パッチで指定したキーだけを差し替え、ほかのキーは今の値を保つ", () => {
+    const current = { ...player("a"), color: "#0f0" };
+    const position = { lateralYard: 20, downfieldYard: 5 };
 
-    cmd.apply(model);
-    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 20, downfieldYard: 70 });
-
-    cmd.undo(model);
-    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 5, downfieldYard: 50 });
+    expect(applyPlayerPatch(current, { position, label: "QB" })).toEqual({
+      ...current,
+      position,
+      label: "QB",
+    });
   });
 
-  it("未知 id の apply と apply 前 undo は throw する", () => {
-    const model = new PlayModel(seed());
+  it("色に null を渡すとキーごと消す", () => {
+    const next = applyPlayerPatch({ ...player("a"), color: "#0f0" }, { color: null });
 
-    expect(() => new MovePlayerCommand("ghost", player("x").position).apply(model)).toThrow(
-      /unknown player id "ghost"/,
-    );
-    expect(() => new MovePlayerCommand("a", player("a").position).undo(model)).toThrow(
-      /apply 未実行/,
-    );
+    expect(next).toEqual(player("a"));
+    expect(next).not.toHaveProperty("color");
   });
 });
 
 describe("UpdatePlayerCommand", () => {
-  it("指定プロパティのみ上書きし undo で戻す", () => {
+  it("apply でパッチを当て、undo で当てる前の選手に戻す", () => {
     const model = new PlayModel(seed());
-    const cmd = new UpdatePlayerCommand("a", { label: "QB", shape: "square", color: "#0f0" });
+    const position = { lateralYard: 20, downfieldYard: 5 };
+    const cmd = new UpdatePlayerCommand("a", { position, shape: "square", color: "#0f0" });
 
     cmd.apply(model);
     expect(model.findPlayer("a")).toEqual({
-      id: "a",
-      position: { lateralYard: 5, downfieldYard: 50 },
+      ...player("a"),
+      position,
       shape: "square",
-      label: "QB",
       color: "#0f0",
     });
 
@@ -104,33 +97,30 @@ describe("UpdatePlayerCommand", () => {
     expect(model.findPlayer("a")).toEqual(player("a"));
   });
 
-  it("色に null を渡すと値を消して既定に戻し、undo で元の色に戻す", () => {
+  it("構築したあとで渡したパッチを書き換えても、当てる内容は変わらない", () => {
     const model = new PlayModel(seed());
-    new UpdatePlayerCommand("a", { color: "#0f0" }).apply(model);
-    const cmd = new UpdatePlayerCommand("a", { color: null });
-
-    cmd.apply(model);
-    expect(model.findPlayer("a")).toEqual(player("a"));
-
-    cmd.undo(model);
-    expect(model.findPlayer("a")?.color).toBe("#0f0");
-  });
-
-  it("空 patch は現状維持（全項目の未指定分岐）", () => {
-    const model = new PlayModel(seed());
-    const cmd = new UpdatePlayerCommand("a", {});
+    const patch = { label: "QB" };
+    const cmd = new UpdatePlayerCommand("a", patch);
+    patch.label = "RB";
 
     cmd.apply(model);
 
-    expect(model.findPlayer("a")).toEqual(player("a"));
+    expect(model.findPlayer("a")?.label).toBe("QB");
   });
 
-  it("未知 id の apply と apply 前 undo は throw する", () => {
+  it("無い id の選手に apply すると throw する", () => {
     const model = new PlayModel(seed());
 
     expect(() => new UpdatePlayerCommand("ghost", { label: "x" }).apply(model)).toThrow(
-      /unknown player id "ghost"/,
+      'UpdatePlayerCommand: unknown player id "ghost"',
     );
-    expect(() => new UpdatePlayerCommand("a", {}).undo(model)).toThrow(/apply 未実行/);
+  });
+
+  it("apply より前に undo すると throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => new UpdatePlayerCommand("a", {}).undo(model)).toThrow(
+      "選手の編集: apply より前に undo された",
+    );
   });
 });

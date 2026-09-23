@@ -1,22 +1,18 @@
-// コマンド/Undo の契約を通しで検証する統合テスト:
-// CommandService → PlayModel → onDidChange、UndoRedoService 往復、選手削除のカスケード復元。
-
 import { describe, expect, it, vi } from "vitest";
 import { must } from "../../test-support/must.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
-import { UndoRedoService } from "../undoRedo/undo-redo-service.js";
 import { CommandService } from "./command-service.js";
 import { AddLineCommand } from "./line-commands.js";
 import { AddPlayerCommand, RemovePlayerCommand } from "./player-commands.js";
+import { UndoRedoService } from "./undo-redo-service.js";
 
 function wire(initial?: PlayData) {
   const model = new PlayModel(initial);
-  const undoRedo = new UndoRedoService(model);
-  const commands = new CommandService(model, undoRedo);
+  const commands = new CommandService(model, new UndoRedoService());
   const onChange = vi.fn<(data: PlayData) => void>();
   model.onDidChange(onChange);
-  return { model, undoRedo, commands, onChange };
+  return { model, commands, onChange };
 }
 
 describe("編集フロー統合", () => {
@@ -54,7 +50,7 @@ describe("編集フロー統合", () => {
         },
       ],
     };
-    const { commands, undoRedo, onChange } = wire(seed);
+    const { commands, onChange } = wire(seed);
 
     commands.execute(new RemovePlayerCommand("wr"));
     expect(onChange).toHaveBeenCalledTimes(1); // 選手+線の除去でも 1 回
@@ -65,17 +61,17 @@ describe("編集フロー統合", () => {
       lines: [],
     });
 
-    undoRedo.undo();
+    commands.undo();
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(must(onChange.mock.lastCall)[0]).toEqual(seed);
 
-    undoRedo.redo();
+    commands.redo();
     expect(onChange).toHaveBeenCalledTimes(3);
     expect(must(onChange.mock.lastCall)[0].lines).toEqual([]);
   });
 
   it("複数編集を LIFO で undo / redo し履歴フラグが整合する", () => {
-    const { commands, undoRedo, model } = wire();
+    const { commands, model } = wire();
     commands.execute(
       new AddPlayerCommand({
         id: "p",
@@ -95,21 +91,21 @@ describe("編集フロー統合", () => {
       }),
     );
 
-    undoRedo.undo(); // 線を取り消し
+    commands.undo(); // 線を取り消し
     expect(model.getData().lines).toEqual([]);
     expect(model.getData().players.map((p) => p.id)).toEqual(["p"]);
-    undoRedo.undo(); // 選手を取り消し
+    commands.undo(); // 選手を取り消し
     expect(model.getData().players).toEqual([]);
-    expect(undoRedo.canUndo).toBe(false);
-    expect(undoRedo.canRedo).toBe(true);
+    expect(commands.canUndo).toBe(false);
+    expect(commands.canRedo).toBe(true);
 
-    undoRedo.redo();
-    undoRedo.redo();
+    commands.redo();
+    commands.redo();
     expect(model.getData().lines.map((l) => l.id)).toEqual(["l"]);
 
     // 新規編集で redo 履歴が破棄される
-    undoRedo.undo(); // 線を取り消し → redo スタックに AddLineCommand が乗る
-    expect(undoRedo.canRedo).toBe(true);
+    commands.undo(); // 線を取り消し → redo スタックに AddLineCommand が乗る
+    expect(commands.canRedo).toBe(true);
     commands.execute(
       new AddPlayerCommand({
         id: "q",
@@ -118,8 +114,8 @@ describe("編集フロー統合", () => {
         label: "q",
       }),
     );
-    expect(undoRedo.canRedo).toBe(false);
-    expect(undoRedo.canUndo).toBe(true);
+    expect(commands.canRedo).toBe(false);
+    expect(commands.canUndo).toBe(true);
     expect(model.getData().players.map((p) => p.id)).toEqual(["p", "q"]);
     expect(model.getData().lines).toEqual([]);
   });

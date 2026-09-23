@@ -32,7 +32,7 @@ Playmaker は VSCode 流レイヤ分離を採る。テストは `common` 層（D
 ```ts
 // GOOD
 const ids: IIdFactory = { next: vi.fn(() => "player-1") };
-const controller = new EditorController(model, commands, undoRedo, ids);
+const controller = new EditorController(model, commands, ids);
 ```
 
 ## 重点的に網羅する対象（common 層）

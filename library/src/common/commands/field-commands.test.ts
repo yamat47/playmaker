@@ -20,6 +20,8 @@ describe("SetFieldZoneCommand", () => {
   it("apply 前の undo は throw する", () => {
     const model = new PlayModel();
 
-    expect(() => new SetFieldZoneCommand("redzone").undo(model)).toThrow(/apply 未実行/);
+    expect(() => new SetFieldZoneCommand("redzone").undo(model)).toThrow(
+      /apply より前に undo された/,
+    );
   });
 });

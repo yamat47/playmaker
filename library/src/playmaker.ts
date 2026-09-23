@@ -119,6 +119,7 @@ export class Playmaker extends Disposable {
    * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
    * 既存のプレー図へ追記する（攻守プリセットを順に重ねられる）。外部の
    * カスタム隊形は normalizeFormation で正規化し、配置可能な選手が無ければ no-op。
+   * 置くと選手が 64 人を超えるときも、1 人も置かずに no-op。
    * 編集操作なので Undo/onChange の対象（view モードでも API としては有効）。
    * プリセットは公開 `FORMATION_PRESETS` / `getFormationPreset` から取得できる。
    */
@@ -149,8 +150,8 @@ export class Playmaker extends Disposable {
    * 現在のプレー図の正準スナップショット（深い防御的コピー・`version` は現行）。
    * そのまま JSON 化して永続化でき、後で `setPlayData` / `initialData` に戻すと
    * 同値のプレー図に復元される（PRD 5.8 / 6.6 の往復契約）。
-   * ただし編集では件数の上限（`initialData` を参照）を超えられ、
-   * 超えた図は戻したときに切り詰められる。
+   * 編集でも件数の上限（`initialData` を参照）は超えられず、上限に達すると
+   * 選手の追加、フォーメーションの読み込み、作図は何もしない。
    */
   getPlayData(): PlayData {
     return this.model.getData();
@@ -181,10 +182,10 @@ export class Playmaker extends Disposable {
     controller: EditorController;
   } {
     const model = this.session.add(new PlayModel(data));
-    const undoRedo = new UndoRedoService(model);
-    const commands = new CommandService(model, undoRedo);
+    const history = this.session.add(new UndoRedoService());
+    const commands = new CommandService(model, history);
     const ids = new IdFactory();
-    const controller = this.session.add(new EditorController(model, commands, undoRedo, ids));
+    const controller = this.session.add(new EditorController(model, commands, ids));
 
     this.session.add(
       controller.onDidChange(() =>

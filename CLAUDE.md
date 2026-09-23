@@ -2,7 +2,15 @@
 
 アメフトのプレー図を作成・表示する、UI フレームワーク非依存の TypeScript ライブラリ。
 要件は `docs/prd.md`、今の設計とその理由は `docs/design.md`、
-コーディング規約は `.claude/rules/`（対象ファイルを触ると自動で読み込まれる）。
+テストの規約は `.claude/rules/testing.md`（テストを触ると自動で読み込まれる）。
+
+## 規約の置き場
+
+- コメント、コミット、PR の書き方は `writing-conventions` skill、TypeScript の書き方は `typescript-idioms` skill に従う
+- `.claude/skills/` のうち frontmatter の `metadata.github-repo` が github-toolkit のものは、取り込んだ版をそのまま使う。
+  直接書き換えない。このリポジトリ固有の決まりはこのファイルと `.claude/rules/` に書き、skill と食い違うときはこちらを優先する
+- `library/src/` を変える前に `docs/design.md` の該当する節を読む。層の分け方、データの形、公開 API の契約、
+  ツールチェーンの回避策など、`docs/design.md` に書いてある設計を変えたら、同じ PR で `docs/design.md` も直す
 
 ## ディレクトリ
 

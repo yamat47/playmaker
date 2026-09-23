@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { mutable } from "../../test-support/mutable.js";
+import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
 import { CURRENT_PLAY_DATA_VERSION, LOS_YARD_BY_ZONE, type PlayData } from "./play-data.js";
 import { PlayModel } from "./play-model.js";
+import { type FieldPosition, MAX_PLAYERS, type Player } from "./player.js";
 
 function seed(): PlayData {
   return {
@@ -178,9 +180,7 @@ describe("PlayModel の id 重複の拒否", () => {
   it("insertLine は既にある id の線を渡すと throw する", () => {
     const model = new PlayModel(seed());
 
-    expect(() => model.insertLine(line("lb", "a"), 0)).toThrow(
-      'PlayModel.insertLine: duplicate line id "lb"',
-    );
+    expect(() => model.insertLine(line("lb", "a"), 0)).toThrow('PlayModel: duplicate line id "lb"');
   });
 
   it("restorePlayer は同じ id の選手が既にあると throw する", () => {
@@ -272,10 +272,115 @@ describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () =
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it("removePlayers は未知 id を含むと throw する（コア共有の契約）", () => {
+  it("無い id が混じっていると、先に並んだ選手も消さずに throw し、通知もしない", () => {
     const model = new PlayModel(seed());
+    const before = model.getSnapshot();
+    const listener = vi.fn();
+    model.onDidChange(listener);
 
-    expect(() => model.removePlayers(["a", "ghost"])).toThrow(/unknown player id "ghost"/);
+    expect(() => model.removePlayers(["a", "ghost"])).toThrow(
+      'PlayModel.removePlayers: unknown or repeated player id "ghost"',
+    );
+
+    expect(model.getSnapshot()).toBe(before);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("同じ id が 2 度あると、1 人も消さずに throw する", () => {
+    const model = new PlayModel(seed());
+    const before = model.getSnapshot();
+
+    expect(() => model.removePlayers(["a", "a"])).toThrow(
+      'PlayModel.removePlayers: unknown or repeated player id "a"',
+    );
+
+    expect(model.getSnapshot()).toBe(before);
+  });
+});
+
+describe("PlayModel の件数の上限", () => {
+  function players(count: number, prefix = "p"): Player[] {
+    return Array.from({ length: count }, (_, i) => player(`${prefix}${i}`));
+  }
+
+  function lines(count: number): Line[] {
+    return Array.from({ length: count }, (_, i) => line(`l${i}`, "p0"));
+  }
+
+  function waypoints(count: number): FieldPosition[] {
+    return Array.from({ length: count }, (_, i) => ({ lateralYard: i, downfieldYard: 5 }));
+  }
+
+  it("選手はちょうど MAX_PLAYERS 人まで足せる", () => {
+    const model = new PlayModel();
+
+    model.addPlayers(players(MAX_PLAYERS));
+
+    expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS);
+  });
+
+  it("MAX_PLAYERS 人を超える追加は、1 人も足さずに throw する", () => {
+    const model = new PlayModel();
+    model.addPlayers(players(MAX_PLAYERS - 1));
+    const before = model.getSnapshot();
+
+    expect(() => model.addPlayers(players(2, "q"))).toThrow(
+      `PlayModel: too many players: ${MAX_PLAYERS + 1} > ${MAX_PLAYERS}`,
+    );
+
+    expect(model.getSnapshot()).toBe(before);
+  });
+
+  it("上限に達しているときに選手を戻すと throw する", () => {
+    const model = new PlayModel({ ...seed(), players: [player("a")], lines: [] });
+    const removal = model.removePlayer("a");
+    model.addPlayers(players(MAX_PLAYERS));
+
+    expect(() => model.restorePlayer(removal)).toThrow("PlayModel: too many players");
+  });
+
+  it("選手を戻すと従属線で MAX_LINES 本を超えるときは throw する", () => {
+    const model = new PlayModel({
+      ...seed(),
+      players: [player("a"), player("p0")],
+      lines: [line("la", "a")],
+    });
+    const removal = model.removePlayer("a");
+    for (const l of lines(MAX_LINES)) {
+      model.addLine(l);
+    }
+
+    expect(() => model.restorePlayer(removal)).toThrow("PlayModel: too many lines");
+  });
+
+  it("線はちょうど MAX_LINES 本まで足せ、それを超える追加は throw する", () => {
+    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [] });
+    for (const l of lines(MAX_LINES)) {
+      model.addLine(l);
+    }
+
+    expect(model.getSnapshot().lines).toHaveLength(MAX_LINES);
+    expect(() => model.addLine(line("extra", "p0"))).toThrow("PlayModel: too many lines");
+  });
+
+  it("waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線は、追加も差し替えも throw する", () => {
+    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [line("l", "p0")] });
+    const tooMany = waypoints(MAX_WAYPOINTS_PER_LINE + 1);
+
+    expect(() => model.addLine({ ...line("x", "p0"), waypoints: tooMany })).toThrow(
+      "PlayModel: too many waypoints",
+    );
+    expect(() => model.updateLine({ ...line("l", "p0"), waypoints: tooMany })).toThrow(
+      "PlayModel: too many waypoints",
+    );
+  });
+
+  it("waypoint がちょうど MAX_WAYPOINTS_PER_LINE 個の線は差し替えられる", () => {
+    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [line("l", "p0")] });
+
+    model.updateLine({ ...line("l", "p0"), waypoints: waypoints(MAX_WAYPOINTS_PER_LINE) });
+
+    expect(model.findLine("l")?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
   });
 });
 

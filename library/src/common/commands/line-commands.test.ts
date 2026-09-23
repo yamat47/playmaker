@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
-import { must } from "../../test-support/must.js";
-import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import {
   AddLineCommand,
+  applyLinePatch,
   RemoveLineCommand,
-  SetLineEndCommand,
-  SetLineWaypointsCommand,
   UpdateLineCommand,
 } from "./line-commands.js";
 
@@ -22,11 +19,9 @@ function seed(): PlayData {
 }
 
 describe("AddLineCommand", () => {
-  it("apply で追加、undo で除去、redo で復帰、構築後の改変は無効", () => {
+  it("apply で線を足し、undo で除き、もう一度 apply すると同じ線が戻る", () => {
     const model = new PlayModel({ ...seed(), lines: [] });
-    const input = line("x");
-    const cmd = new AddLineCommand(input);
-    mutable(input).kind = "block";
+    const cmd = new AddLineCommand(line("x"));
 
     cmd.apply(model);
     expect(model.getData().lines).toEqual([line("x")]);
@@ -34,7 +29,7 @@ describe("AddLineCommand", () => {
     cmd.undo(model);
     expect(model.getData().lines).toEqual([]);
 
-    cmd.apply(model); // redo
+    cmd.apply(model);
     expect(model.getData().lines).toEqual([line("x")]);
   });
 });
@@ -50,33 +45,61 @@ describe("RemoveLineCommand", () => {
     cmd.undo(model);
     expect(model.getData().lines.map((l) => l.id)).toEqual(["l1", "l2", "l3"]);
 
-    cmd.apply(model); // redo
+    cmd.apply(model);
     expect(model.getData().lines.map((l) => l.id)).toEqual(["l1", "l3"]);
   });
 
-  it("apply 前の undo は throw する", () => {
+  it("apply より前に undo すると throw する", () => {
     const model = new PlayModel(seed());
 
-    expect(() => new RemoveLineCommand("l1").undo(model)).toThrow(/apply 未実行/);
+    expect(() => new RemoveLineCommand("l1").undo(model)).toThrow(
+      "線の削除: apply より前に undo された",
+    );
+  });
+});
+
+describe("applyLinePatch", () => {
+  it("パッチで指定したキーだけを差し替え、ほかのキーは今の値を保つ", () => {
+    const current = { ...line("l1"), color: "#abc" };
+    const end = { lateralYard: 12, downfieldYard: 70 };
+
+    expect(applyLinePatch(current, { kind: "block", end })).toEqual({
+      ...current,
+      kind: "block",
+      end,
+    });
+  });
+
+  it("色と太さに null を渡すとキーごと消す", () => {
+    const current = { ...line("l1"), color: "#abc", thickness: 2 };
+
+    const next = applyLinePatch(current, { color: null, thickness: null });
+
+    expect(next).toEqual(line("l1"));
+    expect(next).not.toHaveProperty("color");
+    expect(next).not.toHaveProperty("thickness");
+  });
+
+  it("元の線は書き換えない", () => {
+    const current = line("l1");
+
+    applyLinePatch(current, { kind: "block" });
+
+    expect(current).toEqual(line("l1"));
   });
 });
 
 describe("UpdateLineCommand", () => {
-  it("指定プロパティのみ上書きし undo で戻す", () => {
+  it("apply でパッチを当て、undo で当てる前の線に戻す", () => {
     const model = new PlayModel(seed());
-    const cmd = new UpdateLineCommand("l1", {
-      kind: "block",
-      interpolation: "bezier",
-      color: "#abc",
-      thickness: 4,
-    });
+    const waypoints = [{ lateralYard: 10, downfieldYard: 55 }];
+    const cmd = new UpdateLineCommand("l1", { interpolation: "bezier", waypoints, thickness: 4 });
 
     cmd.apply(model);
     expect(model.findLine("l1")).toEqual({
       ...line("l1"),
-      kind: "block",
       interpolation: "bezier",
-      color: "#abc",
+      waypoints,
       thickness: 4,
     });
 
@@ -84,83 +107,30 @@ describe("UpdateLineCommand", () => {
     expect(model.findLine("l1")).toEqual(line("l1"));
   });
 
-  it("色と太さに null を渡すと値を消して既定に戻し、undo で元の値に戻す", () => {
+  it("構築したあとで渡したパッチを書き換えても、当てる内容は変わらない", () => {
     const model = new PlayModel(seed());
-    new UpdateLineCommand("l1", { color: "#abc", thickness: 2 }).apply(model);
-    const cmd = new UpdateLineCommand("l1", { color: null, thickness: null });
-
-    cmd.apply(model);
-    expect(model.findLine("l1")).toEqual(line("l1"));
-
-    cmd.undo(model);
-    expect(model.findLine("l1")).toEqual({ ...line("l1"), color: "#abc", thickness: 2 });
-  });
-
-  it("空 patch は現状維持（全項目の未指定分岐）", () => {
-    const model = new PlayModel(seed());
-    const cmd = new UpdateLineCommand("l1", {});
+    const patch: { kind: "block" | "motion" } = { kind: "block" };
+    const cmd = new UpdateLineCommand("l1", patch);
+    patch.kind = "motion";
 
     cmd.apply(model);
 
-    expect(model.findLine("l1")).toEqual(line("l1"));
+    expect(model.findLine("l1")?.kind).toBe("block");
   });
 
-  it("未知 id の apply と apply 前 undo は throw する", () => {
+  it("無い id の線に apply すると throw する", () => {
     const model = new PlayModel(seed());
 
     expect(() => new UpdateLineCommand("ghost", { kind: "block" }).apply(model)).toThrow(
-      /unknown line id "ghost"/,
+      'UpdateLineCommand: unknown line id "ghost"',
     );
-    expect(() => new UpdateLineCommand("l1", {}).undo(model)).toThrow(/apply 未実行/);
-  });
-});
-
-describe("SetLineWaypointsCommand", () => {
-  it("waypoint 列を差し替え、undo で元へ戻す。構築後の改変は無効", () => {
-    const model = new PlayModel(seed());
-    const wps = [{ lateralYard: 10, downfieldYard: 55 }];
-    const cmd = new SetLineWaypointsCommand("l1", wps);
-    must(wps[0]).lateralYard = 999;
-
-    cmd.apply(model);
-    expect(model.findLine("l1")?.waypoints).toEqual([{ lateralYard: 10, downfieldYard: 55 }]);
-
-    cmd.undo(model);
-    expect(model.findLine("l1")?.waypoints).toEqual([]);
   });
 
-  it("未知 id の apply と apply 前 undo は throw する", () => {
+  it("apply より前に undo すると throw する", () => {
     const model = new PlayModel(seed());
 
-    expect(() => new SetLineWaypointsCommand("ghost", []).apply(model)).toThrow(
-      /unknown line id "ghost"/,
+    expect(() => new UpdateLineCommand("l1", {}).undo(model)).toThrow(
+      "線の編集: apply より前に undo された",
     );
-    expect(() => new SetLineWaypointsCommand("l1", []).undo(model)).toThrow(/apply 未実行/);
-  });
-});
-
-describe("SetLineEndCommand", () => {
-  it("終点だけを差し替え waypoint は不変、undo で元へ戻す。構築後の改変は無効", () => {
-    const model = new PlayModel(seed());
-    const end = { lateralYard: 12, downfieldYard: 70 };
-    const cmd = new SetLineEndCommand("l1", end);
-    end.lateralYard = 999;
-
-    cmd.apply(model);
-    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 12, downfieldYard: 70 });
-    expect(model.findLine("l1")?.waypoints).toEqual([]);
-
-    cmd.undo(model);
-    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 5, downfieldYard: 60 });
-  });
-
-  it("未知 id の apply と apply 前 undo は throw する", () => {
-    const model = new PlayModel(seed());
-    const end = { lateralYard: 0, downfieldYard: 0 };
-
-    expect(() => new SetLineEndCommand("ghost", end).apply(model)).toThrow(
-      /unknown line id "ghost"/,
-    );
-    expect(() => new SetLineEndCommand("l1", end).undo(model)).toThrow(/apply 未実行/);
   });
 });

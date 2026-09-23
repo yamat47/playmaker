@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandService } from "../commands/command-service.js";
-import { MovePlayerCommand } from "../commands/player-commands.js";
+import { UpdatePlayerCommand } from "../commands/player-commands.js";
+import { UndoRedoService } from "../commands/undo-redo-service.js";
 import type { Formation } from "../formations/formation.js";
 import { RemoveLineCommand, RemovePlayerCommand } from "../index.js";
+import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
-import { UndoRedoService } from "../undoRedo/undo-redo-service.js";
+import { MAX_PLAYERS, type Player } from "../model/player.js";
 import { EditorController } from "./editor-controller.js";
 import { IdFactory } from "./id-factory.js";
 
@@ -32,13 +34,12 @@ function initialData(): PlayData {
 
 function setup(data: PlayData = initialData()) {
   const model = new PlayModel(data);
-  const undoRedo = new UndoRedoService(model);
-  const commands = new CommandService(model, undoRedo);
+  const commands = new CommandService(model, new UndoRedoService());
   const ids = new IdFactory();
-  const controller = new EditorController(model, commands, undoRedo, ids);
+  const controller = new EditorController(model, commands, ids);
   const changes = vi.fn();
   controller.onDidChange(changes);
-  return { model, undoRedo, commands, ids, controller, changes };
+  return { model, commands, ids, controller, changes };
 }
 
 describe("EditorController: 初期状態", () => {
@@ -254,17 +255,17 @@ describe("EditorController: 線の作図（draw-line）", () => {
 
 describe("EditorController: 選択と選手ドラッグ（select）", () => {
   it("選手クリックで選択、動かさず離せばコマンドは出ない", () => {
-    const { controller, undoRedo } = setup();
+    const { controller, commands } = setup();
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 中心
     expect(controller.getSelection()).toEqual({ kind: "player", id: "p-a" });
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
 
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
     expect(controller.getSelectedPlayer()).toMatchObject({ id: "p-a" });
   });
 
-  it("ドラッグするとプレビューが追従し、離すと MovePlayerCommand を実行する", () => {
+  it("ドラッグするとプレビューが追従し、離すと選手の位置を更新する", () => {
     const { controller, model } = setup();
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a（offset 0）
@@ -348,7 +349,7 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
 });
 
 describe("EditorController: waypoint 編集", () => {
-  it("選択中の線の waypoint をドラッグして SetLineWaypointsCommand を実行する", () => {
+  it("選択中の線の waypoint をドラッグして waypoint を更新する", () => {
     const { controller, model } = setup();
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 を選択（終点側）
     expect(controller.getSelection()).toEqual({ kind: "line", id: "l-1" });
@@ -363,12 +364,12 @@ describe("EditorController: waypoint 編集", () => {
   });
 
   it("waypoint を掴んで動かさず離せばコマンドを出さない", () => {
-    const { controller, undoRedo } = setup();
+    const { controller, commands } = setup();
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 選択
     controller.pointerDown({ lateralYard: 15, downfieldYard: 2 }); // waypoint
     controller.pointerUp({ lateralYard: 15, downfieldYard: 2 });
 
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
   });
 
   it("waypoint ドラッグ中に線が消えたら離してもコマンドを出さない", () => {
@@ -486,7 +487,7 @@ describe("EditorController: waypoint 編集", () => {
 
 describe("EditorController: 終点（endpoint）編集", () => {
   it("終点を掴んでドラッグし、end だけ更新・他線/waypoint 不変・undo 可", () => {
-    const { controller, model, undoRedo } = setup({
+    const { controller, model, commands } = setup({
       version: 2,
       field: { zone: "middle", losYard: 50 },
       players: [
@@ -531,17 +532,17 @@ describe("EditorController: 終点（endpoint）編集", () => {
     expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 28, downfieldYard: 8 });
     expect(model.findLine("l-1")?.waypoints).toEqual([{ lateralYard: 15, downfieldYard: 2 }]);
 
-    undoRedo.undo();
+    commands.undo();
     expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 25, downfieldYard: 5 });
   });
 
   it("終点を掴んで動かさず離せばコマンドを出さない", () => {
-    const { controller, undoRedo } = setup();
+    const { controller, commands } = setup();
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 選択
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // 終点を掴む
     controller.pointerUp({ lateralYard: 25, downfieldYard: 5 });
 
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
   });
 
   it("終点ドラッグ中に線が消えたら離してもコマンドを出さない", () => {
@@ -607,15 +608,15 @@ describe("EditorController: アクション", () => {
   });
 
   it("deleteSelection: 選手が既に消えていればコマンドを出さない", () => {
-    const { controller, commands, undoRedo } = setup();
+    const { controller, commands } = setup();
     controller.pointerDown({ lateralYard: 20, downfieldYard: 0 }); // p-b
     controller.pointerUp({ lateralYard: 20, downfieldYard: 0 });
     commands.execute(new RemovePlayerCommand("p-b"));
-    const undoCount = undoRedo.canUndo;
+    const undoCount = commands.canUndo;
 
     controller.deleteSelection();
 
-    expect(undoRedo.canUndo).toBe(undoCount);
+    expect(commands.canUndo).toBe(undoCount);
     expect(controller.getSelection()).toBeNull();
   });
 
@@ -689,13 +690,13 @@ describe("EditorController: アクション", () => {
   });
 
   it("setFieldZone: 同値は無視、変更はコマンド化して undo 可能", () => {
-    const { controller, model, undoRedo } = setup();
+    const { controller, model, commands } = setup();
     controller.setFieldZone("middle"); // 同値
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
 
     controller.setFieldZone("redzone");
     expect(model.getFieldZone()).toBe("redzone");
-    expect(undoRedo.canUndo).toBe(true);
+    expect(commands.canUndo).toBe(true);
   });
 
   it("undo / redo を委譲し履歴を行き来する", () => {
@@ -731,7 +732,7 @@ describe("EditorController: loadFormation（フォーメーション読込）", 
   };
 
   it("既存選手を保ち衝突しない id で追記、選択解除、Undo で取り消せる", () => {
-    const { controller, model, undoRedo } = setup();
+    const { controller, model, commands } = setup();
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
 
@@ -747,7 +748,7 @@ describe("EditorController: loadFormation（フォーメーション読込）", 
     });
     expect(players[3]?.color).toBe("#c62828"); // 色ありテンプレートは色を保つ
     expect(controller.getSelection()).toBeNull(); // 読込で選択解除
-    expect(undoRedo.canUndo).toBe(true);
+    expect(commands.canUndo).toBe(true);
 
     controller.undo();
     expect(model.getData().players.map((p) => p.id)).toEqual(["p-a", "p-b"]);
@@ -776,13 +777,13 @@ describe("EditorController: loadFormation（フォーメーション読込）", 
   });
 
   it("配置可能な選手が無ければ no-op（コマンドも発火も出ない）", () => {
-    const { controller, model, undoRedo, changes } = setup();
+    const { controller, model, commands, changes } = setup();
     changes.mockClear();
 
     controller.loadFormation({ id: "empty", name: "空", side: "offense", players: [] });
 
     expect(model.getData().players.map((p) => p.id)).toEqual(["p-a", "p-b"]);
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
     expect(changes).not.toHaveBeenCalled();
   });
 });
@@ -916,7 +917,9 @@ describe("EditorController: 長さ 0 の線を作らない", () => {
     controller.setTool("draw-line");
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
     controller.pointerDown({ lateralYard: 14, downfieldYard: 0 });
-    commands.execute(new MovePlayerCommand("p-a", { lateralYard: 14, downfieldYard: 0 }));
+    commands.execute(
+      new UpdatePlayerCommand("p-a", { position: { lateralYard: 14, downfieldYard: 0 } }),
+    );
 
     controller.commitLine();
 
@@ -927,7 +930,7 @@ describe("EditorController: 長さ 0 の線を作らない", () => {
 
 describe("EditorController: 途中状態のまま別の操作をしたとき", () => {
   it("作図中の Undo は最後の打点だけを取り消し、履歴には触れない", () => {
-    const { controller, model, undoRedo } = setup();
+    const { controller, model, commands } = setup();
     controller.setFieldZone("redzone");
     controller.setFieldZone("middle");
     controller.setTool("draw-line");
@@ -941,7 +944,7 @@ describe("EditorController: 途中状態のまま別の操作をしたとき", (
     const added = model.getData().lines.find((l) => l.id !== "l-1");
     expect(added).toMatchObject({ waypoints: [], end: { lateralYard: 14, downfieldYard: 0 } });
     expect(model.getFieldZone()).toBe("middle");
-    expect(undoRedo.canRedo).toBe(false);
+    expect(commands.canRedo).toBe(false);
   });
 
   it("作図中に打点が無いときの Undo は作図をやめ、履歴には触れない", () => {
@@ -1018,7 +1021,7 @@ describe("EditorController: ゾーン窓の外の位置", () => {
   });
 
   it("窓の外にある選手を動かさずにクリックしても、窓の端へ動かさない", () => {
-    const { controller, model, undoRedo } = setup({
+    const { controller, model, commands } = setup({
       version: 2,
       field: { zone: "middle", losYard: 50 },
       players: [
@@ -1031,7 +1034,7 @@ describe("EditorController: ゾーン窓の外の位置", () => {
     controller.pointerUp({ lateralYard: 10, downfieldYard: 16 });
 
     expect(model.findPlayer("far")?.position.downfieldYard).toBe(16);
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
   });
 
   it("ドラッグのプレビューも窓の端で止まる", () => {
@@ -1097,34 +1100,34 @@ describe("EditorController: 消えた対象の選択", () => {
 
 describe("EditorController: 値が変わらないパッチ", () => {
   it("選手の現在値と同じパッチはコマンドを積まず通知もしない", () => {
-    const { controller, undoRedo, changes } = setup();
+    const { controller, commands, changes } = setup();
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
     changes.mockClear();
 
     controller.updateSelectedPlayer({ label: "A", shape: "circle" });
 
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
     expect(changes).not.toHaveBeenCalled();
   });
 
   it("色のない選手に色を消すパッチを渡してもコマンドを積まない", () => {
-    const { controller, undoRedo } = setup();
+    const { controller, commands } = setup();
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
 
     controller.updateSelectedPlayer({ color: null });
 
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
   });
 
   it("線の現在値と同じパッチはコマンドを積まない", () => {
-    const { controller, undoRedo } = setup();
+    const { controller, commands } = setup();
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 選択
 
     controller.updateSelectedLine({ kind: "route", interpolation: "straight" });
 
-    expect(undoRedo.canUndo).toBe(false);
+    expect(commands.canUndo).toBe(false);
   });
 
   it("指定したキーのうち 1 つでも値が違えば適用する", () => {
@@ -1134,5 +1137,117 @@ describe("EditorController: 値が変わらないパッチ", () => {
     controller.updateSelectedLine({ kind: "route", interpolation: "bezier" });
 
     expect(model.findLine("l-1")?.interpolation).toBe("bezier");
+  });
+});
+
+describe("EditorController: 件数の上限", () => {
+  function manyPlayers(count: number): Player[] {
+    return Array.from({ length: count }, (_, i) => ({
+      id: `m-${i}`,
+      position: { lateralYard: 1 + (i % 50), downfieldYard: -10 },
+      shape: "circle",
+      label: "",
+    }));
+  }
+
+  function withPlayers(count: number): PlayData {
+    return { ...initialData(), players: manyPlayers(count), lines: [] };
+  }
+
+  const pair: Formation = {
+    id: "pair",
+    name: "2 人",
+    side: "offense",
+    players: [
+      { position: { lateralYard: 30, downfieldYard: -5 }, shape: "circle", label: "A" },
+      { position: { lateralYard: 32, downfieldYard: -5 }, shape: "circle", label: "B" },
+    ],
+  };
+
+  it("選手が MAX_PLAYERS 人いると、選手の追加ツールでクリックしても足さない", () => {
+    const { controller, model, commands } = setup(withPlayers(MAX_PLAYERS));
+    controller.setTool("add-player");
+
+    controller.pointerDown({ lateralYard: 30, downfieldYard: 5 });
+
+    expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS);
+    expect(commands.canUndo).toBe(false);
+  });
+
+  it("読み込むと MAX_PLAYERS 人を超えるフォーメーションは、1 人も置かない", () => {
+    const { controller, model, commands } = setup(withPlayers(MAX_PLAYERS - 1));
+
+    controller.loadFormation(pair);
+
+    expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS - 1);
+    expect(commands.canUndo).toBe(false);
+  });
+
+  it("読み込んでちょうど MAX_PLAYERS 人になるフォーメーションは置く", () => {
+    const { controller, model } = setup(withPlayers(MAX_PLAYERS - 2));
+
+    controller.loadFormation(pair);
+
+    expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS);
+  });
+
+  it("線が MAX_LINES 本あると、選手をクリックしても作図を始めない", () => {
+    const base = initialData();
+    const lines: Line[] = Array.from({ length: MAX_LINES }, (_, i) => ({
+      id: `m-${i}`,
+      kind: "route",
+      startPlayerId: "p-b",
+      waypoints: [],
+      end: { lateralYard: 20, downfieldYard: 5 },
+      interpolation: "straight",
+    }));
+    const { controller } = setup({ ...base, lines });
+    controller.setTool("draw-line");
+
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
+
+    expect(controller.getViewState().drawing).toBe(false);
+  });
+
+  it("作図では waypoint の上限を超えて打点せず、上限を超えた打点は線に入らない", () => {
+    const { controller, model } = setup();
+    controller.setTool("draw-line");
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
+    // 最後の点は終点になるので、上限より 2 つ多く打つと 1 つだけ溢れる。
+    for (let i = 1; i <= MAX_WAYPOINTS_PER_LINE + 2; i++) {
+      controller.pointerDown({ lateralYard: 10 + i, downfieldYard: 3 });
+    }
+
+    controller.commitLine();
+
+    const added = model.getSnapshot().lines.find((l) => l.id !== "l-1");
+    expect(added?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
+    expect(added?.end).toEqual({ lateralYard: 10 + MAX_WAYPOINTS_PER_LINE + 1, downfieldYard: 3 });
+  });
+
+  it("打点が上限に達したら、プレビューはカーソルではなく最後の打点を終点に描く", () => {
+    const { controller } = setup();
+    controller.setTool("draw-line");
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
+    for (let i = 1; i <= MAX_WAYPOINTS_PER_LINE + 1; i++) {
+      controller.pointerDown({ lateralYard: 10 + i, downfieldYard: 3 });
+    }
+
+    controller.pointerMove({ lateralYard: 50, downfieldYard: 10 });
+
+    const draft = controller.getRenderModel().lines.at(-1);
+    expect(draft?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
+    expect(draft?.end).toEqual({ lateralYard: 10 + MAX_WAYPOINTS_PER_LINE + 1, downfieldYard: 3 });
+  });
+});
+
+describe("EditorController: 履歴の通知", () => {
+  it("Model が変わらず履歴だけが変わっても通知する", () => {
+    const { commands, changes } = setup();
+    const noop = { label: "何も変えないコマンド", apply: () => {}, undo: () => {} };
+
+    commands.execute(noop);
+
+    expect(changes).toHaveBeenCalledOnce();
   });
 });

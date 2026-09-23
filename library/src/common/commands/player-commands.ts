@@ -1,26 +1,21 @@
-// 選手の編集操作（PRD 5.4: 追加 / 移動 / 削除 / プロパティ編集）。DOM 非依存。
-// 各コマンドは apply 時に逆操作用の状態を自分で捕捉する（redo でも再捕捉され整合する）。
-
 import type { IPlayModel, PlayerRemoval } from "../model/play-model.js";
-import type { FieldPosition, Player, PlayerShape } from "../model/player.js";
-import { clonePlayer } from "../model/player.js";
-import type { ICommand } from "./command.js";
+import type { Player } from "../model/player.js";
+import { type ICommand, requireApplied } from "./command.js";
+import { applyPatch, type Patch } from "./patch.js";
 
-/** 指定したキーだけを差し替える。色は null で値を消し、既定に戻す。 */
-export interface PlayerPatch {
-  readonly label?: string;
-  readonly shape?: PlayerShape;
-  readonly color?: string | null;
+/** id は選手を見分ける鍵なので、パッチでは変えない。 */
+export type PlayerPatch = Patch<Omit<Player, "id">>;
+
+export function applyPlayerPatch(current: Player, patch: PlayerPatch): Player {
+  return applyPatch<Player>(current, patch);
 }
 
-/** 選手を 1 人追加する。undo は同 id の削除。 */
 export class AddPlayerCommand implements ICommand {
   readonly label = "選手の追加";
   private readonly player: Player;
 
   constructor(player: Player) {
-    // 構築後に呼び出し側が元オブジェクトを変えても redo が揺れないよう複製して保持する。
-    this.player = clonePlayer(player);
+    this.player = player;
   }
 
   apply(model: IPlayModel): void {
@@ -28,12 +23,13 @@ export class AddPlayerCommand implements ICommand {
   }
 
   undo(model: IPlayModel): void {
-    // 追加直後の選手に従属線は無い（線は別コマンド＝LIFO で先に巻き戻る）。メメントは捨てる。
+    // 追加した直後の選手を起点にした線は、それより後のコマンドなので先に取り消されている。
+    // 削除で控える従属線は空なので捨てる。
     model.removePlayer(this.player.id);
   }
 }
 
-/** 選手を 1 人削除する（従属線もカスケード）。undo はメメントから完全復元。 */
+/** 起点がその選手の線も一緒に消す。undo は選手と線を元の並びの位置へ戻す。 */
 export class RemovePlayerCommand implements ICommand {
   readonly label = "選手の削除";
   private readonly playerId: string;
@@ -48,44 +44,13 @@ export class RemovePlayerCommand implements ICommand {
   }
 
   undo(model: IPlayModel): void {
-    if (this.removal === undefined) {
-      throw new Error("RemovePlayerCommand.undo: apply 未実行");
-    }
-    model.restorePlayer(this.removal);
+    model.restorePlayer(requireApplied(this.removal, this));
   }
 }
 
-/** 選手を移動する（位置のみ変更）。undo は移動前の選手へ差し戻す。 */
-export class MovePlayerCommand implements ICommand {
-  readonly label = "選手の移動";
-  private readonly playerId: string;
-  private readonly to: FieldPosition;
-  private previous: Player | undefined;
-
-  constructor(playerId: string, to: FieldPosition) {
-    this.playerId = playerId;
-    this.to = { ...to };
-  }
-
-  apply(model: IPlayModel): void {
-    const current = model.findPlayer(this.playerId);
-    if (current === undefined) {
-      throw new Error(`MovePlayerCommand: unknown player id "${this.playerId}"`);
-    }
-    this.previous = model.updatePlayer({ ...current, position: { ...this.to } });
-  }
-
-  undo(model: IPlayModel): void {
-    if (this.previous === undefined) {
-      throw new Error("MovePlayerCommand.undo: apply 未実行");
-    }
-    model.updatePlayer(this.previous);
-  }
-}
-
-/** 選手のプロパティ（ラベル・形状・色）を編集する。undo は編集前へ差し戻す。 */
+/** 位置、ラベル、形状、色をまとめて編集する。 */
 export class UpdatePlayerCommand implements ICommand {
-  readonly label = "選手プロパティの編集";
+  readonly label = "選手の編集";
   private readonly playerId: string;
   private readonly patch: PlayerPatch;
   private previous: Player | undefined;
@@ -100,22 +65,10 @@ export class UpdatePlayerCommand implements ICommand {
     if (current === undefined) {
       throw new Error(`UpdatePlayerCommand: unknown player id "${this.playerId}"`);
     }
-    // undefined は現状維持、null は値を消して既定に戻す。
-    const { label, shape, color } = this.patch;
-    const nextColor = color === undefined ? current.color : (color ?? undefined);
-    this.previous = model.updatePlayer({
-      id: current.id,
-      position: current.position,
-      shape: shape ?? current.shape,
-      label: label ?? current.label,
-      ...(nextColor === undefined ? {} : { color: nextColor }),
-    });
+    this.previous = model.updatePlayer(applyPlayerPatch(current, this.patch));
   }
 
   undo(model: IPlayModel): void {
-    if (this.previous === undefined) {
-      throw new Error("UpdatePlayerCommand.undo: apply 未実行");
-    }
-    model.updatePlayer(this.previous);
+    model.updatePlayer(requireApplied(this.previous, this));
   }
 }

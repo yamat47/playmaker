@@ -12,17 +12,18 @@ export {
   AddLineCommand,
   type LinePatch,
   RemoveLineCommand,
-  SetLineEndCommand,
-  SetLineWaypointsCommand,
   UpdateLineCommand,
 } from "./commands/line-commands.js";
 export {
   AddPlayerCommand,
-  MovePlayerCommand,
   type PlayerPatch,
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "./commands/player-commands.js";
+export {
+  type IUndoRedoService,
+  UndoRedoService,
+} from "./commands/undo-redo-service.js";
 export { FIELD_FONT_FAMILY } from "./design/field-font.js";
 export { LINE_COLOR_PALETTE, type LineColorOption } from "./design/line-palette.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
@@ -147,7 +148,3 @@ export {
 export type { PlayCategory, PlayPreset } from "./plays/play-preset.js";
 export { getPlayPreset, PLAY_PRESETS } from "./plays/presets.js";
 export { TEAM_SIDE_VALUES, type TeamSide } from "./presets/shared.js";
-export {
-  type IUndoRedoService,
-  UndoRedoService,
-} from "./undoRedo/undo-redo-service.js";

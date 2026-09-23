@@ -347,6 +347,14 @@ describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () =
     expect(model.getData().lines).toHaveLength(3);
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it("同じ id を 2 回含む一括削除は、何も消さずに throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.removePlayers(["a", "a"])).toThrow('duplicate player id "a"');
+
+    expect(model.getData()).toEqual(seed());
+  });
 });
 
 describe("PlayModel 線の追加・挿入・削除・更新", () => {

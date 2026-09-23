@@ -60,7 +60,10 @@ export interface IPlayModel {
   addPlayers(players: readonly Player[]): void;
   /** 選手を削除し、起点がその選手の線もカスケード除去する。巻き戻し用メメントを返す。 */
   removePlayer(id: string): PlayerRemoval;
-  /** 複数選手を一括削除し（各々従属線をカスケード）、変更を 1 回だけ発火する。 */
+  /**
+   * 複数選手を一括削除し（各々従属線をカスケード）、変更を 1 回だけ発火する。
+   * 未知の id か重なった id を含むなら、何も消さずに throw する。
+   */
   removePlayers(ids: readonly string[]): PlayerRemoval[];
   /**
    * removePlayer の逆操作。選手と従属線を元の並びへ戻す。
@@ -214,10 +217,14 @@ export class PlayModel extends Disposable implements IPlayModel {
 
   removePlayers(ids: readonly string[]): PlayerRemoval[] {
     // 1 件ずつ消しながら未知の id で throw すると、通知も履歴もない削除が途中まで残る。
-    // 先に全件の実在を確かめ、どれか欠けていれば何も消さない。
+    // 先に全件を確かめ、欠けた id や重なった id があれば何も消さない。
     const missing = ids.find((id) => !this.hasPlayer(id));
     if (missing !== undefined) {
-      throw new Error(`PlayModel.removePlayer: unknown player id "${missing}"`);
+      throw new Error(`PlayModel.removePlayers: unknown player id "${missing}"`);
+    }
+    const repeated = ids.find((id, i) => ids.indexOf(id) !== i);
+    if (repeated !== undefined) {
+      throw new Error(`PlayModel.removePlayers: duplicate player id "${repeated}"`);
     }
     const removals = ids.map((id) => this.removePlayerCore(id));
     this.emitChange();

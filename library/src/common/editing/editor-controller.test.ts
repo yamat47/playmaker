@@ -666,10 +666,10 @@ describe("EditorController: アクション", () => {
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
-    controller.updateSelectedPlayer({ label: "Z", shape: "triangle", color: "#f00" });
+    controller.updateSelectedPlayer({ label: "Z", shape: "square", color: "#f00" });
     expect(model.findPlayer("p-a")).toMatchObject({
       label: "Z",
-      shape: "triangle",
+      shape: "square",
       color: "#f00",
     });
 

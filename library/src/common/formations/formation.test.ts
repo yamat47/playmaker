@@ -46,8 +46,8 @@ describe("normalizeFormation: 既定補完", () => {
         name: "ニッケル",
         side: "defense",
         players: [
-          { position: { lateralYard: 7, downfieldYard: 53 }, shape: "hexagon", color: "#c62828" },
-          { position: { lateralYard: 46, downfieldYard: 53 }, shape: "hexagon" },
+          { position: { lateralYard: 7, downfieldYard: 53 }, shape: "square", color: "#c62828" },
+          { position: { lateralYard: 46, downfieldYard: 53 }, shape: "square" },
         ],
       }),
     );

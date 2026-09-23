@@ -1,7 +1,3 @@
-// 選手マーカー（6 形状・ラベル・色）を Canvas へ描く（PRD 5.2）。
-// 位置決定は common の FieldGeometry に委譲し、本クラスは描画命令だけを持つ
-// → ロジックは common 単体テストで網羅し、ここは VRT なしでも薄く保てる。
-
 import { PLAYER_RADIUS_YARDS, playerMarkerOutline } from "../../common/index.js";
 import { fieldFont } from "../theme/field-font.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
@@ -28,15 +24,12 @@ export class PlayerRenderer implements ILayerRenderer {
 
       // 影・グラデーションを持たない完全フラット。塗り → 枠線の順で描く。
       ctx.beginPath();
-      const outline = playerMarkerOutline(player.shape, center, r);
+      const outline = playerMarkerOutline(player.shape, r);
       if (outline.kind === "circle") {
         ctx.arc(center.x, center.y, outline.radius, 0, Math.PI * 2);
       } else {
-        // 空のパスへの最初の lineTo は moveTo として働く。
-        for (const vertex of outline.vertices) {
-          ctx.lineTo(vertex.x, vertex.y);
-        }
-        ctx.closePath();
+        const { halfSide } = outline;
+        ctx.rect(center.x - halfSide, center.y - halfSide, halfSide * 2, halfSide * 2);
       }
       ctx.fillStyle = player.color ?? fill;
       ctx.fill();

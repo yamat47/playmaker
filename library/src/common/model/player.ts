@@ -1,7 +1,3 @@
-// 選手のデータ表現（PRD 5.2）。DOM 非依存。
-// PlayData に合成され商用ソフトの DB に保存される（PRD 5.8）。
-// 戦術的厳密性より組み込みやすさ優先（PRD 4.1）: 形状は描画しやすい 6 種の幾何図形に絞る。
-
 import {
   isFiniteNumber,
   isNonEmptyString,
@@ -11,17 +7,10 @@ import {
 } from "./guards.js";
 
 /**
- * 選手マーカーの形状（6 種・PRD 5.2）。
- * いずれも凸図形で「外接円 = ヒット領域」が成立し、レンダラ/hit-test を一様に保てる。
+ * 選手マーカーの形状。種類が多いと図が散らかるので、丸と四角の 2 種だけにする。
+ * どちらも外接円を当たり判定にできるので、hit-test は形状で分けない。
  */
-export const PLAYER_SHAPE_VALUES = [
-  "circle",
-  "square",
-  "triangle",
-  "diamond",
-  "pentagon",
-  "hexagon",
-] as const;
+export const PLAYER_SHAPE_VALUES = ["circle", "square"] as const;
 
 export type PlayerShape = (typeof PLAYER_SHAPE_VALUES)[number];
 

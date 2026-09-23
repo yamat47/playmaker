@@ -11,10 +11,9 @@ import {
 } from "./player.js";
 
 describe("isPlayerShape", () => {
-  it("6 種の正規形状を true と判定する", () => {
-    for (const shape of ["circle", "square", "triangle", "diamond", "pentagon", "hexagon"]) {
-      expect(isPlayerShape(shape)).toBe(true);
-    }
+  it("circle と square を true と判定する", () => {
+    expect(isPlayerShape("circle")).toBe(true);
+    expect(isPlayerShape("square")).toBe(true);
   });
 
   it("未知の文字列や非文字列を false と判定する", () => {
@@ -48,6 +47,14 @@ describe("normalizePlayers", () => {
         label: "",
       },
     ]);
+  });
+
+  it("丸と四角以外の形状は、既定の形状に置き換える", () => {
+    const [player] = normalizePlayers([
+      { id: "de", position: { lateralYard: 1, downfieldYard: 2 }, shape: "triangle" },
+    ]);
+
+    expect(player?.shape).toBe(DEFAULT_PLAYER_SHAPE);
   });
 
   it("color は非空文字列のときだけ保持する", () => {
@@ -145,7 +152,7 @@ describe("clonePlayer", () => {
     const original: Player = {
       id: "x",
       position: { lateralYard: 3, downfieldYard: 4 },
-      shape: "diamond",
+      shape: "square",
       label: "X",
       color: "#00f",
     };

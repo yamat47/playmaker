@@ -39,7 +39,7 @@ describe("hitTestPlayer", () => {
     expect(hitTestPlayer([p], { lateralYard: 1.0001, downfieldYard: 0 }, 1)).toBeUndefined();
   });
 
-  it("重なり合う選手は最も手前（配列末尾＝上に描画）を返す", () => {
+  it("重なり合う選手は、配列の後ろにあって上に描いた選手を返す", () => {
     const back = player("back", 10, 50);
     const front = player("front", 10, 50);
 
@@ -142,7 +142,7 @@ describe("hitTestLine", () => {
     expect(hitTestLine([curved], players, probe, 0.3)).toBeUndefined();
   });
 
-  it("重なる線は最も手前（配列末尾＝上に描画）を返す", () => {
+  it("重なる線は、配列の後ろにあって上に描いた線を返す", () => {
     const back = line("back");
     const front = line("front");
 

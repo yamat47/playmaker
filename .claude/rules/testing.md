@@ -24,6 +24,16 @@ paths:
   図の組み立てに使う型と、`MAX_PLAYERS` のような公開された定数は使ってよい
 - PlaySession と IEditorController は公開しない。ジェスチャ単位の API を互換つきで固定する便益が、今の利用者には無い
 
+## ブラウザテスト
+
+`new Playmaker(container)` の結線（DOM、ポインタ、キー、テーマ変数）は、Vitest の Browser Mode で Chromium を動かして確かめる。
+
+- 置き場は `src/playmaker.browser.test.ts`。編集の振る舞いそのものは仕様テストで確かめ、ここでは
+  UI の操作が図に届くことと、DOM の組み立てと後始末だけを確かめる。10〜20 本に保つ
+- 操作は `vitest/browser` の `page` と `userEvent` で行い、要素はロールと名前で探す。
+  canvas の中の位置は、canvas の左上からの px で渡す
+- 観測するのは公開 API（`getPlayData()`、`fieldZone`、`onChange`）と、container に置かれた DOM だけにする
+
 ## 単体テスト
 
 モジュールとしての約束を書けるものだけ、ソースと同じ階層に `*.test.ts` を置く。
@@ -35,7 +45,7 @@ paths:
 
 ## 書き方
 
-- Vitest は `src/**/*.test.ts` を node 環境で実行する。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
+- Vitest は `src/**/*.test.ts` を node 環境で、`src/**/*.browser.test.ts` を Chromium で実行する。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
 - `describe` は機能か、単体テストならモジュールの名前にする。`it` は日本語で「どういう入力のとき、どうなるか」を書く
   （例: `it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ")`）。
   メソッド名で始めない。「正しく動く」「正常系」のように結果を言わない名前にしない
@@ -48,9 +58,10 @@ paths:
 
 ## 実行
 
-- `make test`（全体、カバレッジゲート込み）、`make test FILE=<file>`（1 ファイル、ゲートなし）、
+- `make test`（node のテスト全体、カバレッジゲート込み）、`make test FILE=<file>`（1 ファイル、ゲートなし）、
   `make test-watch`（カバレッジなし）
-- `browser/` と `playmaker.ts` の結線は、今は demo で目視する（`run-demo` skill）
+- `make test-browser`（ブラウザテスト）。CI では別のジョブで動く
+- 見た目（色、線の形、文字）はテストで確かめず、demo で目視する（`run-demo` skill）
 
 ## カバレッジ（common 層 100% ゲート）
 

@@ -411,7 +411,7 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T12 描画パイプライン（browser）
+### T12 描画パイプライン（browser） (done)
 
 - [x] **T12-1 [should] IRenderer がない（規約と実装の衝突）**（D1）
   - locations: library/src/browser/rendering/canvas-surface.ts:30-32, library/src/browser/rendering/canvas-surface.ts:38, library/src/browser/rendering/field-renderer.ts, library/src/browser/rendering/line-renderer.ts:34-41, library/src/browser/rendering/player-renderer.ts:54-60, library/src/browser/input/pointer-input.ts:6-9
@@ -425,22 +425,25 @@ PR 単位で、依存順に並べる。
     - 再描画は rAF で束ねる invalidate にする。
     - DPR は matchMedia の change を監視する。
   - 結論（T12a）: PNG の書き出しと画面の描画は、どちらも renderLayers で図の層を描く（台帳の renderPlayToCanvas に当たる）。書き出しは編集の層を通さない。再描画は requestAnimationFrame で 1 回にまとめる。大きさが変わったときはバッファが消えるので、待たずにすぐ描く。geometry は状態として持たず、描くときと座標を変換するときに、その都度 host の大きさとゾーンから求める。`geometry!:` もここで外した。
-- [ ] **T12-3 [should] exportToPng がフォントの読み込みを待たず、同期 throw と reject が混在し、幅に上限もない**
+- [x] **T12-3 [should] exportToPng がフォントの読み込みを待たず、同期 throw と reject が混在し、幅に上限もない**
   - locations: library/src/browser/rendering/canvas-surface.ts:36, library/src/browser/rendering/canvas-surface.ts:67-83, library/src/browser/rendering/canvas-surface.ts:120-140, library/src/common/export/image-export.ts:39-43, library/src/playmaker.ts:161-163
   - 対応: async にし、`document.fonts.load` を待ち、失敗はすべて reject にする。MAX_EXPORT_WIDTH を設ける。fonts は `in` で狭める。`geometry!:` は T12a で外した。
-- [ ] **T12-4 [nit] CSS の適用が遅れると、同梱フォントでの再描画が行われない**
+  - 結論: 失敗はすべて reject にした。フォントを読み込めなかったときは reject せず、代わりのフォントで描く。MAX_EXPORT_WIDTH は 4096 で、超えた幅は拒まずに切り詰める（iOS の Safari の面積の上限に、どのゾーンでも収まる）。`document.fonts.load` を待つだけでは、ホストが CSS を読み込む前の書き出しを救えなかったので、同梱フォントは styles.css の @font-face をやめ、FontFace で JS から登録する（2026-09-23 にユーザーが決定）。woff2 は CSS ではなく JS に inline される。書き出しはフォントを待つ間に処理を手放すので、テーマ変数は待つ前に読み切る（createThemeReader が作った時点で全変数を読む）。
+- [x] **T12-4 [nit] CSS の適用が遅れると、同梱フォントでの再描画が行われない**
   - locations: library/src/browser/rendering/canvas-surface.ts:67-70
   - 対応: loadingdone を購読する。
-- [ ] **T12-5 [should] DOM に依存しない描画の計算が browser 層にあり、テストされていない**
+  - 結論: loadingdone は購読しない。T12-3 でフォントを JS から登録したので、画面も書き出しと同じ読み込みを待って 1 回描き直すだけでよい。loadingdone はホストのページのフォントでも発火する。
+- [x] **T12-5 [should] DOM に依存しない描画の計算が browser 層にあり、テストされていない**
   - locations: library/src/browser/rendering/line-renderer.ts:99, library/src/browser/rendering/line-renderer.ts:119, library/src/browser/rendering/line-renderer.ts:141, library/src/browser/rendering/line-renderer.ts:168, library/src/browser/rendering/player-renderer.ts:100, library/src/browser/rendering/canvas-surface.ts:262
   - 対応: `common/geometry/line-decoration.ts`、playerPolygonVertices、変数が空のときのフォールバック規則を common へ移し、node でテストする。
+  - 結論: 矢じり、T 字、矢じりの手前での切り詰めは `common/geometry/line-decoration.ts`、選手マーカーの輪郭（丸の描く半径と多角形の頂点）は `common/geometry/player-marker.ts` に移した。変数が空のときに既定値へ寄せる規則は common へ移さず、`browser/theme/tokens.ts` の themeReaderFrom にして node でテストする。トークンの一覧と既定値が T11 で browser/theme に入ったので、規則だけを離すと既定値の出どころが 2 か所に分かれる。
 - [x] **T12-6 [should] 太さの倍率を描画に反映する**（T7-2 の描画側。T7 で一緒に対応した）
   - locations: library/src/browser/rendering/line-renderer.ts:60
 
 - 依存: T11、T7、D1
 - 完了条件: レンダラが RenderFrame に揃い、注入できる。構築直後に書き出した PNG も同梱フォントで描かれる。DPR を変えても鮮明なまま。
 - 規模: L。T12-1 と T12-2 を先に、T12-3〜T12-6 を後に分けてもよい。
-- 進み具合: T12a（T12-1、T12-2）を閉じた。残りは T12b（T12-3〜T12-5）。
+- 進み具合: T12a（T12-1、T12-2）と T12b（T12-3〜T12-5）の 2 本で閉じた。
 
 ---
 
@@ -452,7 +455,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T13-2 [should] 選択肢に英語の enum 値がそのまま表示されている**
   - locations: library/src/browser/ui/property-panel.ts:18-20, library/src/browser/ui/property-panel.ts:172-178
 - [ ] **T13-3 [should] 形状を 2 種に確定し、残り 4 種を型・レンダラから削除する**（D18）
-  - locations: library/src/browser/ui/property-panel.ts:16-18, library/src/common/model/player.ts:9, library/src/common/model/player.ts:14, library/src/browser/rendering/player-renderer.ts
+  - locations: library/src/browser/ui/property-panel.ts:16-18, library/src/common/model/player.ts:9, library/src/common/model/player.ts:14, library/src/common/geometry/player-marker.ts
   - 対応: PlayerShape を circle / square だけにし、多角形描画のコードを消す。未知の形状は既定へ寄せる正規化だけ残す。PRD 5.2 の更新は T18。
   - 補足: 型を 2 種にすれば、旧形状は正規化で既定（circle）へ寄るので、migration の段は要らない（T7 で確かめた）。
 - [ ] **T13-4 [should] ツールバーとパネルが canvas に重なり、フィールドを隠す**（D17）

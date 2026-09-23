@@ -2,34 +2,9 @@
 // 位置決定は common の FieldGeometry に委譲し、本クラスは描画命令だけを持つ
 // → ロジックは common 単体テストで網羅し、ここは VRT なしでも薄く保てる。
 
-import { PLAYER_RADIUS_YARDS, type PlayerShape } from "../../common/index.js";
-import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
+import { PLAYER_RADIUS_YARDS, playerMarkerOutline } from "../../common/index.js";
+import { fieldFont } from "../theme/field-font.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
-
-// 正多角形の頂点角（apex を上に向ける）。circle は arc で特別扱い。
-// 当たり領域（hit-test）は半径 r の外接円なので、全頂点を r 上に置き整合させる。
-const POLYGON_SIDES: Record<Exclude<PlayerShape, "circle">, number> = {
-  triangle: 3,
-  square: 4,
-  diamond: 4,
-  pentagon: 5,
-  hexagon: 6,
-};
-
-// square は頂点を上に置くと菱形に見えるため、辺が水平になるよう 45° 回す。
-const SHAPE_ROTATION: Record<Exclude<PlayerShape, "circle">, number> = {
-  triangle: 0,
-  square: Math.PI / 4,
-  diamond: 0,
-  pentagon: 0,
-  hexagon: 0,
-};
-
-// 円は外接円半径そのままだと多角形（外接円に内接＝辺が内側）より一回り大きく見え、
-// マーカーが動線（特に LOS 際のブロック）を覆う。描画半径だけ正方形の辺幅へ寄せて
-// 視覚的な大きさを揃える（錯視で円は小さく見えるためやや大きめ）。当たり領域は全形状で
-// 外接円のまま＝hit-test の一様性（player.ts の不変条件）は崩さない。
-const CIRCLE_DRAW_SCALE = 0.82;
 
 export class PlayerRenderer implements ILayerRenderer {
   /** players を配列順（後の要素ほど上）に描く。 */
@@ -49,14 +24,19 @@ export class PlayerRenderer implements ILayerRenderer {
     const strokeWidth = metrics.markerStroke;
 
     for (const player of players) {
-      const { x, y } = geometry.toCanvas(player.position);
+      const center = geometry.toCanvas(player.position);
 
       // 影・グラデーションを持たない完全フラット。塗り → 枠線の順で描く。
       ctx.beginPath();
-      if (player.shape === "circle") {
-        ctx.arc(x, y, r * CIRCLE_DRAW_SCALE, 0, Math.PI * 2);
+      const outline = playerMarkerOutline(player.shape, center, r);
+      if (outline.kind === "circle") {
+        ctx.arc(center.x, center.y, outline.radius, 0, Math.PI * 2);
       } else {
-        this.tracePolygon(ctx, x, y, r, player.shape);
+        // 空のパスへの最初の lineTo は moveTo として働く。
+        for (const vertex of outline.vertices) {
+          ctx.lineTo(vertex.x, vertex.y);
+        }
+        ctx.closePath();
       }
       ctx.fillStyle = player.color ?? fill;
       ctx.fill();
@@ -66,38 +46,15 @@ export class PlayerRenderer implements ILayerRenderer {
 
       if (player.label !== "") {
         ctx.fillStyle = labelColor;
-        ctx.font = `700 ${fontPx}px ${FIELD_FONT_FAMILY}`;
+        ctx.font = fieldFont(fontPx);
         ctx.textAlign = "center";
         // textBaseline="middle" は em ボックス基準でフォント次第で上下にずれる。
         // 実際の字面ボックス（actualBoundingBox）の中心をマーカー中心へ合わせる。
         ctx.textBaseline = "alphabetic";
         const tm = ctx.measureText(player.label);
-        const labelY = y + (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent) / 2;
-        ctx.fillText(player.label, x, labelY);
+        const labelY = center.y + (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent) / 2;
+        ctx.fillText(player.label, center.x, labelY);
       }
     }
-  }
-
-  private tracePolygon(
-    ctx: CanvasRenderingContext2D,
-    cx: number,
-    cy: number,
-    r: number,
-    shape: Exclude<PlayerShape, "circle">,
-  ): void {
-    const sides = POLYGON_SIDES[shape];
-    // -π/2 で apex を上（Canvas は y 下向き）に向け、形状ごとの回転を加える。
-    const start = -Math.PI / 2 + SHAPE_ROTATION[shape];
-    for (let i = 0; i < sides; i++) {
-      const angle = start + (i * 2 * Math.PI) / sides;
-      const px = cx + r * Math.cos(angle);
-      const py = cy + r * Math.sin(angle);
-      if (i === 0) {
-        ctx.moveTo(px, py);
-      } else {
-        ctx.lineTo(px, py);
-      }
-    }
-    ctx.closePath();
   }
 }

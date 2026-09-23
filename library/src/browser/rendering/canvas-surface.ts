@@ -9,8 +9,9 @@ import {
   type SceneData,
   toDisposable,
 } from "../../common/index.js";
-import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
+import { loadFieldFont } from "../theme/field-font-face.js";
 import { createThemeReader } from "../theme/theme-reader.js";
+import type { ThemeReader } from "../theme/tokens.js";
 import {
   createDefaultLayers,
   type EditorRenderFrame,
@@ -65,7 +66,7 @@ export class CanvasSurface extends Disposable {
 
     this.watchDevicePixelRatio();
     this.resize();
-    this.renderWhenFontReady();
+    this.redrawWhenFontLoads();
   }
 
   /** テーマ変数は描くたびに読み直すので、ホストが変数を変えたあとに呼べば反映される。 */
@@ -92,9 +93,14 @@ export class CanvasSurface extends Disposable {
   /**
    * 指定したプレー図を PNG（Blob）として書き出す。図の層だけで描くので、選択の強調と
    * ハンドルは入らない。配色は画面と同じテーマ変数から読む。
+   * 同梱フォントを読み込み終えてから描くので、構築の直後でも数字とラベルは同梱フォントになる。
    */
-  exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
+  async exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
     const { width, height } = resolveImageExportSize(data.field.zone, options);
+    // 配色は呼んだ時点の変数で決める。フォントを待つ間にホストが変数を戻したり、破棄して canvas が
+    // host から外れたりしても、書き出す色は変わらない。
+    const theme = createThemeReader(this.host);
+    await loadFieldFont();
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -103,7 +109,7 @@ export class CanvasSurface extends Disposable {
       throw new Error("Playmaker: エクスポート用 2D canvas context を取得できませんでした。");
     }
     const geometry = new FieldGeometry(width, height, data.field);
-    renderLayers(ctx, this.frameFor(geometry, data), this.layers.play);
+    renderLayers(ctx, this.frameFor(geometry, data, theme), this.layers.play);
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (blob) {
@@ -115,26 +121,13 @@ export class CanvasSurface extends Disposable {
     });
   }
 
-  /**
-   * 同梱フォントは CSS を読んだあとで非同期に読み込まれる。初回は代わりのフォントで描いて
-   * 白い画面を避け、読み込めたら描き直して同梱フォントに差し替える。
-   */
-  private renderWhenFontReady(): void {
-    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
-    const fontSpec = `700 1em ${FIELD_FONT_FAMILY}`;
-    if (!fonts || fonts.check(fontSpec)) {
-      return;
-    }
-    fonts.load(fontSpec).then(
-      () => {
-        if (!this.isDisposed) {
-          this.invalidate();
-        }
-      },
-      () => {
-        // 読み込めなくても、代わりのフォントのまま図は描ける。
-      },
-    );
+  /** 初回は代わりのフォントで描いて白い画面を避け、同梱フォントを読み込めたら描き直す。 */
+  private redrawWhenFontLoads(): void {
+    void loadFieldFont().then(() => {
+      if (!this.isDisposed) {
+        this.invalidate();
+      }
+    });
   }
 
   /** コンテナの大きさと DPR に合わせて、描画用のバッファを作り直す。 */
@@ -183,19 +176,19 @@ export class CanvasSurface extends Disposable {
 
   private render(): void {
     const frame: EditorRenderFrame = {
-      ...this.frameFor(this.measure(), this.scene),
+      ...this.frameFor(this.measure(), this.scene, createThemeReader(this.host)),
       overlay: this.overlay,
     };
     renderLayers(this.ctx, frame, this.layers.play);
     renderLayers(this.ctx, frame, this.layers.editor);
   }
 
-  private frameFor(geometry: FieldGeometry, scene: SceneData): RenderFrame {
+  private frameFor(geometry: FieldGeometry, scene: SceneData, theme: ThemeReader): RenderFrame {
     return {
       geometry,
       metrics: computeFieldMetrics(geometry.fieldPixelWidth, geometry.scale),
       scene,
-      theme: createThemeReader(this.host),
+      theme,
     };
   }
 

@@ -43,3 +43,12 @@ export const THEME_TOKENS = {
 export type ThemeTokenName = keyof typeof THEME_TOKENS;
 
 export type ThemeReader = (token: ThemeTokenName) => string;
+
+/** 変数の値を読む関数から ThemeReader を作る。値が空か空白だけのトークンは、既定値で描く。 */
+export function themeReaderFrom(readProperty: (property: string) => string): ThemeReader {
+  return (token) => {
+    const { property, fallback } = THEME_TOKENS[token];
+    const value = readProperty(property).trim();
+    return value === "" ? fallback : value;
+  };
+}

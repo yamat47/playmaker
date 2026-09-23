@@ -1,14 +1,14 @@
-import { THEME_TOKENS, type ThemeReader } from "./tokens.js";
+import { THEME_TOKENS, type ThemeReader, themeReaderFrom } from "./tokens.js";
 
 /**
  * element で解決したテーマ変数を読む。canvas は var() を解釈できないので、描く前に具体的な色にする。
- * getComputedStyle はスタイルの再計算を起こしうるので、1 回の描画では 1 つの reader を使い回す。
+ * 変数は作った時点ですべて読むので、あとでホストが変数を変えても、この reader が返す色は変わらない。
  */
 export function createThemeReader(element: Element): ThemeReader {
   const styles = getComputedStyle(element);
-  return (token) => {
-    const { property, fallback } = THEME_TOKENS[token];
-    const value = styles.getPropertyValue(property).trim();
-    return value === "" ? fallback : value;
-  };
+  const values = new Map<string, string>();
+  for (const { property } of Object.values(THEME_TOKENS)) {
+    values.set(property, styles.getPropertyValue(property));
+  }
+  return themeReaderFrom((property) => values.get(property) ?? "");
 }

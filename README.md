@@ -69,7 +69,7 @@ const playmaker = new Playmaker(container, {
 | `setPlayData(data)` | 永続化済み PlayData を丸ごと再読込（履歴はリセット・`onChange` は出ない） |
 | `loadFormation(formation)` | フォーメーションを既存図へ追記（攻守プリセットを順に重ねられる） |
 | `get fieldZone` / `setFieldZone(zone)` | フィールドゾーン（`middle` / `redzone` / `own-redzone`） |
-| `exportToPng(options?): Promise<Blob>` | 編集 UI を含まない PNG を出力。`options.width` で出力幅(px) |
+| `exportToPng(options?): Promise<Blob>` | 編集 UI を含まない PNG を出力。`options.width` で出力幅(px)。上限は 4096 |
 | `dispose()` | DOM・購読・リソースを解放 |
 
 再エクスポート: 型 `PlayData` `Player` `Line` `FieldPosition` `Formation`

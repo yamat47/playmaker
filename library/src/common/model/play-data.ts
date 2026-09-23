@@ -18,15 +18,40 @@ export type FieldZone = (typeof FIELD_ZONE_VALUES)[number];
 /** ゾーン未指定時の既定。中央が最も汎用的な初期表示。 */
 export const DEFAULT_FIELD_ZONE: FieldZone = "middle";
 
+/** ツールバーやホストの UI がゾーンを並べるときの表示名。 */
+export const FIELD_ZONE_LABELS = {
+  "own-redzone": "自陣RZ",
+  middle: "中央",
+  redzone: "相手RZ",
+} as const satisfies Record<FieldZone, string>;
+
+/**
+ * ゾーンごとの LOS の絶対ヤード（0 = 自ゴール、100 = 相手ゴール）。
+ * 窓の中にバックフィールドとダウンフィールドの両方が収まる位置に置く。
+ * - `middle`: センター
+ * - `redzone`: 相手 15 ヤード
+ * - `own-redzone`: 自陣 10 ヤード
+ */
+export const LOS_YARD_BY_ZONE = {
+  "own-redzone": 10,
+  middle: 50,
+  redzone: 85,
+} as const satisfies Record<FieldZone, number>;
+
 export interface FieldState {
   readonly zone: FieldZone;
+  /**
+   * LOS の絶対ヤード。今はゾーンから決まり、読み込んだデータの値は使わない。
+   * 保存するデータから選手の絶対位置を復元できるよう、値としては持たせる。
+   */
+  readonly losYard: number;
 }
 
 /**
  * 現在の PlayData スキーマ版。スキーマを変えるたびに +1 し、`migratePlayData` の
  * 段（`PLAY_DATA_MIGRATIONS`）に旧→新の変換を 1 つ足す。version の真実源はここ 1 か所。
  */
-export const CURRENT_PLAY_DATA_VERSION = 1 as const;
+export const CURRENT_PLAY_DATA_VERSION = 2 as const;
 
 /**
  * プレー図データ。`version` でスキーマ進化に備え、復元時は `migratePlayData` が
@@ -45,11 +70,15 @@ export function isFieldZone(value: unknown): value is FieldZone {
   return isOneOf(value, FIELD_ZONE_VALUES);
 }
 
+export function fieldStateForZone(zone: FieldZone): FieldState {
+  return { zone, losYard: LOS_YARD_BY_ZONE[zone] };
+}
+
 /** 既定状態の新規 PlayData（選手・線なし）。 */
 export function createEmptyPlayData(): PlayData {
   return {
     version: CURRENT_PLAY_DATA_VERSION,
-    field: { zone: DEFAULT_FIELD_ZONE },
+    field: fieldStateForZone(DEFAULT_FIELD_ZONE),
     players: [],
     lines: [],
   };
@@ -84,7 +113,7 @@ export function resolvePlayData(data: unknown): PlayData {
   const validPlayerIds = new Set(players.map((p) => p.id));
   return {
     version: CURRENT_PLAY_DATA_VERSION,
-    field: { zone: isFieldZone(zone) ? zone : DEFAULT_FIELD_ZONE },
+    field: fieldStateForZone(isFieldZone(zone) ? zone : DEFAULT_FIELD_ZONE),
     players,
     lines: makeIdsUnique(normalizeLines(source.lines, validPlayerIds)),
   };

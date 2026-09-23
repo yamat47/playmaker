@@ -6,17 +6,18 @@ import {
   createEmptyPlayData,
   DEFAULT_FIELD_ZONE,
   isFieldZone,
+  LOS_YARD_BY_ZONE,
   type PlayData,
   resolvePlayData,
 } from "./play-data.js";
 
 describe("createEmptyPlayData", () => {
-  it("version 1・既定ゾーン・選手/線なしの新規データを返す", () => {
+  it("現行 version・既定ゾーン・選手と線なしの新規データを返す", () => {
     const data = createEmptyPlayData();
 
     expect(data).toEqual({
-      version: 1,
-      field: { zone: DEFAULT_FIELD_ZONE },
+      version: 2,
+      field: { zone: DEFAULT_FIELD_ZONE, losYard: 50 },
       players: [],
       lines: [],
     });
@@ -35,12 +36,12 @@ describe("createEmptyPlayData", () => {
 
 describe("clonePlayData", () => {
   const source: PlayData = {
-    version: 1,
-    field: { zone: "redzone" },
+    version: 2,
+    field: { zone: "redzone", losYard: 85 },
     players: [
       {
         id: "qb",
-        position: { lateralYard: 26, absoluteYard: 48 },
+        position: { lateralYard: 26, downfieldYard: 48 },
         shape: "circle",
         label: "QB",
         color: "#f00",
@@ -51,8 +52,8 @@ describe("clonePlayData", () => {
         id: "r1",
         kind: "route",
         startPlayerId: "qb",
-        waypoints: [{ lateralYard: 30, absoluteYard: 52 }],
-        end: { lateralYard: 35, absoluteYard: 60 },
+        waypoints: [{ lateralYard: 30, downfieldYard: 52 }],
+        end: { lateralYard: 35, downfieldYard: 60 },
         interpolation: "bezier",
       },
     ],
@@ -74,7 +75,7 @@ describe("clonePlayData", () => {
 
     copy.field.zone = "middle";
     must(copy.players[0]).label = "WR";
-    must(copy.lines[0]).waypoints.push({ lateralYard: 0, absoluteYard: 0 });
+    must(copy.lines[0]).waypoints.push({ lateralYard: 0, downfieldYard: 0 });
 
     expect(source.field.zone).toBe("redzone");
     expect(source.players[0]?.label).toBe("QB");
@@ -101,21 +102,31 @@ describe("isFieldZone", () => {
 describe("resolvePlayData", () => {
   it("undefined には既定ゾーン・選手/線なしの空データを返す", () => {
     expect(resolvePlayData(undefined)).toEqual({
-      version: 1,
-      field: { zone: DEFAULT_FIELD_ZONE },
+      version: 2,
+      field: { zone: DEFAULT_FIELD_ZONE, losYard: 50 },
       players: [],
       lines: [],
     });
   });
 
   it("正当なゾーンはそのまま保持する", () => {
-    const input: PlayData = { version: 1, field: { zone: "redzone" }, players: [], lines: [] };
+    const input: PlayData = {
+      version: 2,
+      field: { zone: "redzone", losYard: 85 },
+      players: [],
+      lines: [],
+    };
 
     expect(resolvePlayData(input).field.zone).toBe("redzone");
   });
 
   it("入力を共有せず新規オブジェクトを返す（Model 専有）", () => {
-    const input: PlayData = { version: 1, field: { zone: "own-redzone" }, players: [], lines: [] };
+    const input: PlayData = {
+      version: 2,
+      field: { zone: "own-redzone", losYard: 10 },
+      players: [],
+      lines: [],
+    };
 
     const resolved = resolvePlayData(input);
 
@@ -126,9 +137,15 @@ describe("resolvePlayData", () => {
     expect(resolved.field.zone).toBe("own-redzone");
   });
 
+  it("losYard は入力の値を使わず、ゾーンの既定の位置にする", () => {
+    const resolved = resolvePlayData({ field: { zone: "redzone", losYard: 30 } });
+
+    expect(resolved.field).toEqual({ zone: "redzone", losYard: LOS_YARD_BY_ZONE.redzone });
+  });
+
   it("不正・欠落したゾーンは既定へフォールバックする（古い永続データ耐性）", () => {
-    const broken = { version: 1, field: { zone: "bogus" } } as unknown as PlayData;
-    const missingField = { version: 1 } as unknown as PlayData;
+    const broken = { version: 2, field: { zone: "bogus" } } as unknown as PlayData;
+    const missingField = { version: 2 } as unknown as PlayData;
 
     expect(resolvePlayData(broken).field.zone).toBe(DEFAULT_FIELD_ZONE);
     expect(resolvePlayData(missingField).field.zone).toBe(DEFAULT_FIELD_ZONE);
@@ -136,9 +153,9 @@ describe("resolvePlayData", () => {
 
   it("選手を正規化して保持し、入力要素を共有しない", () => {
     const input = {
-      version: 1,
-      field: { zone: "middle" },
-      players: [{ id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "square" }],
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
+      players: [{ id: "qb", position: { lateralYard: 26, downfieldYard: 48 }, shape: "square" }],
     } as unknown as PlayData;
 
     const resolved = resolvePlayData(input);
@@ -146,7 +163,7 @@ describe("resolvePlayData", () => {
     expect(resolved.players).toEqual([
       {
         id: "qb",
-        position: { lateralYard: 26, absoluteYard: 48 },
+        position: { lateralYard: 26, downfieldYard: 48 },
         shape: "square",
         label: "",
       },
@@ -155,10 +172,10 @@ describe("resolvePlayData", () => {
   });
 
   it("players が無い/不正なら空配列にフォールバックする（古い永続データ耐性）", () => {
-    const missing = { version: 1, field: { zone: "middle" } } as unknown as PlayData;
+    const missing = { version: 2, field: { zone: "middle", losYard: 50 } } as unknown as PlayData;
     const broken = {
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: "nope",
     } as unknown as PlayData;
 
@@ -168,22 +185,22 @@ describe("resolvePlayData", () => {
 
   it("線を正規化し、確定済み選手を起点に持つものだけ残す", () => {
     const input = {
-      version: 1,
-      field: { zone: "middle" },
-      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 } }],
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
+      players: [{ id: "wr", position: { lateralYard: 5, downfieldYard: 50 } }],
       lines: [
         {
           id: "r1",
           kind: "route",
           startPlayerId: "wr",
-          end: { lateralYard: 5, absoluteYard: 60 },
+          end: { lateralYard: 5, downfieldYard: 60 },
         },
         // 起点が存在しない選手 → 復元不能として除外。
         {
           id: "r2",
           kind: "route",
           startPlayerId: "ghost",
-          end: { lateralYard: 0, absoluteYard: 0 },
+          end: { lateralYard: 0, downfieldYard: 0 },
         },
       ],
     } as unknown as PlayData;
@@ -196,13 +213,13 @@ describe("resolvePlayData", () => {
 
   it("重複した選手 id は後ろの方を振り直し、その id を指す線は先頭の選手に付ける", () => {
     const input = {
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [
-        { id: "wr", position: { lateralYard: 5, absoluteYard: 50 } },
-        { id: "wr", position: { lateralYard: 9, absoluteYard: 50 } },
+        { id: "wr", position: { lateralYard: 5, downfieldYard: 50 } },
+        { id: "wr", position: { lateralYard: 9, downfieldYard: 50 } },
       ],
-      lines: [{ id: "r1", startPlayerId: "wr", end: { lateralYard: 5, absoluteYard: 60 } }],
+      lines: [{ id: "r1", startPlayerId: "wr", end: { lateralYard: 5, downfieldYard: 60 } }],
     } as unknown as PlayData;
 
     const resolved = resolvePlayData(input);
@@ -216,12 +233,12 @@ describe("resolvePlayData", () => {
 
   it("振り直す id は入力に明示された他の id と衝突させない", () => {
     const input = {
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [
-        { id: "a", position: { lateralYard: 1, absoluteYard: 50 } },
-        { id: "a", position: { lateralYard: 2, absoluteYard: 50 } },
-        { id: "a-2", position: { lateralYard: 3, absoluteYard: 50 } },
+        { id: "a", position: { lateralYard: 1, downfieldYard: 50 } },
+        { id: "a", position: { lateralYard: 2, downfieldYard: 50 } },
+        { id: "a-2", position: { lateralYard: 3, downfieldYard: 50 } },
       ],
     } as unknown as PlayData;
 
@@ -233,11 +250,11 @@ describe("resolvePlayData", () => {
   it("補完した id が明示 id と衝突したら、補完した側を振り直す", () => {
     // id の無い 2 番目（index 1）は p1 を補完されるが、先頭が明示的に p1 を持つ。
     const input = {
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [
-        { id: "p1", position: { lateralYard: 1, absoluteYard: 50 } },
-        { position: { lateralYard: 2, absoluteYard: 50 } },
+        { id: "p1", position: { lateralYard: 1, downfieldYard: 50 } },
+        { position: { lateralYard: 2, downfieldYard: 50 } },
       ],
     } as unknown as PlayData;
 
@@ -248,12 +265,12 @@ describe("resolvePlayData", () => {
 
   it("重複した線 id は後ろの方を振り直す", () => {
     const input = {
-      version: 1,
-      field: { zone: "middle" },
-      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 } }],
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
+      players: [{ id: "wr", position: { lateralYard: 5, downfieldYard: 50 } }],
       lines: [
-        { id: "r", startPlayerId: "wr", end: { lateralYard: 5, absoluteYard: 60 } },
-        { id: "r", startPlayerId: "wr", end: { lateralYard: 9, absoluteYard: 60 } },
+        { id: "r", startPlayerId: "wr", end: { lateralYard: 5, downfieldYard: 60 } },
+        { id: "r", startPlayerId: "wr", end: { lateralYard: 9, downfieldYard: 60 } },
       ],
     } as unknown as PlayData;
 
@@ -264,13 +281,13 @@ describe("resolvePlayData", () => {
 
   it("lines が無い/不正なら空配列にフォールバックする（古い永続データ耐性）", () => {
     const missing = {
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [],
     } as unknown as PlayData;
     const broken = {
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [],
       lines: "nope",
     } as unknown as PlayData;

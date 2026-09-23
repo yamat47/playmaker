@@ -7,9 +7,9 @@ import {
   sampleLinePath,
 } from "./bezier.js";
 
-const at = (lateralYard: number, absoluteYard: number): FieldPosition => ({
+const at = (lateralYard: number, downfieldYard: number): FieldPosition => ({
   lateralYard,
-  absoluteYard,
+  downfieldYard,
 });
 
 describe("cubicBezierPoint", () => {
@@ -29,7 +29,7 @@ describe("cubicBezierPoint", () => {
     const mid = cubicBezierPoint(a, at(3, 1), at(6, 2), b, 0.5);
 
     expect(mid.lateralYard).toBeCloseTo(4.5, 10);
-    expect(mid.absoluteYard).toBeCloseTo(1.5, 10);
+    expect(mid.downfieldYard).toBeCloseTo(1.5, 10);
   });
 
   it("対称な制御点では t=0.5 が左右対称の頂点になる", () => {
@@ -38,7 +38,7 @@ describe("cubicBezierPoint", () => {
     // 左右対称配置なので中央の横位置はちょうど中点。
     expect(mid.lateralYard).toBeCloseTo(5, 10);
     // 0.125*0 + 0.375*10 + 0.375*10 + 0.125*0 = 7.5
-    expect(mid.absoluteYard).toBeCloseTo(7.5, 10);
+    expect(mid.downfieldYard).toBeCloseTo(7.5, 10);
   });
 });
 
@@ -47,15 +47,15 @@ describe("catmullRomBezierControls", () => {
     const [c1, c2] = catmullRomBezierControls(at(0, 0), at(6, 0), at(6, 6), at(0, 6));
 
     // c1 = p1 + (p2 - p0)/6, c2 = p2 - (p3 - p1)/6
-    expect(c1).toEqual({ lateralYard: 6 + 6 / 6, absoluteYard: 0 + 6 / 6 });
-    expect(c2).toEqual({ lateralYard: 6 - -6 / 6, absoluteYard: 6 - 6 / 6 });
+    expect(c1).toEqual({ lateralYard: 6 + 6 / 6, downfieldYard: 0 + 6 / 6 });
+    expect(c2).toEqual({ lateralYard: 6 - -6 / 6, downfieldYard: 6 - 6 / 6 });
   });
 
   it("一直線上の点なら制御点も同一直線上（曲線が直線のまま）", () => {
     const [c1, c2] = catmullRomBezierControls(at(0, 0), at(1, 1), at(2, 2), at(3, 3));
 
-    expect(c1.lateralYard).toBeCloseTo(c1.absoluteYard, 10);
-    expect(c2.lateralYard).toBeCloseTo(c2.absoluteYard, 10);
+    expect(c1.lateralYard).toBeCloseTo(c1.downfieldYard, 10);
+    expect(c2.lateralYard).toBeCloseTo(c2.downfieldYard, 10);
   });
 });
 
@@ -118,7 +118,7 @@ describe("sampleLinePath", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 10)], "bezier", 6);
 
     for (const p of out) {
-      expect(p.lateralYard).toBeCloseTo(p.absoluteYard, 9);
+      expect(p.lateralYard).toBeCloseTo(p.downfieldYard, 9);
     }
   });
 

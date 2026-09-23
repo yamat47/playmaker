@@ -1,28 +1,28 @@
 // 組み込み済みプリセットプレー図（攻 9・守 7）。現代アメフト（NFL/カレッジ）の代表的な
 // ラン/パス/RPO/カバレッジ/プレッシャー概念を 1 枚ずつ収める。DOM 非依存のデータ。
-// 座標はヤード空間（LOS≈50・ダウンフィールド=abs 増加・センター lat≈26.7）で middle ゾーン窓
-// (abs 35..65) に収まる。主役側のみがルート/ブロック/モーションを持ち、相手側は配置マーカーだけ。
+// 縦は LOS からの位置（LOS = 0、攻撃方向が正）、横はセンター lat≈26.7 で置き、middle ゾーンの窓
+// （LOS の前後 15 ヤード）に収まる。主役側のみがルート/ブロック/モーションを持ち、相手側は配置マーカーだけ。
 
 import type { Line, LineInterpolation, LineKind } from "../model/line.js";
-import { CURRENT_PLAY_DATA_VERSION } from "../model/play-data.js";
+import { CURRENT_PLAY_DATA_VERSION, fieldStateForZone } from "../model/play-data.js";
 import type { FieldPosition, Player, PlayerShape } from "../model/player.js";
 import { DEFENSE_COLOR, deepFreeze, type TeamSide } from "../presets/shared.js";
 import type { PlayCategory, PlayPreset } from "./play-preset.js";
 
-function pt(lateralYard: number, absoluteYard: number): FieldPosition {
-  return { lateralYard, absoluteYard };
+function pt(lateralYard: number, downfieldYard: number): FieldPosition {
+  return { lateralYard, downfieldYard };
 }
 
 /** オフェンス選手（色なし＝テーマ既定）。 */
-function oP(id: string, label: string, lat: number, abs: number, shape: PlayerShape): Player {
-  return { id, position: { lateralYard: lat, absoluteYard: abs }, shape, label };
+function oP(id: string, label: string, lat: number, down: number, shape: PlayerShape): Player {
+  return { id, position: { lateralYard: lat, downfieldYard: down }, shape, label };
 }
 
 /** ディフェンス選手（丸・DEFENSE_COLOR）。 */
-function dP(id: string, label: string, lat: number, abs: number): Player {
+function dP(id: string, label: string, lat: number, down: number): Player {
   return {
     id,
-    position: { lateralYard: lat, absoluteYard: abs },
+    position: { lateralYard: lat, downfieldYard: down },
     shape: "circle",
     label,
     color: DEFENSE_COLOR,
@@ -67,18 +67,23 @@ function play(
     category,
     personnel,
     summary,
-    data: { version: CURRENT_PLAY_DATA_VERSION, field: { zone: "middle" }, players, lines },
+    data: {
+      version: CURRENT_PLAY_DATA_VERSION,
+      field: fieldStateForZone("middle"),
+      players,
+      lines,
+    },
   };
 }
 
 // オフェンスライン 5 人（全プレー共通）。
 function ol(): Player[] {
   return [
-    oP("lt", "LT", 22.1, 49.5, "square"),
-    oP("lg", "LG", 24.4, 49.5, "square"),
-    oP("c", "C", 26.7, 49.5, "square"),
-    oP("rg", "RG", 29, 49.5, "square"),
-    oP("rt", "RT", 31.3, 49.5, "square"),
+    oP("lt", "LT", 22.1, -0.5, "square"),
+    oP("lg", "LG", 24.4, -0.5, "square"),
+    oP("c", "C", 26.7, -0.5, "square"),
+    oP("rg", "RG", 29, -0.5, "square"),
+    oP("rt", "RT", 31.3, -0.5, "square"),
   ];
 }
 
@@ -86,62 +91,62 @@ function ol(): Player[] {
 // （カバレッジ/プレッシャーごとに DB の置き方が変わるため、変動分だけを各所で明示する）。
 function nickelFront(): Player[] {
   return [
-    dP("de-l", "", 21.5, 51),
-    dP("dt-l", "", 24.4, 51),
-    dP("dt-r", "", 29, 51),
-    dP("de-r", "", 31.9, 51),
-    dP("mlb", "M", 23.5, 54),
-    dP("wlb", "W", 31, 54),
+    dP("de-l", "", 21.5, 1),
+    dP("dt-l", "", 24.4, 1),
+    dP("dt-r", "", 29, 1),
+    dP("de-r", "", 31.9, 1),
+    dP("mlb", "M", 23.5, 4),
+    dP("wlb", "W", 31, 4),
   ];
 }
 
 // 相手側（脇役）の配置のみ。線は持たせない。攻のプレー図ではこのフロントを添える。
 function defLook43(): Player[] {
   return [
-    dP("de-l", "", 21.5, 51),
-    dP("dt-l", "", 24.4, 51),
-    dP("dt-r", "", 29, 51),
-    dP("de-r", "", 31.9, 51),
-    dP("wlb", "W", 22, 54),
-    dP("mlb", "M", 26.7, 54),
-    dP("slb", "S", 31.4, 54),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 24, 59),
-    dP("ss", "SS", 30, 58),
+    dP("de-l", "", 21.5, 1),
+    dP("dt-l", "", 24.4, 1),
+    dP("dt-r", "", 29, 1),
+    dP("de-r", "", 31.9, 1),
+    dP("wlb", "W", 22, 4),
+    dP("mlb", "M", 26.7, 4),
+    dP("slb", "S", 31.4, 4),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 24, 9),
+    dP("ss", "SS", 30, 8),
   ];
 }
 
 function defLookNickel(): Player[] {
   return [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 22, 59.5),
-    dP("ss", "SS", 31, 59.5),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 22, 9.5),
+    dP("ss", "SS", 31, 9.5),
   ];
 }
 
 function defLookCover2(): Player[] {
   return [
     ...nickelFront(),
-    dP("nb", "N", 14, 54),
-    dP("cb-l", "", 7, 52.5),
-    dP("cb-r", "", 46, 52.5),
-    dP("fs", "FS", 18, 60),
-    dP("ss", "SS", 35, 60),
+    dP("nb", "N", 14, 4),
+    dP("cb-l", "", 7, 2.5),
+    dP("cb-r", "", 46, 2.5),
+    dP("fs", "FS", 18, 10),
+    dP("ss", "SS", 35, 10),
   ];
 }
 
 function defLookCover3(): Player[] {
   return [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 26.7, 60),
-    dP("ss", "SS", 33, 55),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 26.7, 10),
+    dP("ss", "SS", 33, 5),
   ];
 }
 
@@ -149,12 +154,12 @@ function defLookCover3(): Player[] {
 function offLook(): Player[] {
   return [
     ...ol(),
-    oP("qb", "QB", 26.7, 45, "circle"),
-    oP("rb", "RB", 29.5, 45, "circle"),
-    oP("x", "X", 5.5, 49.5, "circle"),
-    oP("y", "Y", 13, 49, "circle"),
-    oP("h", "H", 40, 49, "circle"),
-    oP("z", "Z", 47.5, 49.5, "circle"),
+    oP("qb", "QB", 26.7, -5, "circle"),
+    oP("rb", "RB", 29.5, -5, "circle"),
+    oP("x", "X", 5.5, -0.5, "circle"),
+    oP("y", "Y", 13, -1, "circle"),
+    oP("h", "H", 40, -1, "circle"),
+    oP("z", "Z", 47.5, -0.5, "circle"),
   ];
 }
 
@@ -167,22 +172,22 @@ const INSIDE_ZONE = play(
   "ゾーンブロックで内側を一気に。RB はバックサイド A ギャップを読んで切る。",
   [
     ...ol(),
-    oP("y", "Y", 33.6, 49.5, "square"),
-    oP("qb", "QB", 26.7, 45, "circle"),
-    oP("rb", "RB", 24, 45, "circle"),
-    oP("x", "X", 6, 49.5, "circle"),
-    oP("h", "H", 40, 48.5, "circle"),
-    oP("z", "Z", 47, 49, "circle"),
+    oP("y", "Y", 33.6, -0.5, "square"),
+    oP("qb", "QB", 26.7, -5, "circle"),
+    oP("rb", "RB", 24, -5, "circle"),
+    oP("x", "X", 6, -0.5, "circle"),
+    oP("h", "H", 40, -1.5, "circle"),
+    oP("z", "Z", 47, -1, "circle"),
     ...defLook43(),
   ],
   [
-    ln("bl-lt", "block", "lt", [], pt(22.9, 50.8), "straight"),
-    ln("bl-lg", "block", "lg", [], pt(25.2, 50.8), "straight"),
-    ln("bl-c", "block", "c", [], pt(27.5, 50.8), "straight"),
-    ln("bl-rg", "block", "rg", [], pt(30, 50.8), "straight"),
-    ln("bl-rt", "block", "rt", [], pt(32.2, 50.8), "straight"),
-    ln("bl-y", "block", "y", [], pt(35, 50.8), "straight"),
-    ln("run-rb", "route", "rb", [pt(26.5, 48.5)], pt(28.5, 53), "bezier"),
+    ln("bl-lt", "block", "lt", [], pt(22.9, 0.8), "straight"),
+    ln("bl-lg", "block", "lg", [], pt(25.2, 0.8), "straight"),
+    ln("bl-c", "block", "c", [], pt(27.5, 0.8), "straight"),
+    ln("bl-rg", "block", "rg", [], pt(30, 0.8), "straight"),
+    ln("bl-rt", "block", "rt", [], pt(32.2, 0.8), "straight"),
+    ln("bl-y", "block", "y", [], pt(35, 0.8), "straight"),
+    ln("run-rb", "route", "rb", [pt(26.5, -1.5)], pt(28.5, 3), "bezier"),
   ],
 );
 
@@ -195,22 +200,22 @@ const OUTSIDE_ZONE = play(
   "ワイドゾーンで横へ伸ばし、エッジを攻めて縦に切り返す。",
   [
     ...ol(),
-    oP("y", "Y", 33.6, 49.5, "square"),
-    oP("qb", "QB", 26.7, 47.5, "circle"),
-    oP("rb", "RB", 26.7, 43.5, "circle"),
-    oP("x", "X", 6, 49.5, "circle"),
-    oP("h", "H", 40, 48.5, "circle"),
-    oP("z", "Z", 47, 49, "circle"),
+    oP("y", "Y", 33.6, -0.5, "square"),
+    oP("qb", "QB", 26.7, -2.5, "circle"),
+    oP("rb", "RB", 26.7, -6.5, "circle"),
+    oP("x", "X", 6, -0.5, "circle"),
+    oP("h", "H", 40, -1.5, "circle"),
+    oP("z", "Z", 47, -1, "circle"),
     ...defLook43(),
   ],
   [
-    ln("bl-lt", "block", "lt", [], pt(23.5, 50.6), "straight"),
-    ln("bl-lg", "block", "lg", [], pt(26, 50.6), "straight"),
-    ln("bl-c", "block", "c", [], pt(28, 50.6), "straight"),
-    ln("bl-rg", "block", "rg", [], pt(30.5, 50.6), "straight"),
-    ln("bl-rt", "block", "rt", [], pt(33, 50.7), "straight"),
-    ln("bl-y", "block", "y", [], pt(35.5, 50.6), "straight"),
-    ln("run-rb", "route", "rb", [pt(31, 45.5), pt(34, 48.5)], pt(35.5, 53), "bezier"),
+    ln("bl-lt", "block", "lt", [], pt(23.5, 0.6), "straight"),
+    ln("bl-lg", "block", "lg", [], pt(26, 0.6), "straight"),
+    ln("bl-c", "block", "c", [], pt(28, 0.6), "straight"),
+    ln("bl-rg", "block", "rg", [], pt(30.5, 0.6), "straight"),
+    ln("bl-rt", "block", "rt", [], pt(33, 0.7), "straight"),
+    ln("bl-y", "block", "y", [], pt(35.5, 0.6), "straight"),
+    ln("run-rb", "route", "rb", [pt(31, -4.5), pt(34, -1.5)], pt(35.5, 3), "bezier"),
   ],
 );
 
@@ -223,23 +228,23 @@ const POWER = play(
   "プレイサイドはダウンブロック、バックサイドガードがプルしてリードする。",
   [
     ...ol(),
-    oP("y", "Y", 33.6, 49.5, "square"),
-    oP("qb", "QB", 26.7, 47.5, "circle"),
-    oP("fb", "FB", 26.7, 45, "circle"),
-    oP("rb", "RB", 26.7, 42.5, "circle"),
-    oP("x", "X", 6.5, 49.5, "circle"),
-    oP("z", "Z", 46.5, 49, "circle"),
+    oP("y", "Y", 33.6, -0.5, "square"),
+    oP("qb", "QB", 26.7, -2.5, "circle"),
+    oP("fb", "FB", 26.7, -5, "circle"),
+    oP("rb", "RB", 26.7, -7.5, "circle"),
+    oP("x", "X", 6.5, -0.5, "circle"),
+    oP("z", "Z", 46.5, -1, "circle"),
     ...defLook43(),
   ],
   [
-    ln("bl-rg", "block", "rg", [], pt(30.5, 50.6), "straight"),
-    ln("bl-rt", "block", "rt", [], pt(33, 50.6), "straight"),
-    ln("bl-y", "block", "y", [], pt(35.5, 50.6), "straight"),
-    ln("bl-c", "block", "c", [], pt(25.5, 50.5), "straight"),
-    ln("bl-lt", "block", "lt", [], pt(21.5, 50), "straight"),
-    ln("pull-lg", "block", "lg", [pt(27, 48.5)], pt(33, 51.5), "bezier"),
-    ln("lead-fb", "block", "fb", [], pt(34, 50.5), "straight"),
-    ln("run-rb", "route", "rb", [pt(29, 45)], pt(33.5, 51), "bezier"),
+    ln("bl-rg", "block", "rg", [], pt(30.5, 0.6), "straight"),
+    ln("bl-rt", "block", "rt", [], pt(33, 0.6), "straight"),
+    ln("bl-y", "block", "y", [], pt(35.5, 0.6), "straight"),
+    ln("bl-c", "block", "c", [], pt(25.5, 0.5), "straight"),
+    ln("bl-lt", "block", "lt", [], pt(21.5, 0), "straight"),
+    ln("pull-lg", "block", "lg", [pt(27, -1.5)], pt(33, 1.5), "bezier"),
+    ln("lead-fb", "block", "fb", [], pt(34, 0.5), "straight"),
+    ln("run-rb", "route", "rb", [pt(29, -5)], pt(33.5, 1), "bezier"),
   ],
 );
 
@@ -252,23 +257,23 @@ const COUNTER = play(
   "バックサイドのガードとタックルがプルし、逆方向へ折り返す（GT カウンター）。",
   [
     ...ol(),
-    oP("y", "Y", 33.6, 49.5, "square"),
-    oP("qb", "QB", 26.7, 47.5, "circle"),
-    oP("fb", "FB", 26.7, 45, "circle"),
-    oP("rb", "RB", 26.7, 42.5, "circle"),
-    oP("x", "X", 6.5, 49.5, "circle"),
-    oP("z", "Z", 46.5, 49, "circle"),
+    oP("y", "Y", 33.6, -0.5, "square"),
+    oP("qb", "QB", 26.7, -2.5, "circle"),
+    oP("fb", "FB", 26.7, -5, "circle"),
+    oP("rb", "RB", 26.7, -7.5, "circle"),
+    oP("x", "X", 6.5, -0.5, "circle"),
+    oP("z", "Z", 46.5, -1, "circle"),
     ...defLook43(),
   ],
   [
-    ln("bl-c", "block", "c", [], pt(28, 50.6), "straight"),
-    ln("bl-rg", "block", "rg", [], pt(30.5, 50.6), "straight"),
-    ln("bl-rt", "block", "rt", [], pt(33, 50.6), "straight"),
-    ln("bl-y", "block", "y", [], pt(35.5, 50.6), "straight"),
-    ln("pull-lg", "block", "lg", [pt(28, 49)], pt(34.5, 50.8), "bezier"),
-    ln("pull-lt", "block", "lt", [pt(27, 48.5)], pt(33, 52.5), "bezier"),
-    ln("fill-fb", "block", "fb", [], pt(24, 49.5), "straight"),
-    ln("run-rb", "route", "rb", [pt(24, 43.5), pt(29, 46)], pt(34, 51), "bezier"),
+    ln("bl-c", "block", "c", [], pt(28, 0.6), "straight"),
+    ln("bl-rg", "block", "rg", [], pt(30.5, 0.6), "straight"),
+    ln("bl-rt", "block", "rt", [], pt(33, 0.6), "straight"),
+    ln("bl-y", "block", "y", [], pt(35.5, 0.6), "straight"),
+    ln("pull-lg", "block", "lg", [pt(28, -1)], pt(34.5, 0.8), "bezier"),
+    ln("pull-lt", "block", "lt", [pt(27, -1.5)], pt(33, 2.5), "bezier"),
+    ln("fill-fb", "block", "fb", [], pt(24, -0.5), "straight"),
+    ln("run-rb", "route", "rb", [pt(24, -6.5), pt(29, -4)], pt(34, 1), "bezier"),
   ],
 );
 
@@ -281,20 +286,20 @@ const FOUR_VERTICALS = play(
   "トリップスから 4 本の縦。対シングルハイのシームで勝負する。",
   [
     ...ol(),
-    oP("qb", "QB", 26.7, 45, "circle"),
-    oP("rb", "RB", 24, 45, "circle"),
-    oP("x", "X", 5.5, 49.5, "circle"),
-    oP("y", "Y", 34.5, 49, "square"),
-    oP("h", "H", 41, 48.5, "circle"),
-    oP("z", "Z", 47.5, 49, "circle"),
+    oP("qb", "QB", 26.7, -5, "circle"),
+    oP("rb", "RB", 24, -5, "circle"),
+    oP("x", "X", 5.5, -0.5, "circle"),
+    oP("y", "Y", 34.5, -1, "square"),
+    oP("h", "H", 41, -1.5, "circle"),
+    oP("z", "Z", 47.5, -1, "circle"),
     ...defLookCover3(),
   ],
   [
-    ln("go-x", "route", "x", [], pt(6, 63), "straight"),
-    ln("seam-y", "route", "y", [pt(33, 55)], pt(31, 63), "bezier"),
-    ln("seam-h", "route", "h", [pt(40, 55)], pt(38, 63), "bezier"),
-    ln("go-z", "route", "z", [], pt(47.5, 63), "straight"),
-    ln("chk-rb", "route", "rb", [], pt(20, 47), "straight"),
+    ln("go-x", "route", "x", [], pt(6, 13), "straight"),
+    ln("seam-y", "route", "y", [pt(33, 5)], pt(31, 13), "bezier"),
+    ln("seam-h", "route", "h", [pt(40, 5)], pt(38, 13), "bezier"),
+    ln("go-z", "route", "z", [], pt(47.5, 13), "straight"),
+    ln("chk-rb", "route", "rb", [], pt(20, -3), "straight"),
   ],
 );
 
@@ -307,20 +312,20 @@ const MESH = play(
   "浅いクロスの交差。対マン/ゾーン両対応で空いた所へ運ぶ。",
   [
     ...ol(),
-    oP("qb", "QB", 26.7, 45, "circle"),
-    oP("rb", "RB", 29.5, 45, "circle"),
-    oP("x", "X", 5.5, 49.5, "circle"),
-    oP("y", "Y", 13, 49, "circle"),
-    oP("h", "H", 40, 49, "circle"),
-    oP("z", "Z", 47.5, 49.5, "circle"),
+    oP("qb", "QB", 26.7, -5, "circle"),
+    oP("rb", "RB", 29.5, -5, "circle"),
+    oP("x", "X", 5.5, -0.5, "circle"),
+    oP("y", "Y", 13, -1, "circle"),
+    oP("h", "H", 40, -1, "circle"),
+    oP("z", "Z", 47.5, -0.5, "circle"),
     ...defLookNickel(),
   ],
   [
-    ln("cross-y", "route", "y", [pt(20, 51.5)], pt(38, 52), "bezier"),
-    ln("cross-h", "route", "h", [pt(33, 51)], pt(15, 52), "bezier"),
-    ln("corner-x", "route", "x", [pt(5, 55)], pt(2, 59), "bezier"),
-    ln("sit-z", "route", "z", [], pt(47, 55), "straight"),
-    ln("swing-rb", "route", "rb", [pt(33, 46)], pt(41, 48), "bezier"),
+    ln("cross-y", "route", "y", [pt(20, 1.5)], pt(38, 2), "bezier"),
+    ln("cross-h", "route", "h", [pt(33, 1)], pt(15, 2), "bezier"),
+    ln("corner-x", "route", "x", [pt(5, 5)], pt(2, 9), "bezier"),
+    ln("sit-z", "route", "z", [], pt(47, 5), "straight"),
+    ln("swing-rb", "route", "rb", [pt(33, -4)], pt(41, -2), "bezier"),
   ],
 );
 
@@ -333,20 +338,20 @@ const SMASH = play(
   "コーナー＋ヒッチのハイロー。対カバー 2 のコーナーを攻める。",
   [
     ...ol(),
-    oP("y", "Y", 33.6, 49.5, "square"),
-    oP("qb", "QB", 26.7, 47.5, "circle"),
-    oP("rb", "RB", 26.7, 43.5, "circle"),
-    oP("x", "X", 6, 49.5, "circle"),
-    oP("h", "H", 40, 48.5, "circle"),
-    oP("z", "Z", 47, 49, "circle"),
+    oP("y", "Y", 33.6, -0.5, "square"),
+    oP("qb", "QB", 26.7, -2.5, "circle"),
+    oP("rb", "RB", 26.7, -6.5, "circle"),
+    oP("x", "X", 6, -0.5, "circle"),
+    oP("h", "H", 40, -1.5, "circle"),
+    oP("z", "Z", 47, -1, "circle"),
     ...defLookCover2(),
   ],
   [
-    ln("hitch-z", "route", "z", [], pt(47, 53), "straight"),
-    ln("corner-h", "route", "h", [pt(41, 54)], pt(46, 60), "bezier"),
-    ln("dig-y", "route", "y", [pt(31, 53)], pt(27, 57), "bezier"),
-    ln("hitch-x", "route", "x", [], pt(6, 53), "straight"),
-    ln("flat-rb", "route", "rb", [], pt(22, 46), "straight"),
+    ln("hitch-z", "route", "z", [], pt(47, 3), "straight"),
+    ln("corner-h", "route", "h", [pt(41, 4)], pt(46, 10), "bezier"),
+    ln("dig-y", "route", "y", [pt(31, 3)], pt(27, 7), "bezier"),
+    ln("hitch-x", "route", "x", [], pt(6, 3), "straight"),
+    ln("flat-rb", "route", "rb", [], pt(22, -4), "straight"),
   ],
 );
 
@@ -359,20 +364,20 @@ const STICK = play(
   "3 ステップの速攻。スティック（座り）＋フラットで素早く配球する。",
   [
     ...ol(),
-    oP("y", "Y", 33.6, 49.5, "square"),
-    oP("qb", "QB", 26.7, 47.5, "circle"),
-    oP("rb", "RB", 26.7, 43.5, "circle"),
-    oP("x", "X", 6, 49.5, "circle"),
-    oP("h", "H", 40, 48.5, "circle"),
-    oP("z", "Z", 47, 49, "circle"),
+    oP("y", "Y", 33.6, -0.5, "square"),
+    oP("qb", "QB", 26.7, -2.5, "circle"),
+    oP("rb", "RB", 26.7, -6.5, "circle"),
+    oP("x", "X", 6, -0.5, "circle"),
+    oP("h", "H", 40, -1.5, "circle"),
+    oP("z", "Z", 47, -1, "circle"),
     ...defLookNickel(),
   ],
   [
-    ln("stick-y", "route", "y", [], pt(33, 53.5), "straight"),
-    ln("flat-h", "route", "h", [], pt(45, 50), "straight"),
-    ln("hitch-z", "route", "z", [], pt(47, 53), "straight"),
-    ln("slant-x", "route", "x", [pt(6, 52)], pt(10, 53), "bezier"),
-    ln("chk-rb", "route", "rb", [], pt(21, 45), "straight"),
+    ln("stick-y", "route", "y", [], pt(33, 3.5), "straight"),
+    ln("flat-h", "route", "h", [], pt(45, 0), "straight"),
+    ln("hitch-z", "route", "z", [], pt(47, 3), "straight"),
+    ln("slant-x", "route", "x", [pt(6, 2)], pt(10, 3), "bezier"),
+    ln("chk-rb", "route", "rb", [], pt(21, -5), "straight"),
   ],
 );
 
@@ -385,24 +390,24 @@ const RPO_BUBBLE = play(
   "ボックスの人数を読み、インサイドゾーンかバブルへ分岐する。",
   [
     ...ol(),
-    oP("qb", "QB", 26.7, 45, "circle"),
-    oP("rb", "RB", 29.5, 45, "circle"),
-    oP("x", "X", 5.5, 49.5, "circle"),
-    oP("y", "Y", 13, 49, "circle"),
-    oP("h", "H", 40, 49, "circle"),
-    oP("z", "Z", 47.5, 49.5, "circle"),
+    oP("qb", "QB", 26.7, -5, "circle"),
+    oP("rb", "RB", 29.5, -5, "circle"),
+    oP("x", "X", 5.5, -0.5, "circle"),
+    oP("y", "Y", 13, -1, "circle"),
+    oP("h", "H", 40, -1, "circle"),
+    oP("z", "Z", 47.5, -0.5, "circle"),
     ...defLookNickel(),
   ],
   [
-    ln("bl-lt", "block", "lt", [], pt(22.9, 50.8), "straight"),
-    ln("bl-lg", "block", "lg", [], pt(25.2, 50.8), "straight"),
-    ln("bl-c", "block", "c", [], pt(27.5, 50.8), "straight"),
-    ln("bl-rg", "block", "rg", [], pt(30, 50.8), "straight"),
-    ln("bl-rt", "block", "rt", [], pt(32.2, 50.8), "straight"),
-    ln("run-rb", "route", "rb", [pt(27, 48)], pt(26, 52.5), "bezier"),
-    ln("bubble-h", "route", "h", [pt(43, 48)], pt(46, 50.5), "bezier"),
-    ln("bl-z", "block", "z", [], pt(45, 52), "straight"),
-    ln("glance-y", "route", "y", [pt(15, 51.5)], pt(19, 53), "bezier"),
+    ln("bl-lt", "block", "lt", [], pt(22.9, 0.8), "straight"),
+    ln("bl-lg", "block", "lg", [], pt(25.2, 0.8), "straight"),
+    ln("bl-c", "block", "c", [], pt(27.5, 0.8), "straight"),
+    ln("bl-rg", "block", "rg", [], pt(30, 0.8), "straight"),
+    ln("bl-rt", "block", "rt", [], pt(32.2, 0.8), "straight"),
+    ln("run-rb", "route", "rb", [pt(27, -2)], pt(26, 2.5), "bezier"),
+    ln("bubble-h", "route", "h", [pt(43, -2)], pt(46, 0.5), "bezier"),
+    ln("bl-z", "block", "z", [], pt(45, 2), "straight"),
+    ln("glance-y", "route", "y", [pt(15, 1.5)], pt(19, 3), "bezier"),
   ],
 );
 
@@ -415,23 +420,23 @@ const PA_BOOT = play(
   "プレイアクションで QB がブートし、フラット/セイル/縦の 3 段で攻める。",
   [
     ...ol(),
-    oP("y", "Y", 33.6, 49.5, "square"),
-    oP("qb", "QB", 26.7, 47.5, "circle"),
-    oP("rb", "RB", 26.7, 43.5, "circle"),
-    oP("x", "X", 6, 49.5, "circle"),
-    oP("h", "H", 40, 48.5, "circle"),
-    oP("z", "Z", 47, 49, "circle"),
+    oP("y", "Y", 33.6, -0.5, "square"),
+    oP("qb", "QB", 26.7, -2.5, "circle"),
+    oP("rb", "RB", 26.7, -6.5, "circle"),
+    oP("x", "X", 6, -0.5, "circle"),
+    oP("h", "H", 40, -1.5, "circle"),
+    oP("z", "Z", 47, -1, "circle"),
     ...defLook43(),
   ],
   [
-    ln("fake-rb", "motion", "rb", [pt(24, 44.5)], pt(20, 46), "straight"),
-    ln("boot-qb", "route", "qb", [pt(31, 47.5)], pt(36.5, 46), "bezier"),
-    ln("bl-c", "block", "c", [], pt(27.5, 50.5), "straight"),
-    ln("bl-rg", "block", "rg", [], pt(30, 50.5), "straight"),
-    ln("flat-y", "route", "y", [pt(37, 49.5)], pt(43, 50.5), "bezier"),
-    ln("sail-h", "route", "h", [pt(41, 53)], pt(47, 56), "bezier"),
-    ln("go-z", "route", "z", [], pt(47.5, 62), "straight"),
-    ln("comeback-x", "route", "x", [pt(6, 58)], pt(9, 56), "bezier"),
+    ln("fake-rb", "motion", "rb", [pt(24, -5.5)], pt(20, -4), "straight"),
+    ln("boot-qb", "route", "qb", [pt(31, -2.5)], pt(36.5, -4), "bezier"),
+    ln("bl-c", "block", "c", [], pt(27.5, 0.5), "straight"),
+    ln("bl-rg", "block", "rg", [], pt(30, 0.5), "straight"),
+    ln("flat-y", "route", "y", [pt(37, -0.5)], pt(43, 0.5), "bezier"),
+    ln("sail-h", "route", "h", [pt(41, 3)], pt(47, 6), "bezier"),
+    ln("go-z", "route", "z", [], pt(47.5, 12), "straight"),
+    ln("comeback-x", "route", "x", [pt(6, 8)], pt(9, 6), "bezier"),
   ],
 );
 
@@ -444,20 +449,20 @@ const COVER_1 = play(
   "1 ディープのフリーセイフティを残し、残りは全マン。",
   [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 26.7, 61),
-    dP("ss", "SS", 33, 55),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 26.7, 11),
+    dP("ss", "SS", 33, 5),
     ...offLook(),
   ],
   [
-    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 50.5), "straight", DEFENSE_COLOR),
-    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 50.5), "straight", DEFENSE_COLOR),
-    ln("man-nb", "motion", "nb", [], pt(13, 50), "straight", DEFENSE_COLOR),
-    ln("man-ss", "motion", "ss", [pt(36, 52)], pt(40, 50), "straight", DEFENSE_COLOR),
-    ln("man-mlb", "motion", "mlb", [], pt(26.5, 47), "straight", DEFENSE_COLOR),
-    ln("free-fs", "motion", "fs", [], pt(26.7, 63), "straight", DEFENSE_COLOR),
+    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 0.5), "straight", DEFENSE_COLOR),
+    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 0.5), "straight", DEFENSE_COLOR),
+    ln("man-nb", "motion", "nb", [], pt(13, 0), "straight", DEFENSE_COLOR),
+    ln("man-ss", "motion", "ss", [pt(36, 2)], pt(40, 0), "straight", DEFENSE_COLOR),
+    ln("man-mlb", "motion", "mlb", [], pt(26.5, -3), "straight", DEFENSE_COLOR),
+    ln("free-fs", "motion", "fs", [], pt(26.7, 13), "straight", DEFENSE_COLOR),
   ],
 );
 
@@ -470,21 +475,21 @@ const COVER_2 = play(
   "2 ディープ 5 アンダーのゾーン。深いハーフを 2 人で分ける。",
   [
     ...nickelFront(),
-    dP("nb", "N", 14, 54),
-    dP("cb-l", "", 7, 52.5),
-    dP("cb-r", "", 46, 52.5),
-    dP("fs", "FS", 15, 60),
-    dP("ss", "SS", 38, 60),
+    dP("nb", "N", 14, 4),
+    dP("cb-l", "", 7, 2.5),
+    dP("cb-r", "", 46, 2.5),
+    dP("fs", "FS", 15, 10),
+    dP("ss", "SS", 38, 10),
     ...offLook(),
   ],
   [
-    ln("half-fs", "motion", "fs", [], pt(13, 62), "straight", DEFENSE_COLOR),
-    ln("half-ss", "motion", "ss", [], pt(40, 62), "straight", DEFENSE_COLOR),
-    ln("flat-cbl", "motion", "cb-l", [], pt(10, 52), "straight", DEFENSE_COLOR),
-    ln("flat-cbr", "motion", "cb-r", [], pt(43, 52), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(22, 52), "straight", DEFENSE_COLOR),
-    ln("hook-wlb", "motion", "wlb", [], pt(33, 52), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(16, 53), "straight", DEFENSE_COLOR),
+    ln("half-fs", "motion", "fs", [], pt(13, 12), "straight", DEFENSE_COLOR),
+    ln("half-ss", "motion", "ss", [], pt(40, 12), "straight", DEFENSE_COLOR),
+    ln("flat-cbl", "motion", "cb-l", [], pt(10, 2), "straight", DEFENSE_COLOR),
+    ln("flat-cbr", "motion", "cb-r", [], pt(43, 2), "straight", DEFENSE_COLOR),
+    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight", DEFENSE_COLOR),
+    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight", DEFENSE_COLOR),
+    ln("curl-nb", "motion", "nb", [], pt(16, 3), "straight", DEFENSE_COLOR),
   ],
 );
 
@@ -497,21 +502,21 @@ const COVER_3 = play(
   "3 ディープ 4 アンダー。現代の基準となるシングルハイのゾーン。",
   [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 26.7, 60),
-    dP("ss", "SS", 34, 55),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 26.7, 10),
+    dP("ss", "SS", 34, 5),
     ...offLook(),
   ],
   [
-    ln("deep-cbl", "motion", "cb-l", [pt(7, 57)], pt(7, 62), "straight", DEFENSE_COLOR),
-    ln("deep-cbr", "motion", "cb-r", [], pt(46, 62), "straight", DEFENSE_COLOR),
-    ln("deep-fs", "motion", "fs", [], pt(26.7, 63), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(15, 53), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(22, 52), "straight", DEFENSE_COLOR),
-    ln("hook-wlb", "motion", "wlb", [], pt(33, 52), "straight", DEFENSE_COLOR),
-    ln("flat-ss", "motion", "ss", [], pt(38, 53), "straight", DEFENSE_COLOR),
+    ln("deep-cbl", "motion", "cb-l", [pt(7, 7)], pt(7, 12), "straight", DEFENSE_COLOR),
+    ln("deep-cbr", "motion", "cb-r", [], pt(46, 12), "straight", DEFENSE_COLOR),
+    ln("deep-fs", "motion", "fs", [], pt(26.7, 13), "straight", DEFENSE_COLOR),
+    ln("curl-nb", "motion", "nb", [], pt(15, 3), "straight", DEFENSE_COLOR),
+    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight", DEFENSE_COLOR),
+    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight", DEFENSE_COLOR),
+    ln("flat-ss", "motion", "ss", [], pt(38, 3), "straight", DEFENSE_COLOR),
   ],
 );
 
@@ -524,21 +529,21 @@ const COVER_4 = play(
   "4 ディープのクォーターズ。縦パスを上から踏み潰す。",
   [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 20, 59.5),
-    dP("ss", "SS", 33, 59.5),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 20, 9.5),
+    dP("ss", "SS", 33, 9.5),
     ...offLook(),
   ],
   [
-    ln("qtr-cbl", "motion", "cb-l", [], pt(6, 62), "straight", DEFENSE_COLOR),
-    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 62), "straight", DEFENSE_COLOR),
-    ln("qtr-fs", "motion", "fs", [], pt(18, 62), "straight", DEFENSE_COLOR),
-    ln("qtr-ss", "motion", "ss", [], pt(35, 62), "straight", DEFENSE_COLOR),
-    ln("under-nb", "motion", "nb", [], pt(15, 52), "straight", DEFENSE_COLOR),
-    ln("under-mlb", "motion", "mlb", [], pt(24, 52), "straight", DEFENSE_COLOR),
-    ln("under-wlb", "motion", "wlb", [], pt(31, 52), "straight", DEFENSE_COLOR),
+    ln("qtr-cbl", "motion", "cb-l", [], pt(6, 12), "straight", DEFENSE_COLOR),
+    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 12), "straight", DEFENSE_COLOR),
+    ln("qtr-fs", "motion", "fs", [], pt(18, 12), "straight", DEFENSE_COLOR),
+    ln("qtr-ss", "motion", "ss", [], pt(35, 12), "straight", DEFENSE_COLOR),
+    ln("under-nb", "motion", "nb", [], pt(15, 2), "straight", DEFENSE_COLOR),
+    ln("under-mlb", "motion", "mlb", [], pt(24, 2), "straight", DEFENSE_COLOR),
+    ln("under-wlb", "motion", "wlb", [], pt(31, 2), "straight", DEFENSE_COLOR),
   ],
 );
 
@@ -551,25 +556,25 @@ const FIRE_ZONE = play(
   "5 人ブリッツ＋ライン 1 枚をドロップ、3 ディープ 3 アンダーで覆う。",
   [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 26.7, 60),
-    dP("ss", "SS", 34, 55),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 26.7, 10),
+    dP("ss", "SS", 34, 5),
     ...offLook(),
   ],
   [
-    ln("rush-dtl", "route", "dt-l", [], pt(24, 49), "straight", DEFENSE_COLOR),
-    ln("rush-dtr", "route", "dt-r", [], pt(29.5, 49), "straight", DEFENSE_COLOR),
-    ln("rush-der", "route", "de-r", [], pt(32.5, 49), "straight", DEFENSE_COLOR),
-    ln("blz-wlb", "route", "wlb", [pt(30, 52)], pt(29, 49.5), "bezier", DEFENSE_COLOR),
-    ln("blz-nb", "route", "nb", [pt(16, 52)], pt(20, 49.5), "bezier", DEFENSE_COLOR),
-    ln("drop-del", "motion", "de-l", [pt(20, 53)], pt(18, 55), "straight", DEFENSE_COLOR),
-    ln("deep-cbl", "motion", "cb-l", [], pt(7, 61), "straight", DEFENSE_COLOR),
-    ln("deep-cbr", "motion", "cb-r", [], pt(46, 61), "straight", DEFENSE_COLOR),
-    ln("deep-fs", "motion", "fs", [], pt(26.7, 63), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(24, 52), "straight", DEFENSE_COLOR),
-    ln("flat-ss", "motion", "ss", [], pt(37, 53), "straight", DEFENSE_COLOR),
+    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight", DEFENSE_COLOR),
+    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight", DEFENSE_COLOR),
+    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight", DEFENSE_COLOR),
+    ln("blz-wlb", "route", "wlb", [pt(30, 2)], pt(29, -0.5), "bezier", DEFENSE_COLOR),
+    ln("blz-nb", "route", "nb", [pt(16, 2)], pt(20, -0.5), "bezier", DEFENSE_COLOR),
+    ln("drop-del", "motion", "de-l", [pt(20, 3)], pt(18, 5), "straight", DEFENSE_COLOR),
+    ln("deep-cbl", "motion", "cb-l", [], pt(7, 11), "straight", DEFENSE_COLOR),
+    ln("deep-cbr", "motion", "cb-r", [], pt(46, 11), "straight", DEFENSE_COLOR),
+    ln("deep-fs", "motion", "fs", [], pt(26.7, 13), "straight", DEFENSE_COLOR),
+    ln("hook-mlb", "motion", "mlb", [], pt(24, 2), "straight", DEFENSE_COLOR),
+    ln("flat-ss", "motion", "ss", [], pt(37, 3), "straight", DEFENSE_COLOR),
   ],
 );
 
@@ -582,25 +587,25 @@ const COVER_0 = play(
   "セイフティを残さず全マン、6 人で最大限の圧力をかける。",
   [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 52.5),
-    dP("cb-r", "", 46, 52.5),
-    dP("fs", "FS", 22, 59.5),
-    dP("ss", "SS", 31, 59.5),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 2.5),
+    dP("cb-r", "", 46, 2.5),
+    dP("fs", "FS", 22, 9.5),
+    dP("ss", "SS", 31, 9.5),
     ...offLook(),
   ],
   [
-    ln("rush-del", "route", "de-l", [], pt(21, 49), "straight", DEFENSE_COLOR),
-    ln("rush-dtl", "route", "dt-l", [], pt(24, 49), "straight", DEFENSE_COLOR),
-    ln("rush-dtr", "route", "dt-r", [], pt(29.5, 49), "straight", DEFENSE_COLOR),
-    ln("rush-der", "route", "de-r", [], pt(32.5, 49), "straight", DEFENSE_COLOR),
-    ln("blz-mlb", "route", "mlb", [pt(25, 51)], pt(26.5, 49), "bezier", DEFENSE_COLOR),
-    ln("blz-wlb", "route", "wlb", [pt(28, 52)], pt(28.5, 49.5), "bezier", DEFENSE_COLOR),
-    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 50.5), "straight", DEFENSE_COLOR),
-    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 50.5), "straight", DEFENSE_COLOR),
-    ln("man-nb", "motion", "nb", [], pt(13, 50), "straight", DEFENSE_COLOR),
-    ln("man-fs", "motion", "fs", [pt(26, 54)], pt(29, 48), "straight", DEFENSE_COLOR),
-    ln("man-ss", "motion", "ss", [], pt(40, 50), "straight", DEFENSE_COLOR),
+    ln("rush-del", "route", "de-l", [], pt(21, -1), "straight", DEFENSE_COLOR),
+    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight", DEFENSE_COLOR),
+    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight", DEFENSE_COLOR),
+    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight", DEFENSE_COLOR),
+    ln("blz-mlb", "route", "mlb", [pt(25, 1)], pt(26.5, -1), "bezier", DEFENSE_COLOR),
+    ln("blz-wlb", "route", "wlb", [pt(28, 2)], pt(28.5, -0.5), "bezier", DEFENSE_COLOR),
+    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 0.5), "straight", DEFENSE_COLOR),
+    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 0.5), "straight", DEFENSE_COLOR),
+    ln("man-nb", "motion", "nb", [], pt(13, 0), "straight", DEFENSE_COLOR),
+    ln("man-fs", "motion", "fs", [pt(26, 4)], pt(29, -2), "straight", DEFENSE_COLOR),
+    ln("man-ss", "motion", "ss", [], pt(40, 0), "straight", DEFENSE_COLOR),
   ],
 );
 
@@ -613,25 +618,25 @@ const DOUBLE_A = play(
   "両 A ギャップに 2 人を提示。実行・シム（見せ）どちらにも化ける。",
   [
     ...nickelFront(),
-    dP("nb", "N", 14, 54.5),
-    dP("cb-l", "", 7, 53),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 26.7, 60),
-    dP("ss", "SS", 34, 55),
+    dP("nb", "N", 14, 4.5),
+    dP("cb-l", "", 7, 3),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 26.7, 10),
+    dP("ss", "SS", 34, 5),
     ...offLook(),
   ],
   [
-    ln("aim-mlb", "route", "mlb", [pt(25, 52)], pt(25.8, 49.5), "bezier", DEFENSE_COLOR),
-    ln("aim-wlb", "route", "wlb", [pt(28, 52)], pt(27.6, 49.5), "bezier", DEFENSE_COLOR),
-    ln("rush-del", "route", "de-l", [], pt(21, 49), "straight", DEFENSE_COLOR),
-    ln("rush-dtl", "route", "dt-l", [], pt(24, 49), "straight", DEFENSE_COLOR),
-    ln("rush-dtr", "route", "dt-r", [], pt(29.5, 49), "straight", DEFENSE_COLOR),
-    ln("rush-der", "route", "de-r", [], pt(32.5, 49), "straight", DEFENSE_COLOR),
-    ln("bail-cbl", "motion", "cb-l", [], pt(7, 60), "straight", DEFENSE_COLOR),
-    ln("bail-cbr", "motion", "cb-r", [], pt(46, 60), "straight", DEFENSE_COLOR),
-    ln("deep-fs", "motion", "fs", [], pt(26.7, 62), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(16, 53), "straight", DEFENSE_COLOR),
-    ln("flat-ss", "motion", "ss", [], pt(37, 53), "straight", DEFENSE_COLOR),
+    ln("aim-mlb", "route", "mlb", [pt(25, 2)], pt(25.8, -0.5), "bezier", DEFENSE_COLOR),
+    ln("aim-wlb", "route", "wlb", [pt(28, 2)], pt(27.6, -0.5), "bezier", DEFENSE_COLOR),
+    ln("rush-del", "route", "de-l", [], pt(21, -1), "straight", DEFENSE_COLOR),
+    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight", DEFENSE_COLOR),
+    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight", DEFENSE_COLOR),
+    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight", DEFENSE_COLOR),
+    ln("bail-cbl", "motion", "cb-l", [], pt(7, 10), "straight", DEFENSE_COLOR),
+    ln("bail-cbr", "motion", "cb-r", [], pt(46, 10), "straight", DEFENSE_COLOR),
+    ln("deep-fs", "motion", "fs", [], pt(26.7, 12), "straight", DEFENSE_COLOR),
+    ln("curl-nb", "motion", "nb", [], pt(16, 3), "straight", DEFENSE_COLOR),
+    ln("flat-ss", "motion", "ss", [], pt(37, 3), "straight", DEFENSE_COLOR),
   ],
 );
 
@@ -644,21 +649,21 @@ const COVER_6 = play(
   "クォーター×2＋ハーフの分割カバー。フィールドはクォーターズ、バウンダリは 2。",
   [
     ...nickelFront(),
-    dP("nb", "N", 39, 54),
-    dP("cb-l", "", 7, 52.5),
-    dP("cb-r", "", 46, 53),
-    dP("fs", "FS", 15, 59.5),
-    dP("ss", "SS", 35, 55),
+    dP("nb", "N", 39, 4),
+    dP("cb-l", "", 7, 2.5),
+    dP("cb-r", "", 46, 3),
+    dP("fs", "FS", 15, 9.5),
+    dP("ss", "SS", 35, 5),
     ...offLook(),
   ],
   [
-    ln("flat-cbl", "motion", "cb-l", [], pt(11, 52), "straight", DEFENSE_COLOR),
-    ln("half-fs", "motion", "fs", [], pt(12, 62), "straight", DEFENSE_COLOR),
-    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 62), "straight", DEFENSE_COLOR),
-    ln("qtr-ss", "motion", "ss", [], pt(38, 62), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(42, 53), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(22, 52), "straight", DEFENSE_COLOR),
-    ln("hook-wlb", "motion", "wlb", [], pt(33, 52), "straight", DEFENSE_COLOR),
+    ln("flat-cbl", "motion", "cb-l", [], pt(11, 2), "straight", DEFENSE_COLOR),
+    ln("half-fs", "motion", "fs", [], pt(12, 12), "straight", DEFENSE_COLOR),
+    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 12), "straight", DEFENSE_COLOR),
+    ln("qtr-ss", "motion", "ss", [], pt(38, 12), "straight", DEFENSE_COLOR),
+    ln("curl-nb", "motion", "nb", [], pt(42, 3), "straight", DEFENSE_COLOR),
+    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight", DEFENSE_COLOR),
+    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight", DEFENSE_COLOR),
   ],
 );
 

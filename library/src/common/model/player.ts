@@ -42,13 +42,14 @@ export const MAX_PLAYERS = 64;
 export const PLAYER_RADIUS_YARDS = 0.93;
 
 /**
- * フィールド上の論理位置（ヤード空間）。geometry の語彙に揃える。
+ * フィールド上の位置（ヤード）。縦は LOS（`field.losYard`）からの距離で持つので、
+ * ゾーンを切り替えて LOS が動いても、図は形を保ったまま一緒に動く。
  * - lateralYard: 0 = 左サイドライン … FIELD_WIDTH_YARDS = 右サイドライン
- * - absoluteYard: -10..110（0/100 = 各ゴールライン、50 = センター）
+ * - downfieldYard: 0 = LOS。正が攻撃方向（画面の上）、負がバックフィールド
  */
 export interface FieldPosition {
   readonly lateralYard: number;
-  readonly absoluteYard: number;
+  readonly downfieldYard: number;
 }
 
 /**
@@ -72,11 +73,11 @@ export function parseFieldPosition(raw: unknown): FieldPosition | null {
   if (!isRecord(raw)) {
     return null;
   }
-  const { lateralYard, absoluteYard } = raw;
-  if (!isFiniteNumber(lateralYard) || !isFiniteNumber(absoluteYard)) {
+  const { lateralYard, downfieldYard } = raw;
+  if (!isFiniteNumber(lateralYard) || !isFiniteNumber(downfieldYard)) {
     return null;
   }
-  return { lateralYard, absoluteYard };
+  return { lateralYard, downfieldYard };
 }
 
 /**

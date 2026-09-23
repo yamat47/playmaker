@@ -74,7 +74,8 @@ export class PropertyPanel extends Disposable {
         controller.updateSelectedLine({ interpolation: v }),
       );
       this.addLineColor(line.color, (v) => controller.updateSelectedLine({ color: v }));
-      this.addNumber("太さ", line.thickness ?? 2, (v) =>
+      // 太さは既定の太さに対する倍率。未指定の線は既定（倍率 1）で描いている。
+      this.addNumber("太さ", line.thickness ?? 1, (v) =>
         controller.updateSelectedLine({ thickness: v }),
       );
       return;
@@ -112,8 +113,8 @@ export class PropertyPanel extends Disposable {
   private addNumber(labelText: string, value: number, onChange: (v: number) => void): void {
     const input = document.createElement("input");
     input.type = "number";
-    input.min = "1";
-    input.step = "0.5";
+    input.min = "0.25";
+    input.step = "0.25";
     input.value = String(value);
     input.addEventListener("change", () => {
       const n = Number(input.value);

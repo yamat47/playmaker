@@ -49,15 +49,14 @@ export class LineRenderer {
       if (anchors === undefined) {
         continue;
       }
-      const path = sampleLinePath(anchors, line.interpolation).map((p) =>
-        geometry.toCanvas(p.lateralYard, p.absoluteYard),
-      );
+      const path = sampleLinePath(anchors, line.interpolation).map((p) => geometry.toCanvas(p));
       if (path.length < 2) {
         continue;
       }
 
       const color = line.color ?? this.colorFor(line.kind, theme);
-      const width = line.thickness ?? this.widthFor(line.kind, metrics);
+      // thickness は既定の太さに対する倍率なので、画面と PNG のどちらの縮尺でも見え方が揃う。
+      const width = this.widthFor(line.kind, metrics) * (line.thickness ?? 1);
       const isBlock = line.kind === "block";
 
       ctx.save();

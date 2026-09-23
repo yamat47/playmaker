@@ -6,7 +6,7 @@ import { Emitter, type Event } from "../event/emitter.js";
 import { Disposable } from "../lifecycle/disposable.js";
 import type { Line } from "./line.js";
 import { migratePlayData } from "./migration.js";
-import { clonePlayData, type FieldZone, type PlayData } from "./play-data.js";
+import { clonePlayData, type FieldZone, fieldStateForZone, type PlayData } from "./play-data.js";
 import type { Player } from "./player.js";
 
 /**
@@ -46,6 +46,7 @@ export interface IPlayModel {
   findPlayer(id: string): Player | undefined;
   /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
   findLine(id: string): Line | undefined;
+  /** LOS もゾーンの既定の位置へ移す。選手と線は LOS からの位置なので、図ごと一緒に動く。 */
   setFieldZone(zone: FieldZone): void;
   /** 既にある id の選手を渡すと throw する（id は選択と編集の対象を決める唯一の鍵）。 */
   addPlayer(player: Player): void;
@@ -133,7 +134,7 @@ export class PlayModel extends Disposable implements IPlayModel {
 
   setFieldZone(zone: FieldZone): void {
     // no-op（同値）抑止はコマンド/UI 層の責務。Model は決定的に set して発火する。
-    this.state = { ...this.state, field: { ...this.state.field, zone } };
+    this.state = { ...this.state, field: fieldStateForZone(zone) };
     this.emitChange();
   }
 

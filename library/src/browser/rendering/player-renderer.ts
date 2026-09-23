@@ -68,7 +68,7 @@ export class PlayerRenderer {
     const strokeWidth = metrics.markerStroke;
 
     for (const player of players) {
-      const { x, y } = geometry.toCanvas(player.position.lateralYard, player.position.absoluteYard);
+      const { x, y } = geometry.toCanvas(player.position);
 
       // 影・グラデーションを持たない完全フラット。塗り → 枠線の順で描く。
       ctx.beginPath();

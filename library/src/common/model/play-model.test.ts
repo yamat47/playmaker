@@ -7,8 +7,8 @@ import { PlayModel } from "./play-model.js";
 
 function seed(): PlayData {
   return {
-    version: 1,
-    field: { zone: "middle" },
+    version: 2,
+    field: { zone: "middle", losYard: 50 },
     players: [player("a"), player("b"), player("c")],
     lines: [line("la", "a"), line("lb", "b"), line("lc", "a")],
   };
@@ -19,8 +19,8 @@ describe("PlayModel 構築", () => {
     const model = new PlayModel();
 
     expect(model.getData()).toEqual({
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [],
       lines: [],
     });
@@ -38,8 +38,8 @@ describe("PlayModel 構築", () => {
   it("版なしの旧来 blob も migratePlayData 経由で現行版へ寄せて取り込む", () => {
     // 商用ソフトが永続化した未バージョン化データの再読込（PRD 6.6 唯一の入口）。
     const legacy = {
-      field: { zone: "redzone" },
-      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square" }],
+      field: { zone: "redzone", losYard: 85 },
+      players: [{ id: "wr", position: { lateralYard: 5, downfieldYard: 50 }, shape: "square" }],
     } as unknown as PlayData;
 
     const model = new PlayModel(legacy);

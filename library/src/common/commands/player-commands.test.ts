@@ -12,8 +12,8 @@ import {
 
 function seed(): PlayData {
   return {
-    version: 1,
-    field: { zone: "middle" },
+    version: 2,
+    field: { zone: "middle", losYard: 50 },
     players: [player("a")],
     lines: [line("la")],
   };
@@ -63,15 +63,15 @@ describe("RemovePlayerCommand", () => {
 describe("MovePlayerCommand", () => {
   it("apply で位置変更、undo で元位置へ戻す", () => {
     const model = new PlayModel(seed());
-    const dest = { lateralYard: 20, absoluteYard: 70 };
+    const dest = { lateralYard: 20, downfieldYard: 70 };
     const cmd = new MovePlayerCommand("a", dest);
     dest.lateralYard = 999; // 構築後の改変は影響しない
 
     cmd.apply(model);
-    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 20, absoluteYard: 70 });
+    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 20, downfieldYard: 70 });
 
     cmd.undo(model);
-    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 5, absoluteYard: 50 });
+    expect(model.findPlayer("a")?.position).toEqual({ lateralYard: 5, downfieldYard: 50 });
   });
 
   it("未知 id の apply と apply 前 undo は throw する", () => {
@@ -94,7 +94,7 @@ describe("UpdatePlayerCommand", () => {
     cmd.apply(model);
     expect(model.findPlayer("a")).toEqual({
       id: "a",
-      position: { lateralYard: 5, absoluteYard: 50 },
+      position: { lateralYard: 5, downfieldYard: 50 },
       shape: "square",
       label: "QB",
       color: "#0f0",
@@ -102,6 +102,18 @@ describe("UpdatePlayerCommand", () => {
 
     cmd.undo(model);
     expect(model.findPlayer("a")).toEqual(player("a"));
+  });
+
+  it("色に null を渡すと値を消して既定に戻し、undo で元の色に戻す", () => {
+    const model = new PlayModel(seed());
+    new UpdatePlayerCommand("a", { color: "#0f0" }).apply(model);
+    const cmd = new UpdatePlayerCommand("a", { color: null });
+
+    cmd.apply(model);
+    expect(model.findPlayer("a")).toEqual(player("a"));
+
+    cmd.undo(model);
+    expect(model.findPlayer("a")?.color).toBe("#0f0");
   });
 
   it("空 patch は現状維持（全項目の未指定分岐）", () => {

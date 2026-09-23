@@ -19,8 +19,9 @@ const VALID_CATEGORIES: readonly PlayCategory[] = [
   "pressure",
 ];
 
-function inWindow(lateralYard: number, absoluteYard: number): boolean {
-  return absoluteYard >= 35 && absoluteYard <= 65 && lateralYard >= 0 && lateralYard <= 53.3;
+// プレー図のプリセットは middle ゾーンで読み込まれ、窓は LOS の前後 15 ヤード。
+function inWindow(lateralYard: number, downfieldYard: number): boolean {
+  return downfieldYard >= -15 && downfieldYard <= 15 && lateralYard >= 0 && lateralYard <= 53.3;
 }
 
 describe("PLAY_PRESETS データ健全性", () => {
@@ -52,7 +53,7 @@ describe("PLAY_PRESETS データ健全性", () => {
       expect(new Set(ids).size).toBe(ids.length);
       for (const p of players) {
         expect(isPlayerShape(p.shape)).toBe(true);
-        expect(inWindow(p.position.lateralYard, p.position.absoluteYard)).toBe(true);
+        expect(inWindow(p.position.lateralYard, p.position.downfieldYard)).toBe(true);
         // 守は赤で塗り、攻は色なし（テーマ既定）。
         expect(p.color === DEFENSE_COLOR || p.color === undefined).toBe(true);
       }
@@ -68,7 +69,7 @@ describe("PLAY_PRESETS データ健全性", () => {
         expect(isLineInterpolation(line.interpolation)).toBe(true);
         expect(line.color === DEFENSE_COLOR || line.color === undefined).toBe(true);
         for (const point of [...line.waypoints, line.end]) {
-          expect(inWindow(point.lateralYard, point.absoluteYard)).toBe(true);
+          expect(inWindow(point.lateralYard, point.downfieldYard)).toBe(true);
         }
       }
     }

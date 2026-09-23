@@ -24,7 +24,7 @@ export function hitTestPlayer(
   const r2 = radiusYards * radiusYards;
   for (const player of [...players].reverse()) {
     const dx = player.position.lateralYard - target.lateralYard;
-    const dy = player.position.absoluteYard - target.absoluteYard;
+    const dy = player.position.downfieldYard - target.downfieldYard;
     if (dx * dx + dy * dy <= r2) {
       return player;
     }
@@ -41,9 +41,9 @@ export const LINE_HIT_TOLERANCE_YARDS = 0.6;
 /** 点 p から線分 a–b への最短距離（ヤード空間）。退化（a=b）は点距離。 */
 export function distanceToSegment(p: FieldPosition, a: FieldPosition, b: FieldPosition): number {
   const abx = b.lateralYard - a.lateralYard;
-  const aby = b.absoluteYard - a.absoluteYard;
+  const aby = b.downfieldYard - a.downfieldYard;
   const apx = p.lateralYard - a.lateralYard;
-  const apy = p.absoluteYard - a.absoluteYard;
+  const apy = p.downfieldYard - a.downfieldYard;
   const lenSq = abx * abx + aby * aby;
   // 射影パラメタ t を [0,1] に丸めて線分内に収める。退化時は t=0（= 点 a）。
   const t = lenSq > 0 ? Math.max(0, Math.min(1, (apx * abx + apy * aby) / lenSq)) : 0;

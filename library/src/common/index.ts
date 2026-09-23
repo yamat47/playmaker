@@ -119,6 +119,7 @@ export {
   clonePlayData,
   createEmptyPlayData,
   DEFAULT_FIELD_ZONE,
+  FIELD_ZONE_LABELS,
   FIELD_ZONE_VALUES,
   type FieldState,
   type FieldZone,

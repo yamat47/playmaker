@@ -560,7 +560,12 @@ need("load-stress", HTMLButtonElement).addEventListener(
   () => {
     replacePlayKeepingZone(STRESS_PLAYERS, STRESS_LINES);
     clearActive();
-    setInfo("密度ストレス", null, "選手 22・線 20", "描画・操作の体感速度を手動目視する fixture。");
+    setInfo(
+      "密度ストレス",
+      null,
+      `選手 ${STRESS_PLAYERS.length}・線 ${STRESS_LINES.length}`,
+      "描画・操作の体感速度を手動目視する fixture。",
+    );
   },
   { signal },
 );

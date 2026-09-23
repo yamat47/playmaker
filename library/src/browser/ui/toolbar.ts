@@ -24,6 +24,14 @@ const SIDE_LABELS = {
   defense: "ディフェンス",
 } satisfies Record<TeamSide, string>;
 
+/**
+ * disabled ではなく aria-disabled で無効を示す。disabled にすると、押した直後に無効になったボタンから
+ * フォーカスが body へ落ち、編集 UI の中で受けているショートカットが効かなくなる。
+ */
+function setEnabled(button: HTMLButtonElement, enabled: boolean): void {
+  button.setAttribute("aria-disabled", String(!enabled));
+}
+
 export class Toolbar extends Disposable {
   readonly element: HTMLElement;
   private readonly toolButtons = new Map<EditorTool, HTMLButtonElement>();
@@ -69,7 +77,11 @@ export class Toolbar extends Disposable {
     button.type = "button";
     button.textContent = label;
     button.className = "playmaker-toolbar__button";
-    button.addEventListener("click", onClick);
+    button.addEventListener("click", () => {
+      if (button.getAttribute("aria-disabled") !== "true") {
+        onClick();
+      }
+    });
     this.element.appendChild(button);
     return button;
   }
@@ -128,10 +140,10 @@ export class Toolbar extends Disposable {
     for (const [zone, btn] of this.zoneButtons) {
       btn.setAttribute("aria-pressed", String(zone === state.fieldZone));
     }
-    this.undoButton.disabled = !state.canUndo;
-    this.redoButton.disabled = !state.canRedo;
-    this.deleteButton.disabled = state.selection === null;
-    this.commitButton.disabled = !state.isDrawing;
-    this.cancelButton.disabled = !state.isDrawing;
+    setEnabled(this.undoButton, state.canUndo);
+    setEnabled(this.redoButton, state.canRedo);
+    setEnabled(this.deleteButton, state.selection !== null);
+    setEnabled(this.commitButton, state.isDrawing);
+    setEnabled(this.cancelButton, state.isDrawing);
   }
 }

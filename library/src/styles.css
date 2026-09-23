@@ -81,7 +81,7 @@
   cursor: pointer;
 }
 
-.playmaker-toolbar__button:hover:not(:disabled) {
+.playmaker-toolbar__button:hover:not([aria-disabled="true"]) {
   border-color: var(--_playmaker-ui-accent);
 }
 
@@ -91,7 +91,7 @@
   color: var(--_playmaker-ui-accent-text);
 }
 
-.playmaker-toolbar__button:disabled {
+.playmaker-toolbar__button[aria-disabled="true"] {
   opacity: 0.45;
   cursor: not-allowed;
 }

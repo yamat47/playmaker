@@ -1,6 +1,7 @@
 import { CanvasSurface, PointerInput, PropertyPanel, Toolbar } from "./browser/index.js";
 import {
   DisposableStore,
+  type Event,
   type FieldZone,
   type Formation,
   type IDisposable,
@@ -12,11 +13,13 @@ import {
 import "./styles.css";
 
 export type {
+  Event,
   FieldPosition,
   FieldState,
   FieldZone,
   Formation,
   FormationPlayer,
+  IDisposable,
   ImageExportOptions,
   Line,
   LineInterpolation,
@@ -50,12 +53,7 @@ export interface PlaymakerOptions {
    * 先頭から上限までを残して捨てる。
    */
   initialData?: PlayData;
-  /**
-   * 編集確定契約（PRD 5.8）：編集コマンドおよび Undo/Redo の確定ごとに **1 回**、
-   * 最新 PlayData の深いスナップショット（`version` は常に現行・内部状態と分離）を渡す。
-   * 受け手はそのまま永続化でき、書き換えても内部に波及しない。構築時・`setPlayData`
-   * での再読込・PNG 出力では発火しない（再読込は編集ではない）。
-   */
+  /** 構築時に `onDidChange` へ登録するリスナ。解除するには Playmaker を dispose する。 */
   onChange?: (data: PlayData) => void;
 }
 
@@ -65,6 +63,14 @@ export interface PlaymakerOptions {
  */
 export class Playmaker implements IDisposable {
   readonly mode: PlaymakerMode;
+  /**
+   * 編集コマンドと Undo / Redo の確定ごとに 1 回、最新の図の深いコピーを渡す。
+   * `version` は常に現行なので、受け取った値をそのまま永続化できる。
+   * 構築時、`setPlayData` での読み込み、PNG の書き出しでは発火しない（読み込みは編集ではないため）。
+   * コピーはリスナごとに作るので、受け手が書き換えても、この図とほかのリスナには波及しない。
+   * 返り値を dispose すると購読をやめる。
+   */
+  readonly onDidChange: Event<PlayData>;
   private readonly store = new DisposableStore();
   private readonly root: HTMLElement;
   private readonly surface: CanvasSurface;
@@ -75,6 +81,7 @@ export class Playmaker implements IDisposable {
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
     this.mode = options.mode ?? "edit";
     this.session = this.store.add(new PlaySession(options.initialData));
+    this.onDidChange = this.session.onDidChange;
     if (options.onChange !== undefined) {
       this.store.add(this.session.onDidChange(options.onChange));
     }

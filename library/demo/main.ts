@@ -336,14 +336,9 @@ const playmaker = new Playmaker(mountPoint, { initialData: PLAY_PRESETS[0]?.data
 
 let activeButton: HTMLButtonElement | null = null;
 
-function clearActive(): void {
+function setActive(button: HTMLButtonElement | null): void {
   activeButton?.classList.remove("is-active");
-  activeButton = null;
-}
-
-function setActive(button: HTMLButtonElement): void {
-  activeButton?.classList.remove("is-active");
-  button.classList.add("is-active");
+  button?.classList.add("is-active");
   activeButton = button;
 }
 
@@ -397,7 +392,7 @@ function subTitle(text: string, offense: boolean): HTMLElement {
 function replacePlayKeepingZone(players: readonly Player[], lines: readonly Line[]): void {
   playmaker.setPlayData({
     version: CURRENT_PLAY_DATA_VERSION,
-    field: playmaker.getPlayData().field,
+    field: { zone: playmaker.fieldZone },
     players,
     lines,
   });
@@ -515,7 +510,7 @@ need("clear", HTMLButtonElement).addEventListener(
   "click",
   () => {
     replacePlayKeepingZone([], []);
-    clearActive();
+    setActive(null);
     setInfo("—", null, "", "");
   },
   { signal },
@@ -559,7 +554,7 @@ need("load-stress", HTMLButtonElement).addEventListener(
   "click",
   () => {
     replacePlayKeepingZone(STRESS_PLAYERS, STRESS_LINES);
-    clearActive();
+    setActive(null);
     setInfo(
       "密度ストレス",
       null,

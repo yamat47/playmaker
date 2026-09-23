@@ -32,10 +32,15 @@ if [ "pnpm@$(pnpm --version 2>/dev/null || true)" != "$package_manager" ]; then
 fi
 
 # Makefile は IN_CONTAINER を見て、docker compose を経由せず pnpm を直接呼ぶ。
+# ブラウザテストの Chromium は、コンテナに置いてあるものを使う。playwright install は
+# ダウンロード先に届かず、置いてあるものは playwright の版と合わないので、実行ファイルを直接指す。
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   {
     echo "export PATH=\"$node_prefix/bin:\$PATH\""
     echo "export IN_CONTAINER=1"
+    if [ -x /opt/pw-browsers/chromium ]; then
+      echo "export PLAYMAKER_CHROMIUM_PATH=/opt/pw-browsers/chromium"
+    fi
   } >> "$CLAUDE_ENV_FILE"
 fi
 

@@ -133,7 +133,7 @@ describe("UpdateLineCommand", () => {
     const model = new PlayModel(seed());
 
     expect(() => new UpdateLineCommand("ghost", { kind: "block" }).apply(model)).toThrow(
-      'UpdateLineCommand: unknown line id "ghost"',
+      /unknown line id "ghost"/,
     );
   });
 

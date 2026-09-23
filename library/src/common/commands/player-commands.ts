@@ -63,10 +63,7 @@ export class UpdatePlayerCommand implements ICommand {
   }
 
   apply(model: IPlayModel): boolean {
-    const current = model.findPlayer(this.playerId);
-    if (current === undefined) {
-      throw new Error(`UpdatePlayerCommand: unknown player id "${this.playerId}"`);
-    }
+    const current = model.getPlayer(this.playerId);
     if (!patchChangesAnything(current, this.patch)) {
       return false;
     }

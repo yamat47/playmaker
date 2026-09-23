@@ -94,7 +94,6 @@ describe("PlayModel.setFieldZone", () => {
     expect(model.findPlayer("a")).toEqual(player("a"));
   });
 
-
   it("ゾーンを変更しスナップショットを 1 回発火する", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn<(data: PlayData) => void>();

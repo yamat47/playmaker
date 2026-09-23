@@ -35,6 +35,7 @@ export { isOneOf } from "./model/guards.js";
 export {
   DEFAULT_LINE_THICKNESS,
   indexPlayersById,
+  isLineThickness,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,

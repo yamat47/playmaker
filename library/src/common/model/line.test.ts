@@ -7,6 +7,7 @@ import {
   indexPlayersById,
   isLineInterpolation,
   isLineKind,
+  isLineThickness,
   type Line,
   lineAnchorPoints,
   MAX_LINES,
@@ -37,6 +38,24 @@ describe("isLineInterpolation", () => {
     expect(isLineInterpolation("bezier")).toBe(true);
     expect(isLineInterpolation("spline")).toBe(false);
     expect(isLineInterpolation(undefined)).toBe(false);
+  });
+});
+
+describe("isLineThickness", () => {
+  it("正の有限な数を true と判定する", () => {
+    expect(isLineThickness(0.25)).toBe(true);
+    expect(isLineThickness(3)).toBe(true);
+  });
+
+  it("0 と負の数を false と判定する", () => {
+    expect(isLineThickness(0)).toBe(false);
+    expect(isLineThickness(-1)).toBe(false);
+  });
+
+  it("数でない値と、有限でない数を false と判定する", () => {
+    expect(isLineThickness("2")).toBe(false);
+    expect(isLineThickness(Number.NaN)).toBe(false);
+    expect(isLineThickness(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
 

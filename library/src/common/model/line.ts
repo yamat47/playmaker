@@ -78,6 +78,11 @@ export function isLineInterpolation(value: unknown): value is LineInterpolation 
   return isOneOf(value, LINE_INTERPOLATION_VALUES);
 }
 
+/** 太さの倍率として受け付ける値か。0 以下では線が見えなくなるので受け付けない。 */
+export function isLineThickness(value: unknown): value is number {
+  return isFiniteNumber(value) && value > 0;
+}
+
 /**
  * 外部（商用ソフト）から渡る 1 要素を内部で安全な Line へ正規化する。
  * 復元不能（非オブジェクト / 起点選手が実在しない / 終点が数値でない）は null で除外。
@@ -115,7 +120,7 @@ function normalizeLine(
       : DEFAULT_LINE_INTERPOLATION,
     // exactOptionalPropertyTypes では undefined を入れられないので、値があるときだけキーを置く。
     ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
-    ...(isFiniteNumber(raw.thickness) && raw.thickness > 0 ? { thickness: raw.thickness } : {}),
+    ...(isLineThickness(raw.thickness) ? { thickness: raw.thickness } : {}),
   };
 }
 

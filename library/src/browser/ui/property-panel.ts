@@ -6,6 +6,7 @@ import {
   DEFAULT_LINE_THICKNESS,
   Disposable,
   type IEditorUi,
+  isLineThickness,
   isOneOf,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
@@ -130,7 +131,7 @@ export class PropertyPanel extends Disposable {
     input.value = String(value);
     input.addEventListener("change", () => {
       const n = Number(input.value);
-      if (Number.isFinite(n) && n > 0) {
+      if (isLineThickness(n)) {
         onChange(n);
       }
     });

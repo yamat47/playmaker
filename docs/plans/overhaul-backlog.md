@@ -531,6 +531,23 @@ PR 単位で、依存順に並べる。
 
 ### T15 テストの整備
 
+2026-09-23 にユーザーと方針を決め直した。監査のときの項目（T15-1〜T15-7）は、テストを今の単位のまま直す前提だった。これを、テストの境界そのものを置き直す方針に切り替える。
+
+- 今のテストは内部の部品ごとに付いていて、公開 API の Playmaker にはテストがない。9 月の refactor のコミットでは、本体 5,033 行に対してテストも 2,403 行を書き換えている。
+- 編集の振る舞いは、`PlaySession` と `IEditorController` を境界にした仕様テストで確かめる。ヤード座標で操作し、PlayData、表示状態、通知を見る。仕様テストは機能ごとのファイルに置き、ソースファイルごとには置かない。PlaySession と IEditorController は公開しない（ジェスチャ単位の API を互換つきで固定する便益が、今の利用者には無い）。
+- 実装に依存するテストは持たない。単体テストは、モジュールとしての約束を書けるものだけ残す（bezier、polyline、field の座標変換、hit-test、color、keymap、base の Event と lifecycle、PlayData の正規化と `migratePlayData`、プリセット）。公開の入口から観測できない数値計算は、単体テストを残す。interaction、preview、editor-notifier、patch、各コマンド、undo-redo-service、command-service、editor-controller のテストは、仕様テストに吸収して消す。
+- ブラウザテストは Vitest の Browser Mode（Playwright の Chromium だけ）で、`new Playmaker(container)` の結線を 10〜20 本だけ確かめる。スクリーンショットの比較はしない。`make test` とは別のターゲットと CI のジョブにする。
+- common の 100% ゲートは残す。仕様テストから届かない行は、テストを足すか、消すか、理由付きの `v8 ignore` にする。
+
+分割:
+
+- T15-0 cloud 版のセッションで make を動かす（done）。SessionStart hook（`docker/cloud-session-setup.sh`）が Node と pnpm、依存を入れ、`IN_CONTAINER=1` で make が pnpm を直接呼ぶ。コンテナの中で Docker を動かす案は、起動が拒否されるうえ、イメージを毎回作り直すので見送った。
+- T15a 規約と土台。testing.md を上の方針で書き直し、仕様テストの操作ヘルパを作る。
+- T15b 仕様テストへの移行。機能のまとまりごとに 2〜3 本に割る。届かないと分かったコードの削除は別コミットにする。下の T15-1〜T15-7 はここで片付くか、消える。
+- T15c ブラウザテスト。Browser Mode を入れ、Docker イメージにも Chromium を入れる。
+
+controller の構造を分けるか（ジェスチャの解釈を切り出すか）は、T15b のあとで設計上の理由だけで決める。
+
 - [ ] **T15-1 [should] テスト名とコメントがカバレッジの分岐に引きずられている**
   - locations: library/src/common/editing/editor-controller.test.ts:342, library/src/common/editing/editor-controller.test.ts:414, library/src/common/editing/editor-controller.test.ts:599, library/src/common/editing/editor-controller.test.ts:827-839, library/src/common/commands/player-commands.test.ts:119, library/src/common/commands/line-commands.test.ts:106, library/src/common/model/play-model.test.ts:125, library/src/common/model/play-model.test.ts:147, library/src/common/model/play-model.test.ts:169, library/src/common/model/play-model.test.ts:292, library/src/common/geometry/hit-test.test.ts:175, library/src/common/model/migration.test.ts:52
 - [ ] **T15-2 [should] 1 つの it に複数の振る舞いを詰め込んでいる**
@@ -548,8 +565,9 @@ PR 単位で、依存順に並べる。
   - 対応: コメントを削り、空行で段を区切る書き方に揃える。
 
 - 依存: T5-5、T9、T10（コードの形が固まってから）
-- 完了条件: テスト名に実装の分岐名や内部関数名が出てこない。Controller のテストがフェイクの CommandService で検証している。common 100% を維持する。
-- 規模: M
+- 完了条件: 編集の振る舞いが仕様テストで確かめられ、実装に依存するテストが残っていない。Playmaker の結線をブラウザテストで確かめている。common 100% を維持する。
+- 規模: L（T15-0、T15a、T15b、T15c）
+- 進み具合: T15-0 を閉じた。
 
 ---
 

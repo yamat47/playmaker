@@ -122,7 +122,7 @@ export class Playmaker implements IDisposable {
     stage.className = "playmaker-stage";
     this.root.appendChild(stage);
     this.surface = this.store.add(new CanvasSurface(stage, this.session.getSnapshot()));
-    // CanvasSurface は構築したときに同じ図を描くので、ここでは描き直さない。
+    // CanvasSurface は最初の大きさが決まったときに今の図を描くので、ここでは描かない。
     this.ui = this.createUi();
     this.store.add(this.session.onDidReset(() => this.attachUi()));
   }

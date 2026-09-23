@@ -65,8 +65,9 @@ export class CanvasSurface extends Disposable {
       }),
     );
 
+    // 最初の描画は、observe した直後の ResizeObserver の通知で行う。構築した時点ではホストが
+    // ツールバーやパネルをまだ並べておらず、ここで描くとすぐに大きさが変わって描き直しになる。
     this.watchDevicePixelRatio();
-    this.resize();
     this.redrawWhenFontLoads();
   }
 
@@ -137,8 +138,7 @@ export class CanvasSurface extends Disposable {
     const { clientWidth, clientHeight } = this.host;
     const width = Math.max(1, Math.round(clientWidth * dpr));
     const height = Math.max(1, Math.round(clientHeight * dpr));
-    // ResizeObserver は observe した直後にも 1 回呼ぶ。大きさも DPR も変わっていなければ、
-    // 構築したときに描いた図がそのまま使えるので、バッファを作り直さない。
+    // 要素の大きさが変わっても、バッファの大きさと DPR が同じなら描いた図がそのまま使える。
     if (width === this.canvas.width && height === this.canvas.height && dpr === this.dpr) {
       return;
     }
@@ -167,7 +167,8 @@ export class CanvasSurface extends Disposable {
   }
 
   private invalidate(): void {
-    if (this.frameRequest !== undefined) {
+    // 最初の大きさが決まる前は描かない。決まったときに resize が描く。
+    if (this.frameRequest !== undefined || this.dpr === 0) {
       return;
     }
     this.frameRequest = requestAnimationFrame(() => {

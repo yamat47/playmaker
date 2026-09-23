@@ -25,7 +25,11 @@ export {
   yardLinesInWindow,
 } from "./geometry/field.js";
 export { WAYPOINT_HANDLE_RADIUS_YARDS } from "./geometry/hit-test.js";
-export { trimPolylineEnd } from "./geometry/polyline.js";
+export {
+  arrowHeadVertices,
+  blockCapEndpoints,
+  trimForArrowHead,
+} from "./geometry/line-decoration.js";
 export { isOneOf } from "./model/guards.js";
 export {
   DEFAULT_LINE_THICKNESS,

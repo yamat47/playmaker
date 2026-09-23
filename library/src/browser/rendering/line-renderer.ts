@@ -4,6 +4,8 @@
 // 本クラスは「サンプル後ポリラインを種別ごとの見た目で描く」命令だけを持つ（VRT なしで薄く保つ）。
 
 import {
+  arrowHeadVertices,
+  blockCapEndpoints,
   type CanvasPoint,
   DEFAULT_LINE_THICKNESS,
   type FieldMetrics,
@@ -11,13 +13,10 @@ import {
   type LineKind,
   lineAnchorPoints,
   sampleLinePath,
-  trimPolylineEnd,
+  trimForArrowHead,
 } from "../../common/index.js";
 import type { ThemeTokenName } from "../theme/tokens.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
-
-// 線が矢じりより短くても消えないよう、切り詰めは全長のこの割合までに留める（残りは矢じりが覆う）。
-const ARROW_TRIM_MAX_FRACTION = 0.9;
 
 const LINE_COLOR_TOKENS = {
   route: "lineRoute",
@@ -63,9 +62,7 @@ export class LineRenderer implements ILayerRenderer {
       // 遡らないと線が先端近くまで伸びきり、太さ一定の線の丸キャップが先細りの三角から
       // はみ出して先端に「丸いドット」が生える。ブロックは T 字キャップを当てるため終点まで
       // 引く。矢じりの向き/位置は元 path から得る。
-      const strokePath = isBlock
-        ? path
-        : trimPolylineEnd(path, metrics.arrowLength, ARROW_TRIM_MAX_FRACTION);
+      const strokePath = isBlock ? path : trimForArrowHead(path, metrics.arrowLength);
       ctx.beginPath();
       // 空のパスへの最初の lineTo は moveTo として働く。
       for (const pt of strokePath) {
@@ -89,27 +86,6 @@ export class LineRenderer implements ILayerRenderer {
     return kind === "block" ? metrics.blockWidth : metrics.routeWidth;
   }
 
-  /**
-   * 終点と、終点と一致しない直近点から見た終端の進行方向（角度）。
-   * 曲線末尾の微小区間で方向が出ない事故を避ける。終端飾りの共通前処理。
-   */
-  private endDirection(
-    path: readonly CanvasPoint[],
-  ): { readonly tip: CanvasPoint; readonly angle: number } | undefined {
-    const tip = path.at(-1);
-    if (tip === undefined) {
-      return undefined;
-    }
-    // 毎フレーム線ごとに呼ぶので、配列を複製せずに終点側から探す。
-    for (let i = path.length - 2; i >= 0; i--) {
-      const from = path[i];
-      if (from !== undefined && (from.x !== tip.x || from.y !== tip.y)) {
-        return { tip, angle: Math.atan2(tip.y - from.y, tip.x - from.x) };
-      }
-    }
-    return undefined;
-  }
-
   /** 終点に、進行方向へ向けた塗り三角の矢じりを描く（route / motion）。 */
   private drawArrowHead(
     ctx: CanvasRenderingContext2D,
@@ -117,20 +93,15 @@ export class LineRenderer implements ILayerRenderer {
     color: string,
     metrics: FieldMetrics,
   ): void {
-    const direction = this.endDirection(path);
-    if (direction === undefined) {
+    const vertices = arrowHeadVertices(path, metrics.arrowLength, metrics.arrowHalfWidth);
+    if (vertices === undefined) {
       return;
     }
-    const { tip, angle } = direction;
-    const baseX = tip.x - metrics.arrowLength * Math.cos(angle);
-    const baseY = tip.y - metrics.arrowLength * Math.sin(angle);
-    const nx = -Math.sin(angle);
-    const ny = Math.cos(angle);
-
+    const [tip, left, right] = vertices;
     ctx.beginPath();
     ctx.moveTo(tip.x, tip.y);
-    ctx.lineTo(baseX + metrics.arrowHalfWidth * nx, baseY + metrics.arrowHalfWidth * ny);
-    ctx.lineTo(baseX - metrics.arrowHalfWidth * nx, baseY - metrics.arrowHalfWidth * ny);
+    ctx.lineTo(left.x, left.y);
+    ctx.lineTo(right.x, right.y);
     ctx.closePath();
     ctx.fillStyle = color;
     ctx.fill();
@@ -144,21 +115,17 @@ export class LineRenderer implements ILayerRenderer {
     metrics: FieldMetrics,
     width: number,
   ): void {
-    const direction = this.endDirection(path);
-    if (direction === undefined) {
+    const endpoints = blockCapEndpoints(path, metrics.blockCapLength);
+    if (endpoints === undefined) {
       return;
     }
-    const { tip, angle } = direction;
-    const nx = -Math.sin(angle);
-    const ny = Math.cos(angle);
-    const half = metrics.blockCapLength / 2;
-
+    const [from, to] = endpoints;
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.lineWidth = width * 1.2;
     ctx.lineCap = "round";
-    ctx.moveTo(tip.x - half * nx, tip.y - half * ny);
-    ctx.lineTo(tip.x + half * nx, tip.y + half * ny);
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
     ctx.stroke();
   }
 }

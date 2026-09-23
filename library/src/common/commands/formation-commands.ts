@@ -14,8 +14,12 @@ export class LoadFormationCommand implements ICommand {
     this.players = players;
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
+    if (this.players.length === 0) {
+      return false;
+    }
     model.addPlayers(this.players);
+    return true;
   }
 
   undo(model: IPlayModel): void {

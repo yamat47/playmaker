@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandService } from "../commands/command-service.js";
-import { UpdatePlayerCommand } from "../commands/player-commands.js";
+import { RemoveLineCommand } from "../commands/line-commands.js";
+import { RemovePlayerCommand, UpdatePlayerCommand } from "../commands/player-commands.js";
 import { UndoRedoService } from "../commands/undo-redo-service.js";
 import type { Formation } from "../formations/formation.js";
-import { RemoveLineCommand, RemovePlayerCommand } from "../index.js";
 import { IdFactory } from "../model/id-factory.js";
 import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
@@ -1251,9 +1251,9 @@ describe("EditorController: 件数の上限", () => {
 describe("EditorController: 履歴の通知", () => {
   it("Model が変わらず履歴だけが変わっても通知する", () => {
     const { commands, changes } = setup();
-    const noop = { label: "何も変えないコマンド", apply: () => {}, undo: () => {} };
+    const untouched = { label: "Model に触れないコマンド", apply: () => true, undo: () => {} };
 
-    commands.execute(noop);
+    commands.execute(untouched);
 
     expect(changes.mock.calls).toEqual([["view"]]);
   });

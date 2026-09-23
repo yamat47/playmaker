@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
@@ -106,6 +106,17 @@ describe("UpdatePlayerCommand", () => {
     cmd.apply(model);
 
     expect(model.findPlayer("a")?.label).toBe("QB");
+  });
+
+  it("今と同じ値だけのパッチは Model に触れず、何も変えなかったと返す", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    const changed = new UpdatePlayerCommand("a", { label: "a", color: null }).apply(model);
+
+    expect(changed).toBe(false);
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("無い id の選手に apply すると throw する", () => {

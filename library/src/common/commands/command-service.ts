@@ -12,7 +12,7 @@ export interface ICommandService {
   readonly onDidChangeHistory: Event<void>;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  /** 適用が throw したら、コマンドは履歴に積まない。 */
+  /** 適用が throw したときと、何も変えなかったときは、コマンドを履歴に積まない。 */
   execute(command: ICommand): void;
   /** 取り消しが throw したら、履歴は動かさない。戻す対象が無ければ何もしない。 */
   undo(): void;
@@ -42,8 +42,9 @@ export class CommandService implements ICommandService {
   }
 
   execute(command: ICommand): void {
-    command.apply(this.model);
-    this.history.push(command);
+    if (command.apply(this.model)) {
+      this.history.push(command);
+    }
   }
 
   undo(): void {

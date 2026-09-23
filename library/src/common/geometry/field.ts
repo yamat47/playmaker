@@ -16,12 +16,6 @@ export const FIELD_WIDTH_YARDS = 160 / 3;
 export const ZONE_WINDOW_LENGTH_YARDS = 30;
 
 /**
- * ハッシュマークのサイドラインからの距離。NCAA（カレッジ）規定の 60 ft = 20 yd。
- * 日本のアメフトはカレッジルール準拠が主流のためこれを採用。厳密値より目安。
- */
-export const HASH_FROM_SIDELINE_YARDS = 20;
-
-/**
  * リーグ別ハッシュ位置（中央からの片側オフセット, yd）。レンダラはこの表を引くだけで
  * 切り替えられるよう定数化する（NCAA は左右間 40ft、NFL は約 18.5ft、NFHS は 53⅓ft）。
  * 既定は日本で主流の NCAA。runtime 切替の API 化は将来課題（PRD 4.1 で範囲を絞る）。
@@ -36,15 +30,6 @@ export type FieldLeague = keyof typeof HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
 
 /** 既定リーグ。NCAA のハッシュ間 40ft が日本の標準。 */
 export const DEFAULT_FIELD_LEAGUE: FieldLeague = "ncaa";
-
-/**
- * 「9 ヤードマーク」（short hash）のサイドラインからの距離。
- * 実フィールドでサイドライン際の球位置を素早く判定するための補助目盛。
- */
-export const NEAR_SIDELINE_TICK_YARDS = 9;
-
-/** 1 ヤード刻みティックの目盛り長（ヤード）。実フィールドの 1 ヤード刻みを再現。 */
-export const HASH_TICK_YARDS = 0.8;
 
 /**
  * レッドゾーン窓に映す奥行き（25 ヤードライン〜ゴール）。実レッドゾーン（ゴール前 20yd）

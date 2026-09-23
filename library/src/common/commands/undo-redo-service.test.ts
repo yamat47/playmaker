@@ -3,7 +3,7 @@ import type { ICommand } from "./command.js";
 import { UndoRedoService } from "./undo-redo-service.js";
 
 function fakeCommand(label = "cmd"): ICommand {
-  return { label, apply: vi.fn(), undo: vi.fn() };
+  return { label, apply: vi.fn(() => true), undo: vi.fn() };
 }
 
 describe("UndoRedoService", () => {

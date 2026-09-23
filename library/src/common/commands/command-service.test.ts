@@ -20,6 +20,7 @@ function failing(on: "apply" | "undo"): ICommand {
       if (on === "apply") {
         throw new Error("apply failed");
       }
+      return true;
     }),
     undo: vi.fn(() => {
       throw new Error("undo failed");
@@ -50,6 +51,17 @@ describe("CommandService", () => {
     expect(commands.canRedo).toBe(false);
   });
 
+  it("何も変えなかったと返したコマンドは履歴に積まない", () => {
+    const { commands } = wire();
+    const history = vi.fn();
+    commands.onDidChangeHistory(history);
+
+    commands.execute({ label: "何も変えないコマンド", apply: () => false, undo: vi.fn() });
+
+    expect(commands.canUndo).toBe(false);
+    expect(history).not.toHaveBeenCalled();
+  });
+
   it("適用が throw したコマンドは履歴に積まない", () => {
     const { commands } = wire();
 
@@ -76,6 +88,7 @@ describe("CommandService", () => {
       label: "複数の削除",
       apply: (m) => {
         m.removePlayers(["a", "ghost"]);
+        return true;
       },
       undo: vi.fn(),
     };

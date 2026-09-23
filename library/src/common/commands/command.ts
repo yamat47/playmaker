@@ -7,7 +7,11 @@ import type { IPlayModel } from "../model/play-model.js";
 export interface ICommand {
   /** 履歴の表示に使う日本語のラベル。 */
   readonly label: string;
-  apply(model: IPlayModel): void;
+  /**
+   * Model を変えたら true を返す。何も変えないときは Model に触れずに false を返し、
+   * 履歴に空の段を積ませない。
+   */
+  apply(model: IPlayModel): boolean;
   undo(model: IPlayModel): void;
 }
 

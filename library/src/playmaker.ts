@@ -1,19 +1,13 @@
 import { CanvasSurface, PointerInput, PropertyPanel, Toolbar } from "./browser/index.js";
 import {
-  CommandService,
   Disposable,
   DisposableStore,
-  EditorController,
   type FieldZone,
   type Formation,
-  IdFactory,
   type ImageExportOptions,
-  migratePlayData,
-  normalizeFormation,
   type PlayData,
-  PlayModel,
+  PlaySession,
   toDisposable,
-  UndoRedoService,
 } from "./common/index.js";
 import "./styles.css";
 
@@ -66,26 +60,21 @@ export interface PlaymakerOptions {
 }
 
 /**
- * ライブラリの公開エントリ。common（Model/コマンド/Undo/EditorController）と
+ * ライブラリの公開エントリ。編集の部品一式（PlaySession）と、
  * browser（Canvas/入力/UI）を結線する。商用ソフトはコンテナとオプションを渡すだけ。
- *
- * 1 セッション = 1 つの Model + 履歴 + UI。setPlayData は履歴ごと作り直す
- * （Model は唯一の状態保持者で setData を持たない設計を尊重する）。
  */
 export class Playmaker extends Disposable {
   readonly mode: PlaymakerMode;
   private readonly root: HTMLElement;
   private readonly surface: CanvasSurface;
-  private readonly options: PlaymakerOptions;
-  // セッション（Model/コマンド/Undo/Controller/UI/入力）。再読込で丸ごと作り直す。
-  private session = new DisposableStore();
-  private model: PlayModel;
-  private controller: EditorController;
+  private readonly session: PlaySession;
+  // 今の controller に付けた描画の購読、UI、入力。setPlayData で controller が変わると付け直す。
+  private ui = new DisposableStore();
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
     super();
-    this.options = options;
     this.mode = options.mode ?? "edit";
+    this.session = this._register(new PlaySession(options.initialData, options.onChange));
 
     this.root = document.createElement("div");
     this.root.className = "playmaker-root";
@@ -93,18 +82,14 @@ export class Playmaker extends Disposable {
     container.appendChild(this.root);
     this._register(toDisposable(() => this.root.remove()));
 
-    this.surface = this._register(
-      new CanvasSurface(this.root, migratePlayData(options.initialData)),
-    );
-
-    const built = this.buildSession(options.initialData);
-    this.model = built.model;
-    this.controller = built.controller;
+    this.surface = this._register(new CanvasSurface(this.root, this.session.getSnapshot()));
+    this._register(this.session.onDidReset(() => this.attachUi()));
+    this.attachUi();
   }
 
   /** 現在のフィールドゾーン。 */
   get fieldZone(): FieldZone {
-    return this.model.getFieldZone();
+    return this.session.fieldZone;
   }
 
   /**
@@ -112,7 +97,7 @@ export class Playmaker extends Disposable {
    * view モードでもプログラム API としては有効（編集 UI は出さないだけ）。
    */
   setFieldZone(zone: FieldZone): void {
-    this.controller.setFieldZone(zone);
+    this.session.setFieldZone(zone);
   }
 
   /**
@@ -124,11 +109,7 @@ export class Playmaker extends Disposable {
    * プリセットは公開 `FORMATION_PRESETS` / `getFormationPreset` から取得できる。
    */
   loadFormation(formation: Formation): void {
-    const normalized = normalizeFormation(formation);
-    if (normalized === null) {
-      return;
-    }
-    this.controller.loadFormation(normalized);
+    this.session.loadFormation(formation);
   }
 
   /**
@@ -139,11 +120,7 @@ export class Playmaker extends Disposable {
    * 件数の上限は `initialData` と同じで、超えた分は捨てる。
    */
   setPlayData(data: PlayData): void {
-    this.session.dispose();
-    this.session = new DisposableStore();
-    const built = this.buildSession(data);
-    this.model = built.model;
-    this.controller = built.controller;
+    this.session.setPlayData(data);
   }
 
   /**
@@ -154,7 +131,7 @@ export class Playmaker extends Disposable {
    * 選手の追加、フォーメーションの読み込み、作図は何もしない。
    */
   getPlayData(): PlayData {
-    return this.model.getData();
+    return this.session.getPlayData();
   }
 
   /**
@@ -165,45 +142,29 @@ export class Playmaker extends Disposable {
    * `options.width` で出力幅(px)を指定でき、高さは縦横比から導かれる。
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {
-    return this.surface.exportToPngBlob(this.model.getSnapshot(), options);
+    return this.surface.exportToPngBlob(this.session.getSnapshot(), options);
   }
 
   override dispose(): void {
-    this.session.dispose();
+    this.ui.dispose();
     super.dispose();
   }
 
-  /**
-   * Model/コマンド/Undo/Controller/UI/入力を 1 セッションとして構築し session に束ねる。
-   * 図の変化で再描画し、model の変更で onChange を呼ぶ。UI と入力は edit のときだけ出す。
-   */
-  private buildSession(data: PlayData | undefined): {
-    model: PlayModel;
-    controller: EditorController;
-  } {
-    const model = this.session.add(new PlayModel(data));
-    const history = this.session.add(new UndoRedoService());
-    const commands = new CommandService(model, history);
-    const ids = new IdFactory();
-    const controller = this.session.add(new EditorController(model, commands, ids));
-
+  // 図の変化で再描画し、UI と入力は edit のときだけ出す。
+  private attachUi(): void {
+    this.ui.dispose();
+    this.ui = new DisposableStore();
+    const controller = this.session.controller;
     const draw = (): void => {
       const { scene, overlay } = controller.getFrame();
       this.surface.setScene(scene, overlay);
     };
-    this.session.add(controller.onDidChangeScene(draw));
-    // Model 変更（編集コマンド・Undo/Redo）のたびに最新 PlayData を通知する。
-    // 構築時は発火しない＝再読込は edit ではないので onChange を出さない。
-    // 受け手が書き換えても Model に波及しないよう、渡す直前にだけ深いコピーを作る。
-    this.session.add(model.onDidChange(() => this.options.onChange?.(model.getData())));
-
+    this.ui.add(controller.onDidChangeScene(draw));
     if (this.mode === "edit") {
-      this.session.add(new Toolbar(this.root, controller));
-      this.session.add(new PropertyPanel(this.root, controller));
-      this.session.add(new PointerInput(this.root, this.surface, controller));
+      this.ui.add(new Toolbar(this.root, controller));
+      this.ui.add(new PropertyPanel(this.root, controller));
+      this.ui.add(new PointerInput(this.root, this.surface, controller));
     }
-
     draw();
-    return { model, controller };
   }
 }

@@ -10,7 +10,6 @@ import {
   RemoveLineCommand,
   UpdateLineCommand,
 } from "../commands/line-commands.js";
-import { patchChangesAnything } from "../commands/patch.js";
 import {
   AddPlayerCommand,
   type PlayerPatch,
@@ -230,8 +229,7 @@ export class EditorController extends Disposable implements IEditorController {
 
   updateSelectedPlayer(patch: PlayerPatch): void {
     const player = this.getSelectedPlayer();
-    // 値が変わらないパッチを積むと、何も戻らない Undo 段と onChange が出てしまう。
-    if (player === undefined || !patchChangesAnything(player, patch)) {
+    if (player === undefined) {
       return;
     }
     this.notifier.batch(() => this.commands.execute(new UpdatePlayerCommand(player.id, patch)));
@@ -239,16 +237,13 @@ export class EditorController extends Disposable implements IEditorController {
 
   updateSelectedLine(patch: LinePatch): void {
     const line = this.getSelectedLine();
-    if (line === undefined || !patchChangesAnything(line, patch)) {
+    if (line === undefined) {
       return;
     }
     this.notifier.batch(() => this.commands.execute(new UpdateLineCommand(line.id, patch)));
   }
 
   setFieldZone(zone: FieldZone): void {
-    if (zone === this.model.getFieldZone()) {
-      return;
-    }
     this.notifier.batch(() => {
       this.setInteraction(undefined);
       this.commands.execute(new SetFieldZoneCommand(zone));

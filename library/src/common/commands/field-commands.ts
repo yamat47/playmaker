@@ -11,9 +11,13 @@ export class SetFieldZoneCommand implements ICommand {
     this.zone = zone;
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
     this.previous = model.getFieldZone();
+    if (this.previous === this.zone) {
+      return false;
+    }
     model.setFieldZone(this.zone);
+    return true;
   }
 
   undo(model: IPlayModel): void {

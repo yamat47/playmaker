@@ -50,4 +50,13 @@ describe("LoadFormationCommand", () => {
     expect(onChange).toHaveBeenCalledTimes(3);
     expect(model.getData().players.map((p) => p.id)).toEqual(["e-1", "f-1", "f-2"]);
   });
+
+  it("選手が 1 人もいなければ Model に触れず、何も変えなかったと返す", () => {
+    const model = new PlayModel();
+    const onChange = vi.fn();
+    model.onDidChange(onChange);
+
+    expect(new LoadFormationCommand([]).apply(model)).toBe(false);
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

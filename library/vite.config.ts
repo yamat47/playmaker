@@ -28,10 +28,12 @@ function chromiumLaunchOptions(): { executablePath?: string } {
 
 export default defineConfig({
   resolve: {
-    alias: {
-      // demo からは `import { Playmaker } from "playmaker"` で src を直接参照する。
-      playmaker: resolve(root, "src/playmaker.ts"),
-    },
+    // demo からは、配布版を使う利用者と同じ指定子で src を直接参照する。
+    alias: [
+      // 文字列で指定すると "playmaker/styles.css" にも前方一致するので、完全一致の正規表現にする。
+      { find: /^playmaker$/, replacement: resolve(root, "src/playmaker.ts") },
+      { find: "playmaker/styles.css", replacement: resolve(root, "src/styles.css") },
+    ],
   },
   build: {
     lib: {

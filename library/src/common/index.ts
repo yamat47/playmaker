@@ -1,152 +1,55 @@
-// common 層の公開面。DOM 非依存のロジックのみをここから export する。
-// 以降のマイルストーンで formations を追加する。
-
-export { Emitter, type Event } from "./base/event.js";
-export {
-  Disposable,
-  DisposableStore,
-  type IDisposable,
-  toDisposable,
-} from "./base/lifecycle.js";
-export type { ICommand } from "./commands/command.js";
-export {
-  CommandService,
-  type ICommandService,
-} from "./commands/command-service.js";
-export { SetFieldZoneCommand } from "./commands/field-commands.js";
-export { LoadFormationCommand } from "./commands/formation-commands.js";
-export {
-  AddLineCommand,
-  type LinePatch,
-  RemoveLineCommand,
-  UpdateLineCommand,
-} from "./commands/line-commands.js";
-export {
-  AddPlayerCommand,
-  type PlayerPatch,
-  RemovePlayerCommand,
-  UpdatePlayerCommand,
-} from "./commands/player-commands.js";
-export {
-  type IUndoRedoService,
-  UndoRedoService,
-} from "./commands/undo-redo-service.js";
+export { Disposable, DisposableStore, toDisposable } from "./base/lifecycle.js";
 export { FIELD_FONT_FAMILY } from "./design/field-font.js";
 export { LINE_COLOR_PALETTE, type LineColorOption } from "./design/line-palette.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EDITOR_TOOL_VALUES,
-  type EditorFrame,
   type EditorOverlay,
-  type EditorSelection,
   type EditorTool,
-  type EditorViewState,
   type IEditorActions,
-  type IEditorController,
   type IEditorGestures,
   type IEditorScene,
   type IEditorUi,
   type SceneData,
 } from "./editing/editor.js";
-export { EditorController } from "./editing/editor-controller.js";
-export {
-  DEFAULT_EXPORT_WIDTH,
-  type ImageExportOptions,
-  type ImageExportSize,
-  resolveImageExportSize,
-  resolveImageExportWidth,
-} from "./export/image-export.js";
-export {
-  type Formation,
-  type FormationPlayer,
-  normalizeFormation,
-} from "./formations/formation.js";
+export { PlaySession } from "./editing/play-session.js";
+export { type ImageExportOptions, resolveImageExportSize } from "./export/image-export.js";
+export type { Formation, FormationPlayer } from "./formations/formation.js";
 export { FORMATION_PRESETS, getFormationPreset } from "./formations/presets.js";
-export {
-  catmullRomBezierControls,
-  cubicBezierPoint,
-  DEFAULT_BEZIER_SAMPLES_PER_SEGMENT,
-  sampleLinePath,
-} from "./geometry/bezier.js";
+export { sampleLinePath } from "./geometry/bezier.js";
 export {
   type CanvasPoint,
   DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
-  END_ZONE_DEPTH_YARDS,
   FIELD_WIDTH_YARDS,
   FieldGeometry,
-  type FieldLeague,
-  fieldWindowAspect,
-  fieldZoneWindow,
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
-  HASH_FROM_SIDELINE_YARDS,
-  HASH_TICK_YARDS,
-  isEndZone,
-  NEAR_SIDELINE_TICK_YARDS,
-  RED_ZONE_DEPTH_YARDS,
-  type YardWindow,
   yardLinesInWindow,
-  ZONE_WINDOW_LENGTH_YARDS,
-  zoneWindowLength,
 } from "./geometry/field.js";
-export {
-  distanceToSegment,
-  hitTestLine,
-  hitTestPlayer,
-  LINE_HIT_TOLERANCE_YARDS,
-  WAYPOINT_HANDLE_RADIUS_YARDS,
-} from "./geometry/hit-test.js";
+export { WAYPOINT_HANDLE_RADIUS_YARDS } from "./geometry/hit-test.js";
 export { trimPolylineEnd } from "./geometry/polyline.js";
 export { isOneOf } from "./model/guards.js";
-export { IdFactory, type IIdFactory } from "./model/id-factory.js";
 export {
-  cloneLine,
-  DEFAULT_LINE_INTERPOLATION,
-  DEFAULT_LINE_KIND,
   DEFAULT_LINE_THICKNESS,
   indexPlayersById,
-  isLineInterpolation,
-  isLineKind,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,
   type LineInterpolation,
   type LineKind,
   lineAnchorPoints,
-  normalizeLines,
 } from "./model/line.js";
-export {
-  applyPlayDataMigrations,
-  migratePlayData,
-  PLAY_DATA_MIGRATIONS,
-  type PlayDataMigration,
-  readDeclaredVersion,
-} from "./model/migration.js";
+export { migratePlayData } from "./model/migration.js";
 export {
   CURRENT_PLAY_DATA_VERSION,
-  clonePlayData,
-  createEmptyPlayData,
-  DEFAULT_FIELD_ZONE,
   FIELD_ZONE_LABELS,
   FIELD_ZONE_VALUES,
   type FieldState,
   type FieldZone,
-  isFieldZone,
   type PlayData,
-  resolvePlayData,
 } from "./model/play-data.js";
 export {
-  type IPlayModel,
-  type LineRemoval,
-  type PlayerRemoval,
-  PlayModel,
-} from "./model/play-model.js";
-export {
-  clonePlayer,
-  DEFAULT_PLAYER_SHAPE,
   type FieldPosition,
-  isPlayerShape,
-  normalizePlayers,
   PLAYER_RADIUS_YARDS,
   type Player,
   type PlayerShape,

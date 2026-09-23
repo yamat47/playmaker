@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PlayModel } from "../model/play-model.js";
 import { SetFieldZoneCommand } from "./field-commands.js";
 
@@ -15,6 +15,15 @@ describe("SetFieldZoneCommand", () => {
 
     cmd.apply(model); // redo（直前ゾーンを再捕捉）
     expect(model.getData().field.zone).toBe("redzone");
+  });
+
+  it("今と同じゾーンへの切り替えは Model に触れず、何も変えなかったと返す", () => {
+    const model = new PlayModel();
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    expect(new SetFieldZoneCommand("middle").apply(model)).toBe(false);
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("apply 前の undo は throw する", () => {

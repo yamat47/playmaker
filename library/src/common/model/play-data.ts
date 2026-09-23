@@ -74,16 +74,6 @@ export function fieldStateForZone(zone: FieldZone): FieldState {
   return { zone, losYard: LOS_YARD_BY_ZONE[zone] };
 }
 
-/** 既定状態の新規 PlayData（選手・線なし）。 */
-export function createEmptyPlayData(): PlayData {
-  return {
-    version: CURRENT_PLAY_DATA_VERSION,
-    field: fieldStateForZone(DEFAULT_FIELD_ZONE),
-    players: [],
-    lines: [],
-  };
-}
-
 /**
  * PlayData を深く複製する（field / 各 player / 各 line まで共有しない）。
  * Model が外へ渡すスナップショット（onChange 通知・getData）を入力と切り離すための一手。

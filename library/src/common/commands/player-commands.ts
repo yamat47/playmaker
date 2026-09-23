@@ -1,7 +1,7 @@
 import type { IPlayModel, PlayerRemoval } from "../model/play-model.js";
 import type { Player } from "../model/player.js";
 import { type ICommand, requireApplied } from "./command.js";
-import { applyPatch, type Patch } from "./patch.js";
+import { applyPatch, type Patch, patchChangesAnything } from "./patch.js";
 
 /** id は選手を見分ける鍵なので、パッチでは変えない。 */
 export type PlayerPatch = Patch<Omit<Player, "id">>;
@@ -18,8 +18,9 @@ export class AddPlayerCommand implements ICommand {
     this.player = player;
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
     model.addPlayer(this.player);
+    return true;
   }
 
   undo(model: IPlayModel): void {
@@ -39,8 +40,9 @@ export class RemovePlayerCommand implements ICommand {
     this.playerId = playerId;
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
     this.removal = model.removePlayer(this.playerId);
+    return true;
   }
 
   undo(model: IPlayModel): void {
@@ -60,12 +62,16 @@ export class UpdatePlayerCommand implements ICommand {
     this.patch = { ...patch };
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
     const current = model.findPlayer(this.playerId);
     if (current === undefined) {
       throw new Error(`UpdatePlayerCommand: unknown player id "${this.playerId}"`);
     }
+    if (!patchChangesAnything(current, this.patch)) {
+      return false;
+    }
     this.previous = model.updatePlayer(applyPlayerPatch(current, this.patch));
+    return true;
   }
 
   undo(model: IPlayModel): void {

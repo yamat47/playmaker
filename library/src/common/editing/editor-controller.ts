@@ -10,7 +10,6 @@ import {
   RemoveLineCommand,
   UpdateLineCommand,
 } from "../commands/line-commands.js";
-import { patchChangesAnything } from "../commands/patch.js";
 import {
   AddPlayerCommand,
   type PlayerPatch,
@@ -230,8 +229,7 @@ export class EditorController extends Disposable implements IEditorController {
 
   updateSelectedPlayer(patch: PlayerPatch): void {
     const player = this.getSelectedPlayer();
-    // 値が変わらないパッチを積むと、何も戻らない Undo 段と onChange が出てしまう。
-    if (player === undefined || !patchChangesAnything(player, patch)) {
+    if (player === undefined) {
       return;
     }
     this.notifier.batch(() => this.commands.execute(new UpdatePlayerCommand(player.id, patch)));
@@ -239,25 +237,24 @@ export class EditorController extends Disposable implements IEditorController {
 
   updateSelectedLine(patch: LinePatch): void {
     const line = this.getSelectedLine();
-    if (line === undefined || !patchChangesAnything(line, patch)) {
+    if (line === undefined) {
       return;
     }
     this.notifier.batch(() => this.commands.execute(new UpdateLineCommand(line.id, patch)));
   }
 
   setFieldZone(zone: FieldZone): void {
-    if (zone === this.model.getFieldZone()) {
-      return;
-    }
     this.notifier.batch(() => {
-      this.setInteraction(undefined);
-      this.commands.execute(new SetFieldZoneCommand(zone));
+      // 同じゾーンを選び直しただけなら、途中のドラッグや作図は残す。
+      if (this.commands.execute(new SetFieldZoneCommand(zone))) {
+        this.setInteraction(undefined);
+      }
     });
   }
 
   loadFormation(formation: Formation): void {
     const { players } = this.model.getSnapshot();
-    if (formation.players.length === 0 || players.length + formation.players.length > MAX_PLAYERS) {
+    if (players.length + formation.players.length > MAX_PLAYERS) {
       return;
     }
     const added = instantiateFormation(
@@ -266,10 +263,11 @@ export class EditorController extends Disposable implements IEditorController {
       players.map((p) => p.id),
     );
     this.notifier.batch(() => {
-      this.setInteraction(undefined);
-      this.commands.execute(new LoadFormationCommand(added));
-      // 読み込んだあとは、元の選択に意味が無いので外す。
-      this.setSelection(null);
+      if (this.commands.execute(new LoadFormationCommand(added))) {
+        // 読み込んだあとは、途中の操作と元の選択に意味が無いので外す。
+        this.setInteraction(undefined);
+        this.setSelection(null);
+      }
     });
   }
 

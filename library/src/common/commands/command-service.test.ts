@@ -20,6 +20,7 @@ function failing(on: "apply" | "undo"): ICommand {
       if (on === "apply") {
         throw new Error("apply failed");
       }
+      return true;
     }),
     undo: vi.fn(() => {
       throw new Error("undo failed");
@@ -31,8 +32,9 @@ describe("CommandService", () => {
   it("execute はコマンドを Model に当て、undo できるようにする", () => {
     const { model, commands } = wire();
 
-    commands.execute(new AddPlayerCommand(player("a")));
+    const changed = commands.execute(new AddPlayerCommand(player("a")));
 
+    expect(changed).toBe(true);
     expect(model.findPlayer("a")).toEqual(player("a"));
     expect(commands.canUndo).toBe(true);
   });
@@ -48,6 +50,22 @@ describe("CommandService", () => {
     commands.redo();
     expect(model.hasPlayer("a")).toBe(true);
     expect(commands.canRedo).toBe(false);
+  });
+
+  it("何も変えなかったと返したコマンドは履歴に積まない", () => {
+    const { commands } = wire();
+    const history = vi.fn();
+    commands.onDidChangeHistory(history);
+
+    const changed = commands.execute({
+      label: "何も変えないコマンド",
+      apply: () => false,
+      undo: vi.fn(),
+    });
+
+    expect(changed).toBe(false);
+    expect(commands.canUndo).toBe(false);
+    expect(history).not.toHaveBeenCalled();
   });
 
   it("適用が throw したコマンドは履歴に積まない", () => {
@@ -76,6 +94,7 @@ describe("CommandService", () => {
       label: "複数の削除",
       apply: (m) => {
         m.removePlayers(["a", "ghost"]);
+        return true;
       },
       undo: vi.fn(),
     };

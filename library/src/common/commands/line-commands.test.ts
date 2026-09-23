@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
@@ -116,6 +116,17 @@ describe("UpdateLineCommand", () => {
     cmd.apply(model);
 
     expect(model.findLine("l1")?.kind).toBe("block");
+  });
+
+  it("今と同じ値だけのパッチは Model に触れず、何も変えなかったと返す", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    const changed = new UpdateLineCommand("l1", { kind: "route", thickness: null }).apply(model);
+
+    expect(changed).toBe(false);
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("無い id の線に apply すると throw する", () => {

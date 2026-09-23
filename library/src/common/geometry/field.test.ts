@@ -9,7 +9,6 @@ import {
   fieldWindowAspect,
   fieldZoneWindow,
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
-  isEndZone,
   yardLinesInWindow,
   ZONE_WINDOW_LENGTH_YARDS,
   zoneWindowLength,
@@ -68,18 +67,6 @@ describe("displayYardNumber", () => {
     expect(displayYardNumber(100)).toBeNull();
     expect(displayYardNumber(-5)).toBeNull();
     expect(displayYardNumber(110)).toBeNull();
-  });
-});
-
-describe("isEndZone", () => {
-  it("ゴールラインの外側を true、フィールド内とゴールラインは false", () => {
-    expect(isEndZone(-10)).toBe(true);
-    expect(isEndZone(-0.1)).toBe(true);
-    expect(isEndZone(0)).toBe(false);
-    expect(isEndZone(50)).toBe(false);
-    expect(isEndZone(100)).toBe(false);
-    expect(isEndZone(100.1)).toBe(true);
-    expect(isEndZone(110)).toBe(true);
   });
 });
 

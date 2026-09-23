@@ -360,21 +360,25 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T10 セッションの切り出しと barrel の整理（common）
+### T10 セッションの切り出しと barrel の整理（common） (done)
 
-- [ ] **T10-1 [should] playmaker.ts の公開契約が無テスト**（D13）
+- [x] **T10-1 [should] playmaker.ts の公開契約が無テスト**（D13）
   - locations: library/src/playmaker.ts:123, library/src/playmaker.ts:137, library/src/playmaker.ts:174, library/src/playmaker.ts:191
   - 対応: `common/editing/play-session.ts`（document 束）を作る。Model、履歴、CommandService、IdFactory、Controller の組み立て、onChange の中継、作り直し、normalizeFormation の経由をここに置く。「確定ごとに onChange を 1 回だけ呼ぶ」「構築時と setPlayData では呼ばない」「setPlayData で履歴をリセットする」「不正な Formation は no-op」「onChange で受け取った PlayData を書き換えても getPlayData の結果は変わらない」を it にする（最後の 1 つは T6b で Model から playmaker.ts へ移った深いコピーの契約）。
-- [ ] **T10-2 [should] barrel が内部関数まで約 70 件出していて、古いマイルストーンのコメントも残っている**
+  - 結論: PlaySession は 1 つの図の部品一式を持ち、setPlayData で作り直したあとに onDidReset を出す。Playmaker はそれを受けて描画の購読、UI、入力を新しい controller に付け直す。controller を作り直さずに Model だけ差し替える案は、EditorController が Model を差し替えられる前提になるので採らなかった。dispose 後の呼び出し（D16）は T14 で公開 API を整えるときに扱う。
+- [x] **T10-2 [should] barrel が内部関数まで約 70 件出していて、古いマイルストーンのコメントも残っている**
   - locations: library/src/common/index.ts:1-147, library/src/common/index.ts:2
   - 対応: browser と playmaker.ts が使う契約だけに絞る。テストは各モジュールを直接 import する。2 行目は削除する。
-- [ ] **T10-3 [should] 使われていないフィールド定数に、描画で使われているかのような説明がある**
+  - 結論: 冒頭の定型コメントごと消した。D15 で公開する Event と IDisposable は、T14 で playmaker.ts から出すときに足す。
+- [x] **T10-3 [should] 使われていないフィールド定数に、描画で使われているかのような説明がある**
   - locations: library/src/common/geometry/field.ts:18, library/src/common/geometry/field.ts:40, library/src/common/geometry/field.ts:46, library/src/common/design/metrics.ts:17
   - 対応: 3 つの定数を削除する。
-- [ ] **T10-4 [should] 何も変えないコマンドを履歴に積まない判定が EditorController にしかない**（T8 の見直しで追加）
+  - 結論: 消したのは HASH_FROM_SIDELINE_YARDS、NEAR_SIDELINE_TICK_YARDS、HASH_TICK_YARDS。barrel を絞ったら自分のテストからしか使われなくなった isEndZone と createEmptyPlayData も消した。
+- [x] **T10-4 [should] 何も変えないコマンドを履歴に積まない判定が EditorController にしかない**（T8 の見直しで追加）
   - locations: library/src/common/editing/editor-controller.ts（updateSelectedPlayer、updateSelectedLine、setFieldZone、pointerUp）, library/src/common/commands/command-service.ts（execute）
   - 問題: patchChangesAnything、ゾーンの同値判定、動かさなかったドラッグの判定を、編集の経路ごとに書いている。CommandService.execute は何でも積むので、公開されたコマンドを直に実行すると空の Undo 段ができる。
   - 対応: コマンドが「変化なし」を報告できるようにし（`apply` が boolean を返すなど）、CommandService が積むかどうかを 1 か所で決める。
+  - 結論: `ICommand.apply` は Model を変えたら true を返し、何も変えないときは Model に触れずに false を返す。CommandService は false なら積まず、execute の戻り値で積んだかを返す。EditorController のパッチとゾーンの同値判定、空の隊形の判定は消し、途中の操作や選択を外すのは execute が true を返したときだけにした。ドラッグの「動かさずに離した」判定は、窓の外の選手をクリックしただけで窓の端へ寄せないためのものなので残した。
 
 - 依存: T9、D13、D14
 - 完了条件: セッションの契約テストが node で緑になる。barrel が必要最小限になる。

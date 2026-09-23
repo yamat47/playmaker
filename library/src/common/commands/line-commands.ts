@@ -1,7 +1,7 @@
 import type { Line } from "../model/line.js";
 import type { IPlayModel, LineRemoval } from "../model/play-model.js";
 import { type ICommand, requireApplied } from "./command.js";
-import { applyPatch, type Patch } from "./patch.js";
+import { applyPatch, type Patch, patchChangesAnything } from "./patch.js";
 
 /** id と起点の選手は線を見分ける鍵なので、パッチでは変えない。 */
 export type LinePatch = Patch<Omit<Line, "id" | "startPlayerId">>;
@@ -18,8 +18,9 @@ export class AddLineCommand implements ICommand {
     this.line = line;
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
     model.addLine(this.line);
+    return true;
   }
 
   undo(model: IPlayModel): void {
@@ -37,8 +38,9 @@ export class RemoveLineCommand implements ICommand {
     this.lineId = lineId;
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
     this.removal = model.removeLine(this.lineId);
+    return true;
   }
 
   undo(model: IPlayModel): void {
@@ -59,12 +61,16 @@ export class UpdateLineCommand implements ICommand {
     this.patch = { ...patch };
   }
 
-  apply(model: IPlayModel): void {
+  apply(model: IPlayModel): boolean {
     const current = model.findLine(this.lineId);
     if (current === undefined) {
       throw new Error(`UpdateLineCommand: unknown line id "${this.lineId}"`);
     }
+    if (!patchChangesAnything(current, this.patch)) {
+      return false;
+    }
     this.previous = model.updateLine(applyLinePatch(current, this.patch));
+    return true;
   }
 
   undo(model: IPlayModel): void {

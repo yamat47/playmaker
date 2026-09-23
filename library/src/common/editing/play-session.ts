@@ -22,7 +22,7 @@ function openDocument(data: unknown, onDidEdit: () => void): PlayDocument {
   const controller = store.add(
     new EditorController(model, new CommandService(model, history), new IdFactory()),
   );
-  store.add(model.onDidChange(() => onDidEdit()));
+  store.add(model.onDidChange(onDidEdit));
   return { store, model, controller };
 }
 
@@ -48,7 +48,7 @@ export class PlaySession extends Disposable {
 
   constructor(data: unknown) {
     super();
-    this.document = openDocument(data, () => this._onDidEdit.fire());
+    this.document = this.open(data);
   }
 
   get controller(): IEditorController {
@@ -81,8 +81,12 @@ export class PlaySession extends Disposable {
 
   setPlayData(data: unknown): void {
     this.document.store.dispose();
-    this.document = openDocument(data, () => this._onDidEdit.fire());
+    this.document = this.open(data);
     this._onDidReset.fire();
+  }
+
+  private open(data: unknown): PlayDocument {
+    return openDocument(data, () => this._onDidEdit.fire());
   }
 
   override dispose(): void {

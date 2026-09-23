@@ -2,7 +2,6 @@ import {
   computeFieldMetrics,
   Disposable,
   type EditorOverlay,
-  FIELD_FONT_FAMILY,
   FieldGeometry,
   type FieldPosition,
   type ImageExportOptions,
@@ -12,6 +11,9 @@ import {
   toDisposable,
   WAYPOINT_HANDLE_RADIUS_YARDS,
 } from "../../common/index.js";
+import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
+import { createThemeReader } from "../theme/theme-reader.js";
+import type { ThemeReader } from "../theme/tokens.js";
 import { FieldRenderer, type FieldTheme } from "./field-renderer.js";
 import { LineRenderer, type LineTheme } from "./line-renderer.js";
 import { PlayerRenderer, type PlayerTheme } from "./player-renderer.js";
@@ -82,6 +84,11 @@ export class CanvasSurface extends Disposable {
     );
   }
 
+  /** テーマ変数は描くたびに読み直すので、ホストが変数を変えたあとに呼べば反映される。 */
+  refresh(): void {
+    this.render();
+  }
+
   /** 描画モデルと選択 overlay を差し替えて再描画する（編集のたびに呼ばれる）。 */
   setScene(data: SceneData, overlay: EditorOverlay): void {
     this.data = data;
@@ -101,7 +108,7 @@ export class CanvasSurface extends Disposable {
   /** コンテナサイズと DPR に合わせてバックバッファを再構成し再描画する。 */
   private resize(): void {
     const dpr = window.devicePixelRatio || 1;
-    const { clientWidth, clientHeight } = this.canvas.parentElement ?? this.canvas;
+    const { clientWidth, clientHeight } = this.host;
     this.canvas.width = Math.max(1, Math.round(clientWidth * dpr));
     this.canvas.height = Math.max(1, Math.round(clientHeight * dpr));
     // 以降は CSS px 空間で描く（geometry も CSS px で算出）。
@@ -127,7 +134,7 @@ export class CanvasSurface extends Disposable {
       throw new Error("Playmaker: エクスポート用 2D canvas context を取得できませんでした。");
     }
     const geometry = new FieldGeometry(width, height, data.field);
-    this.drawPlay(ctx, geometry, data, this.makeReader());
+    this.drawPlay(ctx, geometry, data, this.readTheme());
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (blob) {
@@ -140,12 +147,11 @@ export class CanvasSurface extends Disposable {
   }
 
   private render(): void {
-    const { clientWidth, clientHeight } = this.canvas.parentElement ?? this.canvas;
+    const { clientWidth, clientHeight } = this.host;
     this.geometry = new FieldGeometry(clientWidth, clientHeight, this.data.field);
-    // getComputedStyle はスタイル再計算を誘発しうるため 1 render = 1 回に束ねる。
-    const read = this.makeReader();
+    const read = this.readTheme();
     this.drawPlay(this.ctx, this.geometry, this.data, read);
-    this.drawOverlay(read("--playmaker-selection-color", "#ff9800"));
+    this.drawOverlay(read);
   }
 
   /**
@@ -158,9 +164,9 @@ export class CanvasSurface extends Disposable {
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
     data: SceneData,
-    read: (name: string, fallback: string) => string,
+    read: ThemeReader,
   ): void {
-    const { field, line, player } = this.readThemes(read);
+    const { field, line, player } = toRendererThemes(read);
     // 寸法トークンは W/U から導く純計算。1 フレーム 1 回に束ね、各レンダラへ渡す。
     const metrics = computeFieldMetrics(geometry.fieldPixelWidth, geometry.scale);
     this.fieldRenderer.draw(ctx, geometry, field, metrics);
@@ -176,15 +182,15 @@ export class CanvasSurface extends Disposable {
    * waypoint/終点のハンドル）。線色はユーザーがパレットで選ぶので、上塗りすると線色と
    * 混ざって何色の線なのか読めなくなる。
    */
-  private drawOverlay(selectionColor: string): void {
+  private drawOverlay(read: ThemeReader): void {
     switch (this.overlay.kind) {
       case "none":
         return;
       case "player":
-        this.drawSelectedPlayer(this.overlay.playerId, selectionColor);
+        this.drawSelectedPlayer(this.overlay.playerId, read("selection"));
         return;
       case "line":
-        this.drawLineHandles(this.overlay, selectionColor);
+        this.drawLineHandles(this.overlay, read("selection"), read("selectionOutline"));
         return;
     }
   }
@@ -206,16 +212,17 @@ export class CanvasSurface extends Disposable {
   private drawLineHandles(
     handles: Extract<EditorOverlay, { kind: "line" }>,
     selectionColor: string,
+    outlineColor: string,
   ): void {
     // アイコンは hit 許容（WAYPOINT_HANDLE_RADIUS_YARDS）の一部だけを描く。フルに
     // 描くとマーカー並みに大きいので小さく出し、掴みやすさは hit 許容側に委ねる。
     const handleHalf = Math.max(3, 0.45 * WAYPOINT_HANDLE_RADIUS_YARDS * this.geometry.scale);
-    // 現在の path（beginPath 済み）をハンドル共通の塗り・白縁で仕上げる。
+    // 現在の path（beginPath 済み）を、ハンドル共通の塗りと縁取りで仕上げる。
     const paintHandle = () => {
       this.ctx.fillStyle = selectionColor;
       this.ctx.fill();
       this.ctx.lineWidth = 1.5;
-      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+      this.ctx.strokeStyle = outlineColor;
       this.ctx.stroke();
     };
     for (const wp of handles.waypointHandles) {
@@ -232,46 +239,42 @@ export class CanvasSurface extends Disposable {
     paintHandle();
   }
 
-  /**
-   * 配色は親要素（.playmaker-root）の CSS 変数から読む。
-   * 商用ソフトが --playmaker-* を上書きすれば描画色も追従する（PRD 6.5）。
-   */
-  private readThemes(read: (name: string, fallback: string) => string): {
-    field: FieldTheme;
-    line: LineTheme;
-    player: PlayerTheme;
-  } {
-    return {
-      field: {
-        fieldColor: read("--playmaker-field-bg", "#3f7a46"),
-        stripeColor: read("--playmaker-field-stripe", "#3a7341"),
-        oobColor: read("--playmaker-field-oob", "#284b2f"),
-        endzoneColor: read("--playmaker-endzone-bg", "#20503c"),
-        lineColor: read("--playmaker-field-line-color", "rgba(236, 240, 234, 0.82)"),
-        goalLineColor: read("--playmaker-goal-line-color", "rgba(255, 255, 255, 0.92)"),
-        numberColor: read("--playmaker-field-number-color", "rgba(236, 240, 234, 0.72)"),
-        pylonColor: read("--playmaker-pylon-color", "#d06a30"),
-        goalpostColor: read("--playmaker-goalpost-color", "#c2a64a"),
-      },
-      line: {
-        routeColor: read("--playmaker-line-route-color", "#c49a3c"),
-        blockColor: read("--playmaker-line-block-color", "#c49a3c"),
-        motionColor: read("--playmaker-line-motion-color", "#c49a3c"),
-      },
-      player: {
-        fillColor: read("--playmaker-player-fill", "#2b4c72"),
-        strokeColor: read("--playmaker-player-stroke", "#eef2ec"),
-        labelColor: read("--playmaker-player-label-color", "#ffffff"),
-      },
-    };
+  // 大きさとテーマ変数は、canvas を置いた要素から読む。
+  private get host(): HTMLElement {
+    return this.canvas.parentElement ?? this.canvas;
   }
 
-  private makeReader(): (name: string, fallback: string) => string {
-    const host = this.canvas.parentElement;
-    const styles = host ? getComputedStyle(host) : null;
-    return (name, fallback) => {
-      const v = styles?.getPropertyValue(name).trim();
-      return v ? v : fallback;
-    };
+  private readTheme(): ThemeReader {
+    return createThemeReader(this.host);
   }
+}
+
+function toRendererThemes(read: ThemeReader): {
+  field: FieldTheme;
+  line: LineTheme;
+  player: PlayerTheme;
+} {
+  return {
+    field: {
+      fieldColor: read("fieldGrass"),
+      stripeColor: read("fieldStripe"),
+      oobColor: read("fieldOob"),
+      endzoneColor: read("fieldEndzone"),
+      lineColor: read("fieldLine"),
+      goalLineColor: read("fieldGoalLine"),
+      numberColor: read("fieldNumber"),
+      pylonColor: read("fieldPylon"),
+      goalpostColor: read("fieldGoalpost"),
+    },
+    line: {
+      routeColor: read("lineRoute"),
+      blockColor: read("lineBlock"),
+      motionColor: read("lineMotion"),
+    },
+    player: {
+      fillColor: read("playerFill"),
+      strokeColor: read("playerStroke"),
+      labelColor: read("playerLabel"),
+    },
+  };
 }

@@ -1,6 +1,4 @@
 export { Disposable, DisposableStore, toDisposable } from "./base/lifecycle.js";
-export { FIELD_FONT_FAMILY } from "./design/field-font.js";
-export { LINE_COLOR_PALETTE, type LineColorOption } from "./design/line-palette.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EDITOR_TOOL_VALUES,

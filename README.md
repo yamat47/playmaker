@@ -94,29 +94,31 @@ const playmaker = new Playmaker(container, {
 
 - `edit`: ツールバー・プロパティパネル・ポインタ操作で編集。Undo = `Cmd/Ctrl+Z`、
   Redo = `Shift` 併用 / `Y`
-- `view`: 読み取り専用。編集 UI は出さない（CSS でも保険的に非表示）
+- `view`: 読み取り専用。編集 UI は出さない
 
 ### スタイルのカスタマイズ
 
-配色・フォント・サイズはすべて CSS カスタムプロパティ `--playmaker-*` で上書きできる
-（商用ソフトのデザインシステムに追従）。`.playmaker-root` に対して指定する。
+配色と UI のフォントは、CSS カスタムプロパティ `--playmaker-*` で上書きできる。
+Playmaker を置いた要素か、その祖先の要素に指定する。
+ヤード数字と選手ラベルのフォントは同梱のものに固定していて、上書きできない。
 
 ```css
-.playmaker-root {
-  --playmaker-field-bg: #1b5e20;
-  --playmaker-line-route-color: #ffd54f;
-  --playmaker-selection-color: #ff9800;
-  --playmaker-accent-color: #1565c0;
-  --playmaker-font-family: "Inter", system-ui, sans-serif;
+.my-app {
+  --playmaker-field-grass: #1b5e20;
+  --playmaker-line-route: #ffd54f;
+  --playmaker-selection: #ff9800;
+  --playmaker-ui-accent: #1565c0;
+  --playmaker-ui-font: "Inter", system-ui, sans-serif;
 }
 ```
 
-主な変数: `--playmaker-font-family` / `--playmaker-field-bg` /
-`--playmaker-field-line-color` / `--playmaker-field-number-color` /
-`--playmaker-player-fill` / `--playmaker-player-stroke` /
-`--playmaker-player-label-color` / `--playmaker-line-{route,block,motion}-color` /
-`--playmaker-selection-color` / `--playmaker-surface-bg` /
-`--playmaker-border-color` / `--playmaker-text-color` / `--playmaker-accent-color`。
+変数は `--playmaker-<部位>-<部品>` の形で、次のものがある。
+
+- フィールド: `field-grass`、`field-stripe`、`field-oob`、`field-endzone`、`field-line`、`field-number`、`field-goal-line`、`field-pylon`、`field-goalpost`
+- 選手: `player-fill`、`player-stroke`、`player-label`
+- 線: `line-route`、`line-block`、`line-motion`、パネルで選べる 4 色の `line-swatch-1` から `line-swatch-4`
+- 選択: `selection`、ハンドルの縁取りの `selection-outline`
+- ツールバーとパネル: `ui-font`、`ui-surface`、`ui-border`、`ui-text`、`ui-accent`、押されたボタンの文字色の `ui-accent-text`
 
 ## 対応環境
 

@@ -3,13 +3,13 @@
 // → ロジックは common 単体テストで網羅し、ここは VRT なしでも薄く保てる。
 
 import {
-  FIELD_FONT_FAMILY,
   type FieldGeometry,
   type FieldMetrics,
   PLAYER_RADIUS_YARDS,
   type Player,
   type PlayerShape,
 } from "../../common/index.js";
+import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
 
 /** 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。 */
 export interface PlayerTheme {

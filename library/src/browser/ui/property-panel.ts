@@ -7,15 +7,16 @@ import {
   Disposable,
   type IEditorUi,
   isOneOf,
-  LINE_COLOR_PALETTE,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,
-  type LineColorOption,
   type Player,
   type PlayerShape,
   toDisposable,
 } from "../../common/index.js";
+import { LINE_COLOR_PALETTE } from "../theme/line-palette.js";
+import { createThemeReader } from "../theme/theme-reader.js";
+import { THEME_TOKENS, type ThemeReader } from "../theme/tokens.js";
 
 // 形状の語彙は 2 種に絞る（丸=スキル系、四角=ライン系）。多種混在は図を散らかす。
 // 旧データが持つ他形状はモデル・レンダラ側で引き続き受理する（描画の後方互換）。
@@ -33,6 +34,7 @@ interface ShownItems {
 
 export class PropertyPanel extends Disposable {
   readonly element: HTMLElement;
+  private readonly controller: IEditorUi;
   // 直近に描いた選手と線。表示状態の通知はツールや Undo の可否が変わっても届くので、
   // 選択中の要素が差し替わらない限り作り直さず、入力中のフォーカスを失わせない。
   // 要素は値が変わるたびに別のオブジェクトになるので、参照で比べればよい。
@@ -40,16 +42,24 @@ export class PropertyPanel extends Disposable {
 
   constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
+    this.controller = controller;
     this.element = document.createElement("div");
     this.element.className = "playmaker-panel";
 
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
-    this._register(controller.onDidChangeViewState(() => this.rebuild(controller)));
-    this.rebuild(controller);
+    this._register(controller.onDidChangeViewState(() => this.rebuild()));
+    this.rebuild();
   }
 
-  private rebuild(controller: IEditorUi): void {
+  /** 色の既定値とスウォッチはテーマ変数から読むので、ホストが変数を変えたあとに呼べば反映される。 */
+  refresh(): void {
+    this.shown = undefined;
+    this.rebuild();
+  }
+
+  private rebuild(): void {
+    const controller = this.controller;
     const player = controller.getSelectedPlayer();
     const line = controller.getSelectedLine();
     if (this.shown !== undefined && this.shown.player === player && this.shown.line === line) {
@@ -58,13 +68,18 @@ export class PropertyPanel extends Disposable {
     this.shown = { player, line };
 
     this.element.replaceChildren();
+    const read = createThemeReader(this.element);
     if (player !== undefined) {
       this.addTitle("選手");
       this.addText("ラベル", player.label, (v) => controller.updateSelectedPlayer({ label: v }));
       this.addSelect("形状", SHAPES, player.shape, (v) =>
         controller.updateSelectedPlayer({ shape: v }),
       );
-      this.addColor("色", player.color, (v) => controller.updateSelectedPlayer({ color: v }));
+      // 色の無い選手は塗りの既定色で描くので、入力にも同じ色を出す。
+      const fill = toHex(read("playerFill"), THEME_TOKENS.playerFill.fallback);
+      this.addColor("色", toHex(player.color, fill), (v) =>
+        controller.updateSelectedPlayer({ color: v }),
+      );
       return;
     }
     if (line !== undefined) {
@@ -75,7 +90,7 @@ export class PropertyPanel extends Disposable {
       this.addSelect("補間", LINE_INTERPOLATION_VALUES, line.interpolation, (v) =>
         controller.updateSelectedLine({ interpolation: v }),
       );
-      this.addLineColor(line.color, (v) => controller.updateSelectedLine({ color: v }));
+      this.addLineColor(line.color, read, (v) => controller.updateSelectedLine({ color: v }));
       this.addNumber("太さ", line.thickness ?? DEFAULT_LINE_THICKNESS, (v) =>
         controller.updateSelectedLine({ thickness: v }),
       );
@@ -126,30 +141,23 @@ export class PropertyPanel extends Disposable {
     this.addRow(labelText, input);
   }
 
-  private addColor(
-    labelText: string,
-    value: string | undefined,
-    onChange: (v: string) => void,
-  ): void {
+  private addColor(labelText: string, hex: string, onChange: (v: string) => void): void {
     const input = document.createElement("input");
     input.type = "color";
-    input.value = toHex(value, "#1e3fae");
+    input.value = hex;
     input.addEventListener("change", () => onChange(input.value));
     this.addRow(labelText, input);
   }
 
-  // 線色は自由選択ではなく既定パレットに絞る。スウォッチ色はテーマの
-  // --playmaker-* から解決し、host の上書きに追従する（未定義なら fallback）。
-  private addLineColor(value: string | undefined, onChange: (v: string) => void): void {
-    const styles = getComputedStyle(this.element);
-    const resolve = (opt: LineColorOption): string => {
-      const v = styles.getPropertyValue(opt.cssVar).trim();
-      return v !== "" ? v : opt.fallback;
-    };
+  private addLineColor(
+    value: string | undefined,
+    read: ThemeReader,
+    onChange: (v: string) => void,
+  ): void {
     const group = document.createElement("div");
     group.className = "playmaker-panel__swatches";
     for (const opt of LINE_COLOR_PALETTE) {
-      const color = resolve(opt);
+      const color = read(opt.token);
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "playmaker-panel__swatch";

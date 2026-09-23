@@ -1,9 +1,4 @@
 /*
- * Playmaker のスタイル。商用ソフト側は --playmaker-* を上書きするだけで
- * 配色・フォント・サイズをデザインシステムに合わせられる（PRD 6.5）。
- * UI（ツールバー/プロパティパネル）はこの変数体系の上に実装している。
- */
-/*
  * フィールド描画専用フォント。ヤード数字・選手ラベルはこの同梱フォントに固定し、
  * 外部からの差し替えを許さない（プロらしい数字の見た目をブランドとして担保する）。
  * 内部専用名にして商用ソフト側の同名指定と衝突しにくくする。サブセット woff2 は
@@ -19,38 +14,24 @@
   src: url("./assets/playmaker-saira-subset.woff2") format("woff2");
 }
 
+/*
+ * 公開の --playmaker-ui-* はここで宣言しない。宣言すると、ホストが祖先の要素で上書きした値が
+ * 届かなくなる。既定値は内部用の --_playmaker-ui-* に 1 回だけ書き、各ルールはそちらを読む。
+ * Canvas に描く色の既定値は browser/theme/tokens.ts にある。
+ */
 .playmaker-root {
-  --playmaker-font-family: system-ui, sans-serif;
-  /* フィールドは脇役。彩度・明度を少し落とし、白は純白を避けてプレーを前に出す。 */
-  --playmaker-field-bg: #3f7a46;
-  --playmaker-field-stripe: #3a7341;
-  --playmaker-field-oob: #284b2f;
-  --playmaker-endzone-bg: #20503c;
-  --playmaker-field-line-color: rgba(236, 240, 234, 0.82);
-  --playmaker-field-number-color: rgba(236, 240, 234, 0.72);
-  --playmaker-goal-line-color: rgba(255, 255, 255, 0.92);
-  --playmaker-pylon-color: #d06a30;
-  --playmaker-goalpost-color: #c2a64a;
-  /* オフェンスは沈めたスレート、ディフェンスはくすませた煉瓦（presets 側）。原色フル彩度を避ける。 */
-  --playmaker-player-fill: #2b4c72;
-  --playmaker-player-stroke: #eef2ec;
-  --playmaker-player-label-color: #ffffff;
-  /* オフェンス動線は 1 色（落ち着いた琥珀）。route/block/motion は記法（矢印/T 字/破線）で区別する。 */
-  --playmaker-line-route-color: #c49a3c;
-  --playmaker-line-block-color: #c49a3c;
-  --playmaker-line-motion-color: #c49a3c;
-  --playmaker-selection-color: #ff9800;
-  --playmaker-surface-bg: #ffffff;
-  --playmaker-border-color: #d0d0d0;
-  --playmaker-text-color: #1a1a1a;
-  --playmaker-accent-color: #1565c0;
+  --_playmaker-ui-font: var(--playmaker-ui-font, system-ui, sans-serif);
+  --_playmaker-ui-surface: var(--playmaker-ui-surface, #ffffff);
+  --_playmaker-ui-border: var(--playmaker-ui-border, #d0d0d0);
+  --_playmaker-ui-text: var(--playmaker-ui-text, #1a1a1a);
+  --_playmaker-ui-accent: var(--playmaker-ui-accent, #1565c0);
+  --_playmaker-ui-accent-text: var(--playmaker-ui-accent-text, #ffffff);
 
   position: relative;
   width: 100%;
   height: 100%;
-  font-family: var(--playmaker-font-family);
-  color: var(--playmaker-text-color);
-  background: var(--playmaker-field-bg);
+  font-family: var(--_playmaker-ui-font);
+  color: var(--_playmaker-ui-text);
   overflow: hidden;
 }
 
@@ -68,10 +49,7 @@
   touch-action: none;
 }
 
-/*
- * 編集 UI は Canvas の上に重ねる HTML オーバーレイ（PRD 6.5。PNG エクスポートで UI を別レイヤとして除外できる）。
- * 配色・サイズは --playmaker-* 由来で商用ソフトのデザインに追従する。
- */
+/* 編集 UI は Canvas の上に HTML で重ねる。PNG に書き出すとき、UI を含めずに済むため。 */
 .playmaker-toolbar {
   position: absolute;
   top: 8px;
@@ -82,30 +60,30 @@
   align-items: center;
   gap: 4px;
   padding: 6px 8px;
-  border: 1px solid var(--playmaker-border-color);
+  border: 1px solid var(--_playmaker-ui-border);
   border-radius: 6px;
-  background: var(--playmaker-surface-bg);
-  color: var(--playmaker-text-color);
+  background: var(--_playmaker-ui-surface);
+  color: var(--_playmaker-ui-text);
 }
 
 .playmaker-toolbar__button {
   font: inherit;
   padding: 4px 10px;
-  border: 1px solid var(--playmaker-border-color);
+  border: 1px solid var(--_playmaker-ui-border);
   border-radius: 4px;
-  background: var(--playmaker-surface-bg);
-  color: var(--playmaker-text-color);
+  background: var(--_playmaker-ui-surface);
+  color: var(--_playmaker-ui-text);
   cursor: pointer;
 }
 
 .playmaker-toolbar__button:hover:not(:disabled) {
-  border-color: var(--playmaker-accent-color);
+  border-color: var(--_playmaker-ui-accent);
 }
 
 .playmaker-toolbar__button[aria-pressed="true"] {
-  background: var(--playmaker-accent-color);
-  border-color: var(--playmaker-accent-color);
-  color: #ffffff;
+  background: var(--_playmaker-ui-accent);
+  border-color: var(--_playmaker-ui-accent);
+  color: var(--_playmaker-ui-accent-text);
 }
 
 .playmaker-toolbar__button:disabled {
@@ -116,22 +94,22 @@
 .playmaker-toolbar__select {
   font: inherit;
   padding: 4px 8px;
-  border: 1px solid var(--playmaker-border-color);
+  border: 1px solid var(--_playmaker-ui-border);
   border-radius: 4px;
-  background: var(--playmaker-surface-bg);
-  color: var(--playmaker-text-color);
+  background: var(--_playmaker-ui-surface);
+  color: var(--_playmaker-ui-text);
   cursor: pointer;
 }
 
 .playmaker-toolbar__select:hover {
-  border-color: var(--playmaker-accent-color);
+  border-color: var(--_playmaker-ui-accent);
 }
 
 .playmaker-toolbar__sep {
   width: 1px;
   align-self: stretch;
   margin: 0 4px;
-  background: var(--playmaker-border-color);
+  background: var(--_playmaker-ui-border);
 }
 
 .playmaker-panel {
@@ -143,10 +121,10 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid var(--playmaker-border-color);
+  border: 1px solid var(--_playmaker-ui-border);
   border-radius: 6px;
-  background: var(--playmaker-surface-bg);
-  color: var(--playmaker-text-color);
+  background: var(--_playmaker-ui-surface);
+  color: var(--_playmaker-ui-text);
 }
 
 .playmaker-panel__title {
@@ -192,7 +170,7 @@
   width: 22px;
   height: 22px;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--_playmaker-ui-border);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -200,10 +178,4 @@
 .playmaker-panel__swatch[aria-pressed="true"] {
   outline: 2px solid currentColor;
   outline-offset: 1px;
-}
-
-/* view モードでは編集 UI を出さない（PRD 5.5）。保険として CSS でも隠す。 */
-.playmaker-root[data-mode="view"] .playmaker-toolbar,
-.playmaker-root[data-mode="view"] .playmaker-panel {
-  display: none;
 }

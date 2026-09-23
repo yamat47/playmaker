@@ -6,13 +6,13 @@
 import {
   DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
-  FIELD_FONT_FAMILY,
   FIELD_WIDTH_YARDS,
   type FieldGeometry,
   type FieldMetrics,
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   yardLinesInWindow,
 } from "../../common/index.js";
+import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
 
 /**
  * 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。

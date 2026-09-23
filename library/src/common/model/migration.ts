@@ -22,7 +22,7 @@ export interface PlayDataMigration {
 }
 
 /**
- * 旧→現行のマイグレーション段（`to` 昇順）。スキーマを進めるときは
+ * 旧版を現行へ寄せる段（`to` 昇順）。スキーマを進めるときは
  * CURRENT_PLAY_DATA_VERSION を上げ、ここへ段を 1 つ足し、その段の単体テストを書く。
  */
 export const PLAY_DATA_MIGRATIONS: readonly PlayDataMigration[] = [

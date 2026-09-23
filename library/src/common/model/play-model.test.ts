@@ -85,6 +85,16 @@ describe("PlayModel 参照系", () => {
 });
 
 describe("PlayModel.setFieldZone", () => {
+  it("ゾーンを切り替えると LOS もそのゾーンの既定へ移り、選手の LOS からの位置は変わらない", () => {
+    const model = new PlayModel(seed());
+
+    model.setFieldZone("redzone");
+
+    expect(model.getData().field).toEqual({ zone: "redzone", losYard: LOS_YARD_BY_ZONE.redzone });
+    expect(model.findPlayer("a")).toEqual(player("a"));
+  });
+
+
   it("ゾーンを変更しスナップショットを 1 回発火する", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn<(data: PlayData) => void>();

@@ -463,6 +463,7 @@ PR 単位で、依存順に並べる。
   - 対応: options は構築時に値を取り出す。購読 API を公開し、Event と IDisposable の型も export する。
 - [ ] **T14-4 [should] initialData を二重に migrate・二重に描画していて、入力の型も実際の契約と合わない**（D12）
   - locations: library/src/playmaker.ts:56, library/src/playmaker.ts:94-100, library/src/playmaker.ts:123, library/src/playmaker.ts:137, library/src/playmaker.ts:174, library/src/browser/rendering/canvas-surface.ts:38-58
+  - 補足（T7 で判明）: 公開型 FieldState に losYard が必須で増えたが、読み込み時には使わずゾーンから決め直す。型付きで PlayData を組み立てるホストは、意味のない losYard を渡す必要がある。入力側の型では losYard を省略可能にするか、fieldStateForZone を公開するかを、D12 の setPlayData / restorePlayData の型と一緒に決める。また v1 形式（absoluteYard）のカスタム Formation は版を持たず移行されないので、loadFormation で全選手が捨てられ何も起きない。受け付ける形を公開 API の JSDoc に書くか、Formation にも移行を掛けるかを決める。
 - [ ] **T14-5 [nit] 公開オプションの optional に `| undefined` がない**
   - locations: library/src/playmaker.ts:50, library/src/playmaker.ts:56, library/src/playmaker.ts:63, library/src/common/export/image-export.ts:30
 - [ ] **T14-6 [nit] FIELD_ZONES、refresh、Event 型の公開と、公開面の過不足の整理**

@@ -18,7 +18,7 @@ export type FieldZone = (typeof FIELD_ZONE_VALUES)[number];
 /** ゾーン未指定時の既定。中央が最も汎用的な初期表示。 */
 export const DEFAULT_FIELD_ZONE: FieldZone = "middle";
 
-/** ツールバーやホストの UI がゾーンを並べるときの表示名。 */
+/** ゾーンの表示名。 */
 export const FIELD_ZONE_LABELS = {
   "own-redzone": "自陣RZ",
   middle: "中央",

@@ -11,7 +11,7 @@ describe("SetFieldZoneCommand", () => {
     expect(model.getData().field.zone).toBe("redzone");
 
     cmd.undo(model);
-    expect(model.getData().field.zone).toBe("middle");
+    expect(model.getData().field).toEqual({ zone: "middle", losYard: 50 });
 
     cmd.apply(model); // redo（直前ゾーンを再捕捉）
     expect(model.getData().field.zone).toBe("redzone");

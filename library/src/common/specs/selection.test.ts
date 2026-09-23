@@ -46,6 +46,14 @@ describe("クリックでの選択", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
   });
 
+  it("線を選ぶと、選択中の線としてその線を返し、選手は返さない", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(25, 5));
+
+    expect(play.editor.getSelectedLine()?.id).toBe("l");
+    expect(play.editor.getSelectedPlayer()).toBeUndefined();
+  });
+
   it("線を選ぶと、waypoint と終点にハンドルを描く", () => {
     const play = openPlay(twoPlayersWithRoute());
 

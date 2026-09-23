@@ -16,16 +16,17 @@ export interface KeyStroke {
  */
 export function resolveKeyAction(stroke: KeyStroke): KeyAction | null {
   const mod = stroke.metaKey || stroke.ctrlKey;
+  const key = stroke.key.toLowerCase();
   if (stroke.key === "Escape") {
     return "cancel-interaction";
   }
   if (stroke.key === "Enter") {
     return "commit-line";
   }
-  if (mod && (stroke.key === "z" || stroke.key === "Z")) {
+  if (mod && key === "z") {
     return stroke.shiftKey ? "redo" : "undo";
   }
-  if (mod && (stroke.key === "y" || stroke.key === "Y")) {
+  if (mod && key === "y") {
     return "redo";
   }
   return null;

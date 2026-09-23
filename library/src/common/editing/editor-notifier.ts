@@ -83,11 +83,6 @@ export class EditorNotifier extends Disposable {
     this.flushIfIdle();
   }
 
-  /** 表示状態は通知の前に読み直して前回と比べるので、変わったかもしれないときに呼べばよい。 */
-  markViewStateChanged(): void {
-    this.flushIfIdle();
-  }
-
   private flushIfIdle(): void {
     if (this.depth === 0) {
       this.flush();

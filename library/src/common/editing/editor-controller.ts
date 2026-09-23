@@ -92,7 +92,6 @@ export class EditorController extends Disposable implements IEditorController {
     this.onDidChangeScene = this.notifier.onDidChangeScene;
     this.onDidChangeViewState = this.notifier.onDidChangeViewState;
     this._register(this.model.onDidChange(() => this.notifier.markSceneChanged()));
-    this._register(this.commands.onDidChangeHistory(() => this.notifier.markViewStateChanged()));
   }
 
   getViewState(): EditorViewState {

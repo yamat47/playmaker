@@ -1,5 +1,3 @@
-import { Emitter, type Event } from "../base/event.js";
-import { Disposable } from "../base/lifecycle.js";
 import type { ICommand } from "./command.js";
 
 /**
@@ -7,8 +5,6 @@ import type { ICommand } from "./command.js";
  * 履歴は分岐させない。新しいコマンドを積むと redo の履歴は捨てる。
  */
 export interface IUndoRedoService {
-  /** 履歴が変わるたびに 1 回発火する。 */
-  readonly onDidChange: Event<void>;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   /** 実行を済ませたコマンドを積む。 */
@@ -22,9 +18,7 @@ export interface IUndoRedoService {
   redo(reapply: (command: ICommand) => void): void;
 }
 
-export class UndoRedoService extends Disposable implements IUndoRedoService {
-  private readonly _onDidChange = this._register(new Emitter<void>());
-  readonly onDidChange = this._onDidChange.event;
+export class UndoRedoService implements IUndoRedoService {
   private readonly undoStack: ICommand[] = [];
   private readonly redoStack: ICommand[] = [];
 
@@ -39,7 +33,6 @@ export class UndoRedoService extends Disposable implements IUndoRedoService {
   push(command: ICommand): void {
     this.undoStack.push(command);
     this.redoStack.length = 0;
-    this._onDidChange.fire();
   }
 
   undo(revert: (command: ICommand) => void): void {
@@ -59,6 +52,5 @@ export class UndoRedoService extends Disposable implements IUndoRedoService {
     run(command);
     from.pop();
     to.push(command);
-    this._onDidChange.fire();
   }
 }

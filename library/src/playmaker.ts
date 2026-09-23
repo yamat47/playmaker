@@ -114,15 +114,14 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
-   * 既存のプレー図へ追記する（攻守プリセットを順に重ねられる）。外部の
-   * カスタム隊形は正規化してから読み、配置可能な選手が無ければ no-op。
-   * 置くと選手が 64 人を超えるときも、1 人も置かずに no-op。
-   * 編集操作なので Undo/onChange の対象（view モードでも API としては有効）。
-   * プリセットは公開 `FORMATION_PRESETS` / `getFormationPreset` から取得できる。
+   * 隊形の選手を今の図に追記し、置いたら true を返す。攻守の隊形を順に重ねられる。
+   * 選手の位置は LOS からの相対（`lateralYard` と `downfieldYard`）で書く。
+   * 外から渡した隊形は正規化してから読むので、位置の読めない選手は捨てる。
+   * 置ける選手が 1 人もいないときと、置くと選手が 64 人を超えるときは、1 人も置かずに false を返す。
+   * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
    */
-  loadFormation(formation: Formation): void {
-    this.session.loadFormation(formation);
+  loadFormation(formation: Formation): boolean {
+    return this.session.loadFormation(formation);
   }
 
   /**

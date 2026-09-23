@@ -145,12 +145,18 @@ describe("PlaySession の loadFormation", () => {
     expect(onChange).toHaveBeenCalledOnce();
   });
 
-  it("置ける選手が無い隊形は何もしない", () => {
+  it("隊形の選手を置いたら true を返す", () => {
+    const { session } = setup();
+
+    expect(session.loadFormation(formation)).toBe(true);
+  });
+
+  it("置ける選手が無い隊形は何もせず false を返す", () => {
     const { session, onChange } = setup();
     // 型を持たない外部の JSON から来た、位置の無い選手だけの隊形。
     const broken: Formation = JSON.parse('{ "players": [{ "shape": "circle" }] }');
 
-    session.loadFormation(broken);
+    expect(session.loadFormation(broken)).toBe(false);
 
     expect(session.getPlayData()).toEqual(initialData());
     expect(onChange).not.toHaveBeenCalled();

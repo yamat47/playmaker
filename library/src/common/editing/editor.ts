@@ -108,9 +108,10 @@ export interface IEditorActions {
   updateSelectedLine(patch: LinePatch): void;
   setFieldZone(zone: FieldZone): void;
   /**
-   * 選手を既存の図に追記する。置ける選手が無いときと、置くと上限を超えるときは何もしない。
+   * 選手を既存の図に追記し、置いたら true を返す。
+   * 置ける選手が無いときと、置くと上限を超えるときは何もせず false を返す。
    */
-  loadFormation(formation: Formation): void;
+  loadFormation(formation: Formation): boolean;
   /** 作図中は最後の打点を取り消し、履歴には触れない。 */
   undo(): void;
   redo(): void;

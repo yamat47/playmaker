@@ -73,12 +73,10 @@ export class PlaySession extends Disposable {
     this.document.controller.setFieldZone(zone);
   }
 
-  /** 外から来た隊形を正規化してから読む。置ける選手が 1 人もいなければ何もしない。 */
-  loadFormation(formation: Formation): void {
+  /** 外から来た隊形を正規化してから読む。置ける選手が 1 人もいなければ何もせず false を返す。 */
+  loadFormation(formation: Formation): boolean {
     const normalized = normalizeFormation(formation);
-    if (normalized !== null) {
-      this.document.controller.loadFormation(normalized);
-    }
+    return normalized !== null && this.document.controller.loadFormation(normalized);
   }
 
   setPlayData(data: unknown): void {

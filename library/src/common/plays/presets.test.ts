@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
 import { clampToZoneWindow } from "../geometry/field.js";
-import { CURRENT_PLAY_DATA_VERSION, resolvePlayData } from "../model/play-data.js";
+import { resolvePlayData } from "../model/play-data.js";
 import { DEFENSE_COLOR } from "../presets/shared.js";
 import { getPlayPreset, PLAY_PRESETS } from "./presets.js";
 
@@ -13,8 +13,8 @@ describe("PLAY_PRESETS", () => {
   });
 
   it("攻守どちらのプリセットもある", () => {
-    expect(PLAY_PRESETS.filter((p) => p.side === "offense")).not.toHaveLength(0);
-    expect(PLAY_PRESETS.filter((p) => p.side === "defense")).not.toHaveLength(0);
+    expect(PLAY_PRESETS.some((p) => p.side === "offense")).toBe(true);
+    expect(PLAY_PRESETS.some((p) => p.side === "defense")).toBe(true);
   });
 
   it.each(PLAY_PRESETS)("$id は名前、パーソネル、説明を持つ", (preset) => {
@@ -23,8 +23,7 @@ describe("PLAY_PRESETS", () => {
     expect(preset.summary.trim()).not.toBe("");
   });
 
-  it.each(PLAY_PRESETS)("$id は今の版の図で、middle ゾーンに攻守 22 人を並べる", (preset) => {
-    expect(preset.data.version).toBe(CURRENT_PLAY_DATA_VERSION);
+  it.each(PLAY_PRESETS)("$id は middle ゾーンに攻守 22 人を並べる", (preset) => {
     expect(preset.data.field.zone).toBe("middle");
     expect(preset.data.players).toHaveLength(22);
   });

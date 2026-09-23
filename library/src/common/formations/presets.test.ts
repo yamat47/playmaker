@@ -31,13 +31,11 @@ describe("FORMATION_PRESETS", () => {
   });
 
   it.each(OFFENSE_PRESETS)("オフェンスの $id は選手に色を付けない", (formation) => {
-    expect(formation.players.map((p) => p.color)).toEqual(formation.players.map(() => undefined));
+    expect(formation.players.filter((p) => p.color !== undefined)).toEqual([]);
   });
 
   it.each(DEFENSE_PRESETS)("ディフェンスの $id は選手を DEFENSE_COLOR で塗る", (formation) => {
-    expect(formation.players.map((p) => p.color)).toEqual(
-      formation.players.map(() => DEFENSE_COLOR),
-    );
+    expect(formation.players.filter((p) => p.color !== DEFENSE_COLOR)).toEqual([]);
   });
 
   it.each(FIELD_ZONE_VALUES)(

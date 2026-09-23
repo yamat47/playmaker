@@ -387,10 +387,7 @@ describe("PlayModel の件数の上限", () => {
   });
 
   it("MAX_LINES 本を超える線の追加は throw する", () => {
-    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [] });
-    for (const l of lines(MAX_LINES)) {
-      model.addLine(l);
-    }
+    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: lines(MAX_LINES) });
 
     expect(() => model.addLine(line("extra", "p0"))).toThrow("PlayModel: too many lines");
   });

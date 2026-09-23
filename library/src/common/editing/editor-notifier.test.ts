@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { player } from "../../test-support/fixtures.js";
-import type { EditorViewState } from "./editor.js";
-import { EditorNotifier, isSameSelection, type ViewSnapshot } from "./editor-notifier.js";
+import { type EditorViewState, isSameSelection } from "./editor.js";
+import { EditorNotifier, type ViewSnapshot } from "./editor-notifier.js";
 
 const baseState: EditorViewState = {
   tool: "select",
@@ -28,7 +28,7 @@ describe("EditorNotifier", () => {
   it("batch の外で描く図が変わると、描く図の通知をすぐ出す", () => {
     const { notifier, changes } = setup();
 
-    notifier.markChanged(true);
+    notifier.markSceneChanged();
 
     expect(changes.mock.calls).toEqual([["scene"]]);
   });
@@ -37,10 +37,10 @@ describe("EditorNotifier", () => {
     const { notifier, changes, setView } = setup();
 
     notifier.batch(() => {
-      notifier.markChanged(true);
-      notifier.batch(() => notifier.markChanged(true));
+      notifier.markSceneChanged();
+      notifier.batch(() => notifier.markSceneChanged());
       setView({ state: { ...baseState, canUndo: true }, player: undefined, line: undefined });
-      notifier.markChanged(false);
+      notifier.markViewStateChanged();
       expect(changes).not.toHaveBeenCalled();
     });
 
@@ -51,7 +51,7 @@ describe("EditorNotifier", () => {
     const { notifier, changes, setView } = setup();
     setView({ state: { ...baseState }, player: undefined, line: undefined });
 
-    notifier.markChanged(false);
+    notifier.markViewStateChanged();
 
     expect(changes).not.toHaveBeenCalled();
   });
@@ -65,7 +65,7 @@ describe("EditorNotifier", () => {
     });
     setView({ state: baseState, player: { ...before, label: "QB" }, line: undefined });
 
-    notifier.markChanged(false);
+    notifier.markViewStateChanged();
 
     expect(changes.mock.calls).toEqual([["view"]]);
   });
@@ -78,7 +78,7 @@ describe("EditorNotifier", () => {
         throw new Error("boom");
       }),
     ).toThrow("boom");
-    notifier.batch(() => notifier.markChanged(true));
+    notifier.batch(() => notifier.markSceneChanged());
 
     expect(changes.mock.calls).toEqual([["scene"]]);
   });

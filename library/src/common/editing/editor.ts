@@ -16,6 +16,13 @@ export type EditorSelection =
   | { readonly kind: "line"; readonly id: string }
   | null;
 
+export function isSameSelection(a: EditorSelection, b: EditorSelection): boolean {
+  if (a === null || b === null) {
+    return a === b;
+  }
+  return a.kind === b.kind && a.id === b.id;
+}
+
 /** 描画するプレー図。版は保存するときだけ要るので持たない。 */
 export type SceneData = Omit<PlayData, "version">;
 

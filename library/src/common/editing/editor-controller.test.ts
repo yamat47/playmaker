@@ -333,7 +333,7 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
     expect(controller.getSelection()).toEqual({ kind: "line", id: "l-1" });
   });
 
-  it("同じ選手の再選択や別対象選択で sameSelection を網羅する", () => {
+  it("同じ選手を選び直しても選択は変わらず、別の選手を押すと選択が移る", () => {
     const { controller } = setup();
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
@@ -834,7 +834,7 @@ describe("EditorController: ライフサイクル", () => {
   });
 });
 
-describe("EditorController: 初期状態（drawing フラグ別経路）", () => {
+describe("EditorController: 作図中の表示状態", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });

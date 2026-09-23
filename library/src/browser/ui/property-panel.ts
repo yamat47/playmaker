@@ -10,7 +10,9 @@ import {
   LINE_COLOR_PALETTE,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
+  type Line,
   type LineColorOption,
+  type Player,
   type PlayerShape,
   toDisposable,
 } from "../../common/index.js";
@@ -24,11 +26,17 @@ function toHex(value: string | undefined, fallback: string): string {
   return value !== undefined && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
 }
 
+interface ShownItems {
+  readonly player: Player | undefined;
+  readonly line: Line | undefined;
+}
+
 export class PropertyPanel extends Disposable {
   readonly element: HTMLElement;
-  // 直近に描いた内容のキー。表示状態の通知はツールや Undo の可否が変わっても届くので、
-  // 選択と確定値が変わらない限り作り直さず、入力中のフォーカスを失わせない。
-  private lastKey: string | null = null;
+  // 直近に描いた選手と線。表示状態の通知はツールや Undo の可否が変わっても届くので、
+  // 選択中の要素が差し替わらない限り作り直さず、入力中のフォーカスを失わせない。
+  // 要素は値が変わるたびに別のオブジェクトになるので、参照で比べればよい。
+  private shown: ShownItems | undefined;
 
   constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
@@ -44,17 +52,10 @@ export class PropertyPanel extends Disposable {
   private rebuild(controller: IEditorUi): void {
     const player = controller.getSelectedPlayer();
     const line = controller.getSelectedLine();
-    // 確定済みプロパティのスナップショットでキー化＝ドラッグの transient 連打では不変。
-    const key =
-      player !== undefined
-        ? `p:${JSON.stringify(player)}`
-        : line !== undefined
-          ? `l:${JSON.stringify(line)}`
-          : "none";
-    if (key === this.lastKey) {
+    if (this.shown !== undefined && this.shown.player === player && this.shown.line === line) {
       return;
     }
-    this.lastKey = key;
+    this.shown = { player, line };
 
     this.element.replaceChildren();
     if (player !== undefined) {

@@ -2,7 +2,7 @@ import { Emitter } from "../base/event.js";
 import { Disposable } from "../base/lifecycle.js";
 import type { Line } from "../model/line.js";
 import type { Player } from "../model/player.js";
-import type { EditorSelection, EditorViewState } from "./editor.js";
+import { type EditorViewState, isSameSelection } from "./editor.js";
 
 /** onDidChangeViewState を出すかどうかを決めるための、UI が読む値の組。 */
 export interface ViewSnapshot {
@@ -11,22 +11,32 @@ export interface ViewSnapshot {
   readonly line: Line | undefined;
 }
 
-export function isSameSelection(a: EditorSelection, b: EditorSelection): boolean {
-  if (a === null || b === null) {
-    return a === b;
-  }
-  return a.kind === b.kind && a.id === b.id;
+// 表示状態の項目ごとの比べ方。項目を足すとここが型エラーになり、比べ忘れを防ぐ。
+const VIEW_STATE_EQUALS: {
+  readonly [K in keyof EditorViewState]: (a: EditorViewState[K], b: EditorViewState[K]) => boolean;
+} = {
+  tool: Object.is,
+  selection: isSameSelection,
+  canUndo: Object.is,
+  canRedo: Object.is,
+  fieldZone: Object.is,
+  isDrawing: Object.is,
+};
+
+const VIEW_STATE_KEYS = Object.keys(VIEW_STATE_EQUALS) as (keyof EditorViewState)[];
+
+function isSameEntry<K extends keyof EditorViewState>(
+  key: K,
+  a: EditorViewState,
+  b: EditorViewState,
+): boolean {
+  return VIEW_STATE_EQUALS[key](a[key], b[key]);
 }
 
 // 選手と線は変更のたびに差し替わるので、参照で比べれば値の変化が分かる。
 function isSameView(a: ViewSnapshot, b: ViewSnapshot): boolean {
   return (
-    a.state.tool === b.state.tool &&
-    isSameSelection(a.state.selection, b.state.selection) &&
-    a.state.canUndo === b.state.canUndo &&
-    a.state.canRedo === b.state.canRedo &&
-    a.state.fieldZone === b.state.fieldZone &&
-    a.state.isDrawing === b.state.isDrawing &&
+    VIEW_STATE_KEYS.every((key) => isSameEntry(key, a.state, b.state)) &&
     a.player === b.player &&
     a.line === b.line
   );
@@ -61,14 +71,20 @@ export class EditorNotifier extends Disposable {
     } finally {
       this.depth--;
     }
-    if (this.depth === 0) {
-      this.flush();
-    }
+    this.flushIfIdle();
   }
 
-  /** scene は描く図が変わったかどうか。表示状態は通知の前に読み直して比べる。 */
-  markChanged(scene: boolean): void {
-    this.sceneChanged ||= scene;
+  markSceneChanged(): void {
+    this.sceneChanged = true;
+    this.flushIfIdle();
+  }
+
+  /** 表示状態は通知の前に読み直して前回と比べるので、変わったかもしれないときに呼べばよい。 */
+  markViewStateChanged(): void {
+    this.flushIfIdle();
+  }
+
+  private flushIfIdle(): void {
     if (this.depth === 0) {
       this.flush();
     }

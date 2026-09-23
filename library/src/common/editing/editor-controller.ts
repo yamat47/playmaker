@@ -30,14 +30,15 @@ import {
   MAX_PLAYERS,
   type Player,
 } from "../model/player.js";
-import type {
-  EditorFrame,
-  EditorSelection,
-  EditorTool,
-  EditorViewState,
-  IEditorController,
+import {
+  type EditorFrame,
+  type EditorSelection,
+  type EditorTool,
+  type EditorViewState,
+  type IEditorController,
+  isSameSelection,
 } from "./editor.js";
-import { EditorNotifier, isSameSelection } from "./editor-notifier.js";
+import { EditorNotifier } from "./editor-notifier.js";
 import {
   addDraftPoint,
   committableDraft,
@@ -89,8 +90,8 @@ export class EditorController extends Disposable implements IEditorController {
     );
     this.onDidChangeScene = this.notifier.onDidChangeScene;
     this.onDidChangeViewState = this.notifier.onDidChangeViewState;
-    this._register(this.model.onDidChange(() => this.notifier.markChanged(true)));
-    this._register(this.commands.onDidChangeHistory(() => this.notifier.markChanged(false)));
+    this._register(this.model.onDidChange(() => this.notifier.markSceneChanged()));
+    this._register(this.commands.onDidChangeHistory(() => this.notifier.markViewStateChanged()));
   }
 
   getTool(): EditorTool {
@@ -133,7 +134,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (tool === this.tool) {
       return;
     }
-    this.batch(() => {
+    this.notifier.batch(() => {
       this.tool = tool;
       // ツールを切り替えたら作図やドラッグの途中は捨てる。
       this.setInteraction(undefined);
@@ -141,7 +142,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   pointerDown(pos: FieldPosition): void {
-    this.batch(() => {
+    this.notifier.batch(() => {
       switch (this.tool) {
         case "add-player":
           this.addPlayerAt(pos);
@@ -161,7 +162,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (interaction === undefined) {
       return;
     }
-    this.batch(() =>
+    this.notifier.batch(() =>
       this.setInteraction(
         interaction.type === "draw-line"
           ? { ...interaction, cursor: this.clampToField(pos) }
@@ -176,7 +177,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (interaction?.type !== "drag") {
       return;
     }
-    this.batch(() => {
+    this.notifier.batch(() => {
       this.setInteraction(undefined);
       const moved = dragPosition(interaction, pos);
       // 寄せる前の位置で比べる。窓の外にある選手をクリックしただけで、窓の端へ動かさない。
@@ -191,7 +192,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   cancelInteraction(): void {
-    this.batch(() => this.setInteraction(undefined));
+    this.notifier.batch(() => this.setInteraction(undefined));
   }
 
   commitLine(): void {
@@ -199,7 +200,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (interaction?.type !== "draw-line") {
       return;
     }
-    this.batch(() => {
+    this.notifier.batch(() => {
       this.setInteraction(undefined);
       const line = this.lineFromDraft(interaction);
       if (line === undefined) {
@@ -215,7 +216,7 @@ export class EditorController extends Disposable implements IEditorController {
   deleteSelection(): void {
     const player = this.getSelectedPlayer();
     const line = this.getSelectedLine();
-    this.batch(() => {
+    this.notifier.batch(() => {
       if (player !== undefined) {
         this.commands.execute(new RemovePlayerCommand(player.id));
       } else if (line !== undefined) {
@@ -233,7 +234,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (player === undefined || !patchChangesAnything(player, patch)) {
       return;
     }
-    this.batch(() => this.commands.execute(new UpdatePlayerCommand(player.id, patch)));
+    this.notifier.batch(() => this.commands.execute(new UpdatePlayerCommand(player.id, patch)));
   }
 
   updateSelectedLine(patch: LinePatch): void {
@@ -241,14 +242,14 @@ export class EditorController extends Disposable implements IEditorController {
     if (line === undefined || !patchChangesAnything(line, patch)) {
       return;
     }
-    this.batch(() => this.commands.execute(new UpdateLineCommand(line.id, patch)));
+    this.notifier.batch(() => this.commands.execute(new UpdateLineCommand(line.id, patch)));
   }
 
   setFieldZone(zone: FieldZone): void {
     if (zone === this.model.getFieldZone()) {
       return;
     }
-    this.batch(() => {
+    this.notifier.batch(() => {
       this.setInteraction(undefined);
       this.commands.execute(new SetFieldZoneCommand(zone));
     });
@@ -264,7 +265,7 @@ export class EditorController extends Disposable implements IEditorController {
       this.ids,
       players.map((p) => p.id),
     );
-    this.batch(() => {
+    this.notifier.batch(() => {
       this.setInteraction(undefined);
       this.commands.execute(new LoadFormationCommand(added));
       // 読み込んだあとは、元の選択に意味が無いので外す。
@@ -273,7 +274,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   undo(): void {
-    this.batch(() => {
+    this.notifier.batch(() => {
       const interaction = this.interaction;
       if (interaction?.type === "draw-line") {
         this.setInteraction(
@@ -289,7 +290,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   redo(): void {
-    this.batch(() => {
+    this.notifier.batch(() => {
       this.setInteraction(undefined);
       this.commands.redo();
     });
@@ -300,7 +301,7 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.selection = next;
-    this.notifier.markChanged(true);
+    this.notifier.markSceneChanged();
   }
 
   private setInteraction(next: Interaction | undefined): void {
@@ -308,11 +309,7 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.interaction = next;
-    this.notifier.markChanged(true);
-  }
-
-  private batch(action: () => void): void {
-    this.notifier.batch(action);
+    this.notifier.markSceneChanged();
   }
 
   private clampToField(pos: FieldPosition): FieldPosition {

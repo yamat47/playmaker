@@ -447,7 +447,7 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T13 入力と内蔵 UI（browser）
+### T13 入力と内蔵 UI（browser） (done)
 
 - [x] **T13-1 [should] PropertyPanel が確定のたびに DOM を作り直し、フォーカスを失う**
   - locations: library/src/browser/ui/property-panel.ts:29-31, library/src/browser/ui/property-panel.ts:44-59, library/src/browser/ui/property-panel.ts:103-124, library/src/browser/ui/property-panel.ts:107, library/src/browser/ui/property-panel.ts:117, library/src/browser/ui/toolbar.ts:69, library/src/browser/ui/toolbar.ts:129-142
@@ -461,8 +461,9 @@ PR 単位で、依存順に並べる。
   - 対応: PlayerShape を circle / square だけにし、多角形描画のコードを消す。未知の形状は既定へ寄せる正規化だけ残す。PRD 5.2 の更新は T18。
   - 補足: 型を 2 種にすれば、旧形状は正規化で既定（circle）へ寄るので、migration の段は要らない（T7 で確かめた）。
   - 結論（T13a）: PLAYER_SHAPE_VALUES を circle と square だけにし、パネルの選択肢もこの配列から作る。正方形の輪郭は半辺の長さだけを返して rect で描き、多角形の辺の数と回転の表は消した。README の型の説明も直した。PRD は T18 で直す。
-- [ ] **T13-4 [should] ツールバーとパネルが canvas に重なり、フィールドを隠す**（D17）
+- [x] **T13-4 [should] ツールバーとパネルが canvas に重なり、フィールドを隠す**（D17）
   - locations: library/src/styles.css:67-81, library/src/styles.css:129-142, library/src/playmaker.ts:193-197
+  - 結論（T13c）: canvas を `.playmaker-stage` に入れ、edit モードの root を grid にした。ツールバーは図の上、パネルは図の右に置き、canvas は残りの領域の大きさで描く。パネルが縦にあふれたら、パネルの中でスクロールする。view モードは stage が root 全体を占めるので、見た目は変わらない。README のモードの節に配置を書いた。
 - [x] **T13-5 [should] キー割り当てが browser 層にあり、テストされていない**
   - locations: library/src/browser/input/pointer-input.ts:33-51, library/src/browser/ui/property-panel.ts:23, library/src/browser/ui/property-panel.ts:48, library/src/browser/ui/property-panel.ts:118
   - 対応: `common/input/keymap.ts` の resolveKeyAction、toHexColor、太さ入力の検証を common へ移し、テストする。
@@ -472,14 +473,16 @@ PR 単位で、依存順に並べる。
   - 対応: 既定色はテーマの解決値を使う。D11 が A なら既定ボタンを足す。
   - 進み具合: 既定色は T11 でテーマの解決値にした。残りは既定に戻すボタン。
   - 結論（T13b）: 選手の色、線の色、線の太さの行に「既定」ボタンを置き、パッチの null で値を消す。既定のときも押せるままにする。押した直後に無効にすると、フォーカスが body へ落ちる（T13-7 と同じ問題）。
-- [ ] **T13-7 [should] 最後の 1 手を戻すと「元に戻す」が無効になってフォーカスが body に落ち、以降のショートカットが効かない**
+- [x] **T13-7 [should] 最後の 1 手を戻すと「元に戻す」が無効になってフォーカスが body に落ち、以降のショートカットが効かない**
   - locations: library/src/browser/ui/toolbar.ts（sync で disabled にする箇所）, library/src/browser/input/pointer-input.ts（keydown を root で受ける箇所）
   - 問題: keydown は root で受けるが、無効化されたボタンからフォーカスが外れると、キーは root の外（body）に届く。T2 の demo 確認で見つけた。
   - 対応: ボタンを無効にする前にフォーカスを持っていたら canvas へ移す。または disabled ではなく aria-disabled にしてフォーカスを保つ。
-- [ ] **T13-8 [nit] 件数の上限に達しても、選手の追加ツールとフォーメーションの読み込みが押せる**（T8-5 の残り）
+  - 結論（T13c）: aria-disabled にした（2026-09-23 にユーザーが選んだ）。ボタンはフォーカスと Tab 順に残り、押しても何もしない。ツールバーは canvas を知らずに済む。
+- [x] **T13-8 [nit] 件数の上限に達しても、選手の追加ツールとフォーメーションの読み込みが押せる**（T8-5 の残り）
   - locations: library/src/browser/ui/toolbar.ts
   - 問題: 上限に達すると EditorController は何もしないが、ボタンは押せるままで、押しても反応がない理由が分からない。
   - 対応: EditorViewState に上限に達したかを足し、ボタンを無効にするか理由を示す。
+  - 結論（T13c）: 無効にして理由を title で出す案にした（2026-09-23 にユーザーが選んだ）。EditorViewState に remainingPlayerSlots と canStartLine を足し、判定は `common/editing/editor.ts` の isToolAvailable と canLoadFormation にまとめた。EditorController が操作を止める判定も同じ関数を使う。選手の追加と作図のボタン、読み込むと上限を超えるフォーメーションの選択肢を押せなくする。上限に達しても、選択中のツールは切り替えない。
 - [x] **T13-9 [nit] ホストがテーマ変数に hex 以外の色を書くと、色の入力とスウォッチの選択表示がずれる**（T11 で追加）
   - locations: library/src/browser/ui/property-panel.ts（toHex と addLineColor）, library/src/browser/theme/theme-reader.ts
   - 問題: color input は 6 桁の hex しか受け付けないので、`rgb()` や色名を書くと入力は既定色になる。スウォッチは解決した文字列をそのまま Line.color に保存し、保存済みの色と文字列で比べるので、書き方が違うと選択中に見えない。
@@ -489,7 +492,7 @@ PR 単位で、依存順に並べる。
 - 依存: T9、T11、T12、D17、D18
 - 完了条件: キーボードだけで連続して編集できる。UI が canvas に重ならない。表示はすべて日本語になる。
 - 規模: M
-- 進み具合: 3 本に分ける。T13a（T13-3）と T13b（T13-1、T13-2、T13-5、T13-6、T13-9）を閉じた。残りは T13c の配置とフォーカスと上限（T13-4、T13-7、T13-8）。
+- 進み具合: T13a（T13-3）、T13b（T13-1、T13-2、T13-5、T13-6、T13-9）、T13c（T13-4、T13-7、T13-8）の 3 本で閉じた。
 
 ---
 
@@ -512,6 +515,10 @@ PR 単位で、依存順に並べる。
   - locations: library/src/playmaker.ts:50, library/src/playmaker.ts:56, library/src/playmaker.ts:63, library/src/common/export/image-export.ts:30
 - [ ] **T14-6 [nit] FIELD_ZONES、refresh、Event 型の公開と、公開面の過不足の整理**
   - locations: library/src/playmaker.ts:20-44
+- [ ] **T14-7 [nit] パネルが作り直されると、パネルの中にあったフォーカスが body へ落ちる**（T13c で追加）
+  - locations: library/src/browser/ui/property-panel.ts（rebuild の replaceChildren）, library/src/browser/input/pointer-input.ts（keydown を root で受ける箇所）
+  - 問題: パネルの「既定」ボタンやスウォッチにフォーカスがある状態で Cmd+Z を押し、選択中の要素が消えると、パネルは中身を作り直してフォーカスが body へ落ちる。以降のショートカットは root に届かない。setMode で UI を外すときも同じことが起きる。
+  - 対応: 編集 UI の要素が消える直前にフォーカスを持っていたら、canvas へ移す仕組みを 1 か所に置く。T14-2 の UI の付け外しと一緒に決める。
 
 - 依存: T10〜T13、D12、D14、D15、D16
 - 完了条件: dist の d.ts に Disposable_2 などの内部型が出ない。setMode で履歴が残る。購読と解除ができる。構築時の migrate と描画が 1 回ずつになる。

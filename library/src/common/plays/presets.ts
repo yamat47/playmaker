@@ -12,7 +12,6 @@ function pt(lateralYard: number, downfieldYard: number): FieldPosition {
   return { lateralYard, downfieldYard };
 }
 
-/** 色を持たせず、テーマの色で描く。 */
 function oP(id: string, label: string, lat: number, down: number, shape: PlayerShape): Player {
   return { id, position: { lateralYard: lat, downfieldYard: down }, shape, label };
 }
@@ -685,7 +684,6 @@ export const PLAY_PRESETS: readonly PlayPreset[] = /* @__PURE__ */ deepFreeze([
   COVER_6,
 ]);
 
-/** 無い id なら undefined。 */
 export function getPlayPreset(id: string): PlayPreset | undefined {
   return PLAY_PRESETS.find((p) => p.id === id);
 }

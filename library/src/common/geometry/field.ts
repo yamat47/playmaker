@@ -102,7 +102,8 @@ export function yardLinesInWindow(zone: FieldZone, stepYards: number): number[] 
   }
   const { startYard, endYard } = fieldZoneWindow(zone);
   const lines: number[] = [];
-  // 足し算を重ねた浮動小数の誤差で、窓の奥の端にあるラインを落とさないよう少し余裕を持たせる。
+  // stepYards が整数でないと足し算を重ねた誤差が出るので、
+  // 窓の奥の端にあるラインを落とさないよう少し余裕を持たせる。
   const first = Math.ceil(startYard / stepYards) * stepYards;
   for (let y = first; y <= endYard + 1e-9; y += stepYards) {
     lines.push(y);

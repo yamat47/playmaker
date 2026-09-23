@@ -156,10 +156,7 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.stroke();
   }
 
-  /**
-   * 5 ヤードごとのヤードラインと、窓の外枠を描く。ゴールラインと外枠は通常のラインの 2 倍、
-   * センターラインは 1.5 倍の太さにする。ゴールラインは外枠と同じ太さで、色で見分ける。
-   */
+  /** 5 ヤードごとのヤードラインと、窓の外枠を描く。ゴールラインは外枠と同じ太さで、色で見分ける。 */
   private drawYardLines(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,

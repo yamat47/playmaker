@@ -80,7 +80,6 @@ export function isLineThickness(value: unknown): value is number {
  * 外から受け取った 1 要素を Line に正規化する。オブジェクトでないもの、起点の選手が実在しないもの、
  * 終点が座標でないものは null を返して捨てる。
  * 種別、補間、id が欠けていても捨てずに既定で補う。古い版で保存したデータを読めなくしないため。
- * 返り値は新しいオブジェクトで、入力と参照を共有しない。
  */
 function normalizeLine(
   raw: unknown,

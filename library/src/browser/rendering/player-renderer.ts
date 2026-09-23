@@ -3,7 +3,6 @@ import { fieldFont } from "../theme/field-font.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 export class PlayerRenderer implements ILayerRenderer {
-  /** 後の要素ほど上に描く。 */
   draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const { geometry, metrics } = frame;
     const { players } = frame.scene;

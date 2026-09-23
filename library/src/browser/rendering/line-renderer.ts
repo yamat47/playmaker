@@ -20,7 +20,7 @@ const LINE_COLOR_TOKENS = {
 } as const satisfies Record<LineKind, ThemeTokenName>;
 
 export class LineRenderer implements ILayerRenderer {
-  /** 後の要素ほど上に描く。起点の選手が見つからない線は描かない。 */
+  /** 起点の選手が見つからない線は描かない。 */
   draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const { geometry, metrics } = frame;
     const { lines, players } = frame.scene;

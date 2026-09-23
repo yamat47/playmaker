@@ -68,7 +68,6 @@ export function parseFieldPosition(raw: unknown): FieldPosition | null {
 /**
  * 外から受け取った 1 要素を Player に正規化する。位置が座標でないものは null を返して捨てる。
  * 形状、ラベル、色が欠けていても捨てずに既定で補う。古い版で保存したデータを読めなくしないため。
- * 返り値は新しいオブジェクトで、入力と参照を共有しない。
  */
 function normalizePlayer(raw: unknown, index: number): Player | null {
   if (!isRecord(raw)) {

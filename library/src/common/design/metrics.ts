@@ -31,7 +31,7 @@ const MOTION_DASH_OFF_PER_U = 0.7;
 /** 描くときの寸法（px）。 */
 export interface FieldMetrics {
   readonly yardLineWidth: number;
-  /** ゴールラインと、サイドラインを含む窓の外枠の太さ。通常のラインの 2 倍。 */
+  /** ゴールラインと、サイドラインを含む窓の外枠の太さ。 */
   readonly goalLineWidth: number;
   readonly hashTickLength: number;
   readonly numberHeight: number;
@@ -40,7 +40,6 @@ export interface FieldMetrics {
   readonly markerStroke: number;
   readonly markerLabelFont: number;
   readonly routeWidth: number;
-  /** route と同じ太さ。block は終点の T 字で見分ける。 */
   readonly blockWidth: number;
   readonly blockCapLength: number;
   readonly arrowLength: number;

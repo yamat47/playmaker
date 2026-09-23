@@ -5,7 +5,6 @@ import type { PlayerShape } from "../model/player.js";
 import { DEFENSE_COLOR, deepFreeze } from "../presets/shared.js";
 import type { Formation, FormationPlayer } from "./formation.js";
 
-/** 色を持たせず、テーマの色で描く。 */
 function off(
   label: string,
   lateralYard: number,
@@ -266,7 +265,6 @@ export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreez
   DEFENSE_3_3_5,
 ]);
 
-/** 無い id なら undefined。 */
 export function getFormationPreset(id: string): Formation | undefined {
   return FORMATION_PRESETS.find((f) => f.id === id);
 }

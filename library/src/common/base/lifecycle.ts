@@ -41,7 +41,6 @@ export class DisposableStore implements IDisposable {
 export abstract class Disposable implements IDisposable {
   protected readonly _store = new DisposableStore();
 
-  /** 非同期の処理が終わったとき、破棄したあとなら何もしないための判定に使える。 */
   protected get isDisposed(): boolean {
     return this._store.isDisposed;
   }

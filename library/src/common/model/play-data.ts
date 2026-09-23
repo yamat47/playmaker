@@ -58,7 +58,7 @@ export interface PlayData {
   readonly field: FieldState;
   /** 後の要素ほど上に重ねて描く。 */
   readonly players: readonly Player[];
-  /** 後の要素ほど上に重ねて描く。線はすべて選手より下に描く。 */
+  /** 後の要素ほど上に重ねて描く。 */
   readonly lines: readonly Line[];
 }
 

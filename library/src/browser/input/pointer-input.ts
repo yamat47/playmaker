@@ -1,15 +1,17 @@
-// canvas のポインタ入力と、root で受けるショートカットを EditorController の操作へ変換する。
-// 座標規約（px→ヤード）は CanvasSurface に集約し、編集判断は common 側が持つ。
-// ここは「DOM イベントを意味のある操作に翻訳する」だけの薄い層（browser・最小限）。
-
 import {
   Disposable,
+  type FieldPosition,
   type IEditorActions,
   type IEditorGestures,
   type IEditorScene,
   toDisposable,
 } from "../../common/index.js";
-import type { CanvasSurface } from "../rendering/canvas-surface.js";
+
+/** ポインタを受ける canvas と、その上の位置をフィールドのヤードの位置に変える手段。 */
+export interface IPointerSurface {
+  readonly canvas: HTMLCanvasElement;
+  clientToYard(clientX: number, clientY: number): FieldPosition;
+}
 
 // フォーム部品に来たキーは、その部品の標準動作（テキストの Undo など）に任せる。
 function isFormControl(target: EventTarget | null): boolean {
@@ -27,7 +29,7 @@ export class PointerInput extends Disposable {
    */
   constructor(
     root: HTMLElement,
-    surface: CanvasSurface,
+    surface: IPointerSurface,
     controller: IEditorGestures & IEditorActions & Pick<IEditorScene, "getViewState">,
   ) {
     super();

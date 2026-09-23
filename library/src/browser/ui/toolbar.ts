@@ -9,7 +9,6 @@ import {
   type FieldZone,
   FORMATION_PRESETS,
   getFormationPreset,
-  type Formation,
   type IEditorUi,
   isToolAvailable,
   MAX_LINES,
@@ -44,10 +43,14 @@ const SIDE_LABELS = {
  */
 function setEnabled(button: HTMLButtonElement, enabled: boolean, reason?: string): void {
   button.setAttribute("aria-disabled", String(!enabled));
-  if (!enabled && reason !== undefined) {
-    button.title = reason;
+  setTitle(button, enabled ? undefined : reason);
+}
+
+function setTitle(element: HTMLElement, title: string | undefined): void {
+  if (title === undefined) {
+    element.removeAttribute("title");
   } else {
-    button.removeAttribute("title");
+    element.title = title;
   }
 }
 
@@ -61,7 +64,6 @@ export class Toolbar extends Disposable {
   private readonly commitButton: HTMLButtonElement;
   private readonly cancelButton: HTMLButtonElement;
   private readonly formationPicker: HTMLSelectElement;
-  private readonly formationOptions = new Map<HTMLOptionElement, Formation>();
 
   constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
@@ -137,7 +139,6 @@ export class Toolbar extends Disposable {
         option.value = formation.id;
         option.textContent = formation.name;
         group.appendChild(option);
-        this.formationOptions.set(option, formation);
       }
       select.appendChild(group);
     }
@@ -174,14 +175,11 @@ export class Toolbar extends Disposable {
 
   private syncFormationPicker(state: EditorViewState): void {
     let isAnyUnavailable = false;
-    for (const [option, formation] of this.formationOptions) {
-      option.disabled = !canLoadFormation(formation, state);
+    for (const option of this.formationPicker.options) {
+      const formation = getFormationPreset(option.value);
+      option.disabled = formation !== undefined && !canLoadFormation(formation, state);
       isAnyUnavailable ||= option.disabled;
     }
-    if (isAnyUnavailable) {
-      this.formationPicker.title = PLAYER_LIMIT_REASON;
-    } else {
-      this.formationPicker.removeAttribute("title");
-    }
+    setTitle(this.formationPicker, isAnyUnavailable ? PLAYER_LIMIT_REASON : undefined);
   }
 }

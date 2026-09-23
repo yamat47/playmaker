@@ -1,107 +1,140 @@
 import { describe, expect, it, vi } from "vitest";
-import { player } from "../../test-support/fixtures.js";
+import { playData, player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { mutable } from "../../test-support/mutable.js";
+import { openPlay, yd } from "../../test-support/play-driver.js";
 import { PlaySession } from "../editing/play-session.js";
 import type { PlayData } from "../model/play-data.js";
 
 function initialData(): PlayData {
-  return {
-    version: 2,
-    field: { zone: "middle", losYard: 50 },
-    players: [player("a", 10, 0)],
-    lines: [],
-  };
+  return playData([player("a", 10, 0)]);
 }
 
-function setup(data: unknown = initialData()) {
-  const onChange = vi.fn<(data: PlayData) => void>();
-  const session = new PlaySession(data);
-  session.onDidChange(onChange);
-  return { session, onChange };
-}
-
-describe("PlaySession の onDidChange", () => {
+describe("編集の購読", () => {
   it("編集を確定するたびに、最新の図を渡して 1 回だけ呼ぶ", () => {
-    const { session, onChange } = setup();
+    const play = openPlay(initialData());
 
-    session.setFieldZone("redzone");
+    play.session.setFieldZone("redzone");
 
-    expect(onChange).toHaveBeenCalledOnce();
-    expect(onChange.mock.lastCall?.[0].field.zone).toBe("redzone");
+    expect(play.onChange).toHaveBeenCalledOnce();
+    expect(must(play.onChange.mock.lastCall)[0].field.zone).toBe("redzone");
+  });
+
+  it("選手をドラッグしている間は呼ばない", () => {
+    const play = openPlay(initialData());
+
+    play.editor.pointerDown(yd(10, 0));
+    play.editor.pointerMove(yd(12, 3));
+
+    expect(play.onChange).not.toHaveBeenCalled();
+  });
+
+  it("選手をドラッグしている間は、描く図だけが動き、確定した図は動かない", () => {
+    const play = openPlay(initialData());
+
+    play.editor.pointerDown(yd(10, 0));
+    play.editor.pointerMove(yd(12, 3));
+
+    expect(play.editor.getFrame().scene.players[0]?.position).toEqual(yd(12, 3));
+    expect(play.session.getPlayData().players[0]?.position).toEqual(yd(10, 0));
+  });
+
+  it("選手をドラッグして動かすたびに、描き直しの通知を出す", () => {
+    const play = openPlay(initialData());
+    play.editor.pointerDown(yd(10, 0));
+    play.notified.mockClear();
+
+    play.editor.pointerMove(yd(12, 3));
+
+    expect(play.notified).toHaveBeenCalledExactlyOnceWith("scene");
+  });
+
+  it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ", () => {
+    const play = openPlay(initialData());
+
+    play.drag(yd(10, 0), yd(12, 3));
+
+    expect(play.onChange).toHaveBeenCalledOnce();
+    expect(must(play.onChange.mock.lastCall)[0].players[0]?.position).toEqual(yd(12, 3));
+  });
+
+  it("選手をクリックして選んだだけでは呼ばない", () => {
+    const play = openPlay(initialData());
+
+    play.click(yd(10, 0));
+
+    expect(play.onChange).not.toHaveBeenCalled();
   });
 
   it("Undo と Redo もそれぞれ 1 回ずつ呼ぶ", () => {
-    const { session, onChange } = setup();
-    session.setFieldZone("redzone");
-    onChange.mockClear();
+    const play = openPlay(initialData());
+    play.session.setFieldZone("redzone");
+    play.onChange.mockClear();
 
-    session.controller.undo();
-    session.controller.redo();
+    play.editor.undo();
+    play.editor.redo();
 
-    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(play.onChange).toHaveBeenCalledTimes(2);
   });
 
   it("構築したときと setPlayData で読み込んだときは呼ばない", () => {
-    const { session, onChange } = setup();
+    const play = openPlay(initialData());
 
-    session.setPlayData({ ...initialData(), field: { zone: "redzone", losYard: 85 } });
+    play.session.setPlayData({ ...initialData(), field: { zone: "redzone", losYard: 85 } });
 
-    expect(onChange).not.toHaveBeenCalled();
+    expect(play.onChange).not.toHaveBeenCalled();
   });
 
   it("受け取った図を書き換えても、getPlayData の結果は変わらない", () => {
-    const { session, onChange } = setup();
-    session.setFieldZone("redzone");
-    const received = mutable(must(onChange.mock.lastCall)[0]);
+    const play = openPlay(initialData());
+    play.session.setFieldZone("redzone");
+    const received = mutable(must(play.onChange.mock.lastCall)[0]);
 
     received.players.length = 0;
 
-    expect(session.getPlayData().players).toHaveLength(1);
+    expect(play.session.getPlayData().players).toHaveLength(1);
   });
 
   it("リスナごとに別のコピーを渡すので、先のリスナの書き換えは後のリスナに届かない", () => {
-    const session = new PlaySession(initialData());
-    session.onDidChange((data) => {
+    const play = openPlay(initialData());
+    play.session.onDidChange((data) => {
       mutable(data).players.length = 0;
     });
     const later = vi.fn<(data: PlayData) => void>();
-    session.onDidChange(later);
+    play.session.onDidChange(later);
 
-    session.setFieldZone("redzone");
+    play.session.setFieldZone("redzone");
 
     expect(must(later.mock.lastCall)[0].players).toHaveLength(1);
   });
 
   it("購読を解除したあとの編集では呼ばない", () => {
-    const session = new PlaySession(initialData());
-    const onChange = vi.fn<(data: PlayData) => void>();
-    session.onDidChange(onChange).dispose();
+    const play = openPlay(initialData());
+    const listener = vi.fn<(data: PlayData) => void>();
+    play.session.onDidChange(listener).dispose();
 
-    session.setFieldZone("redzone");
+    play.session.setFieldZone("redzone");
 
-    expect(onChange).not.toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("読み直したあとの編集でも、読み直す前からのリスナを呼ぶ", () => {
-    const { session, onChange } = setup();
-    session.setPlayData(initialData());
+    const play = openPlay(initialData());
+    play.session.setPlayData(initialData());
 
-    session.setFieldZone("redzone");
+    play.session.setFieldZone("redzone");
 
-    expect(onChange).toHaveBeenCalledOnce();
+    expect(play.onChange).toHaveBeenCalledOnce();
   });
-});
 
-describe("PlaySession の dispose", () => {
-  it("破棄したあとの編集では onChange を呼ばない", () => {
-    const { session, onChange } = setup();
-    const controller = session.controller;
+  it("破棄したあとの編集では呼ばない", () => {
+    const play = openPlay(initialData());
+    const editor = play.editor;
 
-    session.dispose();
-    controller.setFieldZone("redzone");
+    play.session.dispose();
+    editor.setFieldZone("redzone");
 
-    expect(onChange).not.toHaveBeenCalled();
+    expect(play.onChange).not.toHaveBeenCalled();
   });
 
   it("購読していなくても編集できる", () => {

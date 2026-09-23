@@ -50,5 +50,17 @@
       "Bash(vite:*)"
     ]
   },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/docker/cloud-session-setup.sh"
+          }
+        ]
+      }
+    ]
+  },
   "plansDirectory": "./docs/plans"
 }

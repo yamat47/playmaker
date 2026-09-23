@@ -44,3 +44,6 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
 - pnpm 本体と Node は Dependabot が上げない（Node はイメージだけ上がる）。pnpm は `library/package.json` の
   `packageManager`、Node は `.node-version` と `docker/Dockerfile` を書き換え、イメージに焼き込むので `make setup` する
 - demo をブラウザで確かめる手順は `run-demo` skill にある
+- cloud 版の Claude Code では Docker が動かない。SessionStart hook（`docker/cloud-session-setup.sh`）が
+  `.node-version` の Node と pnpm、依存を入れて `IN_CONTAINER=1` にするので、make はそのまま使える。
+  ただし Docker を操作するホスト専用のターゲット（`setup` `up` `down` `logs` `sh` `clean`）は使えない

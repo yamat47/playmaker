@@ -3,18 +3,27 @@ import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 import { computeFieldMetrics } from "./metrics.js";
 
 describe("computeFieldMetrics", () => {
-  it("フィールドを 2 倍の大きさで描くと、どの寸法も 2 倍になる", () => {
+  it("フィールドの幅だけを 2 倍にすると、ヤードラインとゴールラインだけが 2 倍の太さになる", () => {
     const base = computeFieldMetrics(580, 10.875);
-    const doubled = computeFieldMetrics(1160, 21.75);
 
+    expect(computeFieldMetrics(1160, 10.875)).toEqual({
+      ...base,
+      yardLineWidth: 2 * base.yardLineWidth,
+      goalLineWidth: 2 * base.goalLineWidth,
+    });
+  });
+
+  it("1 ヤードの px だけを 2 倍にすると、ヤードライン以外のどの寸法も 2 倍になる", () => {
+    const base = computeFieldMetrics(580, 10.875);
+    const { yardLineWidth, goalLineWidth, ...byYard } = base;
     const scaled = Object.fromEntries(
-      Object.entries(base).map(([key, value]) => [
+      Object.entries(byYard).map(([key, value]) => [
         key,
-        Array.isArray(value) ? value.map((v) => v * 2) : value * 2,
+        typeof value === "number" ? value * 2 : value.map((v) => v * 2),
       ]),
     );
 
-    expect(doubled).toEqual(scaled);
+    expect(computeFieldMetrics(580, 21.75)).toEqual({ yardLineWidth, goalLineWidth, ...scaled });
   });
 
   it("選手マーカーの直径は、当たり判定の半径を 1 ヤードの px で直径にしたもの", () => {

@@ -2,6 +2,7 @@
 // プリセット（presets.ts）と外部（商用ソフト）から渡るカスタム隊形の双方をこの型で扱う。
 // 戦術的厳密性より組み込みやすさ優先（PRD 4.1）: 隊形 = 選手テンプレートの名前付き集合。
 
+import type { IIdFactory } from "../editing/id-factory.js";
 import { isNonEmptyString, isRecord } from "../model/guards.js";
 import { normalizePlayers, type Player } from "../model/player.js";
 import { isTeamSide, type TeamSide } from "../presets/shared.js";
@@ -58,4 +59,20 @@ export function normalizeFormation(raw: unknown): Formation | null {
     side: isTeamSide(raw.side) ? raw.side : "offense",
     players,
   };
+}
+
+/**
+ * 隊形の選手に id を振って Player にする。id は takenIds とも、同じ隊形のほかの選手とも重ならない。
+ */
+export function instantiateFormation(
+  formation: Formation,
+  ids: IIdFactory,
+  takenIds: Iterable<string>,
+): Player[] {
+  const taken = new Set(takenIds);
+  return formation.players.map((template) => {
+    const id = ids.next("player", taken);
+    taken.add(id);
+    return { ...template, id };
+  });
 }

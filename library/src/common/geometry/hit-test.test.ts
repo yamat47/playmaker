@@ -3,9 +3,11 @@ import { player } from "../../test-support/fixtures.js";
 import type { Line } from "../model/line.js";
 import {
   distanceToSegment,
+  hitLineHandle,
   hitTestLine,
   hitTestPlayer,
   LINE_HIT_TOLERANCE_YARDS,
+  pointDistance,
 } from "./hit-test.js";
 
 describe("hitTestPlayer", () => {
@@ -183,5 +185,56 @@ describe("hitTestLine", () => {
         hitTestLine([degenerate], players, { lateralYard: 5, downfieldYard: 55 }),
       ).toBeUndefined();
     });
+  });
+});
+
+describe("pointDistance", () => {
+  it("2 点間のユークリッド距離を返す", () => {
+    expect(
+      pointDistance({ lateralYard: 0, downfieldYard: 0 }, { lateralYard: 3, downfieldYard: 4 }),
+    ).toBe(5);
+  });
+});
+
+describe("hitLineHandle", () => {
+  const line = {
+    waypoints: [
+      { lateralYard: 10, downfieldYard: 0 },
+      { lateralYard: 10.5, downfieldYard: 0 },
+    ],
+    end: { lateralYard: 20, downfieldYard: 5 },
+  };
+
+  it("半径の内側にある waypoint の位置と index を返す", () => {
+    expect(hitLineHandle(line, { lateralYard: 9.5, downfieldYard: 0 })).toEqual({
+      kind: "waypoint",
+      index: 0,
+      point: { lateralYard: 10, downfieldYard: 0 },
+    });
+  });
+
+  it("waypoint が重なっていれば後ろの waypoint を返す", () => {
+    expect(hitLineHandle(line, { lateralYard: 10.25, downfieldYard: 0 })).toMatchObject({
+      index: 1,
+    });
+  });
+
+  it("終点に当たれば終点を返す", () => {
+    expect(hitLineHandle(line, { lateralYard: 20.5, downfieldYard: 5 })).toEqual({
+      kind: "endpoint",
+      point: line.end,
+    });
+  });
+
+  it("終点と waypoint が重なっていれば終点を返す", () => {
+    const overlapped = { ...line, end: { lateralYard: 10.5, downfieldYard: 0 } };
+
+    expect(hitLineHandle(overlapped, { lateralYard: 10.5, downfieldYard: 0 })?.kind).toBe(
+      "endpoint",
+    );
+  });
+
+  it("どのハンドルにも当たらなければ undefined", () => {
+    expect(hitLineHandle(line, { lateralYard: 40, downfieldYard: 0 })).toBeUndefined();
   });
 });

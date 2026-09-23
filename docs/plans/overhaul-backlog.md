@@ -320,9 +320,9 @@ PR 単位で、依存順に並べる。
 
 ### T9 EditorController の分割とイベントの分離
 
-- [ ] **T9-1 [should] ドラッグの掴み位置のずれを検証するテストがない**（先に特性テストとして足す）
+- [x] **T9-1 [should] ドラッグの掴み位置のずれを検証するテストがない**（先に特性テストとして足す）
   - locations: library/src/common/editing/editor-controller.ts:335, library/src/common/editing/editor-controller.ts:350, library/src/common/editing/editor-controller.ts:520, library/src/common/editing/editor-controller.ts:553, library/src/common/editing/editor-controller.test.ts:276, library/src/common/editing/editor-controller.test.ts:360, library/src/common/editing/editor-controller.test.ts:497
-- [ ] **T9-2 [should] 6 つの責務が 1 クラス（633 行）に集中している**
+- [x] **T9-2 [should] 6 つの責務が 1 クラス（633 行）に集中している**
   - locations: library/src/common/editing/editor-controller.ts:58-59, library/src/common/editing/editor-controller.ts:115-148, library/src/common/editing/editor-controller.ts:218-291, library/src/common/editing/editor-controller.ts:315-378, library/src/common/editing/editor-controller.ts:471-493, library/src/common/editing/editor-controller.ts:505-568, library/src/common/editing/editor-controller.ts:611-628
   - 対応: 次のように切り出す。
     - `interaction.ts`: DragTarget と DragInteraction
@@ -330,17 +330,20 @@ PR 単位で、依存順に並べる。
     - `hit-test` へ handle の当たり判定を移す
     - `instantiateFormation`
     - IF を IEditorGestures、IEditorActions、IEditorScene に分ける
+  - 結論（T9a）: 型と IF は `editing/editor.ts`、途中の状態と作図の純関数は `editing/interaction.ts`、プレビューとオーバーレイは `editing/preview.ts` に置いた。オーバーレイはプレビュー済みの図から求めるので、ドラッグ中のハンドルを別に重ねる処理は無くした。ハンドルの当たり判定と WAYPOINT_HANDLE_RADIUS_YARDS は `geometry/hit-test.ts`、instantiateFormation は `formations/formation.ts` に移した（id-factory の移動は T9-7）。editor-controller.ts は 421 行で、残りは通知の束ねとコマンドの組み立て。T9b で通知を分けたあとに、もう一度削れるか見る。ドラッグ先の置き方（dragPatch）と作図からの線の組み立て（draftToLine）は interaction.ts の 1 か所にし、プレビューと確定の両方がそれを使う。getOverlay は内部で getRenderModel を作り直すので、描画のたびに合成が 2 回走る。T9-3 で描画の購読を分けるときに 1 回にまとめる。commitLine と cancelInteraction は、ツールバーとキーの両方から呼ぶので IEditorActions に入れた。
 - [ ] **T9-3 [should] onDidChange 1 本で再描画と UI 同期を兼ねていて、多重発火もある**
   - locations: library/src/common/editing/editor-controller.ts:168-169, library/src/common/editing/editor-controller.ts:184, library/src/common/editing/editor-controller.ts:340, library/src/common/editing/editor-controller.ts:415-419, library/src/common/editing/editor-controller.ts:431-432, library/src/common/editing/editor-controller.ts:490-492, library/src/common/editing/editor-controller.ts:607-608, library/src/playmaker.ts:185-187
   - 対応: onDidChangeScene と onDidChangeViewState（差分があるときだけ発火）に分ける。`batch(fn)` で発火を 1 回にまとめる。
-- [ ] **T9-4 [should] Interaction と EditorOverlay の判別共用体が mutable で、ありえない組み合わせも表せる**
+- [x] **T9-4 [should] Interaction と EditorOverlay の判別共用体が mutable で、ありえない組み合わせも表せる**
   - locations: library/src/common/editing/editor-controller.ts:45, library/src/common/editing/editor-controller.ts:65, library/src/common/editing/editor-controller.ts:116, library/src/common/editing/editor-controller.ts:123, library/src/common/editing/editor-controller.ts:145, library/src/common/editing/editor-controller.ts:271, library/src/common/editing/editor-controller.ts:333-335, library/src/common/editing/editor-controller.ts:578
   - 対応: フィールドを readonly にして差し替えで更新する。drag 系の共通部分は DragBase にする。null は型に含めない。EditorOverlay は `kind` で判別する共用体にする。
-- [ ] **T9-5 [should] union の分岐が if の連鎖で、網羅性をコンパイラが見ていない**
+  - 結論: drag 系は 1 つの DragInteraction にまとめ、動かす対象を DragTarget（player / waypoint / endpoint）で表した。途中の状態が無いことは undefined で表す。EditorSelection の null は browser と表示状態が使っているので、このテーマでは残した。
+- [x] **T9-5 [should] union の分岐が if の連鎖で、網羅性をコンパイラが見ていない**
   - locations: library/src/common/editing/editor-controller.ts:225, library/src/common/editing/editor-controller.ts:253, library/src/common/editing/editor-controller.ts:315, library/src/common/editing/editor-controller.ts:324, library/src/common/editing/editor-controller.ts:332, library/src/common/geometry/field.ts:77, library/src/browser/rendering/line-renderer.ts:100
-- [ ] **T9-6 [should] 索引アクセスの `arr[i] as T` が約 20 箇所ある**
+- [x] **T9-6 [should] 索引アクセスの `arr[i] as T` が約 20 箇所ある**
   - locations: library/src/common/geometry/polyline.ts:10-11, library/src/common/geometry/polyline.ts:41-42, library/src/common/geometry/polyline.ts:51, library/src/common/geometry/hit-test.ts:60, library/src/common/geometry/hit-test.ts:65, library/src/common/geometry/bezier.ts:92-97, library/src/common/editing/editor-controller.ts:405, library/src/common/editing/editor-controller.ts:529, library/src/common/editing/editor-controller.ts:622, library/src/browser/rendering/line-renderer.ts:80, library/src/browser/rendering/line-renderer.ts:83, library/src/browser/rendering/line-renderer.ts:120, library/src/browser/rendering/line-renderer.ts:122, library/src/browser/rendering/line-renderer.ts:141, library/src/browser/rendering/line-renderer.ts:168
   - 対応: `segments()` ジェネレータ、`.at(-1)`、`readonly [T, ...T[]]`、hitWaypoint が `{ index, point }` を返す形に書き換える。
+  - 結論: segments は `geometry/polyline.ts` に置いた。`readonly [T, ...T[]]` は使わずに済んだ。field.ts と line-renderer.ts の該当箇所は、もう switch になっていた。
 - [ ] **T9-7 [nit] 命名とディレクトリの揺れ**
   - locations: library/src/common/event/emitter.ts:1, library/src/common/lifecycle/disposable.ts:1, library/src/common/editing/id-factory.ts:1, library/src/common/geometry/field.ts:107, library/src/common/geometry/field.ts:144, library/src/common/editing/editor-controller.ts:81, library/src/common/editing/editor-controller.ts:150, library/src/common/editing/editor-controller.ts:160, library/src/common/editing/editor-controller.ts:221, library/src/common/editing/editor-controller.ts:615
   - 対応: `base/event.ts` と `base/lifecycle.ts`、`model/id-factory.ts` に移す。改名は yardWindow、isDrawing、isSame*、interaction。displayYardNumber は `number | null` を返す。

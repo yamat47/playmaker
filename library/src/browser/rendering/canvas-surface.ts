@@ -7,8 +7,8 @@ import {
   type FieldPosition,
   type ImageExportOptions,
   PLAYER_RADIUS_YARDS,
-  type PlayData,
   resolveImageExportSize,
+  type SceneData,
   toDisposable,
   WAYPOINT_HANDLE_RADIUS_YARDS,
 } from "../../common/index.js";
@@ -16,7 +16,7 @@ import { FieldRenderer, type FieldTheme } from "./field-renderer.js";
 import { LineRenderer, type LineTheme } from "./line-renderer.js";
 import { PlayerRenderer, type PlayerTheme } from "./player-renderer.js";
 
-const EMPTY_OVERLAY: EditorOverlay = { waypointHandles: [] };
+const EMPTY_OVERLAY: EditorOverlay = { kind: "none" };
 
 /**
  * Canvas のライフサイクル・解像度（DPR）・リサイズを管理し、
@@ -30,12 +30,12 @@ export class CanvasSurface extends Disposable {
   private readonly fieldRenderer = new FieldRenderer();
   private readonly lineRenderer = new LineRenderer();
   private readonly playerRenderer = new PlayerRenderer();
-  private data: PlayData;
+  private data: SceneData;
   private overlay: EditorOverlay = EMPTY_OVERLAY;
   // 直近 render で確定する。constructor 末尾の resize()→render() で必ず初期化される。
   private geometry!: FieldGeometry;
 
-  constructor(parent: HTMLElement, data: PlayData) {
+  constructor(parent: HTMLElement, data: SceneData) {
     super();
     this.data = data;
 
@@ -83,7 +83,7 @@ export class CanvasSurface extends Disposable {
   }
 
   /** 描画モデルと選択 overlay を差し替えて再描画する（編集のたびに呼ばれる）。 */
-  setScene(data: PlayData, overlay: EditorOverlay): void {
+  setScene(data: SceneData, overlay: EditorOverlay): void {
     this.data = data;
     this.overlay = overlay;
     this.render();
@@ -110,14 +110,14 @@ export class CanvasSurface extends Disposable {
   }
 
   /**
-   * 指定 PlayData を PNG（Blob）として書き出す（PRD 5.7）。
+   * 指定したプレー図を PNG（Blob）として書き出す。
    * - data はコミット済みスナップショット想定。選択強調・waypoint ハンドル・
    *   作図中プレビューといった編集補助は drawPlay が描かない構図なので構造的に
    *   含まれない（ツールバー/パネルは HTML 兄弟要素で canvas 外＝元から非対象）。
    * - 配色は画面と同じ host の --playmaker-* を読むためオンスクリーンと一致する。
    * - 出力寸法はフィールド窓のアスペクト比なのでレターボックス余白は出ない。
    */
-  exportToPngBlob(data: PlayData, options?: ImageExportOptions): Promise<Blob> {
+  exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
     const { width, height } = resolveImageExportSize(data.field.zone, options);
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -157,7 +157,7 @@ export class CanvasSurface extends Disposable {
   private drawPlay(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
-    data: PlayData,
+    data: SceneData,
     read: (name: string, fallback: string) => string,
   ): void {
     const { field, line, player } = this.readThemes(read);
@@ -177,21 +177,36 @@ export class CanvasSurface extends Disposable {
    * 混ざって何色の線なのか読めなくなる。
    */
   private drawOverlay(selectionColor: string): void {
-    const { selectedPlayerId, waypointHandles, endpointHandle } = this.overlay;
-
-    if (selectedPlayerId !== undefined) {
-      const player = this.data.players.find((p) => p.id === selectedPlayerId);
-      if (player) {
-        const { x, y } = this.geometry.toCanvas(player.position);
-        const r = PLAYER_RADIUS_YARDS * this.geometry.scale + 4;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, r, 0, Math.PI * 2);
-        this.ctx.strokeStyle = selectionColor;
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-      }
+    switch (this.overlay.kind) {
+      case "none":
+        return;
+      case "player":
+        this.drawSelectedPlayer(this.overlay.playerId, selectionColor);
+        return;
+      case "line":
+        this.drawLineHandles(this.overlay, selectionColor);
+        return;
     }
+  }
 
+  private drawSelectedPlayer(playerId: string, selectionColor: string): void {
+    const player = this.data.players.find((p) => p.id === playerId);
+    if (!player) {
+      return;
+    }
+    const { x, y } = this.geometry.toCanvas(player.position);
+    const r = PLAYER_RADIUS_YARDS * this.geometry.scale + 4;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, r, 0, Math.PI * 2);
+    this.ctx.strokeStyle = selectionColor;
+    this.ctx.lineWidth = 2;
+    this.ctx.stroke();
+  }
+
+  private drawLineHandles(
+    handles: Extract<EditorOverlay, { kind: "line" }>,
+    selectionColor: string,
+  ): void {
     // アイコンは hit 許容（WAYPOINT_HANDLE_RADIUS_YARDS）の一部だけを描く。フルに
     // 描くとマーカー並みに大きいので小さく出し、掴みやすさは hit 許容側に委ねる。
     const handleHalf = Math.max(3, 0.45 * WAYPOINT_HANDLE_RADIUS_YARDS * this.geometry.scale);
@@ -203,7 +218,7 @@ export class CanvasSurface extends Disposable {
       this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
       this.ctx.stroke();
     };
-    for (const wp of waypointHandles) {
+    for (const wp of handles.waypointHandles) {
       const { x, y } = this.geometry.toCanvas(wp);
       this.ctx.beginPath();
       this.ctx.rect(x - handleHalf, y - handleHalf, handleHalf * 2, handleHalf * 2);
@@ -211,12 +226,10 @@ export class CanvasSurface extends Disposable {
     }
 
     // 終点ハンドルは waypoint（四角）と区別できるよう円で描く（先端の掴み所を明示）。
-    if (endpointHandle !== undefined) {
-      const { x, y } = this.geometry.toCanvas(endpointHandle);
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, handleHalf + 1, 0, Math.PI * 2);
-      paintHandle();
-    }
+    const { x, y } = this.geometry.toCanvas(handles.endpointHandle);
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, handleHalf + 1, 0, Math.PI * 2);
+    paintHandle();
   }
 
   /**

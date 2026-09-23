@@ -11,7 +11,7 @@ import {
   type FieldZone,
   FORMATION_PRESETS,
   getFormationPreset,
-  type IEditorController,
+  type IEditorUi,
   TEAM_SIDE_VALUES,
   type TeamSide,
   toDisposable,
@@ -38,7 +38,7 @@ export class Toolbar extends Disposable {
   private readonly commitButton: HTMLButtonElement;
   private readonly cancelButton: HTMLButtonElement;
 
-  constructor(parent: HTMLElement, controller: IEditorController) {
+  constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
     this.element = document.createElement("div");
     this.element.className = "playmaker-toolbar";
@@ -90,7 +90,7 @@ export class Toolbar extends Disposable {
    * 読込は controller 経由＝Undo/onChange の対象。選択後はプレースホルダへ戻し、
    * 同じ隊形を続けて重ねられる（追記セマンティクス）ようにする。
    */
-  private addFormationPicker(controller: IEditorController): void {
+  private addFormationPicker(controller: IEditorUi): void {
     const select = document.createElement("select");
     select.className = "playmaker-toolbar__select";
     select.setAttribute("aria-label", "フォーメーション");
@@ -124,7 +124,7 @@ export class Toolbar extends Disposable {
     this.element.appendChild(select);
   }
 
-  private sync(controller: IEditorController): void {
+  private sync(controller: IEditorUi): void {
     const state = controller.getViewState();
     for (const [tool, btn] of this.toolButtons) {
       btn.setAttribute("aria-pressed", String(tool === state.tool));

@@ -3,12 +3,22 @@
 
 import type { CanvasPoint } from "./field.js";
 
+/** 隣り合う 2 点の組を先頭から順に返す。2 点未満なら何も返さない。 */
+export function* segments<T>(points: readonly T[]): Generator<readonly [T, T]> {
+  // 前の点を箱に入れて持つ。T が undefined を含んでも「前の点が無い」と区別できる。
+  let previous: { readonly point: T } | undefined;
+  for (const point of points) {
+    if (previous !== undefined) {
+      yield [previous.point, point];
+    }
+    previous = { point };
+  }
+}
+
 /** 隣接点間の距離を足し上げた全長。2 点未満なら 0。 */
 export function polylineLength(path: readonly CanvasPoint[]): number {
   let total = 0;
-  for (let i = 1; i < path.length; i++) {
-    const a = path[i - 1] as CanvasPoint;
-    const b = path[i] as CanvasPoint;
+  for (const [a, b] of segments(path)) {
     total += Math.hypot(b.x - a.x, b.y - a.y);
   }
   return total;
@@ -37,9 +47,15 @@ export function trimPolylineEnd(
     return [...path];
   }
 
+  // 矢じりの長さは全長よりずっと短く、たいてい終点側の数区間で止まるので、配列を複製せずに遡る。
   for (let i = path.length - 1; i > 0; i--) {
-    const a = path[i - 1] as CanvasPoint;
-    const b = path[i] as CanvasPoint;
+    const a = path[i - 1];
+    const b = path[i];
+    /* v8 ignore start -- i は 1 から path.length - 1 までなので、a も b も範囲の内側にある。 */
+    if (a === undefined || b === undefined) {
+      break;
+    }
+    /* v8 ignore stop */
     const segLen = Math.hypot(b.x - a.x, b.y - a.y);
     // 等号で切ると a と同じ座標を足し、長さ 0 の区間が末尾に残る（丸キャップが点を描く）。
     if (segLen > remaining) {
@@ -48,5 +64,5 @@ export function trimPolylineEnd(
     }
     remaining -= segLen;
   }
-  return [path[0] as CanvasPoint];
+  return path.slice(0, 1);
 }

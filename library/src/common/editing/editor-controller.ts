@@ -1,13 +1,3 @@
-// 編集 UI の頭脳。DOM 非依存の純ロジックなので node 単体で全網羅テストできる。
-// 役割: ツール状態・選択状態・ヤード空間ジェスチャ(pointerDown/Move/Up)を受け、
-// 適切な ICommand を ICommandService 経由で発行する（Model 直接書き換えはしない）。
-// ドラッグ/作図中のプレビューは getRenderModel()（Model スナップショット＋一時状態の
-// 純粋な合成）で表現する。これにより実データ変更は 1 コマンド = onChange 1 回を保ち、
-// 見た目の追従はコマンドを汚さずに済む（Model–View 分離の徹底）。
-//
-// 選択は「id の希望」であり、対象が消えても自動解除しない。読み取るときに実在を確かめ、
-// 消えていれば無選択として返す。Undo で対象が戻れば、再び選択として読める。
-
 import type { ICommand } from "../commands/command.js";
 import type { ICommandService } from "../commands/command-service.js";
 import { SetFieldZoneCommand } from "../commands/field-commands.js";
@@ -25,19 +15,13 @@ import {
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "../commands/player-commands.js";
-import { Emitter, type Event } from "../event/emitter.js";
-import type { Formation } from "../formations/formation.js";
+import { Emitter } from "../event/emitter.js";
+import { type Formation, instantiateFormation } from "../formations/formation.js";
 import { clampToZoneWindow } from "../geometry/field.js";
-import { distanceToSegment, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
+import { hitLineHandle, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
 import { Disposable } from "../lifecycle/disposable.js";
-import {
-  DEFAULT_LINE_INTERPOLATION,
-  DEFAULT_LINE_KIND,
-  type Line,
-  MAX_LINES,
-  MAX_WAYPOINTS_PER_LINE,
-} from "../model/line.js";
-import type { FieldZone, PlayData } from "../model/play-data.js";
+import { type Line, MAX_LINES } from "../model/line.js";
+import type { FieldZone } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
 import {
   DEFAULT_PLAYER_SHAPE,
@@ -45,154 +29,32 @@ import {
   MAX_PLAYERS,
   type Player,
 } from "../model/player.js";
+import type {
+  EditorOverlay,
+  EditorSelection,
+  EditorTool,
+  EditorViewState,
+  IEditorController,
+  SceneData,
+} from "./editor.js";
 import type { IIdFactory } from "./id-factory.js";
-
-/** 編集ツール（3 種で PRD 5.4 の操作を賄う）。 */
-export const EDITOR_TOOL_VALUES = ["select", "add-player", "draw-line"] as const;
-
-export type EditorTool = (typeof EDITOR_TOOL_VALUES)[number];
-
-/** 現在の選択対象。プロパティパネル・削除・waypoint 編集の対象を決める。 */
-export type EditorSelection =
-  | { readonly kind: "player"; readonly id: string }
-  | { readonly kind: "line"; readonly id: string }
-  | null;
-
-/** 選択中の線の waypoint / 終点ハンドルをドラッグでき、その当たり半径（ヤード）。 */
-export const WAYPOINT_HANDLE_RADIUS_YARDS = 0.9;
-
-// 作図中、直前点（点がまだ無ければ起点の選手）とこの距離（ヤード）以内のクリックは
-// 同一点とみなし打点しない。ダブルクリック確定は pointerdown を 2 度発火させ、
-// 直前点の真上に重複点を打つため、それを構造的に防ぐ。全長がこれ以下の線も確定しない。
-// 手動の意図的な近接打点は実用上ない粒度。
-const LINE_POINT_MERGE_RADIUS_YARDS = 0.5;
-
-// 作図で打った点のうち最後の点が終点になり、残りが waypoint になる。
-const MAX_DRAFT_POINTS = MAX_WAYPOINTS_PER_LINE + 1;
-
-/** プレビュー専用の合成線 id。Model には決して入らない（getRenderModel の中だけ）。 */
-const DRAFT_LINE_ID = "__playmaker_draft_line__";
-
-/**
- * View（CanvasSurface）が選択ハイライト/ハンドルを描くための最小情報（ヤード空間）。
- * 「どこを強調するか」の計算は common 側に閉じ、browser は描くだけにする。
- */
-export interface EditorOverlay {
-  readonly selectedPlayerId?: string;
-  /** 選択中の線の waypoint ハンドル位置（ドラッグ対象）。それ以外は空配列。 */
-  readonly waypointHandles: readonly FieldPosition[];
-  /** 選択中の線の終点ハンドル位置（ドラッグ対象）。線未選択なら undefined。 */
-  readonly endpointHandle?: FieldPosition;
-}
-
-/** ツールバー/プロパティパネルが描画に使う集約ビュー状態。 */
-export interface EditorViewState {
-  readonly tool: EditorTool;
-  readonly selection: EditorSelection;
-  readonly canUndo: boolean;
-  readonly canRedo: boolean;
-  readonly fieldZone: FieldZone;
-  /** 線を作図中（確定/キャンセル待ち）か。 */
-  readonly drawing: boolean;
-}
-
-/**
- * EditorController の公開面。browser（入力・UI）は具象でなくこの IF に依存し、
- * テストではフェイクへ差し替えられる（インターフェース抽出）。
- */
-export interface IEditorController {
-  readonly onDidChange: Event<void>;
-  getTool(): EditorTool;
-  setTool(tool: EditorTool): void;
-  getSelection(): EditorSelection;
-  getViewState(): EditorViewState;
-  /** 選手選択でない/対象が消えていれば undefined。 */
-  getSelectedPlayer(): Player | undefined;
-  /** 線選択でない/対象が消えていれば undefined。 */
-  getSelectedLine(): Line | undefined;
-  getRenderModel(): PlayData;
-  getOverlay(): EditorOverlay;
-  pointerDown(pos: FieldPosition): void;
-  pointerMove(pos: FieldPosition): void;
-  pointerUp(pos: FieldPosition): void;
-  commitLine(): void;
-  cancelInteraction(): void;
-  deleteSelection(): void;
-  updateSelectedPlayer(patch: PlayerPatch): void;
-  updateSelectedLine(patch: LinePatch): void;
-  setFieldZone(zone: FieldZone): void;
-  /** フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。 */
-  loadFormation(formation: Formation): void;
-  undo(): void;
-  redo(): void;
-}
-
-/** ドラッグ/作図の一時状態。Model には載せず getRenderModel で合成表示する。 */
-type Interaction =
-  | {
-      readonly type: "drag-player";
-      readonly playerId: string;
-      readonly origin: FieldPosition;
-      readonly offsetLat: number;
-      readonly offsetDownfield: number;
-      current: FieldPosition;
-    }
-  | {
-      readonly type: "drag-waypoint";
-      readonly lineId: string;
-      readonly index: number;
-      readonly origin: FieldPosition;
-      readonly offsetLat: number;
-      readonly offsetDownfield: number;
-      current: FieldPosition;
-    }
-  | {
-      readonly type: "drag-endpoint";
-      readonly lineId: string;
-      readonly origin: FieldPosition;
-      readonly offsetLat: number;
-      readonly offsetDownfield: number;
-      current: FieldPosition;
-    }
-  | {
-      readonly type: "draw-line";
-      readonly startPlayerId: string;
-      /** 作図を始めた時点の起点選手の位置。最初の打点の近接判定に使う。 */
-      readonly start: FieldPosition;
-      readonly points: FieldPosition[];
-      cursor: FieldPosition;
-    }
-  | null;
+import {
+  addDraftPoint,
+  committableDraft,
+  type DragInteraction,
+  type DragTarget,
+  type DrawInteraction,
+  draftToLine,
+  dragPatch,
+  dragPosition,
+  type Interaction,
+  startDrag,
+  startDrawing,
+} from "./interaction.js";
+import { composePreview, computeOverlay } from "./preview.js";
 
 function samePosition(a: FieldPosition, b: FieldPosition): boolean {
   return a.lateralYard === b.lateralYard && a.downfieldYard === b.downfieldYard;
-}
-
-// 2 点間距離（ヤード）。geometry の primitive を退化線分（同一点 = 点距離）として
-// 再利用し、ハンドル当たり・近接判定の距離計算を一本化する。
-function pointDistance(a: FieldPosition, b: FieldPosition): number {
-  return distanceToSegment(a, b, b);
-}
-
-// 掴んだ点とポインタのずれを保ったまま、ドラッグ対象を置く位置。
-function dragTarget(
-  drag: { readonly offsetLat: number; readonly offsetDownfield: number },
-  pos: FieldPosition,
-): FieldPosition {
-  return {
-    lateralYard: pos.lateralYard + drag.offsetLat,
-    downfieldYard: pos.downfieldYard + drag.offsetDownfield,
-  };
-}
-
-function polylineLengthYards(start: FieldPosition, points: readonly FieldPosition[]): number {
-  let length = 0;
-  let previous = start;
-  for (const point of points) {
-    length += pointDistance(previous, point);
-    previous = point;
-  }
-  return length;
 }
 
 function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
@@ -202,6 +64,11 @@ function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
   return a.kind === b.kind && a.id === b.id;
 }
 
+/**
+ * ツール、選択、ジェスチャを受けてコマンドを発行する。Model を直接書き換えない。
+ * ドラッグや作図の途中は Model に載せず、getRenderModel で重ねて見せるので、
+ * 確定までは Model の onDidChange も履歴も動かない。
+ */
 export class EditorController extends Disposable implements IEditorController {
   private readonly model: IPlayModel;
   private readonly commands: ICommandService;
@@ -212,14 +79,13 @@ export class EditorController extends Disposable implements IEditorController {
 
   private tool: EditorTool = "select";
   private selection: EditorSelection = null;
-  private interaction: Interaction = null;
+  private interaction: Interaction | undefined;
   // 自分で編集を走らせている間は Model と履歴の通知を転送せず、両方が済んでから 1 回だけ発火する。
   // Model はコマンドの apply の中で通知するので、そのまま転送すると購読側が
   // 更新前の canUndo / canRedo を読んでしまう。
   private editing = false;
   private changedWhileEditing = false;
 
-  // 依存はすべて手動コンストラクタ注入（重い DI 機構は持たない＝MVP・依存最小）。
   constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
     super();
     this.model = model;
@@ -235,8 +101,6 @@ export class EditorController extends Disposable implements IEditorController {
     this._register(this.model.onDidChange(forward));
     this._register(this.commands.onDidChangeHistory(forward));
   }
-
-  // 状態の読み取り
 
   getTool(): EditorTool {
     return this.tool;
@@ -269,216 +133,95 @@ export class EditorController extends Disposable implements IEditorController {
     return s?.kind === "line" ? this.model.findLine(s.id) : undefined;
   }
 
-  /** Model スナップショットに一時状態（ドラッグ/作図プレビュー）を合成して返す純関数。 */
-  getRenderModel(): PlayData {
-    const data = this.model.getSnapshot();
-    const i = this.interaction;
-    if (i === null) {
-      return data;
-    }
-    if (i.type === "drag-player") {
-      // 起点が選手の線は players を差し替えるだけで追従する（lineAnchorPoints 経由）。
-      return {
-        ...data,
-        players: data.players.map((p) =>
-          p.id === i.playerId ? { ...p, position: { ...i.current } } : p,
-        ),
-      };
-    }
-    if (i.type === "drag-waypoint") {
-      return {
-        ...data,
-        lines: data.lines.map((l) =>
-          l.id === i.lineId
-            ? {
-                ...l,
-                waypoints: l.waypoints.map((w, idx) => (idx === i.index ? { ...i.current } : w)),
-              }
-            : l,
-        ),
-      };
-    }
-    if (i.type === "drag-endpoint") {
-      return {
-        ...data,
-        lines: data.lines.map((l) => (l.id === i.lineId ? { ...l, end: { ...i.current } } : l)),
-      };
-    }
-    // draw-line: 起点選手 → 既存 points → 追従カーソルを終点としたプレビュー線を足す。
-    // 打点が上限に達したら、確定される線と同じく最後の打点を終点として描く。
-    const last = i.points.at(-1);
-    const full = last !== undefined && i.points.length >= MAX_DRAFT_POINTS;
-    return {
-      ...data,
-      lines: [
-        ...data.lines,
-        {
-          id: DRAFT_LINE_ID,
-          kind: DEFAULT_LINE_KIND,
-          startPlayerId: i.startPlayerId,
-          waypoints: full ? i.points.slice(0, -1) : i.points,
-          end: full ? last : i.cursor,
-          interpolation: DEFAULT_LINE_INTERPOLATION,
-        },
-      ],
-    };
+  getRenderModel(): SceneData {
+    return composePreview(this.model.getSnapshot(), this.interaction);
   }
 
   getOverlay(): EditorOverlay {
-    const s = this.selection;
-    if (s?.kind === "player") {
-      return { selectedPlayerId: s.id, waypointHandles: [] };
-    }
-    const line = s?.kind === "line" ? this.model.findLine(s.id) : undefined;
-    if (line === undefined) {
-      return { waypointHandles: [] };
-    }
-    const drag = this.interaction;
-    return {
-      waypointHandles: line.waypoints.map((w, idx) =>
-        drag?.type === "drag-waypoint" && drag.lineId === line.id && drag.index === idx
-          ? { ...drag.current }
-          : w,
-      ),
-      endpointHandle:
-        drag?.type === "drag-endpoint" && drag.lineId === line.id
-          ? { ...drag.current }
-          : { ...line.end },
-    };
+    return computeOverlay(this.getRenderModel(), this.selection);
   }
-
-  // ツール・選択
 
   setTool(tool: EditorTool): void {
     if (tool === this.tool) {
       return;
     }
     this.tool = tool;
-    // ツールを切り替えたら作図/ドラッグ途中は破棄する（中途半端な状態を残さない）。
-    this.interaction = null;
+    // ツールを切り替えたら作図やドラッグの途中は捨てる。
+    this.interaction = undefined;
     this._onDidChange.fire();
   }
-
-  private setSelection(next: EditorSelection): void {
-    if (sameSelection(this.selection, next)) {
-      return;
-    }
-    this.selection = next;
-    this._onDidChange.fire();
-  }
-
-  // ジェスチャ（ヤード空間。browser が px→ヤード変換して呼ぶ）
 
   pointerDown(pos: FieldPosition): void {
-    if (this.tool === "add-player") {
-      this.addPlayerAt(pos);
-      return;
+    switch (this.tool) {
+      case "add-player":
+        this.addPlayerAt(pos);
+        return;
+      case "draw-line":
+        this.drawLinePointerDown(pos);
+        return;
+      case "select":
+        this.selectPointerDown(pos);
+        return;
     }
-    if (this.tool === "draw-line") {
-      this.drawLinePointerDown(pos);
-      return;
-    }
-    this.selectPointerDown(pos);
   }
 
   pointerMove(pos: FieldPosition): void {
     const i = this.interaction;
-    if (i === null) {
+    if (i === undefined) {
       return;
     }
-    if (i.type === "draw-line") {
-      i.cursor = this.clampToField(pos);
-    } else {
-      i.current = this.clampToField(dragTarget(i, pos));
-    }
+    this.interaction =
+      i.type === "draw-line"
+        ? { ...i, cursor: this.clampToField(pos) }
+        : { ...i, current: this.clampToField(dragPosition(i, pos)) };
     this._onDidChange.fire();
   }
 
   pointerUp(pos: FieldPosition): void {
     const i = this.interaction;
-    if (i === null || i.type === "draw-line") {
-      // draw-line はクリック（pointerDown）で点を打つ。up では何もしない。
+    // 作図はクリック（pointerDown）で点を打つので、up では何もしない。
+    if (i?.type !== "drag") {
       return;
     }
-    this.interaction = null;
-    const moved = dragTarget(i, pos);
+    this.interaction = undefined;
+    const moved = dragPosition(i, pos);
     // 寄せる前の位置で比べる。窓の外にある選手をクリックしただけで、窓の端へ動かさない。
     if (samePosition(moved, i.origin)) {
-      // 動いていない＝ただのクリック。無駄なコマンド/onChange を出さず再描画だけ。
       this._onDidChange.fire();
       return;
     }
-    const final = this.clampToField(moved);
-    if (i.type === "drag-player") {
-      if (!this.model.hasPlayer(i.playerId)) {
-        this._onDidChange.fire();
-        return;
-      }
-      this.execute(new UpdatePlayerCommand(i.playerId, { position: final }));
+    const command = this.dropCommand(i, this.clampToField(moved));
+    if (command === undefined) {
+      this._onDidChange.fire();
       return;
     }
-    const line = this.model.findLine(i.lineId);
+    this.execute(command);
+  }
+
+  cancelInteraction(): void {
+    if (this.interaction === undefined) {
+      return;
+    }
+    this.interaction = undefined;
+    this._onDidChange.fire();
+  }
+
+  commitLine(): void {
+    const i = this.interaction;
+    if (i?.type !== "draw-line") {
+      return;
+    }
+    this.interaction = undefined;
+    const line = this.lineFromDraft(i);
     if (line === undefined) {
       this._onDidChange.fire();
       return;
     }
-    if (i.type === "drag-endpoint") {
-      this.execute(new UpdateLineCommand(i.lineId, { end: final }));
-      return;
-    }
-    const waypoints = line.waypoints.map((w, idx) => (idx === i.index ? final : w));
-    this.execute(new UpdateLineCommand(i.lineId, { waypoints }));
-  }
-
-  cancelInteraction(): void {
-    if (this.interaction === null) {
-      return;
-    }
-    this.interaction = null;
-    this._onDidChange.fire();
-  }
-
-  /** 作図中の線を確定する（最後の点を終点、手前を waypoint として AddLineCommand）。 */
-  commitLine(): void {
-    const i = this.interaction;
-    if (i === null || i.type !== "draw-line") {
-      return;
-    }
-    this.interaction = null;
-    if (i.points.length === 0) {
-      // 終点に足る点が無い＝確定できない。作図を破棄して再描画のみ。
-      this._onDidChange.fire();
-      return;
-    }
-    const startPlayer = this.model.findPlayer(i.startPlayerId);
-    if (startPlayer === undefined) {
-      this._onDidChange.fire();
-      return;
-    }
-    // 起点の真上に点を重ねただけの線は見えず、選択もしにくいので確定しない。
-    if (polylineLengthYards(startPlayer.position, i.points) <= LINE_POINT_MERGE_RADIUS_YARDS) {
-      this._onDidChange.fire();
-      return;
-    }
-    const waypoints = i.points.slice(0, -1);
-    const end = i.points[i.points.length - 1] as FieldPosition;
-    const id = this.ids.next("line", this.lineIds());
-    const line: Line = {
-      id,
-      kind: DEFAULT_LINE_KIND,
-      startPlayerId: i.startPlayerId,
-      waypoints: waypoints.map((p) => ({ ...p })),
-      end: { ...end },
-      interpolation: DEFAULT_LINE_INTERPOLATION,
-    };
     this.execute(new AddLineCommand(line));
-    // 作図直後は選択モードへ戻し、引いた線を選択する（連続作図より編集導線を優先）。
-    // ツール遷移は setTool に集約する（同値ガード・interaction 破棄・発火を一本化）。
+    // 作図の直後は選択ツールへ戻し、引いた線を選ぶ。続けて引くより、すぐ編集できるほうを取る。
     this.setTool("select");
-    this.setSelection({ kind: "line", id });
+    this.setSelection({ kind: "line", id: line.id });
   }
-
-  // アクション（ツールバー/パネルから）
 
   deleteSelection(): void {
     const player = this.getSelectedPlayer();
@@ -518,42 +261,29 @@ export class EditorController extends Disposable implements IEditorController {
     this.execute(new SetFieldZoneCommand(zone));
   }
 
-  /**
-   * フォーメーションテンプレートを読み込み選手を自動配置する（PRD 5.6）。
-   * 既存選手・線は保持し追記する。id は IdFactory で採番し既存と衝突させない
-   * （バッチ内重複も taken に積んで回避＝採番直後の再衝突を防ぐ）。
-   * 配置可能な選手が無いときと、置くと MAX_PLAYERS 人を超えるときは no-op。
-   * 1 コマンド = onChange 1 回。
-   */
   loadFormation(formation: Formation): void {
-    if (this.model.getSnapshot().players.length + formation.players.length > MAX_PLAYERS) {
+    const { players } = this.model.getSnapshot();
+    if (formation.players.length === 0 || players.length + formation.players.length > MAX_PLAYERS) {
       return;
     }
-    const taken = this.playerIds();
-    const players: Player[] = formation.players.map((fp) => {
-      const id = this.ids.next("player", taken);
-      taken.add(id);
-      return { ...fp, id };
-    });
-    if (players.length === 0) {
-      return;
-    }
+    const added = instantiateFormation(
+      formation,
+      this.ids,
+      players.map((p) => p.id),
+    );
     this.cancelInteraction();
-    this.execute(new LoadFormationCommand(players));
-    // 読込で局所の選択は意味を失う＝解除（stale な選択を残さない）。
+    this.execute(new LoadFormationCommand(added));
+    // 読み込んだあとは、元の選択に意味が無いので外す。
     this.setSelection(null);
   }
 
-  /**
-   * 作図中は最後の打点を取り消す（点が無ければ作図をやめる）。履歴には触れない。
-   * それ以外はドラッグ等の途中状態を捨ててから履歴を戻す。
-   */
   undo(): void {
     const i = this.interaction;
     if (i?.type === "draw-line") {
-      if (i.points.pop() === undefined) {
+      if (i.points.length === 0) {
         this.cancelInteraction();
       } else {
+        this.interaction = { ...i, points: i.points.slice(0, -1) };
         this._onDidChange.fire();
       }
       return;
@@ -567,7 +297,13 @@ export class EditorController extends Disposable implements IEditorController {
     this.runEdit(() => this.commands.redo());
   }
 
-  // 内部
+  private setSelection(next: EditorSelection): void {
+    if (sameSelection(this.selection, next)) {
+      return;
+    }
+    this.selection = next;
+    this._onDidChange.fire();
+  }
 
   private execute(command: ICommand): void {
     this.runEdit(() => this.commands.execute(command));
@@ -590,82 +326,66 @@ export class EditorController extends Disposable implements IEditorController {
     return clampToZoneWindow(pos, this.model.getSnapshot().field);
   }
 
+  // ドラッグ中に対象が消えていたら undefined を返し、コマンドを出さない。
+  private dropCommand(drag: DragInteraction, to: FieldPosition): ICommand | undefined {
+    const drop = dragPatch(this.model.getSnapshot(), drag.target, to);
+    if (drop === undefined) {
+      return undefined;
+    }
+    return drop.kind === "player"
+      ? new UpdatePlayerCommand(drop.playerId, drop.patch)
+      : new UpdateLineCommand(drop.lineId, drop.patch);
+  }
+
+  // 起点の選手が消えていれば確定しない。
+  private lineFromDraft(draw: DrawInteraction): Line | undefined {
+    const start = this.model.findPlayer(draw.startPlayerId);
+    const split = start === undefined ? undefined : committableDraft(draw, start.position);
+    if (split === undefined) {
+      return undefined;
+    }
+    const id = this.ids.next("line", new Set(this.model.getSnapshot().lines.map((l) => l.id)));
+    return draftToLine(draw, id, split);
+  }
+
   private selectPointerDown(pos: FieldPosition): void {
     const data = this.model.getSnapshot();
-    // 1) 選択中の線のハンドルを最優先で掴む（選手/線と重なっても編集可能に）。
-    //    終点 → waypoint の順で当てる（先端を動かしたい操作を最後の waypoint に
-    //    奪われないよう、終点を先に拾う）。
-    const s = this.selection;
-    if (s?.kind === "line") {
-      const line = data.lines.find((l) => l.id === s.id);
-      if (line !== undefined) {
-        if (this.hitEndpoint(line, pos)) {
-          const origin = { ...line.end };
-          this.interaction = {
-            type: "drag-endpoint",
-            lineId: line.id,
-            origin,
-            offsetLat: origin.lateralYard - pos.lateralYard,
-            offsetDownfield: origin.downfieldYard - pos.downfieldYard,
-            current: { ...origin },
-          };
-          this._onDidChange.fire();
-          return;
-        }
-        const index = this.hitWaypoint(line, pos);
-        if (index !== undefined) {
-          const origin = line.waypoints[index] as FieldPosition;
-          this.interaction = {
-            type: "drag-waypoint",
-            lineId: line.id,
-            index,
-            origin,
-            offsetLat: origin.lateralYard - pos.lateralYard,
-            offsetDownfield: origin.downfieldYard - pos.downfieldYard,
-            current: { ...origin },
-          };
-          this._onDidChange.fire();
-          return;
-        }
-      }
-    }
-    // 2) 選手（末尾優先）。選択しつつドラッグ開始（move せず up なら単なる選択）。
-    const player = hitTestPlayer(data.players, pos);
-    if (player !== undefined) {
-      this.setSelection({ kind: "player", id: player.id });
-      const origin = { ...player.position };
-      this.interaction = {
-        type: "drag-player",
-        playerId: player.id,
-        origin,
-        offsetLat: origin.lateralYard - pos.lateralYard,
-        offsetDownfield: origin.downfieldYard - pos.downfieldYard,
-        current: origin,
-      };
+    // 選択中の線のハンドルを最優先で掴む。選手や線と重なっていても編集できるようにする。
+    const handle = this.hitSelectedLineHandle(pos);
+    if (handle !== undefined) {
+      this.interaction = handle;
       this._onDidChange.fire();
       return;
     }
-    // 3) 線（末尾優先）。
-    const line = hitTestLine(data.lines, data.players, pos);
-    if (line !== undefined) {
-      this.setSelection({ kind: "line", id: line.id });
+    // 選手は選択しつつドラッグを始める。動かさずに離せばただの選択になる。
+    const player = hitTestPlayer(data.players, pos);
+    if (player !== undefined) {
+      this.setSelection({ kind: "player", id: player.id });
+      this.interaction = startDrag({ kind: "player", playerId: player.id }, player.position, pos);
+      this._onDidChange.fire();
       return;
     }
-    // 4) 何も無ければ選択解除。
-    this.setSelection(null);
+    const line = hitTestLine(data.lines, data.players, pos);
+    this.setSelection(line === undefined ? null : { kind: "line", id: line.id });
+  }
+
+  private hitSelectedLineHandle(pos: FieldPosition): DragInteraction | undefined {
+    const line = this.getSelectedLine();
+    const hit = line === undefined ? undefined : hitLineHandle(line, pos);
+    if (line === undefined || hit === undefined) {
+      return undefined;
+    }
+    const target: DragTarget =
+      hit.kind === "endpoint"
+        ? { kind: "endpoint", lineId: line.id }
+        : { kind: "waypoint", lineId: line.id, index: hit.index };
+    return startDrag(target, hit.point, pos);
   }
 
   private drawLinePointerDown(pos: FieldPosition): void {
     const i = this.interaction;
     if (i?.type === "draw-line") {
-      // 作図中: クリックごとに中継点を打つ（最後の点が終点になる）。直前点と
-      // ほぼ同座標なら打点せずカーソルだけ進める。
-      const point = this.clampToField(pos);
-      const last = i.points.at(-1) ?? i.start;
-      if (!this.nearPoint(last, point) && i.points.length < MAX_DRAFT_POINTS) {
-        i.points.push(point);
-      }
-      i.cursor = { ...point };
+      this.interaction = addDraftPoint(i, this.clampToField(pos));
       this._onDidChange.fire();
       return;
     }
@@ -673,61 +393,29 @@ export class EditorController extends Disposable implements IEditorController {
     if (data.lines.length >= MAX_LINES) {
       return;
     }
-    // 起点は必ず選手（Model の不変条件）。選手以外で始めようとしたら無視する。
+    // 選手以外から始めようとしたら無視する。
     const player = hitTestPlayer(data.players, pos);
     if (player === undefined) {
       return;
     }
-    this.interaction = {
-      type: "draw-line",
-      startPlayerId: player.id,
-      start: { ...player.position },
-      points: [],
-      cursor: { ...player.position },
-    };
+    this.interaction = startDrawing(player);
     this._onDidChange.fire();
   }
 
   private addPlayerAt(pos: FieldPosition): void {
-    if (this.model.getSnapshot().players.length >= MAX_PLAYERS) {
+    const { players } = this.model.getSnapshot();
+    if (players.length >= MAX_PLAYERS) {
       return;
     }
-    const taken = this.playerIds();
-    const id = this.ids.next("player", taken);
-    const player: Player = {
-      id,
-      position: this.clampToField(pos),
-      shape: DEFAULT_PLAYER_SHAPE,
-      label: "",
-    };
-    this.execute(new AddPlayerCommand(player));
+    const id = this.ids.next("player", new Set(players.map((p) => p.id)));
+    this.execute(
+      new AddPlayerCommand({
+        id,
+        position: this.clampToField(pos),
+        shape: DEFAULT_PLAYER_SHAPE,
+        label: "",
+      }),
+    );
     this.setSelection({ kind: "player", id });
-  }
-
-  private hitEndpoint(line: Line, pos: FieldPosition): boolean {
-    return pointDistance(pos, line.end) <= WAYPOINT_HANDLE_RADIUS_YARDS;
-  }
-
-  private nearPoint(a: FieldPosition, b: FieldPosition): boolean {
-    return pointDistance(a, b) <= LINE_POINT_MERGE_RADIUS_YARDS;
-  }
-
-  private hitWaypoint(line: Line, pos: FieldPosition): number | undefined {
-    // 末尾優先（後の waypoint ほど手前に描く想定に合わせる）。
-    for (let idx = line.waypoints.length - 1; idx >= 0; idx--) {
-      const w = line.waypoints[idx] as FieldPosition;
-      if (pointDistance(pos, w) <= WAYPOINT_HANDLE_RADIUS_YARDS) {
-        return idx;
-      }
-    }
-    return undefined;
-  }
-
-  private playerIds(): Set<string> {
-    return new Set(this.model.getSnapshot().players.map((p) => p.id));
-  }
-
-  private lineIds(): Set<string> {
-    return new Set(this.model.getSnapshot().lines.map((l) => l.id));
   }
 }

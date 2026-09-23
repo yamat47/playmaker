@@ -7,6 +7,7 @@ import { indexPlayersById, type Line, lineAnchorPoints } from "../model/line.js"
 import type { FieldPosition, Player } from "../model/player.js";
 import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 import { sampleLinePath } from "./bezier.js";
+import { segments } from "./polyline.js";
 
 /**
  * target（ヤード空間。画面 px は FieldGeometry.fromCanvas で変換）に最も手前で
@@ -52,20 +53,15 @@ export function distanceToSegment(p: FieldPosition, a: FieldPosition, b: FieldPo
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-/** ポリライン（連続する線分列）への最短距離。点が 1 個ならその点距離。 */
+/** ポリライン（連続する線分列）への最短距離。点が 1 個ならその点距離、0 個なら +Infinity。 */
 function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]): number {
-  // sampleLinePath は空ポリラインを返しうるが専用ガードは不要：length===1 を外れ
-  // 下の for も回らず min=+Infinity（= hit なし）がそのまま返る。
-  if (points.length === 1) {
-    const only = points[0] as FieldPosition;
-    return distanceToSegment(p, only, only);
+  const only = points.length === 1 ? points[0] : undefined;
+  if (only !== undefined) {
+    return pointDistance(p, only);
   }
   let min = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < points.length - 1; i++) {
-    const d = distanceToSegment(p, points[i] as FieldPosition, points[i + 1] as FieldPosition);
-    if (d < min) {
-      min = d;
-    }
+  for (const [a, b] of segments(points)) {
+    min = Math.min(min, distanceToSegment(p, a, b));
   }
   return min;
 }
@@ -94,6 +90,40 @@ export function hitTestLine(
     const polyline = sampleLinePath(anchors, line.interpolation);
     if (distanceToPolyline(target, polyline) <= toleranceYards) {
       return line;
+    }
+  }
+  return undefined;
+}
+
+/** 選択中の線の waypoint と終点のハンドルを掴める半径（ヤード）。 */
+export const WAYPOINT_HANDLE_RADIUS_YARDS = 0.9;
+
+/** 2 点間の距離（ヤード）。 */
+export function pointDistance(a: FieldPosition, b: FieldPosition): number {
+  return Math.hypot(a.lateralYard - b.lateralYard, a.downfieldYard - b.downfieldYard);
+}
+
+/** 線のハンドルに当たったときの、掴んだハンドルとその位置。 */
+export type LineHandleHit =
+  | { readonly kind: "endpoint"; readonly point: FieldPosition }
+  | { readonly kind: "waypoint"; readonly index: number; readonly point: FieldPosition };
+
+/**
+ * target に当たる線のハンドルを返す。終点を waypoint より先に当て、先端を動かしたい操作を
+ * 最後の waypoint に奪われないようにする。waypoint は後ろほど手前に描くので、末尾から探す。
+ */
+export function hitLineHandle(
+  line: Pick<Line, "waypoints" | "end">,
+  target: FieldPosition,
+): LineHandleHit | undefined {
+  const within = (point: FieldPosition) =>
+    pointDistance(target, point) <= WAYPOINT_HANDLE_RADIUS_YARDS;
+  if (within(line.end)) {
+    return { kind: "endpoint", point: line.end };
+  }
+  for (const [index, point] of [...line.waypoints.entries()].reverse()) {
+    if (within(point)) {
+      return { kind: "waypoint", index, point };
     }
   }
   return undefined;

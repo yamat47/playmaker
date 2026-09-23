@@ -29,14 +29,18 @@ export { LINE_COLOR_PALETTE, type LineColorOption } from "./design/line-palette.
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EDITOR_TOOL_VALUES,
-  EditorController,
   type EditorOverlay,
   type EditorSelection,
   type EditorTool,
   type EditorViewState,
+  type IEditorActions,
   type IEditorController,
-  WAYPOINT_HANDLE_RADIUS_YARDS,
-} from "./editing/editor-controller.js";
+  type IEditorGestures,
+  type IEditorScene,
+  type IEditorUi,
+  type SceneData,
+} from "./editing/editor.js";
+export { EditorController } from "./editing/editor-controller.js";
 export { IdFactory, type IIdFactory } from "./editing/id-factory.js";
 export { Emitter, type Event } from "./event/emitter.js";
 export {
@@ -84,6 +88,7 @@ export {
   hitTestLine,
   hitTestPlayer,
   LINE_HIT_TOLERANCE_YARDS,
+  WAYPOINT_HANDLE_RADIUS_YARDS,
 } from "./geometry/hit-test.js";
 export { trimPolylineEnd } from "./geometry/polyline.js";
 export {

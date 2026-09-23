@@ -279,7 +279,7 @@ describe("PlayModel.addPlayers / removePlayers（一括・単一発火）", () =
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it("複数の選手をまとめて消すと、それぞれの選手から出る線も消え、1 回だけ通知する", () => {
+  it("複数の選手をまとめて消すと、それぞれの選手から出る線も消え、消した順に戻すための選手と線を返し、1 回だけ通知する", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn();
     model.onDidChange(listener);

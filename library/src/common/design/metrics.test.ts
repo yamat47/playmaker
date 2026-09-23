@@ -13,7 +13,7 @@ describe("computeFieldMetrics", () => {
     });
   });
 
-  it("1 ヤードの px だけを 2 倍にすると、ヤードライン以外のどの寸法も 2 倍になる", () => {
+  it("1 ヤードの px だけを 2 倍にすると、ヤードラインとゴールライン以外のどの寸法も 2 倍になる", () => {
     const base = computeFieldMetrics(580, 10.875);
     const { yardLineWidth, goalLineWidth, ...byYard } = base;
     const scaled = Object.fromEntries(

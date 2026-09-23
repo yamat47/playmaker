@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { CommandService } from "../commands/command-service.js";
 import { UpdatePlayerCommand } from "../commands/player-commands.js";
@@ -8,7 +9,7 @@ import { RemoveLineCommand, RemovePlayerCommand } from "../index.js";
 import { MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
-import { MAX_PLAYERS, type Player } from "../model/player.js";
+import { MAX_PLAYERS } from "../model/player.js";
 import { EditorController } from "./editor-controller.js";
 import { IdFactory } from "./id-factory.js";
 
@@ -1144,12 +1145,7 @@ describe("EditorController: 値が変わらないパッチ", () => {
 
 describe("EditorController: 件数の上限", () => {
   function fullOfPlayers(): PlayData {
-    const players: Player[] = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
-      id: `p-${i}`,
-      position: { lateralYard: 10, downfieldYard: 0 },
-      shape: "circle",
-      label: "",
-    }));
+    const players = Array.from({ length: MAX_PLAYERS }, (_, i) => player(`p-${i}`, 10, 0));
     return { ...initialData(), players, lines: [] };
   }
 

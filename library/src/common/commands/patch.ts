@@ -57,7 +57,7 @@ export function patchChangesAnything<T>(
   patch: { readonly [K in keyof T]?: T[K] | null },
 ): boolean {
   return (Object.keys(patch) as (keyof T)[]).some((key) => {
-    const value = patch[key];
-    return value !== undefined && resolveClearable(value, current[key]) !== current[key];
+    const value: unknown = patch[key];
+    return value !== undefined && resolveClearable<unknown>(value, current[key]) !== current[key];
   });
 }

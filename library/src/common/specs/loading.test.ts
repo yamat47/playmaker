@@ -67,6 +67,27 @@ describe("図の読み直し", () => {
     expect(reset).toHaveBeenCalledOnce();
   });
 
+  it("読み直すと、onDidReset のあとに描き直しと表示状態の通知を 1 回ずつ出す", () => {
+    const play = openPlay(initialData());
+    const order: string[] = [];
+    play.session.onDidReset(() => order.push("reset"));
+    play.notified.mockImplementation((kind) => order.push(kind));
+
+    play.session.setPlayData(initialData());
+
+    expect(order).toEqual(["reset", "scene", "view"]);
+  });
+
+  it("読み直したあとの編集も、読み直す前からの購読に通知する", () => {
+    const play = openPlay(initialData());
+    play.session.setPlayData(initialData());
+    play.notified.mockClear();
+
+    play.session.setFieldZone("redzone");
+
+    expect(play.notified.mock.calls).toEqual([["scene"], ["view"]]);
+  });
+
   it("読み直したあとも、選手をドラッグして動かせる", () => {
     const play = openPlay(initialData());
     play.session.setPlayData(initialData());

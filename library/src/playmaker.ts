@@ -101,7 +101,7 @@ export class Playmaker implements IDisposable {
   private readonly session: PlaySession;
   private currentMode: PlaymakerMode;
   private panel: PropertyPanel | undefined;
-  // 今の controller に付けた描画の購読、UI、入力。controller かモードが変わると付け直す。
+  // 今の controller に付けた UI と入力。controller かモードが変わると付け直す。
   private ui: DisposableStore;
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
@@ -124,7 +124,9 @@ export class Playmaker implements IDisposable {
     this.surface = this.store.add(new CanvasSurface(stage, this.session.getSnapshot()));
     // CanvasSurface は最初の大きさが決まったときに今の図を描くので、ここでは描かない。
     this.ui = this.createUi();
-    this.store.add(this.session.onDidReset(() => this.attachUi()));
+    this.store.add(this.session.onDidChangeScene(() => this.draw()));
+    // 読み直したあとは session が描き直しを通知するので、ここでは UI だけを付け直す。
+    this.store.add(this.session.onDidReset(() => this.replaceUi()));
   }
 
   get mode(): PlaymakerMode {
@@ -144,7 +146,8 @@ export class Playmaker implements IDisposable {
     if (mode === "view") {
       this.session.controller.cancelInteraction();
     }
-    this.attachUi();
+    this.replaceUi();
+    this.draw();
   }
 
   /** 現在のフィールドゾーン。 */
@@ -254,19 +257,17 @@ export class Playmaker implements IDisposable {
     return true;
   }
 
-  private attachUi(): void {
+  private replaceUi(): void {
     // view では canvas がフォーカスを受けないので、消えたフォーカスは body に落ちたままになる。
     replaceKeepingFocus(this.root, this.surface.canvas, () => {
       this.ui.dispose();
       this.ui = this.createUi();
     });
-    this.draw();
   }
 
   private createUi(): DisposableStore {
     const ui = new DisposableStore();
     const controller = this.session.controller;
-    ui.add(controller.onDidChangeScene(() => this.draw()));
     this.panel = undefined;
     if (this.currentMode === "edit") {
       ui.add(new Toolbar(this.root, controller));

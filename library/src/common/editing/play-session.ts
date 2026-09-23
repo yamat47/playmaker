@@ -15,12 +15,11 @@ interface PlayDocument {
   readonly controller: EditorController;
 }
 
-function openDocument(data: unknown, onDidEdit: () => void): PlayDocument {
+function openDocument(data: unknown): PlayDocument {
   const store = new DisposableStore();
   const model = store.add(new PlayModel(data));
   const commands = new CommandService(model, new UndoRedoService());
   const controller = store.add(new EditorController(model, commands, new IdFactory()));
-  store.add(model.onDidChange(onDidEdit));
   return { store, model, controller };
 }
 
@@ -41,6 +40,20 @@ export class PlaySession extends Disposable {
    */
   readonly onDidChange: Event<PlayData> = (listener) =>
     this._onDidEdit.event(() => listener(this.getPlayData()));
+
+  private readonly _onDidChangeScene = this._register(new Emitter<void>());
+  /**
+   * 今の controller の onDidChangeScene を転送する。setPlayData で読み直したときも、
+   * onDidReset のあとに 1 回出す。controller が作り直されても購読し直さなくてよい。
+   */
+  readonly onDidChangeScene = this._onDidChangeScene.event;
+
+  private readonly _onDidChangeViewState = this._register(new Emitter<void>());
+  /**
+   * 今の controller の onDidChangeViewState を転送する。setPlayData で読み直したときも、
+   * 表示状態が変わったかどうかにかかわらず onDidReset のあとに 1 回出す。
+   */
+  readonly onDidChangeViewState = this._onDidChangeViewState.event;
 
   private document: PlayDocument;
 
@@ -81,10 +94,17 @@ export class PlaySession extends Disposable {
     this.document.store.dispose();
     this.document = this.open(data);
     this._onDidReset.fire();
+    this._onDidChangeScene.fire();
+    this._onDidChangeViewState.fire();
   }
 
   private open(data: unknown): PlayDocument {
-    return openDocument(data, () => this._onDidEdit.fire());
+    const opened = openDocument(data);
+    const { store, model, controller } = opened;
+    store.add(model.onDidChange(() => this._onDidEdit.fire()));
+    store.add(controller.onDidChangeScene(() => this._onDidChangeScene.fire()));
+    store.add(controller.onDidChangeViewState(() => this._onDidChangeViewState.fire()));
+    return opened;
   }
 
   override dispose(): void {

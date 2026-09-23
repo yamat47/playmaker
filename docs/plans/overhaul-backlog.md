@@ -550,7 +550,7 @@ PR 単位で、依存順に並べる。
   - T15b4 残した単体テストの書き方（done）。T15-1、T15-2、T15-5〜T15-7 を片付けた。プリセットはプリセットごとの `it.each` にし、件数の固定をやめた。形状、種別、起点の選手の検査は、正規化しても変わらないことで確かめる（正規化はどれも弾くか既定に寄せるので、壊れていれば差が出る）。寸法は係数を写さず、幅と 1 ヤードの px のどちらに比例するかで確かめる。
 - T15c ブラウザテスト。Browser Mode を入れ、Docker イメージにも Chromium を入れる。Chromium は Dockerfile と CI の両方で、lockfile の playwright と同じ版の `playwright install --with-deps chromium` で入れる（2026-09-23 に決着）。Debian の chromium は版が playwright の想定とずれるので使わない。cloud 版のセッションでは `/opt/pw-browsers` の Chromium を環境変数で指す。
 
-controller の構造を分けるか（ジェスチャの解釈を切り出すか）は、T15b のあとで設計上の理由だけで決める。
+controller の構造は分けない（2026-09-23 に決着）。ジェスチャの途中の状態は interaction.ts と preview.ts に出ていて、controller に残るのはツール、選択、コマンドの組み立てだけである。行数のほかに分ける理由が無い。
 
 - [x] **T15-1 [should] テスト名とコメントがカバレッジの分岐に引きずられている**
   - locations: library/src/common/editing/editor-controller.test.ts:342, library/src/common/editing/editor-controller.test.ts:414, library/src/common/editing/editor-controller.test.ts:599, library/src/common/editing/editor-controller.test.ts:827-839, library/src/common/commands/player-commands.test.ts:119, library/src/common/commands/line-commands.test.ts:106, library/src/common/model/play-model.test.ts:125, library/src/common/model/play-model.test.ts:147, library/src/common/model/play-model.test.ts:169, library/src/common/model/play-model.test.ts:292, library/src/common/geometry/hit-test.test.ts:175, library/src/common/model/migration.test.ts:52
@@ -567,9 +567,10 @@ controller の構造を分けるか（ジェスチャの解釈を切り出すか
 - [x] **T15-7 [nit] AAA のコメントが一部のテストにしかない**
   - locations: library/src/common/event/emitter.test.ts:70, library/src/common/event/emitter.test.ts:82
   - 対応: コメントを削り、空行で段を区切る書き方に揃える。
-- [ ] **T15-8 [nit] setPlayData で controller が作り直されるので、利用側がそのたびに通知を購読し直している**（T15a で追加）
+- [x] **T15-8 [nit] setPlayData で controller が作り直されるので、利用側がそのたびに通知を購読し直している**（T15a で追加）
   - locations: library/src/playmaker.ts:127, library/src/test-support/play-driver.ts:33-38
   - 対応: PlaySession が scene と表示状態の通知を転送し、作り直しを内側で吸収するか。controller の構造を分けるかと一緒に、T15b のあとで決める。
+  - 結論: PlaySession が今の controller の onDidChangeScene と onDidChangeViewState を転送する。読み直したときは onDidReset のあとに両方を 1 回ずつ出す。表示状態は比べずに出す（図も表示状態も入れ替わるため）。Playmaker の描画と driver は購読を 1 回で済ませる。Toolbar、PropertyPanel、PointerInput は controller を握るので、UI の付け直しには onDidReset が残る。session の表示状態の通知を本番で購読しているものは今は無く、driver だけが使う。
 - [ ] **T15-9 [should] PlayModel の単体テストが、仕様テストで確かめている振る舞いを重ねて確かめている**（T15b4 で追加）
   - locations: library/src/common/model/play-model.test.ts, library/src/common/model/play-model.ts（insertLine の位置の丸め）
   - 問題: testing.md の単体テストの対象に PlayModel は無い。選手を消すと線も消えること、戻すと元の並びに戻ること、1 回だけ通知することは specs/players.test.ts などでも確かめている。
@@ -578,7 +579,7 @@ controller の構造を分けるか（ジェスチャの解釈を切り出すか
 - 依存: T5-5、T9、T10（コードの形が固まってから）
 - 完了条件: 編集の振る舞いが仕様テストで確かめられ、実装に依存するテストが残っていない。Playmaker の結線をブラウザテストで確かめている。common 100% を維持する。
 - 規模: L（T15-0、T15a、T15b、T15c）
-- 進み具合: T15-0、T15a、T15b1〜T15b4 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。残りは T15-8、T15-9 と T15c。
+- 進み具合: T15-0、T15a、T15b1〜T15b4、T15-8 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。残りは T15-9 と T15c。
 
 ---
 

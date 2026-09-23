@@ -30,9 +30,11 @@ function openDocument(data: unknown, onChange: ChangeListener | undefined): Play
 }
 
 /**
- * 1 つのプレー図を編集する部品一式（Model、履歴、コマンド、採番、EditorController）。
+ * 1 つのプレー図の編集を受け持つ。
+ *
  * onChange は編集の確定ごとに 1 回だけ呼び、構築時と setPlayData では呼ばない
- * （読み込みは編集ではない）。setPlayData は履歴ごと作り直すので、controller も別物になる。
+ * （読み込みは編集ではないため）。
+ * setPlayData は履歴ごと作り直すので、controller も別のオブジェクトになる。
  */
 export class PlaySession extends Disposable {
   private readonly _onDidReset = this._register(new Emitter<void>());
@@ -61,7 +63,7 @@ export class PlaySession extends Disposable {
     return this.document.model.getData();
   }
 
-  /** 現在の図をコピーせずに返す。書き出しのように、読むだけの用途に使う。 */
+  /** 現在の図をコピーせずに返す。 */
   getSnapshot(): PlayData {
     return this.document.model.getSnapshot();
   }

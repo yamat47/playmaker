@@ -60,8 +60,8 @@ export interface PlaymakerOptions {
 }
 
 /**
- * ライブラリの公開エントリ。編集の部品一式（PlaySession）と、
- * browser（Canvas/入力/UI）を結線する。商用ソフトはコンテナとオプションを渡すだけ。
+ * container の中にプレー図を描き、edit モードでは編集 UI も置く。
+ * dispose すると、置いた要素をすべて取り除く。
  */
 export class Playmaker extends Disposable {
   readonly mode: PlaymakerMode;
@@ -150,7 +150,6 @@ export class Playmaker extends Disposable {
     super.dispose();
   }
 
-  // 図の変化で再描画し、UI と入力は edit のときだけ出す。
   private attachUi(): void {
     this.ui.dispose();
     this.ui = new DisposableStore();

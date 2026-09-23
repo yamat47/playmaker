@@ -52,7 +52,7 @@ describe("zoneWindowLength", () => {
 });
 
 describe("displayYardNumber", () => {
-  it("センター 50 は 50", () => {
+  it("センターの 50 ヤードラインには 50 を書く", () => {
     expect(displayYardNumber(50)).toBe(50);
   });
 
@@ -138,7 +138,7 @@ describe("FieldGeometry", () => {
     );
   });
 
-  it("toCanvas は LOS からの位置を、LOS の絶対ヤードに足してから縦に変換する", () => {
+  it("LOS からの位置は、LOS の絶対ヤードに足してから画面の縦の位置に変える", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("redzone"));
 
     expect(g.toCanvas({ lateralYard: FIELD_WIDTH_YARDS / 2, downfieldYard: 5 })).toEqual({

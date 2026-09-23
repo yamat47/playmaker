@@ -1,6 +1,5 @@
 import { isOneOf } from "../model/guards.js";
 
-/** 攻守の区別。フォーメーションとプレー図のプリセット一覧を攻守で束ねるのに使う。 */
 export const TEAM_SIDE_VALUES = ["offense", "defense"] as const;
 
 export type TeamSide = (typeof TEAM_SIDE_VALUES)[number];

@@ -135,7 +135,6 @@ export class EditorController extends Disposable implements IEditorController {
     }
     this.notifier.batch(() => {
       this.tool = tool;
-      // ツールを切り替えたら作図やドラッグの途中は捨てる。
       this.setInteraction(undefined);
     });
   }

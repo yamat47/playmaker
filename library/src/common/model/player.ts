@@ -102,7 +102,7 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
     position,
     shape: isPlayerShape(raw.shape) ? raw.shape : DEFAULT_PLAYER_SHAPE,
     label: typeof raw.label === "string" ? raw.label : "",
-    // exactOptionalPropertyTypes: color は値があるときだけ持たせる。
+    // exactOptionalPropertyTypes では undefined を入れられないので、色があるときだけキーを置く。
     ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
   };
 }

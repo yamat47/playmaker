@@ -212,9 +212,9 @@ export class FieldRenderer {
   }
 
   /**
-   * 番号付きヤードライン（10yd 刻み）に数字と方向三角を描く。数字は上下ミラーで
-   * 両サイドラインから読め、三角は最寄りゴール方向。EZ・ゴール(0)・センター(50)は
-   * 数字/三角の扱いを分ける（displayYardNumber が null を返すゴールと EZ は描かない）。
+   * 10 ヤードごとのヤードラインに数字と方向の三角を描く。数字は両サイドラインから読めるよう
+   * 上下を反転させ、三角は近いほうのゴールを指す。センターの 50 には三角を描かず、
+   * displayYardNumber が null を返すゴールラインとエンドゾーンには何も描かない。
    */
   private drawNumbers(
     ctx: CanvasRenderingContext2D,

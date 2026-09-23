@@ -138,6 +138,8 @@ export class Playmaker extends Disposable {
    * 呼んだ時点で確定しているプレー図を PNG 画像（Blob）として書き出す。
    * 選択の強調、waypoint のハンドル、ドラッグや作図の途中の形、ツールバーとパネルは入らない。
    * view と edit のどちらのモードでも使える。
+   * 同梱フォントを読み込み終えてから描くので、構築の直後に呼んでもヤードの数字と選手のラベルは同梱フォントになる。
+   * フォントを読み込めなかったときは代わりのフォントで描く。
    * canvas を確保できないときや PNG に変換できないときは、例外を投げずに reject する。
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {

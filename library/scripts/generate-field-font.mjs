@@ -1,9 +1,9 @@
 // フィールド描画専用フォント（同梱・外部指定不可）のサブセット woff2 を生成する。
 // 入力: assets/fonts/SairaCondensed-Bold.ttf（OFL。再生成のため vendor 済み）
-// 出力: src/assets/playmaker-saira-subset.woff2（@font-face から参照、ビルドで CSS へ inline）
+// 出力: src/assets/playmaker-saira-subset.woff2（FontFace で登録し、ビルドで JS へ inline）
 //
 // 収録文字は「ヤード数字 + 選手ラベル」で実際に出る英数字と基本記号に限定する
-// （サブセット B）。未収録グリフは @font-face の sans-serif フォールバックへ逃がす。
+// （サブセット B）。未収録グリフは FIELD_FONT_FAMILY の sans-serif フォールバックへ逃がす。
 // 再生成: `make font`（コンテナの中で動く）
 
 import { readFile, writeFile } from "node:fs/promises";

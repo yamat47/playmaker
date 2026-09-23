@@ -6,6 +6,7 @@ import {
   DEFAULT_LINE_THICKNESS,
   Disposable,
   type IEditorUi,
+  isHexColor,
   isLineThickness,
   isOneOf,
   LINE_INTERPOLATION_VALUES,
@@ -19,9 +20,8 @@ import { LINE_COLOR_PALETTE } from "../theme/line-palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
 import { THEME_TOKENS, type ThemeReader } from "../theme/tokens.js";
 
-/** color input は hex のみ受け付けるため、非 hex は既定にフォールバックする。 */
 function toHex(value: string | undefined, fallback: string): string {
-  return value !== undefined && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
+  return value !== undefined && isHexColor(value) ? value : fallback;
 }
 
 interface ShownItems {

@@ -1,4 +1,5 @@
 export { Disposable, DisposableStore, toDisposable } from "./base/lifecycle.js";
+export { isHexColor } from "./design/color.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EDITOR_TOOL_VALUES,

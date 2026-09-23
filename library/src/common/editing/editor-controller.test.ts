@@ -57,6 +57,8 @@ describe("EditorController: 初期状態", () => {
       canRedo: false,
       fieldZone: "middle",
       isDrawing: false,
+      remainingPlayerSlots: MAX_PLAYERS - 2,
+      canStartLine: true,
     });
     expect(controller.getFrame().overlay).toEqual({ kind: "none" });
     expect(controller.getSelectedPlayer()).toBeUndefined();
@@ -1203,6 +1205,21 @@ describe("EditorController: 件数の上限", () => {
     expect(commands.canUndo).toBe(false);
   });
 
+  it("選手が MAX_PLAYERS 人いると、表示状態の置ける人数は 0 になる", () => {
+    const { controller } = setup(withPlayers(MAX_PLAYERS));
+
+    expect(controller.getViewState().remainingPlayerSlots).toBe(0);
+  });
+
+  it("最後の 1 人を足すと、表示状態の置ける人数は 0 になる", () => {
+    const { controller } = setup(withPlayers(MAX_PLAYERS - 1));
+    controller.setTool("add-player");
+
+    controller.pointerDown({ lateralYard: 30, downfieldYard: 5 });
+
+    expect(controller.getViewState().remainingPlayerSlots).toBe(0);
+  });
+
   it("読み込むと MAX_PLAYERS 人を超えるフォーメーションは、1 人も置かない", () => {
     const { controller, model, commands } = setup(withPlayers(MAX_PLAYERS - 1));
 
@@ -1236,6 +1253,7 @@ describe("EditorController: 件数の上限", () => {
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
 
     expect(controller.getViewState().isDrawing).toBe(false);
+    expect(controller.getViewState().canStartLine).toBe(false);
   });
 
   it("作図では waypoint の上限を超えて打点せず、上限を超えた打点は線に入らない", () => {

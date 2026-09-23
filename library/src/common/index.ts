@@ -2,13 +2,16 @@ export { Disposable, DisposableStore, toDisposable } from "./base/lifecycle.js";
 export { isHexColor } from "./design/color.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
+  canLoadFormation,
   EDITOR_TOOL_VALUES,
   type EditorOverlay,
   type EditorTool,
+  type EditorViewState,
   type IEditorActions,
   type IEditorGestures,
   type IEditorScene,
   type IEditorUi,
+  isToolAvailable,
   type SceneData,
 } from "./editing/editor.js";
 export { PlaySession } from "./editing/play-session.js";
@@ -44,6 +47,7 @@ export {
   type LineInterpolation,
   type LineKind,
   lineAnchorPoints,
+  MAX_LINES,
 } from "./model/line.js";
 export { migratePlayData } from "./model/migration.js";
 export {
@@ -56,6 +60,7 @@ export {
 } from "./model/play-data.js";
 export {
   type FieldPosition,
+  MAX_PLAYERS,
   PLAYER_RADIUS_YARDS,
   PLAYER_SHAPE_VALUES,
   type Player,

@@ -11,12 +11,33 @@
   --_playmaker-ui-accent: var(--playmaker-ui-accent, #1565c0);
   --_playmaker-ui-accent-text: var(--playmaker-ui-accent-text, #ffffff);
 
-  position: relative;
   width: 100%;
   height: 100%;
   font-family: var(--_playmaker-ui-font);
   color: var(--_playmaker-ui-text);
   overflow: hidden;
+}
+
+.playmaker-stage {
+  grid-area: stage;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * 編集 UI は canvas に描かず HTML で置くので、PNG に書き出すときに UI が入らない。
+ * canvas に重ねるとフィールドが隠れるので、grid で canvas の上と横に並べる。
+ */
+.playmaker-root[data-mode="edit"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "toolbar toolbar"
+    "stage panel";
+  gap: 8px;
 }
 
 .playmaker-canvas {
@@ -33,12 +54,8 @@
   touch-action: none;
 }
 
-/* 編集 UI は Canvas の上に HTML で重ねる。PNG に書き出すとき、UI を含めずに済むため。 */
 .playmaker-toolbar {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
+  grid-area: toolbar;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -60,7 +77,7 @@
   cursor: pointer;
 }
 
-.playmaker-toolbar__button:hover:not(:disabled) {
+.playmaker-toolbar__button:hover:not([aria-disabled="true"]) {
   border-color: var(--_playmaker-ui-accent);
 }
 
@@ -70,7 +87,7 @@
   color: var(--_playmaker-ui-accent-text);
 }
 
-.playmaker-toolbar__button:disabled {
+.playmaker-toolbar__button[aria-disabled="true"] {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -97,10 +114,12 @@
 }
 
 .playmaker-panel {
-  position: absolute;
-  top: 56px;
-  right: 8px;
+  grid-area: panel;
+  align-self: start;
+  box-sizing: border-box;
   width: 200px;
+  max-height: 100%;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;

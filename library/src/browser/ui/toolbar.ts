@@ -1,13 +1,18 @@
 import {
+  canLoadFormation,
   Disposable,
   EDITOR_TOOL_VALUES,
   type EditorTool,
+  type EditorViewState,
   FIELD_ZONE_LABELS,
   FIELD_ZONE_VALUES,
   type FieldZone,
   FORMATION_PRESETS,
   getFormationPreset,
   type IEditorUi,
+  isToolAvailable,
+  MAX_LINES,
+  MAX_PLAYERS,
   TEAM_SIDE_VALUES,
   type TeamSide,
   toDisposable,
@@ -19,10 +24,35 @@ const TOOL_LABELS = {
   "draw-line": "線を描く",
 } satisfies Record<EditorTool, string>;
 
+// 件数の上限に達して押せない部品に、理由として出す文。
+const FORMATION_LIMIT_REASON = `置くと ${MAX_PLAYERS} 人を超えるフォーメーションは読み込めません`;
+const TOOL_UNAVAILABLE_REASONS: Readonly<Partial<Record<EditorTool, string>>> = {
+  "add-player": `選手は ${MAX_PLAYERS} 人までです`,
+  "draw-line": `線は ${MAX_LINES} 本までです`,
+};
+
 const SIDE_LABELS = {
   offense: "オフェンス",
   defense: "ディフェンス",
 } satisfies Record<TeamSide, string>;
+
+/**
+ * disabled ではなく aria-disabled で無効を示す。disabled にすると、押した直後に
+ * 無効になったボタンからフォーカスが body へ落ち、
+ * 編集 UI の中で受けているショートカットが効かなくなる。
+ */
+function setEnabled(button: HTMLButtonElement, enabled: boolean, reason?: string): void {
+  button.setAttribute("aria-disabled", String(!enabled));
+  setTitle(button, enabled ? undefined : reason);
+}
+
+function setTitle(element: HTMLElement, title: string | undefined): void {
+  if (title === undefined) {
+    element.removeAttribute("title");
+  } else {
+    element.title = title;
+  }
+}
 
 export class Toolbar extends Disposable {
   readonly element: HTMLElement;
@@ -33,6 +63,7 @@ export class Toolbar extends Disposable {
   private readonly deleteButton: HTMLButtonElement;
   private readonly commitButton: HTMLButtonElement;
   private readonly cancelButton: HTMLButtonElement;
+  private readonly formationPicker: HTMLSelectElement;
 
   constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
@@ -53,7 +84,7 @@ export class Toolbar extends Disposable {
       this.zoneButtons.set(zone, btn);
     }
     this.addSeparator();
-    this.addFormationPicker(controller);
+    this.formationPicker = this.addFormationPicker(controller);
     this.addSeparator();
     this.commitButton = this.addButton("線を確定", () => controller.commitLine());
     this.cancelButton = this.addButton("取消", () => controller.cancelInteraction());
@@ -69,7 +100,11 @@ export class Toolbar extends Disposable {
     button.type = "button";
     button.textContent = label;
     button.className = "playmaker-toolbar__button";
-    button.addEventListener("click", onClick);
+    button.addEventListener("click", () => {
+      if (button.getAttribute("aria-disabled") !== "true") {
+        onClick();
+      }
+    });
     this.element.appendChild(button);
     return button;
   }
@@ -86,7 +121,7 @@ export class Toolbar extends Disposable {
    * 読込は controller 経由＝Undo/onChange の対象。選択後はプレースホルダへ戻し、
    * 同じ隊形を続けて重ねられる（追記セマンティクス）ようにする。
    */
-  private addFormationPicker(controller: IEditorUi): void {
+  private addFormationPicker(controller: IEditorUi): HTMLSelectElement {
     const select = document.createElement("select");
     select.className = "playmaker-toolbar__select";
     select.setAttribute("aria-label", "フォーメーション");
@@ -118,20 +153,33 @@ export class Toolbar extends Disposable {
     });
 
     this.element.appendChild(select);
+    return select;
   }
 
   private sync(controller: IEditorUi): void {
     const state = controller.getViewState();
     for (const [tool, btn] of this.toolButtons) {
       btn.setAttribute("aria-pressed", String(tool === state.tool));
+      setEnabled(btn, isToolAvailable(tool, state), TOOL_UNAVAILABLE_REASONS[tool]);
     }
     for (const [zone, btn] of this.zoneButtons) {
       btn.setAttribute("aria-pressed", String(zone === state.fieldZone));
     }
-    this.undoButton.disabled = !state.canUndo;
-    this.redoButton.disabled = !state.canRedo;
-    this.deleteButton.disabled = state.selection === null;
-    this.commitButton.disabled = !state.isDrawing;
-    this.cancelButton.disabled = !state.isDrawing;
+    setEnabled(this.undoButton, state.canUndo);
+    setEnabled(this.redoButton, state.canRedo);
+    setEnabled(this.deleteButton, state.selection !== null);
+    setEnabled(this.commitButton, state.isDrawing);
+    setEnabled(this.cancelButton, state.isDrawing);
+    this.syncFormationPicker(state);
+  }
+
+  private syncFormationPicker(state: EditorViewState): void {
+    let isAnyUnavailable = false;
+    for (const option of this.formationPicker.options) {
+      const formation = getFormationPreset(option.value);
+      option.disabled = formation !== undefined && !canLoadFormation(formation, state);
+      isAnyUnavailable ||= option.disabled;
+    }
+    setTitle(this.formationPicker, isAnyUnavailable ? FORMATION_LIMIT_REASON : undefined);
   }
 }

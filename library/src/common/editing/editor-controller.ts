@@ -30,12 +30,14 @@ import {
   type Player,
 } from "../model/player.js";
 import {
+  canLoadFormation,
   type EditorFrame,
   type EditorSelection,
   type EditorTool,
   type EditorViewState,
   type IEditorController,
   isSameSelection,
+  isToolAvailable,
 } from "./editor.js";
 import { EditorNotifier } from "./editor-notifier.js";
 import {
@@ -104,6 +106,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   getViewState(): EditorViewState {
+    const { players, lines } = this.model.getSnapshot();
     return {
       tool: this.tool,
       selection: this.getSelection(),
@@ -111,6 +114,8 @@ export class EditorController extends Disposable implements IEditorController {
       canRedo: this.commands.canRedo,
       fieldZone: this.model.getFieldZone(),
       isDrawing: this.interaction?.type === "draw-line",
+      remainingPlayerSlots: MAX_PLAYERS - players.length,
+      canStartLine: lines.length < MAX_LINES,
     };
   }
 
@@ -252,10 +257,10 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   loadFormation(formation: Formation): void {
-    const { players } = this.model.getSnapshot();
-    if (players.length + formation.players.length > MAX_PLAYERS) {
+    if (!canLoadFormation(formation, this.getViewState())) {
       return;
     }
+    const { players } = this.model.getSnapshot();
     const added = instantiateFormation(
       formation,
       this.ids,
@@ -373,10 +378,10 @@ export class EditorController extends Disposable implements IEditorController {
       this.setInteraction(addDraftPoint(interaction, this.clampToField(pos)));
       return;
     }
-    const data = this.model.getSnapshot();
-    if (data.lines.length >= MAX_LINES) {
+    if (!isToolAvailable("draw-line", this.getViewState())) {
       return;
     }
+    const data = this.model.getSnapshot();
     // 選手以外から始めようとしたら無視する。
     const player = hitTestPlayer(data.players, pos);
     if (player === undefined) {
@@ -386,10 +391,10 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private addPlayerAt(pos: FieldPosition): void {
-    const { players } = this.model.getSnapshot();
-    if (players.length >= MAX_PLAYERS) {
+    if (!isToolAvailable("add-player", this.getViewState())) {
       return;
     }
+    const { players } = this.model.getSnapshot();
     const id = this.ids.next("player", new Set(players.map((p) => p.id)));
     this.commands.execute(
       new AddPlayerCommand({

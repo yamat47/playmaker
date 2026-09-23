@@ -23,6 +23,23 @@ export function isSameSelection(a: EditorSelection, b: EditorSelection): boolean
   return a.kind === b.kind && a.id === b.id;
 }
 
+/** 件数の上限に達していて、そのツールで何も置けないときは false。 */
+export function isToolAvailable(tool: EditorTool, state: EditorViewState): boolean {
+  switch (tool) {
+    case "add-player":
+      return state.remainingPlayerSlots > 0;
+    case "draw-line":
+      return state.canStartLine;
+    case "select":
+      return true;
+  }
+}
+
+/** 読み込むと選手の上限を超えるフォーメーションは、1 人も置かれないので false。 */
+export function canLoadFormation(formation: Formation, state: EditorViewState): boolean {
+  return formation.players.length <= state.remainingPlayerSlots;
+}
+
 /** 描画するプレー図。版は保存するときだけ要るので持たない。 */
 export type SceneData = Omit<PlayData, "version">;
 
@@ -44,6 +61,10 @@ export interface EditorViewState {
   readonly fieldZone: FieldZone;
   /** 線を作図中（確定か取り消し待ち）か。 */
   readonly isDrawing: boolean;
+  /** あと何人の選手を置けるか。これより多い人数を置く操作は何もしない。 */
+  readonly remainingPlayerSlots: number;
+  /** 線の本数が上限に達しておらず、新しい線を描き始められるか。 */
+  readonly canStartLine: boolean;
 }
 
 /** オーバーレイは、scene と同じ途中の状態から求める。 */

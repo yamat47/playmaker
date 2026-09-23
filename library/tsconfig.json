@@ -4,6 +4,7 @@
     { "path": "./tsconfig.common.json" },
     { "path": "./tsconfig.browser.json" },
     { "path": "./tsconfig.test.json" },
+    { "path": "./tsconfig.browser-test.json" },
     { "path": "./tsconfig.tooling.json" }
   ]
 }

@@ -25,12 +25,19 @@ ENV pnpm_config_store_dir=/home/node/.local/share/pnpm/store
 # Makefile はこれを見て、docker compose を経由せず pnpm を直接呼ぶ
 ENV IN_CONTAINER=1
 
+# ブラウザテストの Chromium は、package.json で固定した playwright と同じ版の install で入れる。
+# Debian の chromium は版が playwright の想定とずれる。入れる先の既定は root のホームで、
+# テストを動かす node ユーザーから読めないので、共有の場所を指す
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
 # pnpm は packageManager と同じ版を焼き込む。ずれていると pnpm が起動のたびに
 # 指定版をダウンロードし直し、docker compose run --rm では毎回それが起きる。
-# package.json は依存更新のたびに変わるので、キャッシュが崩れても安い最後の層に置く
+# package.json は依存更新のたびに変わり、この層のキャッシュが崩れるので、最後の層に置く
 COPY library/package.json /tmp/package.json
 RUN npm install -g "$(node -p "require('/tmp/package.json').packageManager")" \
-  && rm /tmp/package.json
+  && npx -y "playwright@$(node -p "require('/tmp/package.json').devDependencies.playwright")" \
+    install --with-deps chromium \
+  && rm -rf /var/lib/apt/lists/* /root/.npm /tmp/package.json
 
 USER node
 WORKDIR /workspace/library

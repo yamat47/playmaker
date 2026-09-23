@@ -1,11 +1,12 @@
 /// <reference types="vitest/config" />
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
 // build: ライブラリモードで dist を生成する。
-// test: src 配下の *.test.ts を node 環境で実行する（common 層中心）。
+// test: src 配下の *.test.ts を node 環境で、*.browser.test.ts を Chromium で実行する。
 // demo の dev サーバーは `make up` で起動する（中身は vite demo）。
 const root = import.meta.dirname;
 
@@ -19,6 +20,13 @@ const typescript6 = requireFromRoot.resolve("@typescript/typescript6/package.jso
 const typescriptLibFolder = dirname(
   createRequire(typescript6).resolve("@typescript/old/package.json"),
 );
+
+// playwright の版に合う Chromium が入っていない環境（cloud 版の Claude Code のセッション）では、
+// CHROMIUM_PATH で入っている Chromium を指す。
+function chromiumLaunchOptions(): { executablePath?: string } {
+  const executablePath = process.env.CHROMIUM_PATH;
+  return executablePath === undefined ? {} : { executablePath };
+}
 
 export default defineConfig({
   resolve: {
@@ -55,8 +63,36 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+          exclude: ["src/**/*.browser.test.ts"],
+        },
+      },
+      // build 用の dts plugin を引き継がないよう、root の設定は extends しない。
+      {
+        test: {
+          name: "browser",
+          include: ["src/**/*.browser.test.ts"],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: chromiumLaunchOptions() }),
+            instances: [{ browser: "chromium" }],
+            // テストの iframe が Playwright のページ（1280x720）に収まらないと、Vitest は iframe を縮めて映す。
+            // 縮めると userEvent に渡す要素内の位置が操作によってずれるので、縮めずに済む大きさにする。
+            viewport: { width: 1000, height: 640 },
+            // 失敗したときのスクリーンショットはテストの隣の __screenshots__ に書き出される。
+            // 画面を見比べる運用はしないので撮らない。
+            screenshotFailures: false,
+          },
+        },
+      },
+    ],
     coverage: {
       // v8 ネイティブ計測 + AST-aware リマッピング。計装なしで速く、精度は istanbul 同等
       provider: "v8",

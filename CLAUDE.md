@@ -29,6 +29,7 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
 | CI と同じ検証を全部 | `make check` |
 | テスト（カバレッジゲート込み） | `make test` |
 | テストを 1 ファイルだけ | `make test FILE=library/src/common/base/event.test.ts` |
+| ブラウザテスト（Chromium） | `make test-browser` |
 | 型検査 / lint / 自動修正 | `make typecheck` / `make lint` / `make fix` |
 | ライブラリのビルド | `make build`（`library/dist/`） |
 | 依存の追加・更新 | `make pnpm ARGS="add -D <pkg>"` → lockfile もホストに反映される |
@@ -43,6 +44,7 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
   中身を読みたいときは `make pnpm ARGS="exec ls node_modules/<pkg>"` を使う
 - pnpm 本体と Node は Dependabot が上げない（Node はイメージだけ上がる）。pnpm は `library/package.json` の
   `packageManager`、Node は `.node-version` と `docker/Dockerfile` を書き換え、イメージに焼き込むので `make setup` する
+- playwright は Dependabot が上げるが、ブラウザテストの Chromium はその版に合わせてイメージに焼き込むので、上がったら `make setup` する
 - demo をブラウザで確かめる手順は `run-demo` skill にある
 - cloud 版の Claude Code では Docker が動かない。SessionStart hook（`docker/cloud-session-setup.sh`）が
   `.node-version` の Node と pnpm、依存を入れて `IN_CONTAINER=1` にするので、make はそのまま使える。

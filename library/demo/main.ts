@@ -411,7 +411,7 @@ interface PresetRow {
   select: () => void;
 }
 
-// 1 行ぶんの見た目と読込処理を item から導く（フォーメーション/プレー図で差分はここだけ）。
+// フォーメーションとプレー図で違うのは 1 行の見た目と押したときの処理だけなので、それを toRow で受け取る。
 function addSection<T extends { id: string; side: "offense" | "defense" }>(
   items: readonly T[],
   side: "offense" | "defense",

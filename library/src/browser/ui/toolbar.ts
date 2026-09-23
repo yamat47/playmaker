@@ -25,9 +25,9 @@ const TOOL_LABELS = {
 } satisfies Record<EditorTool, string>;
 
 // 件数の上限に達して押せない部品に、理由として出す文。
-const PLAYER_LIMIT_REASON = `選手は ${MAX_PLAYERS} 人までです`;
+const FORMATION_LIMIT_REASON = `置くと ${MAX_PLAYERS} 人を超えるフォーメーションは読み込めません`;
 const TOOL_UNAVAILABLE_REASONS: Readonly<Partial<Record<EditorTool, string>>> = {
-  "add-player": PLAYER_LIMIT_REASON,
+  "add-player": `選手は ${MAX_PLAYERS} 人までです`,
   "draw-line": `線は ${MAX_LINES} 本までです`,
 };
 
@@ -180,6 +180,6 @@ export class Toolbar extends Disposable {
       option.disabled = formation !== undefined && !canLoadFormation(formation, state);
       isAnyUnavailable ||= option.disabled;
     }
-    setTitle(this.formationPicker, isAnyUnavailable ? PLAYER_LIMIT_REASON : undefined);
+    setTitle(this.formationPicker, isAnyUnavailable ? FORMATION_LIMIT_REASON : undefined);
   }
 }

@@ -123,7 +123,7 @@ describe("UpdatePlayerCommand", () => {
     const model = new PlayModel(seed());
 
     expect(() => new UpdatePlayerCommand("ghost", { label: "x" }).apply(model)).toThrow(
-      'UpdatePlayerCommand: unknown player id "ghost"',
+      'PlayModel: unknown player id "ghost"',
     );
   });
 

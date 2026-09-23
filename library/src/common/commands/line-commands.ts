@@ -62,10 +62,7 @@ export class UpdateLineCommand implements ICommand {
   }
 
   apply(model: IPlayModel): boolean {
-    const current = model.findLine(this.lineId);
-    if (current === undefined) {
-      throw new Error(`UpdateLineCommand: unknown line id "${this.lineId}"`);
-    }
+    const current = model.requireLine(this.lineId);
     if (!patchChangesAnything(current, this.patch)) {
       return false;
     }

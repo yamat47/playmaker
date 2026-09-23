@@ -410,11 +410,6 @@ function replacePlayKeepingZone(players: readonly Player[], lines: readonly Line
   refreshJson();
 }
 
-function loadFormation(formation: Formation): void {
-  const players: Player[] = formation.players.map((p, i) => ({ ...p, id: `${formation.id}-${i}` }));
-  replacePlayKeepingZone(players, []);
-}
-
 function loadPlay(preset: PlayPreset): void {
   playmaker.setPlayData(preset.data);
   refreshJson();
@@ -458,12 +453,14 @@ function formationRow(formation: Formation): PresetRow {
     tag: offense ? "OFF" : "DEF",
     tagColor: offense ? "var(--off)" : "var(--def)",
     select: () => {
-      loadFormation(formation);
+      const placed = playmaker.loadFormation(formation);
       setInfo(
         formation.name,
         null,
         "Formation",
-        "選手配置のみ（ライン無し）。現在の図を差し替えます。",
+        placed
+          ? "今の図に選手を足しました（線は付きません）。攻守の隊形を重ねられます。"
+          : "選手の上限を超えるので、置きませんでした。",
       );
     },
   };

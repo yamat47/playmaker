@@ -1,6 +1,6 @@
 import { isFiniteNumber, isRecord } from "./guards.js";
 import { MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
-import { DEFAULT_FIELD_ZONE, isFieldZone, LOS_YARD_BY_ZONE } from "./play-data.js";
+import { DEFAULT_FIELD_ZONE, fieldStateForZone, isFieldZone } from "./play-data.js";
 import { MAX_PLAYERS } from "./player.js";
 
 /**
@@ -52,10 +52,11 @@ function toV2Line(raw: unknown, losYard: number): unknown {
 export function migrateV1ToV2(data: Readonly<Record<string, unknown>>): Record<string, unknown> {
   const zone =
     isRecord(data.field) && isFieldZone(data.field.zone) ? data.field.zone : DEFAULT_FIELD_ZONE;
-  const losYard = LOS_YARD_BY_ZONE[zone];
+  const field = fieldStateForZone(zone);
+  const { losYard } = field;
   return {
     ...data,
-    field: { zone, losYard },
+    field,
     players: Array.isArray(data.players)
       ? data.players.slice(0, MAX_PLAYERS).map((p) => toV2Player(p, losYard))
       : data.players,

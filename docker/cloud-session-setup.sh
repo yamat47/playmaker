@@ -31,8 +31,7 @@ if [ "pnpm@$(pnpm --version 2>/dev/null || true)" != "$package_manager" ]; then
   npm install -g "$package_manager"
 fi
 
-# Makefile はこれを見て、docker compose を経由せず pnpm を直接呼ぶ。
-export IN_CONTAINER=1
+# Makefile は IN_CONTAINER を見て、docker compose を経由せず pnpm を直接呼ぶ。
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   {
     echo "export PATH=\"$node_prefix/bin:\$PATH\""
@@ -40,4 +39,4 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "$CLAUDE_ENV_FILE"
 fi
 
-make -C "$repo" install
+IN_CONTAINER=1 make -C "$repo" install

@@ -58,6 +58,7 @@ export {
   type FieldState,
   type FieldZone,
   type PlayData,
+  type PlayDataInput,
 } from "./model/play-data.js";
 export {
   type FieldPosition,

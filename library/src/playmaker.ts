@@ -14,6 +14,7 @@ import {
   type IDisposable,
   type ImageExportOptions,
   type PlayData,
+  type PlayDataInput,
   PlaySession,
   toDisposable,
 } from "./common/index.js";
@@ -33,6 +34,7 @@ export type {
   LineKind,
   PlayCategory,
   PlayData,
+  PlayDataInput,
   Player,
   PlayerShape,
   PlayPreset,
@@ -69,14 +71,8 @@ export interface PlaymakerOptions {
    * あとから `setMode` で切り替えられる。
    */
   mode?: PlaymakerMode;
-  /**
-   * 初期表示するプレー図データ。商用ソフトが永続化した PlayData をそのまま渡せる。
-   * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行スキーマへ寄せる
-   * （決して投げず復元不能要素のみ除外＝PRD 6.6 の往復契約）。
-   * 選手 64 人、線 128 本、線 1 本あたり waypoint 32 個を超える分は、
-   * 先頭から上限までを残して捨てる。
-   */
-  initialData?: PlayData;
+  /** 最初に表示する図。`restorePlayData` と同じく、形を確かめずに受け取って今のスキーマへ寄せる。 */
+  initialData?: unknown;
   /** 構築時に `onDidChange` へ登録するリスナ。解除するには Playmaker を dispose する。 */
   onChange?: (data: PlayData) => void;
 }
@@ -91,7 +87,8 @@ export class Playmaker implements IDisposable {
   /**
    * 編集コマンドと Undo / Redo の確定ごとに 1 回、最新の図の深いコピーを渡す。
    * `version` は常に現行なので、受け取った値をそのまま永続化できる。
-   * 構築時、`setPlayData` での読み込み、PNG の書き出しでは発火しない（読み込みは編集ではないため）。
+   * 構築時、`setPlayData` と `restorePlayData` での読み込み、PNG の書き出しでは発火しない
+   * （読み込みは編集ではないため）。
    * コピーはリスナごとに作るので、受け手が書き換えても、この図とほかのリスナには波及しない。
    * 返り値を dispose すると購読をやめる。
    */
@@ -178,13 +175,12 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * 商用ソフトが永続化した PlayData を後から丸ごと再読込する（PRD 5.8）。
-   * 旧版・版なし・未来版・破損データでも `migratePlayData` が現行へ寄せ、決して
-   * 投げない。1 セッション = 1 Model なので履歴はリセットされ、再読込は編集では
-   * ないため `onChange` は発火しない（編集確定のみが通知契約＝PRD 6.6）。
-   * 件数の上限は `initialData` と同じで、超えた分は捨てる。
+   * 型付きで組み立てた図を読み込み、今の図と置き換える。`getPlayData` の戻り値や、
+   * プリセットの `data` もそのまま渡せる。
+   * 型に合っていても、重複した id と件数の上限を超えた分は `restorePlayData` と同じく正規化する。
+   * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
    */
-  setPlayData(data: PlayData): void {
+  setPlayData(data: PlayDataInput): void {
     if (this.ignoreAfterDispose("setPlayData")) {
       return;
     }
@@ -192,11 +188,22 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * 現在のプレー図の正準スナップショット（深い防御的コピー・`version` は現行）。
-   * そのまま JSON 化して永続化でき、後で `setPlayData` / `initialData` に戻すと
-   * 同値のプレー図に復元される（PRD 5.8 / 6.6 の往復契約）。
-   * 編集でも件数の上限（`initialData` を参照）は超えられず、上限に達すると
-   * 選手の追加、フォーメーションの読み込み、作図は何もしない。
+   * 永続化しておいた値を、形を確かめずに受け取って読み込み、今の図と置き換える。
+   * 旧版、版の無いもの、未来版、壊れたデータも、例外を投げずに今のスキーマへ寄せ、読めない要素だけを捨てる。
+   * 選手 64 人、線 128 本、線 1 本あたり waypoint 32 個を超える分は、先頭から上限までを残して捨てる。
+   * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
+   */
+  restorePlayData(raw: unknown): void {
+    if (this.ignoreAfterDispose("restorePlayData")) {
+      return;
+    }
+    this.session.setPlayData(raw);
+  }
+
+  /**
+   * 今の図の深いコピー。`version` は常に現行で、そのまま JSON にして永続化できる。
+   * `restorePlayData` か `initialData` に戻すと、同じ図になる。
+   * 編集でも件数の上限は超えられず、上限に達すると選手の追加、フォーメーションの読み込み、作図は何もしない。
    */
   getPlayData(): PlayData {
     return this.session.getPlayData();

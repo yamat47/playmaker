@@ -1,7 +1,3 @@
-// プロパティパネル（PRD 5.4: 選手=ラベル/形状/色、線=種別/補間/色/太さ）。
-// バニラ DOM・--playmaker-* テーマ。選択が変わるたびに中身を作り直す
-// （DOM が小さく、編集はコマンド確定時に走るので作り直しても支障ない）。
-
 import {
   DEFAULT_LINE_THICKNESS,
   Disposable,
@@ -43,18 +39,18 @@ function toHex(value: string | undefined, fallback: string): string {
   return value !== undefined && isHexColor(value) ? value : fallback;
 }
 
-interface ShownItems {
-  readonly player: Player | undefined;
-  readonly line: Line | undefined;
-}
+/** 表示中の入力と、選択中の要素の値をその入力に書き込む関数。 */
+type ShownFields =
+  | { readonly kind: "player"; readonly id: string; readonly update: (player: Player) => void }
+  | { readonly kind: "line"; readonly id: string; readonly update: (line: Line) => void }
+  | { readonly kind: "hint" };
 
 export class PropertyPanel extends Disposable {
   readonly element: HTMLElement;
   private readonly controller: IEditorUi;
-  // 直近に描いた選手と線。表示状態の通知はツールや Undo の可否が変わっても届くので、
-  // 選択中の要素が差し替わらない限り作り直さず、入力中のフォーカスを失わせない。
-  // 要素は値が変わるたびに別のオブジェクトになるので、参照で比べればよい。
-  private shown: ShownItems | undefined;
+  // 選択中の要素が同じあいだは入力を作り直さず、値だけを書き込む。作り直すと、
+  // 値を確定して Tab で次の入力へ移った直後に、移った先の入力ごと消えてフォーカスが外れる。
+  private shown: ShownFields | undefined;
 
   constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
@@ -64,38 +60,46 @@ export class PropertyPanel extends Disposable {
 
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
-    this._register(controller.onDidChangeViewState(() => this.rebuild()));
-    this.rebuild();
+    this._register(controller.onDidChangeViewState(() => this.sync()));
+    this.sync();
   }
 
   /** 色の既定値とスウォッチはテーマ変数から読むので、ホストが変数を変えたあとに呼べば反映される。 */
   refresh(): void {
     this.shown = undefined;
-    this.rebuild();
+    this.sync();
   }
 
-  private rebuild(): void {
-    const controller = this.controller;
-    const player = controller.getSelectedPlayer();
-    const line = controller.getSelectedLine();
-    if (this.shown !== undefined && this.shown.player === player && this.shown.line === line) {
-      return;
+  private sync(): void {
+    const player = this.controller.getSelectedPlayer();
+    const line = this.controller.getSelectedLine();
+    const shown = this.shown;
+    if (player !== undefined && shown?.kind === "player" && shown.id === player.id) {
+      shown.update(player);
+    } else if (line !== undefined && shown?.kind === "line" && shown.id === line.id) {
+      shown.update(line);
+    } else if (player !== undefined || line !== undefined || shown?.kind !== "hint") {
+      this.shown = this.rebuild(player, line);
     }
-    this.shown = { player, line };
+  }
 
+  private rebuild(player: Player | undefined, line: Line | undefined): ShownFields {
     this.element.replaceChildren();
     if (player !== undefined) {
-      this.addPlayerFields()(player);
-      return;
+      const update = this.addPlayerFields();
+      update(player);
+      return { kind: "player", id: player.id, update };
     }
     if (line !== undefined) {
-      this.addLineFields()(line);
-      return;
+      const update = this.addLineFields();
+      update(line);
+      return { kind: "line", id: line.id, update };
     }
     const hint = document.createElement("p");
     hint.className = "playmaker-panel__hint";
     hint.textContent = "対象を選択するとプロパティを編集できます";
     this.element.appendChild(hint);
+    return { kind: "hint" };
   }
 
   private addPlayerFields(): (player: Player) => void {

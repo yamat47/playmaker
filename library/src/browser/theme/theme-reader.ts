@@ -1,4 +1,4 @@
-import { THEME_TOKENS, type ThemeReader } from "./tokens.js";
+import { type ThemeReader, themeReaderFrom } from "./tokens.js";
 
 /**
  * element で解決したテーマ変数を読む。canvas は var() を解釈できないので、描く前に具体的な色にする。
@@ -6,9 +6,5 @@ import { THEME_TOKENS, type ThemeReader } from "./tokens.js";
  */
 export function createThemeReader(element: Element): ThemeReader {
   const styles = getComputedStyle(element);
-  return (token) => {
-    const { property, fallback } = THEME_TOKENS[token];
-    const value = styles.getPropertyValue(property).trim();
-    return value === "" ? fallback : value;
-  };
+  return themeReaderFrom((property) => styles.getPropertyValue(property));
 }

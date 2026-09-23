@@ -1,3 +1,5 @@
+import type { Event } from "../base/event.js";
+import { Disposable } from "../base/lifecycle.js";
 import type { ICommand } from "../commands/command.js";
 import type { ICommandService } from "../commands/command-service.js";
 import { SetFieldZoneCommand } from "../commands/field-commands.js";
@@ -15,11 +17,10 @@ import {
   RemovePlayerCommand,
   UpdatePlayerCommand,
 } from "../commands/player-commands.js";
-import { Emitter } from "../event/emitter.js";
 import { type Formation, instantiateFormation } from "../formations/formation.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { hitLineHandle, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
-import { Disposable } from "../lifecycle/disposable.js";
+import type { IIdFactory } from "../model/id-factory.js";
 import { type Line, MAX_LINES } from "../model/line.js";
 import type { FieldZone } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
@@ -29,15 +30,15 @@ import {
   MAX_PLAYERS,
   type Player,
 } from "../model/player.js";
-import type {
-  EditorOverlay,
-  EditorSelection,
-  EditorTool,
-  EditorViewState,
-  IEditorController,
-  SceneData,
+import {
+  type EditorFrame,
+  type EditorSelection,
+  type EditorTool,
+  type EditorViewState,
+  type IEditorController,
+  isSameSelection,
 } from "./editor.js";
-import type { IIdFactory } from "./id-factory.js";
+import { EditorNotifier } from "./editor-notifier.js";
 import {
   addDraftPoint,
   committableDraft,
@@ -53,20 +54,13 @@ import {
 } from "./interaction.js";
 import { composePreview, computeOverlay } from "./preview.js";
 
-function samePosition(a: FieldPosition, b: FieldPosition): boolean {
+function isSamePosition(a: FieldPosition, b: FieldPosition): boolean {
   return a.lateralYard === b.lateralYard && a.downfieldYard === b.downfieldYard;
-}
-
-function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
-  if (a === null || b === null) {
-    return a === b;
-  }
-  return a.kind === b.kind && a.id === b.id;
 }
 
 /**
  * ツール、選択、ジェスチャを受けてコマンドを発行する。Model を直接書き換えない。
- * ドラッグや作図の途中は Model に載せず、getRenderModel で重ねて見せるので、
+ * ドラッグや作図の途中は Model に載せず、getFrame で重ねて見せるので、
  * 確定までは Model の onDidChange も履歴も動かない。
  */
 export class EditorController extends Disposable implements IEditorController {
@@ -74,32 +68,30 @@ export class EditorController extends Disposable implements IEditorController {
   private readonly commands: ICommandService;
   private readonly ids: IIdFactory;
 
-  private readonly _onDidChange = this._register(new Emitter<void>());
-  readonly onDidChange = this._onDidChange.event;
+  private readonly notifier: EditorNotifier;
+  readonly onDidChangeScene: Event<void>;
+  readonly onDidChangeViewState: Event<void>;
 
   private tool: EditorTool = "select";
   private selection: EditorSelection = null;
   private interaction: Interaction | undefined;
-  // 自分で編集を走らせている間は Model と履歴の通知を転送せず、両方が済んでから 1 回だけ発火する。
-  // Model はコマンドの apply の中で通知するので、そのまま転送すると購読側が
-  // 更新前の canUndo / canRedo を読んでしまう。
-  private editing = false;
-  private changedWhileEditing = false;
 
   constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
     super();
     this.model = model;
     this.commands = commands;
     this.ids = ids;
-    const forward = (): void => {
-      if (this.editing) {
-        this.changedWhileEditing = true;
-      } else {
-        this._onDidChange.fire();
-      }
-    };
-    this._register(this.model.onDidChange(forward));
-    this._register(this.commands.onDidChangeHistory(forward));
+    this.notifier = this._register(
+      new EditorNotifier(() => ({
+        state: this.getViewState(),
+        player: this.getSelectedPlayer(),
+        line: this.getSelectedLine(),
+      })),
+    );
+    this.onDidChangeScene = this.notifier.onDidChangeScene;
+    this.onDidChangeViewState = this.notifier.onDidChangeViewState;
+    this._register(this.model.onDidChange(() => this.notifier.markSceneChanged()));
+    this._register(this.commands.onDidChangeHistory(() => this.notifier.markViewStateChanged()));
   }
 
   getTool(): EditorTool {
@@ -119,7 +111,7 @@ export class EditorController extends Disposable implements IEditorController {
       canUndo: this.commands.canUndo,
       canRedo: this.commands.canRedo,
       fieldZone: this.model.getFieldZone(),
-      drawing: this.interaction?.type === "draw-line",
+      isDrawing: this.interaction?.type === "draw-line",
     };
   }
 
@@ -133,107 +125,107 @@ export class EditorController extends Disposable implements IEditorController {
     return s?.kind === "line" ? this.model.findLine(s.id) : undefined;
   }
 
-  getRenderModel(): SceneData {
-    return composePreview(this.model.getSnapshot(), this.interaction);
-  }
-
-  getOverlay(): EditorOverlay {
-    return computeOverlay(this.getRenderModel(), this.selection);
+  getFrame(): EditorFrame {
+    const scene = composePreview(this.model.getSnapshot(), this.interaction);
+    return { scene, overlay: computeOverlay(scene, this.selection) };
   }
 
   setTool(tool: EditorTool): void {
     if (tool === this.tool) {
       return;
     }
-    this.tool = tool;
-    // ツールを切り替えたら作図やドラッグの途中は捨てる。
-    this.interaction = undefined;
-    this._onDidChange.fire();
+    this.notifier.batch(() => {
+      this.tool = tool;
+      // ツールを切り替えたら作図やドラッグの途中は捨てる。
+      this.setInteraction(undefined);
+    });
   }
 
   pointerDown(pos: FieldPosition): void {
-    switch (this.tool) {
-      case "add-player":
-        this.addPlayerAt(pos);
-        return;
-      case "draw-line":
-        this.drawLinePointerDown(pos);
-        return;
-      case "select":
-        this.selectPointerDown(pos);
-        return;
-    }
+    this.notifier.batch(() => {
+      switch (this.tool) {
+        case "add-player":
+          this.addPlayerAt(pos);
+          return;
+        case "draw-line":
+          this.drawLinePointerDown(pos);
+          return;
+        case "select":
+          this.selectPointerDown(pos);
+          return;
+      }
+    });
   }
 
   pointerMove(pos: FieldPosition): void {
-    const i = this.interaction;
-    if (i === undefined) {
+    const interaction = this.interaction;
+    if (interaction === undefined) {
       return;
     }
-    this.interaction =
-      i.type === "draw-line"
-        ? { ...i, cursor: this.clampToField(pos) }
-        : { ...i, current: this.clampToField(dragPosition(i, pos)) };
-    this._onDidChange.fire();
+    this.notifier.batch(() =>
+      this.setInteraction(
+        interaction.type === "draw-line"
+          ? { ...interaction, cursor: this.clampToField(pos) }
+          : { ...interaction, current: this.clampToField(dragPosition(interaction, pos)) },
+      ),
+    );
   }
 
   pointerUp(pos: FieldPosition): void {
-    const i = this.interaction;
+    const interaction = this.interaction;
     // 作図はクリック（pointerDown）で点を打つので、up では何もしない。
-    if (i?.type !== "drag") {
+    if (interaction?.type !== "drag") {
       return;
     }
-    this.interaction = undefined;
-    const moved = dragPosition(i, pos);
-    // 寄せる前の位置で比べる。窓の外にある選手をクリックしただけで、窓の端へ動かさない。
-    if (samePosition(moved, i.origin)) {
-      this._onDidChange.fire();
-      return;
-    }
-    const command = this.dropCommand(i, this.clampToField(moved));
-    if (command === undefined) {
-      this._onDidChange.fire();
-      return;
-    }
-    this.execute(command);
+    this.notifier.batch(() => {
+      this.setInteraction(undefined);
+      const moved = dragPosition(interaction, pos);
+      // 寄せる前の位置で比べる。窓の外にある選手をクリックしただけで、窓の端へ動かさない。
+      if (isSamePosition(moved, interaction.origin)) {
+        return;
+      }
+      const command = this.dropCommand(interaction, this.clampToField(moved));
+      if (command !== undefined) {
+        this.commands.execute(command);
+      }
+    });
   }
 
   cancelInteraction(): void {
-    if (this.interaction === undefined) {
-      return;
-    }
-    this.interaction = undefined;
-    this._onDidChange.fire();
+    this.notifier.batch(() => this.setInteraction(undefined));
   }
 
   commitLine(): void {
-    const i = this.interaction;
-    if (i?.type !== "draw-line") {
+    const interaction = this.interaction;
+    if (interaction?.type !== "draw-line") {
       return;
     }
-    this.interaction = undefined;
-    const line = this.lineFromDraft(i);
-    if (line === undefined) {
-      this._onDidChange.fire();
-      return;
-    }
-    this.execute(new AddLineCommand(line));
-    // 作図の直後は選択ツールへ戻し、引いた線を選ぶ。続けて引くより、すぐ編集できるほうを取る。
-    this.setTool("select");
-    this.setSelection({ kind: "line", id: line.id });
+    this.notifier.batch(() => {
+      this.setInteraction(undefined);
+      const line = this.lineFromDraft(interaction);
+      if (line === undefined) {
+        return;
+      }
+      this.commands.execute(new AddLineCommand(line));
+      // 作図の直後は選択ツールへ戻し、引いた線を選ぶ。続けて引くより、すぐ編集できるほうを取る。
+      this.setTool("select");
+      this.setSelection({ kind: "line", id: line.id });
+    });
   }
 
   deleteSelection(): void {
     const player = this.getSelectedPlayer();
     const line = this.getSelectedLine();
-    if (player !== undefined) {
-      this.execute(new RemovePlayerCommand(player.id));
-    } else if (line !== undefined) {
-      this.execute(new RemoveLineCommand(line.id));
-    } else {
-      return;
-    }
-    this.setSelection(null);
+    this.notifier.batch(() => {
+      if (player !== undefined) {
+        this.commands.execute(new RemovePlayerCommand(player.id));
+      } else if (line !== undefined) {
+        this.commands.execute(new RemoveLineCommand(line.id));
+      } else {
+        return;
+      }
+      this.setSelection(null);
+    });
   }
 
   updateSelectedPlayer(patch: PlayerPatch): void {
@@ -242,7 +234,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (player === undefined || !patchChangesAnything(player, patch)) {
       return;
     }
-    this.execute(new UpdatePlayerCommand(player.id, patch));
+    this.notifier.batch(() => this.commands.execute(new UpdatePlayerCommand(player.id, patch)));
   }
 
   updateSelectedLine(patch: LinePatch): void {
@@ -250,15 +242,17 @@ export class EditorController extends Disposable implements IEditorController {
     if (line === undefined || !patchChangesAnything(line, patch)) {
       return;
     }
-    this.execute(new UpdateLineCommand(line.id, patch));
+    this.notifier.batch(() => this.commands.execute(new UpdateLineCommand(line.id, patch)));
   }
 
   setFieldZone(zone: FieldZone): void {
     if (zone === this.model.getFieldZone()) {
       return;
     }
-    this.cancelInteraction();
-    this.execute(new SetFieldZoneCommand(zone));
+    this.notifier.batch(() => {
+      this.setInteraction(undefined);
+      this.commands.execute(new SetFieldZoneCommand(zone));
+    });
   }
 
   loadFormation(formation: Formation): void {
@@ -271,55 +265,51 @@ export class EditorController extends Disposable implements IEditorController {
       this.ids,
       players.map((p) => p.id),
     );
-    this.cancelInteraction();
-    this.execute(new LoadFormationCommand(added));
-    // 読み込んだあとは、元の選択に意味が無いので外す。
-    this.setSelection(null);
+    this.notifier.batch(() => {
+      this.setInteraction(undefined);
+      this.commands.execute(new LoadFormationCommand(added));
+      // 読み込んだあとは、元の選択に意味が無いので外す。
+      this.setSelection(null);
+    });
   }
 
   undo(): void {
-    const i = this.interaction;
-    if (i?.type === "draw-line") {
-      if (i.points.length === 0) {
-        this.cancelInteraction();
-      } else {
-        this.interaction = { ...i, points: i.points.slice(0, -1) };
-        this._onDidChange.fire();
+    this.notifier.batch(() => {
+      const interaction = this.interaction;
+      if (interaction?.type === "draw-line") {
+        this.setInteraction(
+          interaction.points.length === 0
+            ? undefined
+            : { ...interaction, points: interaction.points.slice(0, -1) },
+        );
+        return;
       }
-      return;
-    }
-    this.cancelInteraction();
-    this.runEdit(() => this.commands.undo());
+      this.setInteraction(undefined);
+      this.commands.undo();
+    });
   }
 
   redo(): void {
-    this.cancelInteraction();
-    this.runEdit(() => this.commands.redo());
+    this.notifier.batch(() => {
+      this.setInteraction(undefined);
+      this.commands.redo();
+    });
   }
 
   private setSelection(next: EditorSelection): void {
-    if (sameSelection(this.selection, next)) {
+    if (isSameSelection(this.selection, next)) {
       return;
     }
     this.selection = next;
-    this._onDidChange.fire();
+    this.notifier.markSceneChanged();
   }
 
-  private execute(command: ICommand): void {
-    this.runEdit(() => this.commands.execute(command));
-  }
-
-  private runEdit(edit: () => void): void {
-    this.editing = true;
-    try {
-      edit();
-    } finally {
-      this.editing = false;
+  private setInteraction(next: Interaction | undefined): void {
+    if (next === this.interaction) {
+      return;
     }
-    if (this.changedWhileEditing) {
-      this.changedWhileEditing = false;
-      this._onDidChange.fire();
-    }
+    this.interaction = next;
+    this.notifier.markSceneChanged();
   }
 
   private clampToField(pos: FieldPosition): FieldPosition {
@@ -353,16 +343,14 @@ export class EditorController extends Disposable implements IEditorController {
     // 選択中の線のハンドルを最優先で掴む。選手や線と重なっていても編集できるようにする。
     const handle = this.hitSelectedLineHandle(pos);
     if (handle !== undefined) {
-      this.interaction = handle;
-      this._onDidChange.fire();
+      this.setInteraction(handle);
       return;
     }
     // 選手は選択しつつドラッグを始める。動かさずに離せばただの選択になる。
     const player = hitTestPlayer(data.players, pos);
     if (player !== undefined) {
       this.setSelection({ kind: "player", id: player.id });
-      this.interaction = startDrag({ kind: "player", playerId: player.id }, player.position, pos);
-      this._onDidChange.fire();
+      this.setInteraction(startDrag({ kind: "player", playerId: player.id }, player.position, pos));
       return;
     }
     const line = hitTestLine(data.lines, data.players, pos);
@@ -383,10 +371,9 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private drawLinePointerDown(pos: FieldPosition): void {
-    const i = this.interaction;
-    if (i?.type === "draw-line") {
-      this.interaction = addDraftPoint(i, this.clampToField(pos));
-      this._onDidChange.fire();
+    const interaction = this.interaction;
+    if (interaction?.type === "draw-line") {
+      this.setInteraction(addDraftPoint(interaction, this.clampToField(pos)));
       return;
     }
     const data = this.model.getSnapshot();
@@ -398,8 +385,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (player === undefined) {
       return;
     }
-    this.interaction = startDrawing(player);
-    this._onDidChange.fire();
+    this.setInteraction(startDrawing(player));
   }
 
   private addPlayerAt(pos: FieldPosition): void {
@@ -408,7 +394,7 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     const id = this.ids.next("player", new Set(players.map((p) => p.id)));
-    this.execute(
+    this.commands.execute(
       new AddPlayerCommand({
         id,
         position: this.clampToField(pos),

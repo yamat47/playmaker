@@ -175,7 +175,7 @@ export class Playmaker extends Disposable {
 
   /**
    * Model/コマンド/Undo/Controller/UI/入力を 1 セッションとして構築し session に束ねる。
-   * onDidChange→再描画、model 変更→onChange を配線し、edit のみ UI/入力を出す。
+   * 図の変化で再描画し、model の変更で onChange を呼ぶ。UI と入力は edit のときだけ出す。
    */
   private buildSession(data: PlayData | undefined): {
     model: PlayModel;
@@ -187,11 +187,11 @@ export class Playmaker extends Disposable {
     const ids = new IdFactory();
     const controller = this.session.add(new EditorController(model, commands, ids));
 
-    this.session.add(
-      controller.onDidChange(() =>
-        this.surface.setScene(controller.getRenderModel(), controller.getOverlay()),
-      ),
-    );
+    const draw = (): void => {
+      const { scene, overlay } = controller.getFrame();
+      this.surface.setScene(scene, overlay);
+    };
+    this.session.add(controller.onDidChangeScene(draw));
     // Model 変更（編集コマンド・Undo/Redo）のたびに最新 PlayData を通知する。
     // 構築時は発火しない＝再読込は edit ではないので onChange を出さない。
     // 受け手が書き換えても Model に波及しないよう、渡す直前にだけ深いコピーを作る。
@@ -203,7 +203,7 @@ export class Playmaker extends Disposable {
       this.session.add(new PointerInput(this.root, this.surface, controller));
     }
 
-    this.surface.setScene(controller.getRenderModel(), controller.getOverlay());
+    draw();
     return { model, controller };
   }
 }

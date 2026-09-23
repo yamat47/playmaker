@@ -1,7 +1,7 @@
 // VSCode の base/common/event 相当の極小実装。
 // DOM 非依存。Model→View の購読や onChange 通知の土台に使う。
 
-import { type IDisposable, toDisposable } from "../lifecycle/disposable.js";
+import { type IDisposable, toDisposable } from "./lifecycle.js";
 
 // common は ECMAScript の lib だけで型検査するので、ホストが持つ console には型がない。
 // どのホスト（ブラウザ、Node）にもある console.error だけを、このモジュールの中で宣言して使う。

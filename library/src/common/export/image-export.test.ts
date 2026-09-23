@@ -1,23 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_WIDTH_YARDS, zoneWindowLength } from "../geometry/field.js";
+import { fieldWindowAspect } from "../geometry/field.js";
 import {
   DEFAULT_EXPORT_WIDTH,
-  fieldWindowAspect,
   type ImageExportOptions,
   resolveImageExportSize,
   resolveImageExportWidth,
 } from "./image-export.js";
-
-describe("fieldWindowAspect", () => {
-  it("各ゾーンの窓（幅 / 縦＝ゾーン窓長）の比に一致する", () => {
-    expect(fieldWindowAspect("middle")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("middle"));
-    expect(fieldWindowAspect("redzone")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("redzone"));
-  });
-
-  it("縦長なレッドゾーン窓は middle より横長比が小さい", () => {
-    expect(fieldWindowAspect("redzone")).toBeLessThan(fieldWindowAspect("middle"));
-  });
-});
 
 describe("resolveImageExportWidth", () => {
   it("正の整数はそのまま返す", () => {

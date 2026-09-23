@@ -4,12 +4,12 @@ import { UpdatePlayerCommand } from "../commands/player-commands.js";
 import { UndoRedoService } from "../commands/undo-redo-service.js";
 import type { Formation } from "../formations/formation.js";
 import { RemoveLineCommand, RemovePlayerCommand } from "../index.js";
+import { IdFactory } from "../model/id-factory.js";
 import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import { MAX_PLAYERS, type Player } from "../model/player.js";
 import { EditorController } from "./editor-controller.js";
-import { IdFactory } from "./id-factory.js";
 
 function initialData(): PlayData {
   return {
@@ -37,8 +37,10 @@ function setup(data: PlayData = initialData()) {
   const commands = new CommandService(model, new UndoRedoService());
   const ids = new IdFactory();
   const controller = new EditorController(model, commands, ids);
-  const changes = vi.fn();
-  controller.onDidChange(changes);
+  // どちらの通知が出たかを引数で記録する。
+  const changes = vi.fn<(event: "scene" | "view") => void>();
+  controller.onDidChangeScene(() => changes("scene"));
+  controller.onDidChangeViewState(() => changes("view"));
   return { model, commands, ids, controller, changes };
 }
 
@@ -54,17 +56,17 @@ describe("EditorController: 初期状態", () => {
       canUndo: false,
       canRedo: false,
       fieldZone: "middle",
-      drawing: false,
+      isDrawing: false,
     });
-    expect(controller.getOverlay()).toEqual({ kind: "none" });
+    expect(controller.getFrame().overlay).toEqual({ kind: "none" });
     expect(controller.getSelectedPlayer()).toBeUndefined();
     expect(controller.getSelectedLine()).toBeUndefined();
   });
 
-  it("interaction が無ければ getRenderModel は Model のスナップショットをそのまま返す", () => {
+  it("interaction が無ければ 描く図は Model のスナップショットそのもの", () => {
     const { controller, model } = setup();
 
-    expect(controller.getRenderModel()).toBe(model.getSnapshot());
+    expect(controller.getFrame().scene).toBe(model.getSnapshot());
   });
 });
 
@@ -82,14 +84,14 @@ describe("EditorController: ツール切替", () => {
     const { controller, changes } = setup();
     controller.setTool("draw-line");
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a から作図開始
-    expect(controller.getViewState().drawing).toBe(true);
+    expect(controller.getViewState().isDrawing).toBe(true);
     changes.mockClear();
 
     controller.setTool("select");
 
     expect(controller.getTool()).toBe("select");
-    expect(controller.getViewState().drawing).toBe(false);
-    expect(changes).toHaveBeenCalledOnce();
+    expect(controller.getViewState().isDrawing).toBe(false);
+    expect(changes.mock.calls).toEqual([["scene"], ["view"]]);
   });
 });
 
@@ -126,17 +128,17 @@ describe("EditorController: 線の作図（draw-line）", () => {
 
     controller.pointerDown({ lateralYard: 40, downfieldYard: -10 });
 
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
     expect(changes).not.toHaveBeenCalled();
   });
 
-  it("選手から開始するとプレビュー線が getRenderModel に現れカーソルに追従する", () => {
+  it("選手から開始するとプレビュー線が描く図に現れカーソルに追従する", () => {
     const { controller } = setup();
     controller.setTool("draw-line");
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a
-    expect(controller.getViewState().drawing).toBe(true);
-    let rendered = controller.getRenderModel();
+    expect(controller.getViewState().isDrawing).toBe(true);
+    let rendered = controller.getFrame().scene;
     expect(rendered.lines).toHaveLength(2);
     expect(rendered.lines[1]).toMatchObject({
       startPlayerId: "p-a",
@@ -145,11 +147,11 @@ describe("EditorController: 線の作図（draw-line）", () => {
     });
 
     controller.pointerMove({ lateralYard: 12, downfieldYard: 8 });
-    rendered = controller.getRenderModel();
+    rendered = controller.getFrame().scene;
     expect(rendered.lines[1]?.end).toEqual({ lateralYard: 12, downfieldYard: 8 });
 
     controller.pointerDown({ lateralYard: 12, downfieldYard: 8 }); // 中継点を打つ
-    rendered = controller.getRenderModel();
+    rendered = controller.getFrame().scene;
     expect(rendered.lines[1]?.waypoints).toEqual([{ lateralYard: 12, downfieldYard: 8 }]);
   });
 
@@ -173,7 +175,7 @@ describe("EditorController: 線の作図（draw-line）", () => {
       interpolation: "straight",
     });
     expect(controller.getSelection()).toEqual({ kind: "line", id: "line-1" });
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
   });
 
   it("確定後は select ツールへ戻す（連続作図せず編集導線へ）", () => {
@@ -212,8 +214,8 @@ describe("EditorController: 線の作図（draw-line）", () => {
     controller.commitLine();
 
     expect(model.getData().lines).toHaveLength(1);
-    expect(controller.getViewState().drawing).toBe(false);
-    expect(changes).toHaveBeenCalledOnce();
+    expect(controller.getViewState().isDrawing).toBe(false);
+    expect(changes.mock.calls).toEqual([["scene"], ["view"]]);
   });
 
   it("起点選手が作図中に消えたら確定しても線を追加しない", () => {
@@ -248,8 +250,8 @@ describe("EditorController: 線の作図（draw-line）", () => {
     changes.mockClear();
     controller.cancelInteraction();
 
-    expect(controller.getViewState().drawing).toBe(false);
-    expect(changes).toHaveBeenCalledOnce();
+    expect(controller.getViewState().isDrawing).toBe(false);
+    expect(changes.mock.calls).toEqual([["scene"], ["view"]]);
   });
 });
 
@@ -270,7 +272,7 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a（offset 0）
     controller.pointerMove({ lateralYard: 14, downfieldYard: 3 });
-    const preview = controller.getRenderModel().players.find((p) => p.id === "p-a");
+    const preview = controller.getFrame().scene.players.find((p) => p.id === "p-a");
     expect(preview?.position).toEqual({ lateralYard: 14, downfieldYard: 3 });
 
     controller.pointerUp({ lateralYard: 14, downfieldYard: 3 });
@@ -306,7 +308,7 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
 
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
 
-    expect(controller.getViewState().drawing).toBe(true); // まだ作図継続
+    expect(controller.getViewState().isDrawing).toBe(true); // まだ作図継続
     expect(model.getData().lines).toHaveLength(1);
   });
 
@@ -331,7 +333,7 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
     expect(controller.getSelection()).toEqual({ kind: "line", id: "l-1" });
   });
 
-  it("同じ選手の再選択や別対象選択で sameSelection を網羅する", () => {
+  it("同じ選手を選び直しても選択は変わらず、別の選手を押すと選択が移る", () => {
     const { controller } = setup();
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
@@ -356,7 +358,7 @@ describe("EditorController: waypoint 編集", () => {
 
     controller.pointerDown({ lateralYard: 15, downfieldYard: 2 }); // waypoint 0 を掴む
     controller.pointerMove({ lateralYard: 16, downfieldYard: 4 });
-    expect(controller.getOverlay()).toMatchObject({
+    expect(controller.getFrame().overlay).toMatchObject({
       waypointHandles: [{ lateralYard: 16, downfieldYard: 4 }],
     });
     controller.pointerUp({ lateralYard: 16, downfieldYard: 4 });
@@ -430,7 +432,7 @@ describe("EditorController: waypoint 編集", () => {
     expect(controller.getSelection()).toEqual({ kind: "player", id: "p-a" });
   });
 
-  it("複数 waypoint・複数線でドラッグ中の 1 点だけが overlay/getRenderModel に反映される", () => {
+  it("複数 waypoint・複数線でドラッグ中の 1 点だけが オーバーレイと描く図に反映される", () => {
     const { controller, model } = setup({
       version: 2,
       field: { zone: "middle", losYard: 50 },
@@ -464,11 +466,11 @@ describe("EditorController: waypoint 編集", () => {
     controller.pointerMove({ lateralYard: 15, downfieldYard: 3 });
 
     // ドラッグ中の点だけ current、他 waypoint・他線は不変。
-    expect(controller.getOverlay()).toHaveProperty("waypointHandles", [
+    expect(controller.getFrame().overlay).toHaveProperty("waypointHandles", [
       { lateralYard: 15, downfieldYard: 3 },
       { lateralYard: 18, downfieldYard: 6 },
     ]);
-    const rendered = controller.getRenderModel();
+    const rendered = controller.getFrame().scene;
     expect(rendered.lines.find((l) => l.id === "l-2")?.waypoints).toEqual([
       { lateralYard: 15, downfieldYard: 3 },
       { lateralYard: 18, downfieldYard: 6 },
@@ -518,11 +520,11 @@ describe("EditorController: 終点（endpoint）編集", () => {
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // 終点ハンドルを掴む
     controller.pointerMove({ lateralYard: 28, downfieldYard: 8 });
     // overlay/プレビューに drag-endpoint が反映され、他線は不変。
-    expect(controller.getOverlay()).toHaveProperty("endpointHandle", {
+    expect(controller.getFrame().overlay).toHaveProperty("endpointHandle", {
       lateralYard: 28,
       downfieldYard: 8,
     });
-    const rendered = controller.getRenderModel();
+    const rendered = controller.getFrame().scene;
     expect(rendered.lines.find((l) => l.id === "l-1")?.end).toEqual({
       lateralYard: 28,
       downfieldYard: 8,
@@ -792,13 +794,13 @@ describe("EditorController: loadFormation（フォーメーション読込）", 
   });
 });
 
-describe("EditorController: getOverlay / getSelected*", () => {
+describe("EditorController: オーバーレイと選択中の要素", () => {
   it("選手選択で selectedPlayerId と選手スナップショットを返す", () => {
     const { controller } = setup();
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
 
-    expect(controller.getOverlay()).toEqual({ kind: "player", playerId: "p-a" });
+    expect(controller.getFrame().overlay).toEqual({ kind: "player", playerId: "p-a" });
     expect(controller.getSelectedPlayer()).toMatchObject({ id: "p-a" });
     expect(controller.getSelectedLine()).toBeUndefined();
   });
@@ -807,7 +809,7 @@ describe("EditorController: getOverlay / getSelected*", () => {
     const { controller, commands } = setup();
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1
 
-    expect(controller.getOverlay()).toEqual({
+    expect(controller.getFrame().overlay).toEqual({
       kind: "line",
       waypointHandles: [{ lateralYard: 15, downfieldYard: 2 }],
       endpointHandle: { lateralYard: 25, downfieldYard: 5 },
@@ -815,7 +817,7 @@ describe("EditorController: getOverlay / getSelected*", () => {
     expect(controller.getSelectedLine()).toMatchObject({ id: "l-1" });
 
     commands.execute(new RemoveLineCommand("l-1")); // stale 選択
-    expect(controller.getOverlay()).toEqual({ kind: "none" });
+    expect(controller.getFrame().overlay).toEqual({ kind: "none" });
     expect(controller.getSelectedLine()).toBeUndefined();
   });
 });
@@ -832,17 +834,17 @@ describe("EditorController: ライフサイクル", () => {
   });
 });
 
-describe("EditorController: 初期状態（drawing フラグ別経路）", () => {
+describe("EditorController: 作図中の表示状態", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("作図中は viewState.drawing が true になる", () => {
+  it("作図中は viewState.isDrawing が true になる", () => {
     const { controller } = setup();
     controller.setTool("draw-line");
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
 
-    expect(controller.getViewState().drawing).toBe(true);
+    expect(controller.getViewState().isDrawing).toBe(true);
   });
 });
 
@@ -856,7 +858,7 @@ describe("EditorController: 通知の時点の履歴状態", () => {
 
     controller.pointerUp({ lateralYard: 12, downfieldYard: 2 });
 
-    expect(seen).toEqual([true]);
+    expect(seen).toEqual([true, true]);
   });
 
   it("Undo の通知の中で読む canRedo は、Undo 後の値になっている", () => {
@@ -867,7 +869,7 @@ describe("EditorController: 通知の時点の履歴状態", () => {
 
     controller.undo();
 
-    expect(seen).toEqual([true]);
+    expect(seen).toEqual([true, true]);
   });
 
   it("戻す履歴が無い Undo / Redo は通知しない", () => {
@@ -914,7 +916,7 @@ describe("EditorController: 長さ 0 の線を作らない", () => {
     controller.commitLine();
 
     expect(model.getData().lines.map((l) => l.id)).toEqual(["l-1"]);
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
   });
 
   it("起点の選手が打点の上へ動いて全長が 0 に近くなった線は確定しない", () => {
@@ -929,7 +931,7 @@ describe("EditorController: 長さ 0 の線を作らない", () => {
     controller.commitLine();
 
     expect(model.getData().lines.map((l) => l.id)).toEqual(["l-1"]);
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
   });
 });
 
@@ -961,10 +963,10 @@ describe("EditorController: 途中状態のまま別の操作をしたとき", (
     controller.pointerDown({ lateralYard: 14, downfieldYard: 0 });
 
     controller.undo();
-    expect(controller.getViewState().drawing).toBe(true);
+    expect(controller.getViewState().isDrawing).toBe(true);
     controller.undo();
 
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
     expect(model.getFieldZone()).toBe("middle");
   });
 
@@ -991,7 +993,7 @@ describe("EditorController: 途中状態のまま別の操作をしたとき", (
 
     controller.redo();
 
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
     expect(model.getFieldZone()).toBe("redzone");
   });
 
@@ -1007,11 +1009,11 @@ describe("EditorController: 途中状態のまま別の操作をしたとき", (
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
 
     controller.setFieldZone("redzone");
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
     controller.loadFormation(formation);
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
   });
 });
 
@@ -1048,7 +1050,7 @@ describe("EditorController: ゾーン窓の外の位置", () => {
 
     controller.pointerMove({ lateralYard: 10, downfieldYard: -30 });
 
-    const preview = controller.getRenderModel().players.find((p) => p.id === "p-a");
+    const preview = controller.getFrame().scene.players.find((p) => p.id === "p-a");
     expect(preview?.position).toEqual({ lateralYard: 10, downfieldYard: -15 });
   });
 
@@ -1057,7 +1059,7 @@ describe("EditorController: ゾーン窓の外の位置", () => {
     controller.setTool("draw-line");
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
     controller.pointerMove({ lateralYard: 99, downfieldYard: 0 });
-    expect(controller.getRenderModel().lines.at(-1)?.end).toEqual({
+    expect(controller.getFrame().scene.lines.at(-1)?.end).toEqual({
       lateralYard: 160 / 3,
       downfieldYard: 0,
     });
@@ -1211,7 +1213,7 @@ describe("EditorController: 件数の上限", () => {
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
 
-    expect(controller.getViewState().drawing).toBe(false);
+    expect(controller.getViewState().isDrawing).toBe(false);
   });
 
   it("作図では waypoint の上限を超えて打点せず、上限を超えた打点は線に入らない", () => {
@@ -1240,7 +1242,7 @@ describe("EditorController: 件数の上限", () => {
 
     controller.pointerMove({ lateralYard: 50, downfieldYard: 10 });
 
-    const draft = controller.getRenderModel().lines.at(-1);
+    const draft = controller.getFrame().scene.lines.at(-1);
     expect(draft?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
     expect(draft?.end).toEqual({ lateralYard: 10 + MAX_WAYPOINTS_PER_LINE + 1, downfieldYard: 3 });
   });
@@ -1253,7 +1255,7 @@ describe("EditorController: 履歴の通知", () => {
 
     commands.execute(noop);
 
-    expect(changes).toHaveBeenCalledOnce();
+    expect(changes.mock.calls).toEqual([["view"]]);
   });
 });
 
@@ -1263,7 +1265,7 @@ describe("EditorController: 中心から外れた位置を掴んだドラッグ"
     controller.pointerDown({ lateralYard: 10.5, downfieldYard: 0.25 }); // p-a の中心から外れた点
 
     controller.pointerMove({ lateralYard: 14.5, downfieldYard: 3.25 });
-    const preview = controller.getRenderModel().players.find((p) => p.id === "p-a");
+    const preview = controller.getFrame().scene.players.find((p) => p.id === "p-a");
     controller.pointerUp({ lateralYard: 14.5, downfieldYard: 3.25 });
 
     expect(preview?.position).toEqual({ lateralYard: 14, downfieldYard: 3 });
@@ -1276,7 +1278,7 @@ describe("EditorController: 中心から外れた位置を掴んだドラッグ"
     controller.pointerDown({ lateralYard: 15.5, downfieldYard: 2.25 }); // waypoint 0 の中心から外れた点
 
     controller.pointerMove({ lateralYard: 18.5, downfieldYard: 4.25 });
-    const handle = controller.getOverlay();
+    const handle = controller.getFrame().overlay;
     controller.pointerUp({ lateralYard: 18.5, downfieldYard: 4.25 });
 
     expect(handle).toMatchObject({ waypointHandles: [{ lateralYard: 18, downfieldYard: 4 }] });
@@ -1289,10 +1291,59 @@ describe("EditorController: 中心から外れた位置を掴んだドラッグ"
     controller.pointerDown({ lateralYard: 25.5, downfieldYard: 5.25 }); // 終点の中心から外れた点
 
     controller.pointerMove({ lateralYard: 28.5, downfieldYard: 8.25 });
-    const handle = controller.getOverlay();
+    const handle = controller.getFrame().overlay;
     controller.pointerUp({ lateralYard: 28.5, downfieldYard: 8.25 });
 
     expect(handle).toMatchObject({ endpointHandle: { lateralYard: 28, downfieldYard: 8 } });
     expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 28, downfieldYard: 8 });
+  });
+});
+
+describe("EditorController: 描く図と表示状態の通知", () => {
+  it("ドラッグ中の移動は描く図の通知だけを出し、表示状態の通知は出さない", () => {
+    const { controller, changes } = setup();
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a を掴む
+    changes.mockClear();
+
+    controller.pointerMove({ lateralYard: 12, downfieldYard: 2 });
+    controller.pointerMove({ lateralYard: 14, downfieldYard: 4 });
+
+    expect(changes.mock.calls).toEqual([["scene"], ["scene"]]);
+  });
+
+  it("線の確定で Model、履歴、ツール、選択が変わっても、通知はそれぞれ 1 回にまとめる", () => {
+    const { controller, changes } = setup();
+    controller.setTool("draw-line");
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a
+    controller.pointerDown({ lateralYard: 18, downfieldYard: 10 });
+    changes.mockClear();
+
+    controller.commitLine();
+
+    expect(changes.mock.calls).toEqual([["scene"], ["view"]]);
+  });
+
+  it("表示状態が同じでも、選択中の選手の値が変われば表示状態を通知する", () => {
+    const { controller, changes } = setup();
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
+    controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
+    controller.updateSelectedPlayer({ label: "QB" }); // canUndo はここで true になる
+    changes.mockClear();
+
+    controller.updateSelectedPlayer({ label: "RB" });
+
+    expect(changes.mock.calls).toEqual([["scene"], ["view"]]);
+  });
+
+  it("別の要素の選択へ移ると、描く図と表示状態の両方を通知する", () => {
+    const { controller, changes } = setup();
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
+    controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
+    changes.mockClear();
+
+    controller.pointerDown({ lateralYard: 20, downfieldYard: 0 }); // p-b 選択
+
+    expect(controller.getSelection()).toEqual({ kind: "player", id: "p-b" });
+    expect(changes.mock.calls).toEqual([["scene"], ["view"]]);
   });
 });

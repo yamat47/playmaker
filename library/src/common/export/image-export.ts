@@ -6,19 +6,9 @@
 // 外部受け入れの作法は resolvePlayData / normalizeFormation と揃える：
 // 公開境界で不正値を既定へ丸め、復元不能なら投げずに安全側へ倒す（PRD 6.6 流）。
 
-import { FIELD_WIDTH_YARDS, zoneWindowLength } from "../geometry/field.js";
+import { fieldWindowAspect } from "../geometry/field.js";
 import { isFiniteNumber } from "../model/guards.js";
 import type { FieldZone } from "../model/play-data.js";
-
-/**
- * フィールド窓（幅 FIELD_WIDTH_YARDS × 縦＝ゾーン窓長）のアスペクト比。
- * レッドゾーン窓は middle より縦長なのでゾーンごとに異なる。出力高さをこの比から
- * 導けば、エクスポート画像はレターボックス余白なしでフィールド窓ぴったりになる
- * （FieldGeometry の offset がほぼ 0 になる）。
- */
-export function fieldWindowAspect(zone: FieldZone): number {
-  return FIELD_WIDTH_YARDS / zoneWindowLength(zone);
-}
 
 /** width 未指定/不正時の既定出力幅(px)。組み込み先が十分な解像度を得られる目安。 */
 export const DEFAULT_EXPORT_WIDTH = 1600;
@@ -43,7 +33,8 @@ export function resolveImageExportWidth(width: number | undefined): number {
 
 /**
  * エクスポート設定 → 出力ピクセル寸法。幅は正規化し、高さはゾーン窓の
- * アスペクト比から導く。width >= 1 なので height も必ず 1 以上になる
+ * アスペクト比から導くので、画像は余白なしでフィールド窓にぴったり収まる。
+ * width >= 1 なので height も必ず 1 以上になる
  * （冗長な下限ガードは置かない＝common 100% を素直に保つ方針）。
  */
 export function resolveImageExportSize(

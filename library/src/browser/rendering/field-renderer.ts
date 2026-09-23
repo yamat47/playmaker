@@ -54,12 +54,12 @@ export class FieldRenderer {
     theme: FieldTheme,
     metrics: FieldMetrics,
   ): void {
-    const { viewportWidth, viewportHeight, window } = geometry;
+    const { viewportWidth, viewportHeight, yardWindow } = geometry;
 
     const left = geometry.xForLateralYard(0);
     const right = geometry.xForLateralYard(FIELD_WIDTH_YARDS);
-    const top = geometry.yForAbsoluteYard(window.endYard);
-    const bottom = geometry.yForAbsoluteYard(window.startYard);
+    const top = geometry.yForAbsoluteYard(yardWindow.endYard);
+    const bottom = geometry.yForAbsoluteYard(yardWindow.startYard);
 
     // アウトオブバウンズ（レターボックス余白 + サイドライン外）を先に敷く。
     ctx.fillStyle = theme.oobColor;
@@ -84,7 +84,7 @@ export class FieldRenderer {
     right: number,
     theme: FieldTheme,
   ): void {
-    const { startYard, endYard } = geometry.window;
+    const { startYard, endYard } = geometry.yardWindow;
     const from = Math.max(0, Math.floor(startYard / 5) * 5);
     const to = Math.min(100, endYard);
     ctx.fillStyle = theme.stripeColor;
@@ -106,7 +106,7 @@ export class FieldRenderer {
     right: number,
     theme: FieldTheme,
   ): void {
-    const { startYard, endYard } = geometry.window;
+    const { startYard, endYard } = geometry.yardWindow;
     ctx.fillStyle = theme.endzoneColor;
     if (startYard < 0) {
       const yTop = geometry.yForAbsoluteYard(0);
@@ -214,7 +214,7 @@ export class FieldRenderer {
   /**
    * 番号付きヤードライン（10yd 刻み）に数字と方向三角を描く。数字は上下ミラーで
    * 両サイドラインから読め、三角は最寄りゴール方向。EZ・ゴール(0)・センター(50)は
-   * 数字/三角の扱いを分ける（displayYardNumber が 0 を返す EZ は描かない）。
+   * 数字/三角の扱いを分ける（displayYardNumber が null を返すゴールと EZ は描かない）。
    */
   private drawNumbers(
     ctx: CanvasRenderingContext2D,
@@ -261,7 +261,7 @@ export class FieldRenderer {
 
     for (const yard of yardLinesInWindow(geometry.zone, 10)) {
       const n = displayYardNumber(yard);
-      if (n === 0) {
+      if (n === null) {
         continue;
       }
       const numberY = geometry.yForAbsoluteYard(yard);
@@ -291,7 +291,7 @@ export class FieldRenderer {
     metrics: FieldMetrics,
     theme: FieldTheme,
   ): void {
-    const { startYard, endYard } = geometry.window;
+    const { startYard, endYard } = geometry.yardWindow;
     const pylon = Math.max(3, 0.45 * geometry.scale);
     const drawPylon = (x: number, y: number): void => {
       ctx.fillStyle = theme.pylonColor;

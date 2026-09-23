@@ -2,8 +2,8 @@
 // 変更のたびに onDidChange で PlayData のスナップショットを発火する（PRD 5.8 の onChange 土台）。
 // 選手↔線の整合（起点選手が消えたら従属線も消える）はこの Model が所有する不変条件。
 
-import { Emitter, type Event } from "../event/emitter.js";
-import { Disposable } from "../lifecycle/disposable.js";
+import { Emitter, type Event } from "../base/event.js";
+import { Disposable } from "../base/lifecycle.js";
 import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
 import { migratePlayData } from "./migration.js";
 import { clonePlayData, type FieldZone, fieldStateForZone, type PlayData } from "./play-data.js";

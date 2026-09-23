@@ -22,7 +22,7 @@ model: sonnet
 3. 正常系、異常系、境界値の順に書く
 4. 実行して確かめる:
    ```bash
-   make test FILE=library/src/common/event/emitter.test.ts
+   make test FILE=library/src/common/base/event.test.ts
    ```
    カバレッジゲートまで確かめるときは `make test` を実行する
 

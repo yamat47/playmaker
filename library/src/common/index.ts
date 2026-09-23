@@ -1,6 +1,13 @@
 // common 層の公開面。DOM 非依存のロジックのみをここから export する。
 // 以降のマイルストーンで formations を追加する。
 
+export { Emitter, type Event } from "./base/event.js";
+export {
+  Disposable,
+  DisposableStore,
+  type IDisposable,
+  toDisposable,
+} from "./base/lifecycle.js";
 export type { ICommand } from "./commands/command.js";
 export {
   CommandService,
@@ -29,6 +36,7 @@ export { LINE_COLOR_PALETTE, type LineColorOption } from "./design/line-palette.
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EDITOR_TOOL_VALUES,
+  type EditorFrame,
   type EditorOverlay,
   type EditorSelection,
   type EditorTool,
@@ -41,11 +49,8 @@ export {
   type SceneData,
 } from "./editing/editor.js";
 export { EditorController } from "./editing/editor-controller.js";
-export { IdFactory, type IIdFactory } from "./editing/id-factory.js";
-export { Emitter, type Event } from "./event/emitter.js";
 export {
   DEFAULT_EXPORT_WIDTH,
-  fieldWindowAspect,
   type ImageExportOptions,
   type ImageExportSize,
   resolveImageExportSize,
@@ -71,6 +76,7 @@ export {
   FIELD_WIDTH_YARDS,
   FieldGeometry,
   type FieldLeague,
+  fieldWindowAspect,
   fieldZoneWindow,
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   HASH_FROM_SIDELINE_YARDS,
@@ -91,13 +97,8 @@ export {
   WAYPOINT_HANDLE_RADIUS_YARDS,
 } from "./geometry/hit-test.js";
 export { trimPolylineEnd } from "./geometry/polyline.js";
-export {
-  Disposable,
-  DisposableStore,
-  type IDisposable,
-  toDisposable,
-} from "./lifecycle/disposable.js";
 export { isOneOf } from "./model/guards.js";
+export { IdFactory, type IIdFactory } from "./model/id-factory.js";
 export {
   cloneLine,
   DEFAULT_LINE_INTERPOLATION,

@@ -318,7 +318,7 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T9 EditorController の分割とイベントの分離
+### T9 EditorController の分割とイベントの分離 (done)
 
 - [x] **T9-1 [should] ドラッグの掴み位置のずれを検証するテストがない**（先に特性テストとして足す）
   - locations: library/src/common/editing/editor-controller.ts:335, library/src/common/editing/editor-controller.ts:350, library/src/common/editing/editor-controller.ts:520, library/src/common/editing/editor-controller.ts:553, library/src/common/editing/editor-controller.test.ts:276, library/src/common/editing/editor-controller.test.ts:360, library/src/common/editing/editor-controller.test.ts:497
@@ -331,9 +331,10 @@ PR 単位で、依存順に並べる。
     - `instantiateFormation`
     - IF を IEditorGestures、IEditorActions、IEditorScene に分ける
   - 結論（T9a）: 型と IF は `editing/editor.ts`、途中の状態と作図の純関数は `editing/interaction.ts`、プレビューとオーバーレイは `editing/preview.ts` に置いた。オーバーレイはプレビュー済みの図から求めるので、ドラッグ中のハンドルを別に重ねる処理は無くした。ハンドルの当たり判定と WAYPOINT_HANDLE_RADIUS_YARDS は `geometry/hit-test.ts`、instantiateFormation は `formations/formation.ts` に移した（id-factory の移動は T9-7）。editor-controller.ts は 421 行で、残りは通知の束ねとコマンドの組み立て。T9b で通知を分けたあとに、もう一度削れるか見る。ドラッグ先の置き方（dragPatch）と作図からの線の組み立て（draftToLine）は interaction.ts の 1 か所にし、プレビューと確定の両方がそれを使う。getOverlay は内部で getRenderModel を作り直すので、描画のたびに合成が 2 回走る。T9-3 で描画の購読を分けるときに 1 回にまとめる。commitLine と cancelInteraction は、ツールバーとキーの両方から呼ぶので IEditorActions に入れた。
-- [ ] **T9-3 [should] onDidChange 1 本で再描画と UI 同期を兼ねていて、多重発火もある**
+- [x] **T9-3 [should] onDidChange 1 本で再描画と UI 同期を兼ねていて、多重発火もある**
   - locations: library/src/common/editing/editor-controller.ts:168-169, library/src/common/editing/editor-controller.ts:184, library/src/common/editing/editor-controller.ts:340, library/src/common/editing/editor-controller.ts:415-419, library/src/common/editing/editor-controller.ts:431-432, library/src/common/editing/editor-controller.ts:490-492, library/src/common/editing/editor-controller.ts:607-608, library/src/playmaker.ts:185-187
   - 対応: onDidChangeScene と onDidChangeViewState（差分があるときだけ発火）に分ける。`batch(fn)` で発火を 1 回にまとめる。
+  - 結論: 通知の出し分けは `editing/editor-notifier.ts` の EditorNotifier に置いた。公開の操作はどれも batch で包み、Model、履歴、選択、途中の状態が何度変わっても、操作の終わりに描く図と表示状態の通知を 1 回ずつ出す。表示状態の通知は、getViewState と選択中の選手や線（参照で比べる）が前回と違うときだけ出るので、ドラッグ中の移動では Toolbar と PropertyPanel の同期が走らない。T1-1 の「編集中は転送を遅らせる」仕組みは batch に吸収した。描画は getRenderModel と getOverlay をやめて getFrame にまとめ、合成は 1 回になった。batch は公開していない（外から束ねたい操作がまだ無い）。
 - [x] **T9-4 [should] Interaction と EditorOverlay の判別共用体が mutable で、ありえない組み合わせも表せる**
   - locations: library/src/common/editing/editor-controller.ts:45, library/src/common/editing/editor-controller.ts:65, library/src/common/editing/editor-controller.ts:116, library/src/common/editing/editor-controller.ts:123, library/src/common/editing/editor-controller.ts:145, library/src/common/editing/editor-controller.ts:271, library/src/common/editing/editor-controller.ts:333-335, library/src/common/editing/editor-controller.ts:578
   - 対応: フィールドを readonly にして差し替えで更新する。drag 系の共通部分は DragBase にする。null は型に含めない。EditorOverlay は `kind` で判別する共用体にする。
@@ -344,16 +345,18 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/geometry/polyline.ts:10-11, library/src/common/geometry/polyline.ts:41-42, library/src/common/geometry/polyline.ts:51, library/src/common/geometry/hit-test.ts:60, library/src/common/geometry/hit-test.ts:65, library/src/common/geometry/bezier.ts:92-97, library/src/common/editing/editor-controller.ts:405, library/src/common/editing/editor-controller.ts:529, library/src/common/editing/editor-controller.ts:622, library/src/browser/rendering/line-renderer.ts:80, library/src/browser/rendering/line-renderer.ts:83, library/src/browser/rendering/line-renderer.ts:120, library/src/browser/rendering/line-renderer.ts:122, library/src/browser/rendering/line-renderer.ts:141, library/src/browser/rendering/line-renderer.ts:168
   - 対応: `segments()` ジェネレータ、`.at(-1)`、`readonly [T, ...T[]]`、hitWaypoint が `{ index, point }` を返す形に書き換える。
   - 結論: segments は `geometry/polyline.ts` に置いた。`readonly [T, ...T[]]` は使わずに済んだ。field.ts と line-renderer.ts の該当箇所は、もう switch になっていた。
-- [ ] **T9-7 [nit] 命名とディレクトリの揺れ**
+- [x] **T9-7 [nit] 命名とディレクトリの揺れ**
   - locations: library/src/common/event/emitter.ts:1, library/src/common/lifecycle/disposable.ts:1, library/src/common/editing/id-factory.ts:1, library/src/common/geometry/field.ts:107, library/src/common/geometry/field.ts:144, library/src/common/editing/editor-controller.ts:81, library/src/common/editing/editor-controller.ts:150, library/src/common/editing/editor-controller.ts:160, library/src/common/editing/editor-controller.ts:221, library/src/common/editing/editor-controller.ts:615
   - 対応: `base/event.ts` と `base/lifecycle.ts`、`model/id-factory.ts` に移す。改名は yardWindow、isDrawing、isSame*、interaction。displayYardNumber は `number | null` を返す。
-- [ ] **T9-8 [nit] fieldWindowAspect が export/ に置かれている**
+  - 結論: yardWindow は FieldGeometry.window の改名（描画側でグローバルの window を隠していた）。displayYardNumber はゴールラインとエンドゾーンで null を返す。
+- [x] **T9-8 [nit] fieldWindowAspect が export/ に置かれている**
   - locations: library/src/common/export/image-export.ts:18-20
   - 対応: geometry/field.ts へ移す。
 
 - 依存: T8
 - 完了条件: editor-controller.ts が 300 行前後になる。pointerMove で Toolbar と PropertyPanel の同期が走らない。T9-1 のテストが分割の前後で緑のまま。common 100% を維持する。
 - 規模: L。大きければ T9a（T9-1、T9-2、T9-4〜T9-6）と T9b（T9-3、T9-7、T9-8）に分ける。
+- 進み具合: T9a と T9b の 2 本で閉じた。editor-controller.ts は通知を切り出したあとで約 410 行になり、300 行前後には届かなかった。残りはジェスチャの解釈（選択、ハンドル、作図、選手の追加）とコマンドの組み立てで、ジェスチャを別のクラスに分けるかは T13 で入力を見直すときに決める。
 
 ---
 
@@ -368,6 +371,10 @@ PR 単位で、依存順に並べる。
 - [ ] **T10-3 [should] 使われていないフィールド定数に、描画で使われているかのような説明がある**
   - locations: library/src/common/geometry/field.ts:18, library/src/common/geometry/field.ts:40, library/src/common/geometry/field.ts:46, library/src/common/design/metrics.ts:17
   - 対応: 3 つの定数を削除する。
+- [ ] **T10-4 [should] 何も変えないコマンドを履歴に積まない判定が EditorController にしかない**（T8 の見直しで追加）
+  - locations: library/src/common/editing/editor-controller.ts（updateSelectedPlayer、updateSelectedLine、setFieldZone、pointerUp）, library/src/common/commands/command-service.ts（execute）
+  - 問題: patchChangesAnything、ゾーンの同値判定、動かさなかったドラッグの判定を、編集の経路ごとに書いている。CommandService.execute は何でも積むので、公開されたコマンドを直に実行すると空の Undo 段ができる。
+  - 対応: コマンドが「変化なし」を報告できるようにし（`apply` が boolean を返すなど）、CommandService が積むかどうかを 1 か所で決める。
 
 - 依存: T9、D13、D14
 - 完了条件: セッションの契約テストが node で緑になる。barrel が必要最小限になる。

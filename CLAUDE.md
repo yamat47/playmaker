@@ -28,7 +28,7 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
 |---|---|
 | CI と同じ検証を全部 | `make check` |
 | テスト（カバレッジゲート込み） | `make test` |
-| テストを 1 ファイルだけ | `make test FILE=library/src/common/event/emitter.test.ts` |
+| テストを 1 ファイルだけ | `make test FILE=library/src/common/base/event.test.ts` |
 | 型検査 / lint / 自動修正 | `make typecheck` / `make lint` / `make fix` |
 | ライブラリのビルド | `make build`（`library/dist/`） |
 | 依存の追加・更新 | `make pnpm ARGS="add -D <pkg>"` → lockfile もホストに反映される |

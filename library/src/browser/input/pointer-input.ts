@@ -74,7 +74,7 @@ export class PointerInput extends Disposable {
     // 放っておくとドラッグが外れず、次の移動で選手がついてくる。
     // 作図は押下をまたいで続く操作なので、1 回の押下の中断で打った点まで捨てない。
     const onPointerAbort = (e: PointerEvent) => {
-      if (endPress(e) && !controller.getViewState().drawing) {
+      if (endPress(e) && !controller.getViewState().isDrawing) {
         controller.cancelInteraction();
       }
     };

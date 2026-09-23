@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
+import { mutable } from "../../test-support/mutable.js";
 import type { PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import {
@@ -25,7 +26,7 @@ describe("AddLineCommand", () => {
     const model = new PlayModel({ ...seed(), lines: [] });
     const input = line("x");
     const cmd = new AddLineCommand(input);
-    input.kind = "block";
+    mutable(input).kind = "block";
 
     cmd.apply(model);
     expect(model.getData().lines).toEqual([line("x")]);

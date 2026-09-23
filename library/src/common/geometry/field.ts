@@ -62,9 +62,9 @@ export const END_ZONE_DEPTH_YARDS = 10;
 
 export interface YardWindow {
   /** 窓の手前側（画面下、攻撃方向の後方）の絶対ヤード。 */
-  startYard: number;
+  readonly startYard: number;
   /** 窓の奥側（画面上、攻撃方向の前方）の絶対ヤード。 */
-  endYard: number;
+  readonly endYard: number;
 }
 
 /**

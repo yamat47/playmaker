@@ -17,7 +17,7 @@ import { type PlayData, resolvePlayData } from "./play-data.js";
 export interface PlayDataMigration {
   /** この段を適用すると version はこの値になる（段は `to` 昇順に適用）。 */
   readonly to: number;
-  migrate(data: Record<string, unknown>): Record<string, unknown>;
+  migrate(data: Readonly<Record<string, unknown>>): Record<string, unknown>;
 }
 
 /**

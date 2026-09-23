@@ -9,10 +9,10 @@ import {
   FIELD_ZONE_VALUES,
   type FieldZone,
   FORMATION_PRESETS,
-  FORMATION_SIDE_VALUES,
-  type FormationSide,
   getFormationPreset,
   type IEditorController,
+  TEAM_SIDE_VALUES,
+  type TeamSide,
   toDisposable,
 } from "../../common/index.js";
 
@@ -31,7 +31,7 @@ const ZONE_LABELS = {
 const SIDE_LABELS = {
   offense: "オフェンス",
   defense: "ディフェンス",
-} satisfies Record<FormationSide, string>;
+} satisfies Record<TeamSide, string>;
 
 export class Toolbar extends Disposable {
   readonly element: HTMLElement;
@@ -105,7 +105,7 @@ export class Toolbar extends Disposable {
     placeholder.textContent = "フォーメーション読込…";
     select.appendChild(placeholder);
 
-    for (const side of FORMATION_SIDE_VALUES) {
+    for (const side of TEAM_SIDE_VALUES) {
       const group = document.createElement("optgroup");
       group.label = SIDE_LABELS[side];
       for (const formation of FORMATION_PRESETS.filter((f) => f.side === side)) {

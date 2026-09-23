@@ -47,8 +47,8 @@ export const PLAYER_RADIUS_YARDS = 0.93;
  * - absoluteYard: -10..110（0/100 = 各ゴールライン、50 = センター）
  */
 export interface FieldPosition {
-  lateralYard: number;
-  absoluteYard: number;
+  readonly lateralYard: number;
+  readonly absoluteYard: number;
 }
 
 /**
@@ -56,11 +56,11 @@ export interface FieldPosition {
  * `color` は CSS カラー文字列（任意・未指定はテーマ既定）。
  */
 export interface Player {
-  id: string;
-  position: FieldPosition;
-  shape: PlayerShape;
-  label: string;
-  color?: string;
+  readonly id: string;
+  readonly position: FieldPosition;
+  readonly shape: PlayerShape;
+  readonly label: string;
+  readonly color?: string;
 }
 
 export function isPlayerShape(value: unknown): value is PlayerShape {
@@ -96,17 +96,14 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
 
   // id が無い/空なら index 由来の決定的な id を割り当てる（再正規化でも安定）。
   const id = isNonEmptyString(raw.id) ? raw.id : `p${index}`;
-  const player: Player = {
+  return {
     id,
     position,
     shape: isPlayerShape(raw.shape) ? raw.shape : DEFAULT_PLAYER_SHAPE,
     label: typeof raw.label === "string" ? raw.label : "",
+    // exactOptionalPropertyTypes: color は値があるときだけ持たせる。
+    ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
   };
-  // exactOptionalPropertyTypes: color は値があるときだけ持たせる。
-  if (isNonEmptyString(raw.color)) {
-    player.color = raw.color;
-  }
-  return player;
 }
 
 /**
@@ -120,14 +117,11 @@ export function normalizePlayers(raw: unknown): Player[] {
 
 /** Player を深く複製する（配列・位置まで共有しない防御的コピー）。 */
 export function clonePlayer(player: Player): Player {
-  const copy: Player = {
+  return {
     id: player.id,
     position: { ...player.position },
     shape: player.shape,
     label: player.label,
+    ...(player.color === undefined ? {} : { color: player.color }),
   };
-  if (player.color !== undefined) {
-    copy.color = player.color;
-  }
-  return copy;
 }

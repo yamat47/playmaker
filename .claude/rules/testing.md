@@ -41,14 +41,14 @@ paths:
 - 対象は、bezier、polyline、field の座標変換、hit-test、color、keymap、base の Event と lifecycle、
   PlayData の正規化と `migratePlayData`、プリセット
 - 公開の入口から観測できない数値計算は、単体テストで確かめる
-- 仕様テストで確かめられる振る舞いを、内部のモジュールの単体テストで重ねて確かめない
+- 仕様テストで確かめられる振る舞いを、内部のモジュールの単体テストで重ねて確かめない。
+  `typescript-idioms` skill の「切り出した関数には単体テストを付ける」より、この節を優先する
 
 ## 書き方
 
 - Vitest は `src/**/*.test.ts` を node 環境で、`src/**/*.browser.test.ts` を Chromium で実行する。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
-- `describe` は機能か、単体テストならモジュールの名前にする。`it` は日本語で「どういう入力のとき、どうなるか」を書く
-  （例: `it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ")`）。
-  メソッド名で始めない。「正しく動く」「正常系」のように結果を言わない名前にしない
+- `describe` は機能か、単体テストならモジュールの名前にする。`it` の名前は `writing-conventions` skill に従う
+  （例: `it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ")`）
 - 1 つの `it` は 1 つの振る舞いだけを確かめる。準備、操作、検証の段は空行で区切り、`// Arrange` のようなコメントは書かない
 - テスト名とコメントに、カバレッジのどの分岐を通すかを書かない。書くのは振る舞いである
 - スパイは `vi.fn()` で作り、`toHaveBeenCalledOnce` や `toHaveBeenCalledExactlyOnceWith` で確かめる。

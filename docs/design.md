@@ -1,6 +1,6 @@
 # Playmaker の設計
 
-今のコードがどういう形をしていて、なぜそうしたかを書く。要件は `docs/prd.md`、コーディング規約は `.claude/rules/` にある。
+今のコードがどういう形をしていて、なぜそうしたかを書く。要件は `docs/prd.md`、テストの規約は `.claude/rules/testing.md` にある。
 パスは `library/` からの相対で書く。
 
 ## 層の分け方
@@ -14,6 +14,8 @@ VSCode のレイヤ分離を軽くしたものを使う。下の層は上の層�
 | 公開エントリ | `src/playmaker.ts` | 2 つの層を結線する `Playmaker` クラスと、利用者に見せる型と値の再エクスポート |
 
 新しいロジックは、まず common に置けないかを考える。判断を common に寄せるほど、browser は薄い殻で済む。
+
+browser は common の具象ではなくインターフェース（`IPlayModel`、`IEditorController`、`ILayerRenderer` など）に依存し、Model を直接書き換えずにコマンドを通す。依存はコンストラクタの引数で渡し、デコレータやサービスコンテナは持たない。イベントの購読や DOM のリスナは `Disposable` の `_register` で持ち主に登録し、`dispose()` でまとめて解放する。
 
 依存の向きは 2 か所で機械的に守る。
 

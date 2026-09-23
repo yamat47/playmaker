@@ -267,14 +267,3 @@ describe("PlayModel の件数の上限", () => {
     expect(model.findLine("l")?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
   });
 });
-
-describe("PlayModel.insertLine", () => {
-  it("線を範囲外の位置に差し込むと、近いほうの端に並ぶ", () => {
-    const model = new PlayModel({ ...seed(), lines: [line("x", "a"), line("y", "b")] });
-
-    model.insertLine(line("head", "c"), -5);
-    model.insertLine(line("tail", "c"), 999);
-
-    expect(model.getData().lines.map((l) => l.id)).toEqual(["head", "x", "y", "tail"]);
-  });
-});

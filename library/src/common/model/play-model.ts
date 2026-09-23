@@ -80,7 +80,7 @@ export interface IPlayModel {
    * waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線も throw する。
    */
   addLine(line: Line): void;
-  /** addLine と同じ条件で throw する。 */
+  /** index は 0 から線の本数までで渡す。addLine と同じ条件で throw する。 */
   insertLine(line: Line, index: number): void;
   /** 線を削除し、巻き戻し用メメントを返す。 */
   removeLine(id: string): LineRemoval;
@@ -88,13 +88,8 @@ export interface IPlayModel {
   updateLine(line: Line): Line;
 }
 
-function clampIndex(index: number, length: number): number {
-  return Math.min(Math.max(index, 0), length);
-}
-
 function insertAt<T>(items: readonly T[], index: number, item: T): T[] {
-  const at = clampIndex(index, items.length);
-  return [...items.slice(0, at), item, ...items.slice(at)];
+  return [...items.slice(0, index), item, ...items.slice(index)];
 }
 
 // id は選択と編集の対象を決める唯一の鍵なので、同じ id の要素を 2 つ持たせない。

@@ -148,11 +148,15 @@ export function committableDraft(
   draw: DrawInteraction,
   anchor: FieldPosition,
 ): { readonly waypoints: readonly FieldPosition[]; readonly end: FieldPosition } | undefined {
+  const split = splitDraftPoints(draw.points);
+  if (split === undefined) {
+    return undefined;
+  }
   let length = 0;
   for (const [a, b] of segments([anchor, ...draw.points])) {
     length += pointDistance(a, b);
   }
-  return length <= LINE_POINT_MERGE_RADIUS_YARDS ? undefined : splitDraftPoints(draw.points);
+  return length <= LINE_POINT_MERGE_RADIUS_YARDS ? undefined : split;
 }
 
 /** 作図から線を組み立てる。プレビューと確定で同じ既定値を使う。 */

@@ -15,10 +15,16 @@ import {
   type PlayerShape,
   toDisposable,
 } from "../../common/index.js";
-import { createCssColorNormalizer } from "../theme/css-color.js";
+import { normalizeCssColor } from "../theme/css-color.js";
 import { LINE_COLOR_PALETTE } from "../theme/line-palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
 import { THEME_TOKENS, type ThemeReader } from "../theme/tokens.js";
+
+/** 色の入力に渡せる hex にする。半透明の色と読めない値は hex にできないので undefined。 */
+function toHex(value: string | undefined): string | undefined {
+  const normalized = value === undefined ? undefined : normalizeCssColor(value);
+  return normalized !== undefined && isHexColor(normalized) ? normalized : undefined;
+}
 
 const SHAPE_LABELS = {
   circle: "丸",
@@ -48,7 +54,6 @@ export class PropertyPanel extends Disposable {
   // 選択中の要素が同じあいだは入力を作り直さず、値だけを書き込む。作り直すと、
   // 値を確定して Tab で次の入力へ移った直後に、移った先の入力ごと消えてフォーカスが外れる。
   private shown: ShownFields | undefined;
-  private readonly normalizeColor = createCssColorNormalizer();
 
   constructor(parent: HTMLElement, controller: IEditorUi) {
     super();
@@ -114,11 +119,11 @@ export class PropertyPanel extends Disposable {
     );
     // 色の無い選手は塗りの既定色で描くので、入力にも同じ色を出す。
     const read = createThemeReader(this.element);
-    const fill = this.toHex(read("playerFill")) ?? THEME_TOKENS.playerFill.fallback;
+    const fill = toHex(read("playerFill")) ?? THEME_TOKENS.playerFill.fallback;
     return (player) => {
       setLabel(player.label);
       setShape(player.shape);
-      setColor(this.toHex(player.color) ?? fill);
+      setColor(toHex(player.color) ?? fill);
     };
   }
 
@@ -151,12 +156,6 @@ export class PropertyPanel extends Disposable {
       setColor(line.color);
       setThickness(line.thickness ?? DEFAULT_LINE_THICKNESS);
     };
-  }
-
-  /** 色の入力に渡せる hex にする。半透明の色と読めない値は hex にできないので undefined。 */
-  private toHex(value: string | undefined): string | undefined {
-    const normalized = value === undefined ? undefined : this.normalizeColor(value);
-    return normalized !== undefined && isHexColor(normalized) ? normalized : undefined;
   }
 
   private addTitle(text: string): void {
@@ -266,8 +265,7 @@ export class PropertyPanel extends Disposable {
     const group = document.createElement("div");
     group.className = "playmaker-panel__swatches";
     const swatches = LINE_COLOR_PALETTE.map((opt) => {
-      // 保存する色と選択中かの比較を、書き方の違いに左右されないよう正規化した色でそろえる。
-      const color = this.normalizeColor(read(opt.token)) ?? THEME_TOKENS[opt.token].fallback;
+      const color = read(opt.token);
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "playmaker-panel__swatch";
@@ -280,11 +278,10 @@ export class PropertyPanel extends Disposable {
     });
     this.addGroupRow("色", group, onReset);
     return (value) => {
+      // 保存済みの色は外から渡されたデータのこともあるので、テーマの色と同じ書き方にそろえて比べる。
+      const current = value === undefined ? undefined : normalizeCssColor(value);
       for (const { btn, color } of swatches) {
-        btn.setAttribute(
-          "aria-pressed",
-          String(value !== undefined && this.normalizeColor(value) === color),
-        );
+        btn.setAttribute("aria-pressed", String(current === color));
       }
     };
   }

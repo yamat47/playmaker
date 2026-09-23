@@ -402,4 +402,12 @@ describe("消えた線の選択", () => {
 
     expect(play.editor.getFrame().overlay).toEqual({ kind: "none" });
   });
+
+  it("選んだ線が消えたあとに、その終点があった位置をドラッグしても、何も動かさない", () => {
+    const play = openWithVanishedLine();
+
+    play.drag(yd(30, 8), yd(32, 10));
+
+    expect(play.editor.getViewState().canRedo).toBe(true);
+  });
 });

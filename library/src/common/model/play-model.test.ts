@@ -212,7 +212,7 @@ describe("PlayModel の件数の上限", () => {
     const listener = vi.fn();
     model.onDidChange(listener);
 
-    expect(() => model.addPlayer(player("over"))).toThrow(/exceed MAX_PLAYERS/);
+    expect(() => model.addPlayer(player("over"))).toThrow(/players exceed 64/);
     expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS);
     expect(listener).not.toHaveBeenCalled();
   });
@@ -221,11 +221,9 @@ describe("PlayModel の件数の上限", () => {
     const lines = Array.from({ length: MAX_LINES }, (_, i) => line(`l${i}`, "a"));
     const model = new PlayModel({ ...seed(), lines });
 
-    expect(() => model.addLine(line("over", "a"))).toThrow(
-      /PlayModel.addLine: lines exceed MAX_LINES/,
-    );
+    expect(() => model.addLine(line("over", "a"))).toThrow(/PlayModel.addLine: lines exceed 128/);
     expect(() => model.insertLine(line("over", "a"), 0)).toThrow(
-      /PlayModel.insertLine: lines exceed MAX_LINES/,
+      /PlayModel.insertLine: lines exceed 128/,
     );
     expect(model.getSnapshot().lines).toHaveLength(MAX_LINES);
   });
@@ -234,10 +232,10 @@ describe("PlayModel の件数の上限", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.addLine(tooManyWaypoints("over"))).toThrow(
-      /line "over" exceeds MAX_WAYPOINTS_PER_LINE/,
+      /waypoints of line "over" exceed 32/,
     );
     expect(() => model.updateLine(tooManyWaypoints("la"))).toThrow(
-      /PlayModel.updateLine: line "la" exceeds/,
+      /PlayModel.updateLine: waypoints of line "la" exceed/,
     );
     expect(model.getData()).toEqual(seed());
   });
@@ -249,7 +247,7 @@ describe("PlayModel の件数の上限", () => {
     model.addPlayer(player("other"));
 
     expect(() => model.restorePlayer(removal)).toThrow(
-      /PlayModel.restorePlayer: players exceed MAX_PLAYERS/,
+      /PlayModel.restorePlayer: players exceed 64/,
     );
   });
 });

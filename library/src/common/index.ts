@@ -13,12 +13,7 @@ export {
   RemoveLineCommand,
   UpdateLineCommand,
 } from "./commands/line-commands.js";
-export {
-  applyLinePatch,
-  applyPlayerPatch,
-  type LinePatch,
-  type PlayerPatch,
-} from "./commands/patch.js";
+export type { LinePatch, PlayerPatch } from "./commands/patch.js";
 export {
   AddPlayerCommand,
   RemovePlayerCommand,

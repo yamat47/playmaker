@@ -39,8 +39,7 @@ src/
   common/
     model/       # PlayData, version/migration
     geometry/    # bezier, hit-test, 座標変換
-    commands/    # 編集操作=コマンド(addPlayer, drawRoute…)
-    undoRedo/    # コマンドスタック
+    commands/    # 編集操作=コマンド(addPlayer, drawRoute…)とコマンドスタック
     events/      # Emitter/Event, Disposable(自前極小=VSCode base 相当)
     formations/  # フォーメーションテンプレートのデータ
   browser/
@@ -144,7 +143,7 @@ PRD 5.4 の編集ロジック基盤を **common のみ・UI なし**で確定。
 - `PlayModel`（`IPlayModel`）= プレー図状態の唯一の保持者。変更のたびに `onDidChange` で **PlayData の深いスナップショットを 1 回**発火（PRD 5.8 の `onChange` 土台）。受け手が書き換えても内部状態に波及しない
 - **選手↔線の整合不変条件を Model が所有**：`removePlayer` は起点が一致する線をカスケード除去し、位置付きメメント（`PlayerRemoval`）を返す。`restorePlayer` で選手・従属線を**元の並びまで完全復元**。これによりコマンドは薄く保て、1 コマンド = onChange 1 回を保証（カスケードでも単一発火）
 - **コマンドパターン**：`ICommand`(`apply`/`undo`)。逆操作に要る直前状態は **apply 実行時に各コマンドが自己捕捉**（redo = apply 再実行で再捕捉され整合）。9 コマンド = 選手4（Add/Remove/Move/Update）・線4（Add/Remove/Update/SetWaypoints）・フィールド1（SetFieldZone）。waypoint 編集は**列まるごと差し替えの可逆プリミティブ**（個別 add/move/remove の合成は M5 UI 側の責務）
-- **`ICommandService`** = 唯一の編集入口（`apply` → `IUndoRedoService.push`）。**`IUndoRedoService`** = スタック遷移のみ（push で redo 履歴破棄＝直線履歴、undo/redo は注入された Model へ逆/再適用）。依存は**手動コンストラクタ注入のみ**
+- **`ICommandService`** = 唯一の実行者。execute、undo、redo のどれも、コマンドを Model に適用して成功してから `IUndoRedoService` のスタックを動かす。**`IUndoRedoService`** = Model を持たない純粋なスタック（push で redo 履歴を捨てる直線履歴）。依存は**手動コンストラクタ注入のみ**
 - 未知 id への操作（`updatePlayer`/`removeLine` 等）は**契約違反としてその場で throw**（M5 UI は実在対象のみコマンド化）。`v8 ignore` は 0 件＝ガード不要の実装（`find`+`filter`/`map` で `noUncheckedIndexedAccess` の索引ガードを回避、`pop()===undefined` の単一分岐で空スタックを表現）で common 100% を達成
 
 **M5 / M8 へ繰り延べ（UI 配線・契約確定）**

@@ -1,5 +1,5 @@
 // コマンド/Undo の契約を通しで検証する統合テスト:
-// CommandService → PlayModel → onDidChange、UndoRedoService 往復、選手削除のカスケード復元。
+// CommandService → PlayModel → onDidChange、CommandService の undo/redo 往復、選手削除のカスケード復元。
 
 import { describe, expect, it, vi } from "vitest";
 import { must } from "../../test-support/must.js";

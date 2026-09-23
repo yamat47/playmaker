@@ -296,7 +296,7 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/commands/field-commands.ts:20-24, library/src/common/commands/line-commands.ts:47-52, library/src/common/commands/line-commands.ts:68-94, library/src/common/commands/line-commands.ts:110-126, library/src/common/commands/line-commands.ts:142-155, library/src/common/commands/player-commands.ts:47-52, library/src/common/commands/player-commands.ts:68-81, library/src/common/commands/player-commands.ts:97-121
   - 対応: `requireApplied` を置く。コマンドは UpdateLine と UpdatePlayer に統合し、SetLineWaypoints、SetLineEnd、MovePlayer は削除する。パッチの適用は `applyLinePatch` と `applyPlayerPatch` の純関数にする。
   - 補足: T7 で null による「既定に戻す」を入れたので、UpdateLine と UpdatePlayer は今、Line と Player のフィールドを 1 つずつ書き写して組み立てている。フィールドを足すとパッチの適用で黙って落ちるので、applyLinePatch と applyPlayerPatch では `...current` を起点にし、「undefined は現状維持、null は消す」の規則を 1 か所にまとめる（EditorController の patchChangesAnything も同じ規則を持つ）。
-  - 結論: パッチの型、適用、patchChangesAnything を `commands/patch.ts` に集めた。コマンドの構築時のコピーは残した。型は readonly でも、呼び出し側は書き換えられる値を渡せるので、redo の結果が揺れないよう境界で切り離す。
+  - 結論: パッチの型、適用、patchChangesAnything を `commands/patch.ts` に集めた。追加系のコマンドは構築時に要素を複製する。更新系はパッチの入れ物だけを複製し、中の位置や waypoint は readonly の型に任せる。
 - [x] **T8-3 [nit] ディレクトリ名 `undoRedo/` だけがキャメルケース**
   - locations: library/src/common/undoRedo/undo-redo-service.ts:1
   - 対応: commands/ に統合する。
@@ -309,7 +309,7 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/commands/player-commands.ts（AddPlayerCommand）, library/src/common/commands/formation-commands.ts, library/src/common/commands/line-commands.ts（AddLineCommand、SetLineWaypointsCommand）, library/src/common/editing/editor-controller.ts（loadFormation と作図の確定）, library/src/common/model/play-model.ts（addPlayers、addLine）
   - 問題: 作図での打点、選手の追加、`loadFormation` の繰り返しでは MAX_PLAYERS などを超えられる。超えた図は `getPlayData` から戻したときに黙って切り詰められ、ホストが `loadFormation` を繰り返せば描画の負荷も上限なく増える。公開 API の JSDoc にはこの切り詰めを書いてある。
   - 対応: 上限を PlayModel の不変条件にし、追加系のコマンドは上限で止める（UI のボタンも無効にする）か、今のまま JSDoc の注記で済ませるかを決める。
-  - 結論: 上限を PlayModel の不変条件にした。選手と線の追加、線の差し替え、選手の復元で超えると throw する。EditorController は超える操作を事前に止める。上限に達したら選手を追加しない。読むと超えるフォーメーションは、隊形が欠けるので丸ごと読まない。線が上限の本数なら作図を始めず、作図中は終点を含めて waypoint の上限 + 1 点より先の打点を無視する。上限に達したことを UI で知らせる表示は、T14 の公開 API 整理に合わせて検討する。
+  - 結論: 上限を PlayModel の不変条件にした。選手と線の追加、線の差し替え、選手の復元で超えると throw する。EditorController は超える操作を事前に止める。上限に達したら選手を追加しない。読むと超えるフォーメーションは、隊形が欠けるので丸ごと読まない。線が上限の本数なら作図を始めず、作図中は終点を含めて waypoint の上限 + 1 点より先の打点を無視する。上限に達したことを UI で知らせる表示は、T14 の公開 API 整理に合わせて検討する。そのときは controller の手書きの判定をやめ、IPlayModel に残りの枠を問い合わせる口（`canAdd` など）を足して Model の throw と共有する。
 
 - 依存: T6、T7
 - 完了条件: EditorController が ICommandService だけに依存する。履歴の変化で通知が出る。コマンドが throw してもスタックが壊れないことをテストで確かめる。
@@ -346,10 +346,14 @@ PR 単位で、依存順に並べる。
 - [ ] **T9-8 [nit] fieldWindowAspect が export/ に置かれている**
   - locations: library/src/common/export/image-export.ts:18-20
   - 対応: geometry/field.ts へ移す。
+- [ ] **T9-9 [should] 何も変えないコマンドを履歴に積まない判定が controller にしかない**（T8 のレビューで追加）
+  - locations: library/src/common/editing/editor-controller.ts（updateSelectedPlayer、updateSelectedLine、setFieldZone、ドラッグの確定）, library/src/common/commands/command-service.ts（execute）
+  - 問題: patchChangesAnything、ゾーンの同値判定、「動かさなかったドラッグ」の判定を、編集の経路ごとに書いている。CommandService.execute は何でも積むので、公開されたコマンドを直に実行すると空の Undo 段ができる。
+  - 対応: コマンドが「変化なし」を報告できるようにし（`apply` が boolean を返すなど）、CommandService が積むかどうかを 1 か所で決める。
 
 - 依存: T8
 - 完了条件: editor-controller.ts が 300 行前後になる。pointerMove で Toolbar と PropertyPanel の同期が走らない。T9-1 のテストが分割の前後で緑のまま。common 100% を維持する。
-- 規模: L。大きければ T9a（T9-1、T9-2、T9-4〜T9-6）と T9b（T9-3、T9-7、T9-8）に分ける。
+- 規模: L。大きければ T9a（T9-1、T9-2、T9-4〜T9-6）と T9b（T9-3、T9-7〜T9-9）に分ける。
 
 ---
 

@@ -97,18 +97,15 @@ function assertNewId(items: readonly { id: string }[], id: string, message: stri
 
 // 件数の上限は外部データを読むときにも掛けている。編集で超えさせると、getData で
 // 書き出した図を読み戻したときに黙って切り詰められ、描画の負荷にも歯止めがなくなる。
-function assertWithinLimits(players: number, lines: number, message: string): void {
-  if (players > MAX_PLAYERS) {
-    throw new Error(`${message}: players exceed MAX_PLAYERS (${MAX_PLAYERS})`);
-  }
-  if (lines > MAX_LINES) {
-    throw new Error(`${message}: lines exceed MAX_LINES (${MAX_LINES})`);
+function assertAtMost(count: number, max: number, what: string, message: string): void {
+  if (count > max) {
+    throw new Error(`${message}: ${what} exceed ${max}`);
   }
 }
 
 function assertWaypointLimit(line: Line, message: string): void {
   if (line.waypoints.length > MAX_WAYPOINTS_PER_LINE) {
-    throw new Error(`${message}: line "${line.id}" exceeds MAX_WAYPOINTS_PER_LINE waypoints`);
+    throw new Error(`${message}: waypoints of line "${line.id}" exceed ${MAX_WAYPOINTS_PER_LINE}`);
   }
 }
 
@@ -168,9 +165,10 @@ export class PlayModel extends Disposable implements IPlayModel {
   addPlayers(players: readonly Player[]): void {
     // 1 人でも重複があれば何も足さずに throw する。途中まで足してから投げると、
     // 通知も履歴も伴わない変更が残る。
-    assertWithinLimits(
+    assertAtMost(
       this.state.players.length + players.length,
-      this.state.lines.length,
+      MAX_PLAYERS,
+      "players",
       "PlayModel.addPlayers",
     );
     const taken = new Set(this.state.players.map((p) => p.id));
@@ -232,11 +230,9 @@ export class PlayModel extends Disposable implements IPlayModel {
       removal.player.id,
       "PlayModel.restorePlayer: duplicate player id",
     );
-    assertWithinLimits(
-      this.state.players.length + 1,
-      this.state.lines.length + removal.removedLines.length,
-      "PlayModel.restorePlayer",
-    );
+    const caller = "PlayModel.restorePlayer";
+    assertAtMost(this.state.players.length + 1, MAX_PLAYERS, "players", caller);
+    assertAtMost(this.state.lines.length + removal.removedLines.length, MAX_LINES, "lines", caller);
     const players = insertAt(this.state.players, removal.index, removal.player);
     // 昇順に元インデックスへ挿し戻すと除去前の並びが正確に再現される。
     let lines = this.state.lines;
@@ -270,7 +266,7 @@ export class PlayModel extends Disposable implements IPlayModel {
 
   private insertLineCore(line: Line, index: number, caller: string): void {
     assertNewId(this.state.lines, line.id, `${caller}: duplicate line id`);
-    assertWithinLimits(this.state.players.length, this.state.lines.length + 1, caller);
+    assertAtMost(this.state.lines.length + 1, MAX_LINES, "lines", caller);
     assertWaypointLimit(line, caller);
     this.state = { ...this.state, lines: insertAt(this.state.lines, index, line) };
     this.emitChange();

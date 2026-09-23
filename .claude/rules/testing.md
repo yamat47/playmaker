@@ -1,58 +1,69 @@
 ---
-description: Vitest テスト規約。common 層中心、インターフェース注入、AAA。
+description: Vitest テスト規約。編集は仕様テストで確かめ、単体テストはモジュールの約束だけに絞る。
 paths:
   - "library/src/**/*.test.ts"
+  - "library/src/test-support/**"
 ---
 
 # テスト規約
 
-Playmaker は VSCode 流レイヤ分離を採る。テストは `common` 層（DOM 非依存の純ロジック）を厚く、`browser` 層は最小限にする。
+テストは実装の部品ではなく、利用者から見た振る舞いに付ける。内部の分け方を変えてもテストを書き換えずに済むようにするためである。
 
-## 配置・命名
+## 仕様テスト
 
-- ソースと同階層に `*.test.ts`（`src/common/base/event.ts` → `src/common/base/event.test.ts`）
-- Vitest は `src/**/*.test.ts` を **node 環境**で実行（`vite.config.ts` の `test`）。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
-- 実行: `make test`（全体・**カバレッジゲート内蔵**）/ `make test FILE=<file>`（個別）/ `make test-watch`（TDD 内側ループ・カバレッジなし）。いずれもコンテナ内で動く
-- 複数のテストで使う共通の部品は `src/test-support/` に置く（`must.ts`、`fixtures.ts`、`mutable.ts`）。coverage と build の対象外で、型検査は `tsconfig.test.json` がテストと一緒に行う
+編集の振る舞いは、`PlaySession` と `IEditorController` を境界にした仕様テストで確かめる。
 
-## スタイル
+- 置き場は `src/common/specs/<機能>.test.ts`。機能ごとに 1 ファイルにし、ソースファイルごとには置かない
+- 入口は `src/test-support/play-driver.ts` の `openPlay`。操作はヤード座標（`yd(lateral, downfield)`）で行い、
+  クリックとドラッグは `click` と `drag` を使う。ツールの切替、Undo、パネルからの編集は `editor` を直接呼ぶ
+- 観測するのは、session の読み取り（`getPlayData()`、`getSnapshot()`、`fieldZone`）と `loadFormation` の戻り値、
+  表示状態（`editor.getViewState()`、`editor.getFrame()`）、
+  通知（`onChange`、`notified`、`session.onDidChange`、`session.onDidReset`）だけにする
+- 購読していない状態を確かめるときだけ、`openPlay` を使わずに `PlaySession` を直接作る
+- コマンド、interaction、preview、PlayModel のような内部のモジュールを import しない。
+  図の組み立てに使う型と、`MAX_PLAYERS` のような公開された定数は使ってよい
+- PlaySession と IEditorController は公開しない。ジェスチャ単位の API を互換つきで固定する便益が、今の利用者には無い
 
-- `describe` でユニット、`it` は日本語で「どういう入力のとき、どうなるか」を書く
-  （例: `it("id が重複した選手は後ろの方の id を振り直す")`）。メソッド名で始めない。
-  「正しく動く」「正常系」のように結果を言わない名前にしない
-- AAA（Arrange / Act / Assert）。1 つの `it` は論理的に 1 振る舞い
-- 正常系 → 異常系 → 境界値の順で網羅
-- スパイは `vi.fn()`、`toHaveBeenCalledExactlyOnceWith` / `toHaveBeenCalledOnce` を活用
+## 単体テスト
 
-## テスト容易性の原則
+モジュールとしての約束を書けるものだけ、ソースと同じ階層に `*.test.ts` を置く。
 
-- **ロジックは common に置き、DOM 非依存で単体テストする**。`document` 等を common のテストに持ち込まない
-- 実装差し替えは**インターフェース注入**（`IIdFactory` や `ICommandService` 等のフェイクをコンストラクタに渡す）。モンキーパッチ / 全インスタンス差し替えを避ける
+- 対象は、bezier、polyline、field の座標変換、hit-test、color、keymap、base の Event と lifecycle、
+  PlayData の正規化と `migratePlayData`、プリセット
+- 公開の入口から観測できない数値計算は、単体テストで確かめる
+- 仕様テストで確かめられる振る舞いを、内部のモジュールの単体テストで重ねて確かめない
 
-```ts
-// GOOD
-const ids: IIdFactory = { next: vi.fn(() => "player-1") };
-const controller = new EditorController(model, commands, ids);
-```
+## 書き方
 
-## 重点的に網羅する対象（common 層）
+- Vitest は `src/**/*.test.ts` を node 環境で実行する。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
+- `describe` は機能か、単体テストならモジュールの名前にする。`it` は日本語で「どういう入力のとき、どうなるか」を書く
+  （例: `it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ")`）。
+  メソッド名で始めない。「正しく動く」「正常系」のように結果を言わない名前にしない
+- 1 つの `it` は 1 つの振る舞いだけを確かめる。準備、操作、検証の段は空行で区切り、`// Arrange` のようなコメントは書かない
+- テスト名とコメントに、カバレッジのどの分岐を通すかを書かない。書くのは振る舞いである
+- スパイは `vi.fn()` で作り、`toHaveBeenCalledOnce` や `toHaveBeenCalledExactlyOnceWith` で確かめる。
+  モンキーパッチやモジュールの差し替え（`vi.mock`）はしない
+- 複数のテストで使う部品は `src/test-support/` に置く。coverage と build の対象外で、
+  型検査は `tsconfig.test.json` がテストと一緒に行う
 
-- モデルの不変条件と `onChange` 発火
-- コマンドの適用・取り消し（コマンドパターン）
-- Undo / Redo スタックの遷移
-- 幾何計算（bezier、hit-test、座標変換）
-- PlayData の `version` と migration
+## 実行
+
+- `make test`（全体、カバレッジゲート込み）、`make test FILE=<file>`（1 ファイル、ゲートなし）、
+  `make test-watch`（カバレッジなし）
+- `browser/` と `playmaker.ts` の結線は、今は demo で目視する（`run-demo` skill）
 
 ## カバレッジ（common 層 100% ゲート）
 
-- `make test` = `pnpm run test` = `vitest run --coverage`。**ゲートはこのコマンドに内蔵**され ローカル実行 / CI / create-pr の全経路で強制される。TDD 内側ループは `make test-watch`（カバレッジなし）
-- しきい値は **`src/common/**` のみ** 4 指標すべて 100% / `perFile: true`（`browser/` `playmaker.ts` `index.ts` は測るが落とさない）。設定は `vite.config.ts` の `test.coverage` 1 か所
-- 落ちたら `text` レポーターの「Uncovered Line #s」を見て対処:
-  1. **テスト可能な振る舞い** → テスト追加（未カバー行を `test-writer` エージェントに渡すと速い）
-  2. **到達不能な防御コード**（`noUncheckedIndexedAccess` 用ガード、非 export 関数の前提で到達しない分岐等）に限り `/* v8 ignore start -- <Why> */ … /* v8 ignore stop */` で除外。Why 必須・PR レビューで承認。安易な ignore で穴を隠さない
-- ローカルで赤ハイライトを辿るなら `coverage/index.html`（gitignore 済）
+- しきい値は `src/common/**` だけに掛け、4 指標すべて 100%、`perFile: true` で判定する。
+  `browser/` `playmaker.ts` `index.ts` は測るが落とさない。設定は `vite.config.ts` の `test.coverage` の 1 か所
+- ゲートは `make test` に入っているので、ローカルでも CI でも同じ判定になる
+- 落ちたら `text` レポーターの「Uncovered Line #s」を見て、次のどれかにする
+  1. 利用者から届く振る舞いなら、仕様テストか単体テストを足す
+  2. 仕様テストから届かず、利用者にも届かないコードなら消す
+  3. `noUncheckedIndexedAccess` のためのガードのように到達しない防御コードに限り、
+     `/* v8 ignore start -- <Why> */ … /* v8 ignore stop */` で外す。Why は必須で、PR のレビューで認める
+- ローカルで未カバーの行を辿るときは `coverage/index.html`（gitignore 済み）を開く
 
 ## やらないこと
 
-- 視覚回帰テスト（VRT）は採用しない（方針確定済み）
-- E2E / ブラウザ自動操作は MVP 範囲外（`demo/` playground で手動目視）
+- スクリーンショットを比べる視覚回帰テスト（VRT）は採用しない

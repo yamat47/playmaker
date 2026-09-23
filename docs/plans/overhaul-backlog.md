@@ -542,7 +542,7 @@ PR 単位で、依存順に並べる。
 分割:
 
 - T15-0 cloud 版のセッションで make を動かす（done）。SessionStart hook（`docker/cloud-session-setup.sh`）が Node と pnpm、依存を入れ、`IN_CONTAINER=1` で make が pnpm を直接呼ぶ。コンテナの中で Docker を動かす案は、起動が拒否されるうえ、イメージを毎回作り直すので見送った。
-- T15a 規約と土台。testing.md を上の方針で書き直し、仕様テストの操作ヘルパを作る。
+- T15a 規約と土台（done）。testing.md を上の方針で書き直し、仕様テストの操作ヘルパ（`src/test-support/play-driver.ts` の `openPlay`）を作った。仕様テストは `src/common/specs/` に置く。PlaySession のテストを最初の仕様テストとして移した。
 - T15b 仕様テストへの移行。機能のまとまりごとに 2〜3 本に割る。届かないと分かったコードの削除は別コミットにする。下の T15-1〜T15-7 はここで片付くか、消える。
 - T15c ブラウザテスト。Browser Mode を入れ、Docker イメージにも Chromium を入れる。
 
@@ -563,11 +563,14 @@ controller の構造を分けるか（ジェスチャの解釈を切り出すか
 - [ ] **T15-7 [nit] AAA のコメントが一部のテストにしかない**
   - locations: library/src/common/event/emitter.test.ts:70, library/src/common/event/emitter.test.ts:82
   - 対応: コメントを削り、空行で段を区切る書き方に揃える。
+- [ ] **T15-8 [nit] setPlayData で controller が作り直されるので、利用側がそのたびに通知を購読し直している**（T15a で追加）
+  - locations: library/src/playmaker.ts:127, library/src/test-support/play-driver.ts:33-38
+  - 対応: PlaySession が scene と表示状態の通知を転送し、作り直しを内側で吸収するか。controller の構造を分けるかと一緒に、T15b のあとで決める。
 
 - 依存: T5-5、T9、T10（コードの形が固まってから）
 - 完了条件: 編集の振る舞いが仕様テストで確かめられ、実装に依存するテストが残っていない。Playmaker の結線をブラウザテストで確かめている。common 100% を維持する。
 - 規模: L（T15-0、T15a、T15b、T15c）
-- 進み具合: T15-0 を閉じた。
+- 進み具合: T15-0 と T15a を閉じた。
 
 ---
 

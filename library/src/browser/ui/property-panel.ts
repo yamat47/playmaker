@@ -159,6 +159,16 @@ export class PropertyPanel extends Disposable {
     this.appendRow(label);
   }
 
+  /**
+   * ボタンを並べた行。label で包むと、文字を押したときに先頭のボタンが押されるので、
+   * ボタンの組に名前を付ける。
+   */
+  private addGroupRow(labelText: string, group: HTMLElement): void {
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", labelText);
+    this.appendRow(this.createRowText(labelText), group);
+  }
+
   private createRowText(text: string): HTMLElement {
     const span = document.createElement("span");
     span.textContent = text;
@@ -227,7 +237,7 @@ export class PropertyPanel extends Disposable {
       group.appendChild(btn);
       return { btn, color };
     });
-    this.addRow("色", group);
+    this.addGroupRow("色", group);
     return (value) => {
       for (const { btn, color } of swatches) {
         btn.setAttribute(

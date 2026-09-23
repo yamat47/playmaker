@@ -187,6 +187,7 @@ export class PropertyPanel extends Disposable {
 
   private createRowText(text: string): HTMLElement {
     const span = document.createElement("span");
+    span.className = "playmaker-panel__row-text";
     span.textContent = text;
     return span;
   }

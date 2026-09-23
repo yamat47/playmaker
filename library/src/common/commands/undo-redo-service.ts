@@ -1,5 +1,5 @@
-import { Emitter, type Event } from "../event/emitter.js";
-import { Disposable } from "../lifecycle/disposable.js";
+import { Emitter, type Event } from "../base/event.js";
+import { Disposable } from "../base/lifecycle.js";
 import type { ICommand } from "./command.js";
 
 /**

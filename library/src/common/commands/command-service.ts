@@ -1,4 +1,4 @@
-import type { Event } from "../event/emitter.js";
+import type { Event } from "../base/event.js";
 import type { IPlayModel } from "../model/play-model.js";
 import type { ICommand } from "./command.js";
 import type { IUndoRedoService } from "./undo-redo-service.js";

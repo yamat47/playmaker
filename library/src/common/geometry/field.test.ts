@@ -6,6 +6,7 @@ import {
   displayYardNumber,
   FIELD_WIDTH_YARDS,
   FieldGeometry,
+  fieldWindowAspect,
   fieldZoneWindow,
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   isEndZone,
@@ -52,9 +53,7 @@ describe("zoneWindowLength", () => {
 });
 
 describe("displayYardNumber", () => {
-  it("両ゴール 0/100 は 0、センター 50 は 50", () => {
-    expect(displayYardNumber(0)).toBe(0);
-    expect(displayYardNumber(100)).toBe(0);
+  it("センター 50 は 50", () => {
     expect(displayYardNumber(50)).toBe(50);
   });
 
@@ -64,11 +63,11 @@ describe("displayYardNumber", () => {
     expect(displayYardNumber(80)).toBe(20);
   });
 
-  it("エンドゾーン（フィールド外）は番号なし=0として扱う", () => {
-    expect(displayYardNumber(-10)).toBe(0);
-    expect(displayYardNumber(-5)).toBe(0);
-    expect(displayYardNumber(105)).toBe(0);
-    expect(displayYardNumber(110)).toBe(0);
+  it("ゴールラインとエンドゾーンは番号が無いので null", () => {
+    expect(displayYardNumber(0)).toBeNull();
+    expect(displayYardNumber(100)).toBeNull();
+    expect(displayYardNumber(-5)).toBeNull();
+    expect(displayYardNumber(110)).toBeNull();
   });
 });
 
@@ -242,5 +241,16 @@ describe("clampToZoneWindow", () => {
     expect(clampToZoneWindow({ lateralYard: 10, downfieldYard: 200 }, redzone).downfieldYard).toBe(
       110 - LOS_YARD_BY_ZONE.redzone,
     );
+  });
+});
+
+describe("fieldWindowAspect", () => {
+  it("各ゾーンの窓の幅を縦の長さで割った値になる", () => {
+    expect(fieldWindowAspect("middle")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("middle"));
+    expect(fieldWindowAspect("redzone")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("redzone"));
+  });
+
+  it("縦に長いレッドゾーンの窓は、middle より比が小さい", () => {
+    expect(fieldWindowAspect("redzone")).toBeLessThan(fieldWindowAspect("middle"));
   });
 });

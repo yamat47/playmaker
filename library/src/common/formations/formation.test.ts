@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
-import type { IIdFactory } from "../editing/id-factory.js";
+import type { IIdFactory } from "../model/id-factory.js";
 import type { Player } from "../model/player.js";
 import { type Formation, instantiateFormation, normalizeFormation } from "./formation.js";
 

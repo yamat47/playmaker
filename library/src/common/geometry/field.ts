@@ -96,6 +96,14 @@ export function zoneWindowLength(zone: FieldZone): number {
 }
 
 /**
+ * フィールド窓（幅 FIELD_WIDTH_YARDS、縦はゾーン窓の長さ）のアスペクト比。
+ * レッドゾーンの窓は middle より縦に長いので、ゾーンごとに違う。
+ */
+export function fieldWindowAspect(zone: FieldZone): number {
+  return FIELD_WIDTH_YARDS / zoneWindowLength(zone);
+}
+
+/**
  * 位置をゾーン窓の中（左右はサイドライン間、縦は窓の端から端）へ寄せる。
  * 画面の外で離したドラッグや余白へのクリックで、見えない位置に選手や点を置かないためのもの。
  */
@@ -116,12 +124,14 @@ export function isEndZone(absoluteYard: number): boolean {
 }
 
 /**
- * 絶対ヤード → フィールド上の表示番号(0..50)。両ゴールから数える（…40,50,40…）。
- * フィールド外（エンドゾーン）は番号を持たないため 0 を返す（描画側は 0 を非表示扱い）。
+ * 絶対ヤード → フィールド上の表示番号(1..50)。両ゴールから数える（…40,50,40…）。
+ * ゴールラインとエンドゾーンには番号を書かないので null を返す。
  */
-export function displayYardNumber(absoluteYard: number): number {
-  const clamped = Math.min(100, Math.max(0, absoluteYard));
-  return 50 - Math.abs(50 - clamped);
+export function displayYardNumber(absoluteYard: number): number | null {
+  if (absoluteYard <= 0 || absoluteYard >= 100) {
+    return null;
+  }
+  return 50 - Math.abs(50 - absoluteYard);
 }
 
 /**
@@ -160,7 +170,7 @@ export class FieldGeometry {
   readonly zone: FieldZone;
   /** LOS の絶対ヤード。FieldPosition の downfieldYard はここからの距離。 */
   readonly losYard: number;
-  readonly window: YardWindow;
+  readonly yardWindow: YardWindow;
   /** px / yard。アスペクト維持のため縦横共通。 */
   readonly scale: number;
   readonly fieldPixelWidth: number;
@@ -174,8 +184,8 @@ export class FieldGeometry {
     this.viewportHeight = viewportHeight;
     this.zone = field.zone;
     this.losYard = field.losYard;
-    this.window = fieldZoneWindow(field.zone);
-    const windowLength = this.window.endYard - this.window.startYard;
+    this.yardWindow = fieldZoneWindow(field.zone);
+    const windowLength = this.yardWindow.endYard - this.yardWindow.startYard;
     const w = Math.max(0, viewportWidth);
     const h = Math.max(0, viewportHeight);
     this.scale = Math.min(w / FIELD_WIDTH_YARDS, h / windowLength);
@@ -191,7 +201,7 @@ export class FieldGeometry {
 
   yForAbsoluteYard(absoluteYard: number): number {
     // 窓の奥側(endYard)を上端に、手前側(startYard)を下端に対応させる。
-    return this.offsetY + (this.window.endYard - absoluteYard) * this.scale;
+    return this.offsetY + (this.yardWindow.endYard - absoluteYard) * this.scale;
   }
 
   toCanvas(position: FieldPosition): CanvasPoint {
@@ -211,8 +221,8 @@ export class FieldGeometry {
 
   absoluteYardForY(y: number): number {
     return this.scale > 0
-      ? this.window.endYard - (y - this.offsetY) / this.scale
-      : this.window.endYard;
+      ? this.yardWindow.endYard - (y - this.offsetY) / this.scale
+      : this.yardWindow.endYard;
   }
 
   fromCanvas(point: CanvasPoint): FieldPosition {
@@ -224,6 +234,6 @@ export class FieldGeometry {
 
   /** absoluteYard が現在のゾーン窓に収まるか（端含む）。 */
   containsYard(absoluteYard: number): boolean {
-    return absoluteYard >= this.window.startYard && absoluteYard <= this.window.endYard;
+    return absoluteYard >= this.yardWindow.startYard && absoluteYard <= this.yardWindow.endYard;
   }
 }

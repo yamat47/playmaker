@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Disposable, DisposableStore, toDisposable } from "./disposable.js";
+import { Disposable, DisposableStore, toDisposable } from "./lifecycle.js";
 
 describe("DisposableStore", () => {
   it("追加した全ての IDisposable を dispose する", () => {

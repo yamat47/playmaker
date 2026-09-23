@@ -1,6 +1,6 @@
 // 編集ツールバー（PRD 5.4 / 6.5）。バニラ DOM・--playmaker-* テーマ。
 // 状態は EditorController が真実源で、ここは「ボタン → アクション」と
-// 「onDidChange → 見た目同期」を繋ぐだけ（フレームワーク非依存・組み込み容易）。
+// 「表示状態の変化 → 見た目同期」を繋ぐだけ（フレームワーク非依存・組み込み容易）。
 
 import {
   Disposable,
@@ -64,7 +64,7 @@ export class Toolbar extends Disposable {
 
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
-    this._register(controller.onDidChange(() => this.sync(controller)));
+    this._register(controller.onDidChangeViewState(() => this.sync(controller)));
     this.sync(controller);
   }
 
@@ -135,7 +135,7 @@ export class Toolbar extends Disposable {
     this.undoButton.disabled = !state.canUndo;
     this.redoButton.disabled = !state.canRedo;
     this.deleteButton.disabled = state.selection === null;
-    this.commitButton.disabled = !state.drawing;
-    this.cancelButton.disabled = !state.drawing;
+    this.commitButton.disabled = !state.isDrawing;
+    this.cancelButton.disabled = !state.isDrawing;
   }
 }

@@ -1,6 +1,6 @@
+import type { Event } from "../base/event.js";
 import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerPatch } from "../commands/player-commands.js";
-import type { Event } from "../event/emitter.js";
 import type { Formation } from "../formations/formation.js";
 import type { Line } from "../model/line.js";
 import type { FieldZone, PlayData } from "../model/play-data.js";
@@ -36,20 +36,31 @@ export interface EditorViewState {
   readonly canRedo: boolean;
   readonly fieldZone: FieldZone;
   /** 線を作図中（確定か取り消し待ち）か。 */
-  readonly drawing: boolean;
+  readonly isDrawing: boolean;
+}
+
+/** 1 回の描画に要るもの。オーバーレイは scene と同じ途中の状態から求める。 */
+export interface EditorFrame {
+  /** 確定済みのプレー図に、ドラッグや作図の途中の状態を重ねたもの。 */
+  readonly scene: SceneData;
+  readonly overlay: EditorOverlay;
 }
 
 /** 描画と UI の同期に使う読み取り面。 */
 export interface IEditorScene {
-  readonly onDidChange: Event<void>;
+  /** getFrame の結果が変わったかもしれないときに、1 つの操作につき 1 回発火する。 */
+  readonly onDidChangeScene: Event<void>;
+  /**
+   * getViewState か、選択中の選手や線の値が変わったときだけ発火する。
+   * ドラッグ中の移動のように、描く図だけが変わる操作では発火しない。
+   */
+  readonly onDidChangeViewState: Event<void>;
   getViewState(): EditorViewState;
   /** 選手を選択していないか、対象が消えていれば undefined。 */
   getSelectedPlayer(): Player | undefined;
   /** 線を選択していないか、対象が消えていれば undefined。 */
   getSelectedLine(): Line | undefined;
-  /** 確定済みのプレー図に、ドラッグや作図の途中の状態を重ねたもの。 */
-  getRenderModel(): SceneData;
-  getOverlay(): EditorOverlay;
+  getFrame(): EditorFrame;
 }
 
 /** ポインタの操作（ヤード空間）。 */

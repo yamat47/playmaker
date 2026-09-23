@@ -2,8 +2,8 @@
 // プリセット（presets.ts）と外部（商用ソフト）から渡るカスタム隊形の双方をこの型で扱う。
 // 戦術的厳密性より組み込みやすさ優先（PRD 4.1）: 隊形 = 選手テンプレートの名前付き集合。
 
-import type { IIdFactory } from "../editing/id-factory.js";
 import { isNonEmptyString, isRecord } from "../model/guards.js";
+import type { IIdFactory } from "../model/id-factory.js";
 import { normalizePlayers, type Player } from "../model/player.js";
 import { isTeamSide, type TeamSide } from "../presets/shared.js";
 

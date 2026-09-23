@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Emitter } from "./emitter.js";
+import { Emitter } from "./event.js";
 
 describe("Emitter", () => {
   it("登録したリスナに fire の値を通知する", () => {

@@ -26,8 +26,8 @@ function toHex(value: string | undefined, fallback: string): string {
 
 export class PropertyPanel extends Disposable {
   readonly element: HTMLElement;
-  // 直近に描いた内容のキー。選択や確定値が変わらない限り再構築しない
-  // （ドラッグ中の onDidChange 連打で DOM 破棄＝入力フォーカス喪失を防ぐ）。
+  // 直近に描いた内容のキー。表示状態の通知はツールや Undo の可否が変わっても届くので、
+  // 選択と確定値が変わらない限り作り直さず、入力中のフォーカスを失わせない。
   private lastKey: string | null = null;
 
   constructor(parent: HTMLElement, controller: IEditorUi) {
@@ -37,7 +37,7 @@ export class PropertyPanel extends Disposable {
 
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
-    this._register(controller.onDidChange(() => this.rebuild(controller)));
+    this._register(controller.onDidChangeViewState(() => this.rebuild(controller)));
     this.rebuild(controller);
   }
 

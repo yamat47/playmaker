@@ -5,7 +5,7 @@ import type { PlayerShape } from "../model/player.js";
 import { DEFENSE_COLOR, deepFreeze } from "../presets/shared.js";
 import type { Formation, FormationPlayer } from "./formation.js";
 
-/** オフェンス選手テンプレート（色なし＝テーマ既定）。 */
+/** 色を持たせず、テーマの色で描く。 */
 function off(
   label: string,
   lateralYard: number,
@@ -15,7 +15,6 @@ function off(
   return { position: { lateralYard, downfieldYard }, shape, label };
 }
 
-/** ディフェンス選手テンプレート（DEFENSE_COLOR で塗る）。 */
 function def(
   label: string,
   lateralYard: number,
@@ -25,7 +24,6 @@ function def(
   return { position: { lateralYard, downfieldYard }, shape, label, color: DEFENSE_COLOR };
 }
 
-// オフェンスライン（5 人・LOS 上）は全隊形で共通。
 const OFFENSIVE_LINE: FormationPlayer[] = [
   off("LT", 22.1, -0.5, "square"),
   off("LG", 24.4, -0.5, "square"),
@@ -252,10 +250,6 @@ const DEFENSE_3_3_5: Formation = {
   ],
 };
 
-/**
- * 組み込みプリセット一覧（攻 7・守 6）。Toolbar はこれを攻守でグループ表示し、
- * 商用ソフトはこの配列を起点に独自テンプレートを足せる（PRD 5.6）。
- */
 export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreeze([
   I_FORMATION,
   SINGLEBACK_ACE,
@@ -272,7 +266,7 @@ export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreez
   DEFENSE_3_3_5,
 ]);
 
-/** id でプリセットを引く。未知 id は undefined（呼び出し側で無視する）。 */
+/** 無い id なら undefined。 */
 export function getFormationPreset(id: string): Formation | undefined {
   return FORMATION_PRESETS.find((f) => f.id === id);
 }

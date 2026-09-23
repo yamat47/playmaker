@@ -1,9 +1,3 @@
-// ローカル確認用 playground のエントリ。「Sideline Slate」筐体で以下を目視する:
-// - 左レールのプリセット・ライブラリ（フォーメーション 13・プレー図 16）をワンクリック読込
-// - 中央フィールドでの内蔵 UI（ツールバー/プロパティパネル）編集と view/edit 切替
-// - PNG エクスポート（編集 UI を含まない）
-// - 開発者ドロワー: PlayData 往復（getPlayData→restorePlayData・版なし/未来版の migration）と
-//   密度ストレス（選手 22 + 線 20）を手動目視する fixture
 import {
   CURRENT_PLAY_DATA_VERSION,
   FORMATION_PRESETS,
@@ -44,7 +38,6 @@ const { signal } = demoLifetime;
 
 const DEFENSE_COLOR = "#8f4034";
 
-// タイプ分類 → コールシート色タグ（ラン/パス/RPO/カバレッジ/プレッシャー）。
 const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
   "run-zone": { label: "RUN", color: "var(--cat-run)" },
   "run-gap": { label: "RUN", color: "var(--cat-run)" },
@@ -57,8 +50,8 @@ const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
   pressure: { label: "PRES", color: "var(--cat-pres)" },
 };
 
-// 密度ストレス用 fixture（選手 22 + 線 20）。PRD 6.2 を手動目視するため demo に常設し、
-// 2 形状（丸/四角）・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認する。
+// 要素が多い図でも描画と操作が重くならないかを目で確かめる図。丸と四角、3 種の線、
+// straight と bezier、waypoint を複数持つ線を、1 回の読み込みですべて出す。
 const STRESS_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.7, downfieldYard: -1 }, shape: "square", label: "C" },
   { id: "ol-lg", position: { lateralYard: 24.4, downfieldYard: -1 }, shape: "square", label: "LG" },
@@ -341,7 +334,6 @@ function refreshJson(): void {
 statusEl.textContent = "onChange 待ち（編集すると更新されます）";
 const playmaker = new Playmaker(mountPoint, { initialData: PLAY_PRESETS[0]?.data, onChange });
 
-// ---- 左レール: プリセット・ライブラリ ----
 let activeButton: HTMLButtonElement | null = null;
 
 function clearActive(): void {
@@ -502,7 +494,6 @@ if (initialPreset !== undefined) {
   }
 }
 
-// ---- トップバー ----
 const modeButton = need("mode-toggle", HTMLButtonElement);
 modeButton.addEventListener(
   "click",
@@ -564,7 +555,6 @@ devToggle.addEventListener(
   { signal },
 );
 
-// ---- 開発者ドロワー: 往復・migration・密度ストレスの目視 ----
 need("load-stress", HTMLButtonElement).addEventListener(
   "click",
   () => {

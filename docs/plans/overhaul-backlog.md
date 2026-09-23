@@ -454,10 +454,11 @@ PR 単位で、依存順に並べる。
   - 対応: 選択の kind と id が変わったときだけ作り直し、それ以外は値だけ更新する。JSON キーの比較は削除する。onDidChangeViewState を購読する。
 - [ ] **T13-2 [should] 選択肢に英語の enum 値がそのまま表示されている**
   - locations: library/src/browser/ui/property-panel.ts:18-20, library/src/browser/ui/property-panel.ts:172-178
-- [ ] **T13-3 [should] 形状を 2 種に確定し、残り 4 種を型・レンダラから削除する**（D18）
+- [x] **T13-3 [should] 形状を 2 種に確定し、残り 4 種を型・レンダラから削除する**（D18）
   - locations: library/src/browser/ui/property-panel.ts:16-18, library/src/common/model/player.ts:9, library/src/common/model/player.ts:14, library/src/common/geometry/player-marker.ts
   - 対応: PlayerShape を circle / square だけにし、多角形描画のコードを消す。未知の形状は既定へ寄せる正規化だけ残す。PRD 5.2 の更新は T18。
   - 補足: 型を 2 種にすれば、旧形状は正規化で既定（circle）へ寄るので、migration の段は要らない（T7 で確かめた）。
+  - 結論（T13a）: PLAYER_SHAPE_VALUES を circle と square だけにし、パネルの選択肢もこの配列から作る。正方形の輪郭は半辺の長さだけを返して rect で描き、多角形の辺の数と回転の表は消した。README の型の説明も直した。PRD は T18 で直す。
 - [ ] **T13-4 [should] ツールバーとパネルが canvas に重なり、フィールドを隠す**（D17）
   - locations: library/src/styles.css:67-81, library/src/styles.css:129-142, library/src/playmaker.ts:193-197
 - [ ] **T13-5 [should] キー割り当てが browser 層にあり、テストされていない**
@@ -483,6 +484,7 @@ PR 単位で、依存順に並べる。
 - 依存: T9、T11、T12、D17、D18
 - 完了条件: キーボードだけで連続して編集できる。UI が canvas に重ならない。表示はすべて日本語になる。
 - 規模: M
+- 進み具合: 3 本に分ける。T13a（T13-3）を閉じた。T13b はパネル（T13-1、T13-2、T13-5、T13-6、T13-9）、T13c は配置とフォーカスと上限（T13-4、T13-7、T13-8）。
 
 ---
 

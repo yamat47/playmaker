@@ -93,7 +93,8 @@ const playmaker = new Playmaker(container, {
 ### モード
 
 - `edit`: ツールバー・プロパティパネル・ポインタ操作で編集。Undo = `Cmd/Ctrl+Z`、
-  Redo = `Shift` 併用 / `Y`
+  Redo = `Shift` 併用 / `Y`。ツールバーは図の上、パネルは図の右に置き、図とは重ねない。
+  図は container からそれらを除いた領域に収まる大きさで描く
 - `view`: 読み取り専用。編集 UI は出さない
 
 ### スタイルのカスタマイズ

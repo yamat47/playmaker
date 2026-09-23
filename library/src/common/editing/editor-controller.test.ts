@@ -63,7 +63,7 @@ describe("EditorController: 初期状態", () => {
     expect(controller.getSelectedLine()).toBeUndefined();
   });
 
-  it("interaction が無ければ 描く図は Model のスナップショットそのもの", () => {
+  it("途中の操作が無ければ、描く図は Model のスナップショットそのものになる", () => {
     const { controller, model } = setup();
 
     expect(controller.getFrame().scene).toBe(model.getSnapshot());
@@ -321,14 +321,15 @@ describe("EditorController: 選択と選手ドラッグ（select）", () => {
 
     controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // p-a 選択
     controller.pointerUp({ lateralYard: 10, downfieldYard: 0 });
-    controller.pointerDown({ lateralYard: 45, downfieldYard: -10 }); // 空白 → 解除
+    controller.pointerDown({ lateralYard: 45, downfieldYard: -10 }); // 空白を押して選択を外す。
     expect(controller.getSelection()).toBeNull();
   });
 
   it("線をクリックすると線が選択される", () => {
     const { controller } = setup();
 
-    controller.pointerDown({ lateralYard: 15, downfieldYard: 2 }); // l-1 の waypoint 上＝線上
+    // l-1 の waypoint は線の上にある。
+    controller.pointerDown({ lateralYard: 15, downfieldYard: 2 });
 
     expect(controller.getSelection()).toEqual({ kind: "line", id: "l-1" });
   });
@@ -401,7 +402,8 @@ describe("EditorController: waypoint 編集", () => {
     controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 選択
     controller.pointerUp({ lateralYard: 25, downfieldYard: 5 });
 
-    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 }); // waypoint から遠い→ p-a
+    // waypoint から遠いので p-a を押す。
+    controller.pointerDown({ lateralYard: 10, downfieldYard: 0 });
 
     expect(controller.getSelection()).toEqual({ kind: "player", id: "p-a" });
   });
@@ -432,7 +434,7 @@ describe("EditorController: waypoint 編集", () => {
     expect(controller.getSelection()).toEqual({ kind: "player", id: "p-a" });
   });
 
-  it("複数 waypoint・複数線でドラッグ中の 1 点だけが オーバーレイと描く図に反映される", () => {
+  it("waypoint と線が複数あっても、ドラッグ中の 1 点だけがオーバーレイと描く図で動く", () => {
     const { controller, model } = setup({
       version: 2,
       field: { zone: "middle", losYard: 50 },

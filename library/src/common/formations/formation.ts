@@ -22,7 +22,7 @@ export interface Formation {
   readonly id: string;
   /** 表示名（日本語・UI 用）。 */
   readonly name: string;
-  /** 読み込み（配置）には影響しない。プリセット一覧を攻守で束ねるためのメタ情報。 */
+  /** 読み込んだときの選手の配置には影響しない。 */
   readonly side: TeamSide;
   /** 配置する選手テンプレート（1 つ以上）。 */
   readonly players: readonly FormationPlayer[];

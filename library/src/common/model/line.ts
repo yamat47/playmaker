@@ -113,7 +113,7 @@ function normalizeLine(
     interpolation: isLineInterpolation(raw.interpolation)
       ? raw.interpolation
       : DEFAULT_LINE_INTERPOLATION,
-    // exactOptionalPropertyTypes: 値があるときだけ持たせる。
+    // exactOptionalPropertyTypes では undefined を入れられないので、値があるときだけキーを置く。
     ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
     ...(isFiniteNumber(raw.thickness) && raw.thickness > 0 ? { thickness: raw.thickness } : {}),
   };

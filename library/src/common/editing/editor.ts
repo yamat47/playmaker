@@ -46,7 +46,7 @@ export interface EditorViewState {
   readonly isDrawing: boolean;
 }
 
-/** 1 回の描画に要るもの。オーバーレイは scene と同じ途中の状態から求める。 */
+/** オーバーレイは、scene と同じ途中の状態から求める。 */
 export interface EditorFrame {
   /** 確定済みのプレー図に、ドラッグや作図の途中の状態を重ねたもの。 */
   readonly scene: SceneData;

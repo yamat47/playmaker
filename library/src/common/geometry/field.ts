@@ -9,9 +9,8 @@ import type { FieldPosition } from "../model/player.js";
 export const FIELD_WIDTH_YARDS = 160 / 3;
 
 /**
- * middle ゾーンで映す縦長（PRD 5.1「約 30 ヤード分」）。
- * レッドゾーン窓は数字の見切れ回避でこれより深い（RED_ZONE_DEPTH + END_ZONE = 35）。
- * 窓ごとの実長は zoneWindowLength で得る。
+ * middle ゾーンで映す縦の長さ。レッドゾーンの窓は、ヤード数字が端で見切れないよう
+ * これより深い。窓ごとの長さは zoneWindowLength で得る。
  */
 export const ZONE_WINDOW_LENGTH_YARDS = 30;
 
@@ -104,7 +103,7 @@ export function clampToZoneWindow(position: FieldPosition, field: FieldState): F
 }
 
 /**
- * 絶対ヤード → フィールド上の表示番号(1..50)。両ゴールから数える（…40,50,40…）。
+ * 絶対ヤードに対応する、フィールドに書く番号（1..50）。両ゴールから数える（…40、50、40…）。
  * ゴールラインとエンドゾーンには番号を書かないので null を返す。
  */
 export function displayYardNumber(absoluteYard: number): number | null {

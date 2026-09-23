@@ -33,7 +33,7 @@ export interface LineRemoval {
 export interface IPlayModel {
   /** いずれかの変更後に、getSnapshot と同じ値で 1 回発火する。 */
   readonly onDidChange: Event<PlayData>;
-  /** 現在状態の深いコピー。内部の読み取りには getSnapshot を使い、これは外へ渡すときだけ使う。 */
+  /** 現在状態の深いコピー。呼ぶたびに図全体を複製する。 */
   getData(): PlayData;
   /**
    * 現在状態をコピーせずに返す。状態は変更のたびに新しいオブジェクトへ差し替えるので、

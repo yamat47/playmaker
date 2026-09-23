@@ -1,7 +1,3 @@
-// 編集ツールバー（PRD 5.4 / 6.5）。バニラ DOM・--playmaker-* テーマ。
-// 状態は EditorController が真実源で、ここは「ボタン → アクション」と
-// 「表示状態の変化 → 見た目同期」を繋ぐだけ（フレームワーク非依存・組み込み容易）。
-
 import {
   Disposable,
   EDITOR_TOOL_VALUES,

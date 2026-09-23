@@ -1,7 +1,6 @@
-// 組み込み済みプリセットプレー図（攻 9・守 7）。現代アメフト（NFL/カレッジ）の代表的な
-// ラン/パス/RPO/カバレッジ/プレッシャー概念を 1 枚ずつ収める。DOM 非依存のデータ。
-// 縦は LOS からの位置（LOS = 0、攻撃方向が正）、横はセンター lat≈26.7 で置き、middle ゾーンの窓
-// （LOS の前後 15 ヤード）に収まる。主役側のみがルート/ブロック/モーションを持ち、相手側は配置マーカーだけ。
+// 縦は LOS からの位置（LOS が 0 で、攻撃方向が正）で、横はセンターを 26.7 ヤード付近に置く。
+// middle ゾーンの窓（LOS の前後 15 ヤード）に収まる。ルート、ブロック、モーションを持つのは
+// 主役の側だけで、相手の側は選手の配置だけを持つ。
 
 import type { Line, LineInterpolation, LineKind } from "../model/line.js";
 import { CURRENT_PLAY_DATA_VERSION, fieldStateForZone } from "../model/play-data.js";

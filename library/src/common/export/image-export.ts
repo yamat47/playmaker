@@ -32,10 +32,8 @@ export function resolveImageExportWidth(width: number | undefined): number {
 }
 
 /**
- * エクスポート設定 → 出力ピクセル寸法。幅は正規化し、高さはゾーン窓の
- * アスペクト比から導くので、画像は余白なしでフィールド窓にぴったり収まる。
- * width >= 1 なので height も必ず 1 以上になる
- * （冗長な下限ガードは置かない＝common 100% を素直に保つ方針）。
+ * 幅を正規化し、高さはゾーン窓の縦横比から求めるので、画像は余白なしでフィールド窓に収まる。
+ * 窓の縦横比は 2 未満なので、幅が 1 以上なら四捨五入した高さも 1 以上になる。
  */
 export function resolveImageExportSize(
   zone: FieldZone,

@@ -4,14 +4,14 @@ import type { Line } from "../model/line.js";
 import type { Player } from "../model/player.js";
 import { type EditorViewState, isSameSelection } from "./editor.js";
 
-/** onDidChangeViewState を出すかどうかを決めるための、UI が読む値の組。 */
+/** 表示状態の通知は、この値の組が前回の通知（まだ通知していなければ構築時）と違うときだけ出す。 */
 export interface ViewSnapshot {
   readonly state: EditorViewState;
   readonly player: Player | undefined;
   readonly line: Line | undefined;
 }
 
-// 表示状態の項目ごとの比べ方。項目を足すとここが型エラーになり、比べ忘れを防ぐ。
+// 表示状態の項目ごとの比べ方。項目を足すと、比べ方を書くまでここが型エラーになる。
 const VIEW_STATE_EQUALS: {
   readonly [K in keyof EditorViewState]: (a: EditorViewState[K], b: EditorViewState[K]) => boolean;
 } = {

@@ -16,7 +16,6 @@
 規約やドキュメントに出てくる `src/` `demo/` `vite.config.ts` などは `library/` からの相対パス。
 
 `docs/plans/` には実行中の計画だけを置き、完了したら削除する（経緯は git 履歴に残る）。
-全体見直しの間は `docs/plans/overhaul-backlog.md` が進め方の正で、`implementation-roadmap.md` より優先する。
 
 ## コマンドは必ず make 経由
 

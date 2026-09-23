@@ -408,7 +408,8 @@ interface PresetRow {
   name: string;
   tag: string;
   tagColor: string;
-  select: () => void;
+  /** 図を読み込めなかったときは false を返す。 */
+  select: () => boolean;
 }
 
 // フォーメーションとプレー図で違うのは 1 行の見た目と押したときの処理だけなので、それを toRow で受け取る。
@@ -428,8 +429,9 @@ function addSection<T extends { id: string; side: "offense" | "defense" }>(
     const button = presetButton(row.name, row.tag, row.tagColor);
     button.dataset.presetId = item.id;
     button.addEventListener("click", () => {
-      setActive(button);
-      row.select();
+      if (row.select()) {
+        setActive(button);
+      }
     });
     libraryScroll.append(button);
   }
@@ -442,15 +444,17 @@ function formationRow(formation: Formation): PresetRow {
     tag: offense ? "OFF" : "DEF",
     tagColor: offense ? "var(--off)" : "var(--def)",
     select: () => {
-      const placed = playmaker.loadFormation(formation);
+      if (!playmaker.loadFormation(formation)) {
+        infoSummary.textContent = `${formation.name} は、選手の上限を超えるので置きませんでした。`;
+        return false;
+      }
       setInfo(
         formation.name,
         null,
         "Formation",
-        placed
-          ? "今の図に選手を足しました（線は付きません）。攻守の隊形を重ねられます。"
-          : "選手の上限を超えるので、置きませんでした。",
+        "今の図に選手を足しました（線は付きません）。攻守の隊形を重ねられます。",
       );
+      return true;
     },
   };
 }
@@ -464,6 +468,7 @@ function playRow(preset: PlayPreset): PresetRow {
     select: () => {
       loadPlay(preset);
       setInfo(preset.name, meta, preset.personnel, preset.summary);
+      return true;
     },
   };
 }

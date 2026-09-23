@@ -17,23 +17,23 @@ import {
   type PlayPreset,
 } from "playmaker";
 
-function need<T extends HTMLElement>(id: string): T {
+function need<T extends HTMLElement>(id: string, type: new () => T): T {
   const el = document.getElementById(id);
-  if (el === null) {
-    throw new Error(`#${id} が見つかりません`);
+  if (!(el instanceof type)) {
+    throw new Error(`#${id} の ${type.name} が見つかりません`);
   }
-  return el as T;
+  return el;
 }
 
-const mountPoint = need("stage");
-const libraryScroll = need("library-scroll");
-const statusEl = need("status");
-const jsonArea = need<HTMLTextAreaElement>("json");
-const dataStatus = need("data-status");
-const infoName = need("playinfo-name");
-const infoChip = need("playinfo-chip");
-const infoPers = need("playinfo-pers");
-const infoSummary = need("playinfo-summary");
+const mountPoint = need("stage", HTMLElement);
+const libraryScroll = need("library-scroll", HTMLElement);
+const statusEl = need("status", HTMLElement);
+const jsonArea = need("json", HTMLTextAreaElement);
+const dataStatus = need("data-status", HTMLElement);
+const infoName = need("playinfo-name", HTMLElement);
+const infoChip = need("playinfo-chip", HTMLElement);
+const infoPers = need("playinfo-pers", HTMLElement);
+const infoSummary = need("playinfo-summary", HTMLElement);
 
 // 静的 HTML のボタン/コンテナは HMR を跨いで生き残る。signal でリスナを束ねて再読込時に
 // 外し、コンテナは作り直す前に空にする（束ねないとホットリロードごとに多重登録される）。
@@ -504,7 +504,7 @@ if (initialPreset !== undefined) {
 }
 
 // ---- トップバー ----
-const modeButton = need<HTMLButtonElement>("mode-toggle");
+const modeButton = need("mode-toggle", HTMLButtonElement);
 modeButton.addEventListener(
   "click",
   () => {
@@ -521,7 +521,7 @@ function syncModeButton(): void {
 }
 syncModeButton();
 
-need<HTMLButtonElement>("clear").addEventListener(
+need("clear", HTMLButtonElement).addEventListener(
   "click",
   () => {
     replacePlayKeepingZone([], []);
@@ -543,7 +543,7 @@ async function downloadPng(): Promise<void> {
   statusEl.textContent = `PNG 出力（${playmaker.mode} モード・${Math.round(blob.size / 1024)}KB）`;
 }
 
-need<HTMLButtonElement>("export-png").addEventListener(
+need("export-png", HTMLButtonElement).addEventListener(
   "click",
   () => {
     downloadPng().catch((error: unknown) => {
@@ -554,8 +554,8 @@ need<HTMLButtonElement>("export-png").addEventListener(
   { signal },
 );
 
-const drawer = need("drawer");
-const devToggle = need<HTMLButtonElement>("dev-toggle");
+const drawer = need("drawer", HTMLElement);
+const devToggle = need("dev-toggle", HTMLButtonElement);
 devToggle.addEventListener(
   "click",
   () => {
@@ -566,7 +566,7 @@ devToggle.addEventListener(
 );
 
 // ---- 開発者ドロワー: 往復・migration・密度ストレスの目視 ----
-need<HTMLButtonElement>("load-stress").addEventListener(
+need("load-stress", HTMLButtonElement).addEventListener(
   "click",
   () => {
     replacePlayKeepingZone(STRESS_PLAYERS, STRESS_LINES);
@@ -581,7 +581,8 @@ function loadFromJsonText(): void {
   try {
     parsed = JSON.parse(jsonArea.value);
   } catch (error) {
-    dataStatus.textContent = `JSON 解析エラー: ${(error as Error).message}`;
+    const reason = error instanceof Error ? error.message : String(error);
+    dataStatus.textContent = `JSON 解析エラー: ${reason}`;
     return;
   }
   playmaker.restorePlayData(parsed);
@@ -594,7 +595,7 @@ function loadFixture(blob: unknown): void {
   loadFromJsonText();
 }
 
-need<HTMLButtonElement>("json-export").addEventListener(
+need("json-export", HTMLButtonElement).addEventListener(
   "click",
   () => {
     refreshJson();
@@ -602,8 +603,8 @@ need<HTMLButtonElement>("json-export").addEventListener(
   },
   { signal },
 );
-need<HTMLButtonElement>("json-import").addEventListener("click", loadFromJsonText, { signal });
-need<HTMLButtonElement>("json-legacy").addEventListener(
+need("json-import", HTMLButtonElement).addEventListener("click", loadFromJsonText, { signal });
+need("json-legacy", HTMLButtonElement).addEventListener(
   "click",
   () =>
     loadFixture({
@@ -612,7 +613,7 @@ need<HTMLButtonElement>("json-legacy").addEventListener(
     }),
   { signal },
 );
-need<HTMLButtonElement>("json-future").addEventListener(
+need("json-future", HTMLButtonElement).addEventListener(
   "click",
   () =>
     loadFixture({

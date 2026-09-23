@@ -342,6 +342,11 @@ const playmaker = new Playmaker(mountPoint, { initialData: PLAY_PRESETS[0]?.data
 // ---- 左レール: プリセット・ライブラリ ----
 let activeButton: HTMLButtonElement | null = null;
 
+function clearActive(): void {
+  activeButton?.classList.remove("is-active");
+  activeButton = null;
+}
+
 function setActive(button: HTMLButtonElement): void {
   activeButton?.classList.remove("is-active");
   button.classList.add("is-active");
@@ -395,15 +400,19 @@ function subTitle(text: string, offense: boolean): HTMLElement {
   return el;
 }
 
-function loadFormation(formation: Formation): void {
-  const players: Player[] = formation.players.map((p, i) => ({ ...p, id: `${formation.id}-${i}` }));
+function replacePlayKeepingZone(players: readonly Player[], lines: readonly Line[]): void {
   playmaker.setPlayData({
     version: CURRENT_PLAY_DATA_VERSION,
     field: playmaker.getPlayData().field,
     players,
-    lines: [],
+    lines,
   });
   refreshJson();
+}
+
+function loadFormation(formation: Formation): void {
+  const players: Player[] = formation.players.map((p, i) => ({ ...p, id: `${formation.id}-${i}` }));
+  replacePlayKeepingZone(players, []);
 }
 
 function loadPlay(preset: PlayPreset): void {
@@ -515,15 +524,8 @@ syncModeButton();
 need<HTMLButtonElement>("clear").addEventListener(
   "click",
   () => {
-    playmaker.setPlayData({
-      version: CURRENT_PLAY_DATA_VERSION,
-      field: playmaker.getPlayData().field,
-      players: [],
-      lines: [],
-    });
-    refreshJson();
-    activeButton?.classList.remove("is-active");
-    activeButton = null;
+    replacePlayKeepingZone([], []);
+    clearActive();
     setInfo("—", null, "", "");
   },
   { signal },
@@ -567,15 +569,8 @@ devToggle.addEventListener(
 need<HTMLButtonElement>("load-stress").addEventListener(
   "click",
   () => {
-    playmaker.setPlayData({
-      version: CURRENT_PLAY_DATA_VERSION,
-      field: playmaker.getPlayData().field,
-      players: STRESS_PLAYERS,
-      lines: STRESS_LINES,
-    });
-    refreshJson();
-    activeButton?.classList.remove("is-active");
-    activeButton = null;
+    replacePlayKeepingZone(STRESS_PLAYERS, STRESS_LINES);
+    clearActive();
     setInfo("密度ストレス", null, "選手 22・線 20", "描画・操作の体感速度を手動目視する fixture。");
   },
   { signal },

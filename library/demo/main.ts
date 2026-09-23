@@ -2,7 +2,7 @@
 // - 左レールのプリセット・ライブラリ（フォーメーション 13・プレー図 16）をワンクリック読込
 // - 中央フィールドでの内蔵 UI（ツールバー/プロパティパネル）編集と view/edit 切替
 // - PNG エクスポート（編集 UI を含まない）
-// - 開発者ドロワー: PlayData 往復（getPlayData→setPlayData・版なし/未来版の migration）と
+// - 開発者ドロワー: PlayData 往復（getPlayData→restorePlayData・版なし/未来版の migration）と
 //   密度ストレス（選手 22 + 線 20）を手動目視する fixture
 import {
   CURRENT_PLAY_DATA_VERSION,
@@ -14,8 +14,6 @@ import {
   type PlayData,
   type Player,
   Playmaker,
-  type PlaymakerMode,
-  type PlaymakerOptions,
   type PlayPreset,
 } from "playmaker";
 
@@ -326,7 +324,6 @@ const STRESS_LINES: Line[] = [
   },
 ];
 
-let mode: PlaymakerMode = "edit";
 let changeCount = 0;
 
 function onChange(data: PlayData): void {
@@ -339,17 +336,8 @@ function refreshJson(): void {
   jsonArea.value = JSON.stringify(playmaker.getPlayData(), null, 2);
 }
 
-function create(initialData?: PlayData): Playmaker {
-  changeCount = 0;
-  statusEl.textContent = "onChange 待ち（編集すると更新されます）";
-  const options: PlaymakerOptions = { mode, onChange };
-  if (initialData !== undefined) {
-    options.initialData = initialData;
-  }
-  return new Playmaker(mountPoint, options);
-}
-
-let playmaker = create(PLAY_PRESETS[0]?.data);
+statusEl.textContent = "onChange 待ち（編集すると更新されます）";
+const playmaker = new Playmaker(mountPoint, { initialData: PLAY_PRESETS[0]?.data, onChange });
 
 // ---- 左レール: プリセット・ライブラリ ----
 let activeButton: HTMLButtonElement | null = null;
@@ -511,18 +499,14 @@ const modeButton = need<HTMLButtonElement>("mode-toggle");
 modeButton.addEventListener(
   "click",
   () => {
-    // mode 切替は再マウント（現在のプレー図はそのまま引き継ぐ）。
-    const snapshot = playmaker.getPlayData();
-    playmaker.dispose();
-    mode = mode === "edit" ? "view" : "edit";
-    playmaker = create(snapshot);
+    playmaker.setMode(playmaker.mode === "edit" ? "view" : "edit");
     syncModeButton();
-    refreshJson();
   },
   { signal },
 );
 
 function syncModeButton(): void {
+  const { mode } = playmaker;
   modeButton.textContent = mode === "edit" ? "view モードへ" : "edit モードへ";
   modeButton.setAttribute("aria-pressed", String(mode === "view"));
 }
@@ -550,11 +534,11 @@ async function downloadPng(): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `playmaker-${mode}-${Date.now()}.png`;
+  a.download = `playmaker-${playmaker.mode}-${Date.now()}.png`;
   a.click();
   // click() のダウンロードは環境により非同期。同期 revoke で取りこぼす環境があるため遅延する。
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  statusEl.textContent = `PNG 出力（${mode} モード・${Math.round(blob.size / 1024)}KB）`;
+  statusEl.textContent = `PNG 出力（${playmaker.mode} モード・${Math.round(blob.size / 1024)}KB）`;
 }
 
 need<HTMLButtonElement>("export-png").addEventListener(
@@ -605,8 +589,7 @@ function loadFromJsonText(): void {
     dataStatus.textContent = `JSON 解析エラー: ${(error as Error).message}`;
     return;
   }
-  // 旧版・未来版・破損も migratePlayData が現行へ寄せる前提で型を緩めて渡す。
-  playmaker.setPlayData(parsed as PlayData);
+  playmaker.restorePlayData(parsed);
   refreshJson();
   dataStatus.textContent = "読込完了（version は現行へ寄せて再表示）";
 }

@@ -1,11 +1,12 @@
 /// <reference types="vitest/config" />
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
 // build: ライブラリモードで dist を生成する。
-// test: src 配下の *.test.ts を node 環境で実行する（common 層中心）。
+// test: src/specs の外の *.test.ts は node で、src/specs の *.test.ts は Chromium で実行する。
 // demo の dev サーバーは `make up` で起動する（中身は vite demo）。
 const root = import.meta.dirname;
 
@@ -19,6 +20,8 @@ const typescript6 = requireFromRoot.resolve("@typescript/typescript6/package.jso
 const typescriptLibFolder = dirname(
   createRequire(typescript6).resolve("@typescript/old/package.json"),
 );
+
+const chromiumPath = process.env.PLAYMAKER_CHROMIUM_PATH;
 
 export default defineConfig({
   resolve: {
@@ -55,8 +58,36 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+          exclude: ["src/specs/**"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "browser",
+          include: ["src/specs/**/*.test.ts"],
+          browser: {
+            enabled: true,
+            headless: true,
+            // 既定の 414px 幅では、編集 UI を並べた図の右側が画面の外に出てクリックできない。
+            viewport: { width: 1280, height: 800 },
+            provider: playwright({
+              // cloud 版の Claude Code のセッションには、playwright の版と合わない Chromium しか無く、
+              // playwright install も通らない。そのときだけ、置いてある Chromium を環境変数で指す。
+              launchOptions: chromiumPath ? { executablePath: chromiumPath } : {},
+            }),
+            instances: [{ browser: "chromium" }],
+          },
+        },
+      },
+    ],
     coverage: {
       // v8 ネイティブ計測 + AST-aware リマッピング。計装なしで速く、精度は istanbul 同等
       provider: "v8",

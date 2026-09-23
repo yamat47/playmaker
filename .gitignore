@@ -23,6 +23,9 @@ pnpm-debug.log*
 
 # Test
 coverage/
+# ブラウザテストが失敗したときの画面
+.vitest-attachments/
+__screenshots__/
 
 # Environment
 .env

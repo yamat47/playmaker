@@ -62,6 +62,10 @@ else
 	$(PNPM) run test
 endif
 
+.PHONY: test-browser
+test-browser: ## Playmaker の結線を Chromium で確かめる
+	$(PNPM) run test:browser
+
 .PHONY: test-watch
 test-watch: ## テストを watch モードで実行する
 	$(PNPM) run test:watch

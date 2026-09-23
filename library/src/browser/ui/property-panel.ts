@@ -12,13 +12,32 @@ import {
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,
+  type LineInterpolation,
+  type LineKind,
   PLAYER_SHAPE_VALUES,
   type Player,
+  type PlayerShape,
   toDisposable,
 } from "../../common/index.js";
 import { LINE_COLOR_PALETTE } from "../theme/line-palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
 import { THEME_TOKENS, type ThemeReader } from "../theme/tokens.js";
+
+const SHAPE_LABELS = {
+  circle: "丸",
+  square: "四角",
+} satisfies Record<PlayerShape, string>;
+
+const KIND_LABELS = {
+  route: "ルート",
+  block: "ブロック",
+  motion: "モーション",
+} satisfies Record<LineKind, string>;
+
+const INTERPOLATION_LABELS = {
+  straight: "直線",
+  bezier: "曲線",
+} satisfies Record<LineInterpolation, string>;
 
 function toHex(value: string | undefined, fallback: string): string {
   return value !== undefined && isHexColor(value) ? value : fallback;
@@ -69,7 +88,7 @@ export class PropertyPanel extends Disposable {
     if (player !== undefined) {
       this.addTitle("選手");
       this.addText("ラベル", player.label, (v) => controller.updateSelectedPlayer({ label: v }));
-      this.addSelect("形状", PLAYER_SHAPE_VALUES, player.shape, (v) =>
+      this.addSelect("形状", PLAYER_SHAPE_VALUES, SHAPE_LABELS, player.shape, (v) =>
         controller.updateSelectedPlayer({ shape: v }),
       );
       // 色の無い選手は塗りの既定色で描くので、入力にも同じ色を出す。
@@ -81,11 +100,15 @@ export class PropertyPanel extends Disposable {
     }
     if (line !== undefined) {
       this.addTitle("線");
-      this.addSelect("種別", LINE_KIND_VALUES, line.kind, (v) =>
+      this.addSelect("種別", LINE_KIND_VALUES, KIND_LABELS, line.kind, (v) =>
         controller.updateSelectedLine({ kind: v }),
       );
-      this.addSelect("補間", LINE_INTERPOLATION_VALUES, line.interpolation, (v) =>
-        controller.updateSelectedLine({ interpolation: v }),
+      this.addSelect(
+        "補間",
+        LINE_INTERPOLATION_VALUES,
+        INTERPOLATION_LABELS,
+        line.interpolation,
+        (v) => controller.updateSelectedLine({ interpolation: v }),
       );
       this.addLineColor(line.color, read, (v) => controller.updateSelectedLine({ color: v }));
       this.addNumber("太さ", line.thickness ?? DEFAULT_LINE_THICKNESS, (v) =>
@@ -174,6 +197,7 @@ export class PropertyPanel extends Disposable {
   private addSelect<T extends string>(
     labelText: string,
     options: readonly T[],
+    optionLabels: Readonly<Record<T, string>>,
     value: T,
     onChange: (v: T) => void,
   ): void {
@@ -181,7 +205,7 @@ export class PropertyPanel extends Disposable {
     for (const opt of options) {
       const o = document.createElement("option");
       o.value = opt;
-      o.textContent = opt;
+      o.textContent = optionLabels[opt];
       o.selected = opt === value;
       select.appendChild(o);
     }

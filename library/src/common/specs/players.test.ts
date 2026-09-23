@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { manyPlayers, playData, player, twoPlayersWithRoute } from "../../test-support/fixtures.js";
+import {
+  line,
+  manyPlayers,
+  playData,
+  player,
+  twoPlayersWithRoute,
+} from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
 import type { PlayData } from "../model/play-data.js";
 import { MAX_PLAYERS } from "../model/player.js";
@@ -209,6 +215,20 @@ describe("選手の削除", () => {
     play.editor.undo();
 
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
+  it("ほかの選手の線を挟んで 2 本の線が出ている選手の削除を Undo すると、線が元の並びに戻る", () => {
+    const data = playData(
+      [player("a", 10, 0), player("b", 20, 0)],
+      [line("la", "a"), line("lb", "b"), line("lc", "a")],
+    );
+    const play = openPlay(data);
+    play.click(yd(10, 0));
+    play.editor.deleteSelection();
+
+    play.editor.undo();
+
+    expect(play.session.getPlayData()).toEqual(data);
   });
 
   it("削除を Undo してから Redo すると、選手と線をまた消す", () => {

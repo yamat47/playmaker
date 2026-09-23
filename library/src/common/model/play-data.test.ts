@@ -171,7 +171,7 @@ describe("resolvePlayData", () => {
           startPlayerId: "wr",
           end: { lateralYard: 5, downfieldYard: 60 },
         },
-        // 起点が存在しない選手 → 復元不能として除外。
+        // 起点の選手がいないので捨てる。
         {
           id: "r2",
           kind: "route",
@@ -224,7 +224,7 @@ describe("resolvePlayData", () => {
   });
 
   it("補完した id が明示 id と衝突したら、補完した側を振り直す", () => {
-    // id の無い 2 番目（index 1）は p1 を補完されるが、先頭が明示的に p1 を持つ。
+    // id の無い 2 番目（index 1）には p1 を補うが、先頭がすでに p1 を持っている。
     const input = {
       version: 2,
       field: { zone: "middle", losYard: 50 },

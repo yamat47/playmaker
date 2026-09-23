@@ -71,7 +71,7 @@ describe("normalizeLines", () => {
           end: { lateralYard: 12, downfieldYard: 62 },
           interpolation: "bezier",
         },
-        // kind/interpolation/id 欠落 → 既定補完。
+        // kind、interpolation、id が無いので既定で補う。
         { startPlayerId: "qb", end: { lateralYard: 26, downfieldYard: 40 } },
       ],
       PLAYER_IDS,

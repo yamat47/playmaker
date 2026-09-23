@@ -5,8 +5,6 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
-// build: ライブラリモードで dist を生成する。
-// test: src 配下の *.test.ts を node 環境で、*.browser.test.ts を Chromium で実行する。
 // demo の dev サーバーは `make up` で起動する（中身は vite demo）。
 const root = import.meta.dirname;
 
@@ -52,11 +50,10 @@ export default defineConfig({
   },
   plugins: [
     dts({
-      // dts emit のルートを src に固定する専用 tsconfig。demo / vite.config.ts を
-      // include に含めると共通祖先がプロジェクトルートに上がり、dts が dist/src/* に
-      // 出てしまうため build 用は分離する
+      // 型定義を書き出す起点を src に固定するため、build 専用の tsconfig を使う。demo や vite.config.ts を
+      // include に含めると共通の祖先がプロジェクトのルートに上がり、型定義が dist/src/ の下に出てしまう。
       tsconfigPath: "tsconfig.build.json",
-      // v5: 全型定義を api-extractor で単一 dist/playmaker.d.ts に束ねる
+      // 型定義は api-extractor で dist/playmaker.d.ts の 1 ファイルに束ねる。
       bundleTypes: {
         invokeOptions: { typescriptCompilerFolder: typescriptLibFolder },
       },
@@ -94,19 +91,18 @@ export default defineConfig({
       },
     ],
     coverage: {
-      // v8 ネイティブ計測 + AST-aware リマッピング。計装なしで速く、精度は istanbul 同等
+      // istanbul と違ってコードを計装しないので、テストが遅くならない。
       provider: "v8",
-      // include に一致するファイルは未テストでも 0% として表に出る（Vitest 4 既定）。
-      // include 漏れで見かけ上 100% に見える事故を防ぐため src 配下を明示列挙する。
+      // include に一致するファイルは、テストが 1 つも読まなくても 0% として表に出る。
+      // include を絞ると、テストの無いファイルが表から消えて 100% に見えるので、src の下をすべて入れる。
       include: ["src/**/*.ts"],
       exclude: ["**/*.test.ts", "**/*.d.ts", "src/test-support/**"],
-      // text=Claude/CI ログ用(未カバー行が見える), html=人間用, json-summary=将来連携用
-      reporter: ["text", "html", "json-summary"],
+      // text はログで未カバーの行を見るため、html は手元でソースと並べて見るため。
+      reporter: ["text", "html"],
       thresholds: {
-        // 集計平均でごまかせないようファイル単位で判定する
+        // 全体の平均では、よく網羅したファイルが網羅の薄いファイルを隠すので、ファイルごとに判定する。
         perFile: true,
-        // ゲートは common 層のみ。browser/ playmaker.ts/ index.ts は測るが落とさない
-        // （規約「common 全網羅・browser 最小限・VRT なし」を機械化）
+        // 落とすのは common だけにする。browser と playmaker.ts は DOM が要り、node のテストでは届かない。
         "src/common/**": {
           lines: 100,
           branches: 100,

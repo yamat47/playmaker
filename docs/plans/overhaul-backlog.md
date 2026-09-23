@@ -585,40 +585,41 @@ controller の構造は分けない（2026-09-23 に決着）。ジェスチャ�
 
 ---
 
-### T16 コメントの総点検
+### T16 コメントの総点検 (done)
 
-- [ ] **T16-1 [must] LineKind と LineInterpolation の JSDoc がレンダラの実挙動と食い違う**
+- [x] **T16-1 [must] LineKind と LineInterpolation の JSDoc がレンダラの実挙動と食い違う**
   - locations: library/src/common/model/line.ts:3, library/src/common/model/line.ts:8-11, library/src/common/model/line.ts:19, library/src/browser/rendering/line-renderer.ts:2, library/src/browser/rendering/line-renderer.ts:52, library/src/browser/rendering/line-renderer.ts:110, library/src/common/design/metrics.ts:52, library/src/browser/ui/property-panel.ts:72
   - 問題: JSDoc は「block は太め・矢印なし」「motion は破線」「実質 straight」と書くが、実物の block は route と同じ太さで T 字キャップが付き、補間は全種別に効く。実物で確認済み。
   - 対応: JSDoc を実挙動に合わせる。PRD 5.3 の更新は T18 で行う。公開型の JSDoc で利用者が誤読するので、先行して T1 に含めてもよい。
-- [ ] **T16-2 [should] 実装過程の残骸と古い記述**
+- [x] **T16-2 [should] 実装過程の残骸と古い記述**
   - locations: library/src/common/model/play-data.ts:60, library/src/common/geometry/field.ts:27, library/src/common/commands/command.ts:8, library/src/common/editing/editor-controller.ts:175, library/src/browser/ui/property-panel.ts:17, library/vite.config.ts:49, library/vite.config.ts:66
   - 対応: 削るか、今の事実を書く文に直す。将来課題は docs/plans へ移す。json-summary は使い道がなければレポーターから外す。
-- [ ] **T16-3 [should] PRD の章番号の誤引用と、「往復契約」の出典の揺れ**
+- [x] **T16-3 [should] PRD の章番号の誤引用と、「往復契約」の出典の揺れ**
   - locations: library/src/playmaker.ts:54, library/src/playmaker.ts:135, library/src/playmaker.ts:148, library/src/styles.css:64, library/src/common/design/field-font.ts:2, library/src/common/formations/formation.ts:9, library/src/common/formations/formation.ts:60, library/src/common/geometry/field.ts:27, library/src/common/export/image-export.ts:7, library/src/common/model/migration.ts:75, library/src/common/model/play-data.ts:32, library/src/common/model/play-data.ts:75
-- [ ] **T16-4 [should] 件数や寸法の記述が古い（プリセット数、30 ヤード窓）**
+- [x] **T16-4 [should] 件数や寸法の記述が古い（プリセット数、30 ヤード窓）**
   - locations: library/src/common/plays/presets.ts:1, library/src/common/formations/presets.ts:260, library/src/common/model/play-data.ts:8, library/src/common/geometry/field.ts:136
-- [ ] **T16-5 [should] フィールドのライン太さの階層と、「9yd マーク」の語がコードと食い違う**
+- [x] **T16-5 [should] フィールドのライン太さの階層と、「9yd マーク」の語がコードと食い違う**
   - locations: library/src/browser/rendering/field-renderer.ts:36, library/src/browser/rendering/field-renderer.ts:164, library/src/browser/rendering/field-renderer.ts:195, library/src/common/design/metrics.ts:41
-- [ ] **T16-6 [should] 冒頭の定型ブロック、層方針の繰り返し、長すぎるブロック**（D2）
+- [x] **T16-6 [should] 冒頭の定型ブロック、層方針の繰り返し、長すぎるブロック**（D2）
   - locations: library/src/common/geometry/field.ts:1, library/src/common/design/metrics.ts:1-3, library/src/common/export/image-export.ts:1-4, library/src/common/design/field-font.ts:1, library/src/common/commands/command.ts:1, library/src/common/model/migration.ts:1, library/src/common/model/migration.ts:22-31, library/src/common/model/migration.ts:50, library/src/common/commands/formation-commands.ts:8, library/src/common/commands/command-service.ts:17, library/src/common/undoRedo/undo-redo-service.ts:25, library/src/common/editing/editor-controller.ts:1, library/src/common/editing/editor-controller.ts:175, library/src/browser/rendering/player-renderer.ts:3, library/src/browser/rendering/line-renderer.ts:1-4, library/src/browser/rendering/field-renderer.ts:1-4, library/src/browser/rendering/canvas-surface.ts:112, library/src/browser/rendering/canvas-surface.ts:151
-- [ ] **T16-7 [should] PRD 参照をラベルとして貼っただけの箇所を削る**（D2）
+- [x] **T16-7 [should] PRD 参照をラベルとして貼っただけの箇所を削る**（D2）
   - locations: library/src/common/commands/player-commands.ts:1, library/src/common/commands/line-commands.ts:1, library/src/common/commands/field-commands.ts:1, library/src/common/model/player.ts:6, library/src/common/editing/editor-controller.ts:109, library/src/browser/rendering/player-renderer.ts:1, library/src/browser/ui/toolbar.ts:1
-- [ ] **T16-8 [should] カバレッジの数字を Why として書いている**
+- [x] **T16-8 [should] カバレッジの数字を Why として書いている**
   - locations: library/src/common/editing/editor-controller.ts:8, library/src/common/export/image-export.ts:47, library/src/common/undoRedo/undo-redo-service.ts:43, library/src/common/model/migration.ts:29
-- [ ] **T16-9 [should] 呼び出し元を名指ししている**
+- [x] **T16-9 [should] 呼び出し元を名指ししている**
   - locations: library/src/common/formations/formation.ts:8, library/src/common/formations/formation.ts:25, library/src/common/plays/play-preset.ts:10, library/src/common/plays/play-preset.ts:30, library/src/common/plays/presets.ts:663, library/src/common/geometry/field.ts:92, library/src/common/model/line.ts:179, library/src/common/model/line.ts:192, library/src/common/editing/editor-controller.ts:44, library/src/common/editing/editor-controller.ts:73, library/src/common/editing/editor-controller.ts:422, library/src/common/editing/id-factory.ts:6, library/src/common/lifecycle/disposable.ts:20, library/src/browser/rendering/canvas-surface.ts:85
-- [ ] **T16-10 [should] 記号略記（＝ 55 行、→ 48 行）で文になっていない**
+- [x] **T16-10 [should] 記号略記（＝ 55 行、→ 48 行）で文になっていない**
   - locations: library/src/common/editing/editor-controller.ts:9, library/src/common/editing/editor-controller.ts:491, library/src/common/commands/formation-commands.ts:10, library/src/common/commands/formation-commands.ts:12, library/src/common/commands/player-commands.ts:31, library/src/common/model/migration.ts:36, library/src/common/model/play-model.ts:81, library/src/common/export/image-export.ts:45, library/src/browser/rendering/canvas-surface.ts:94, library/src/browser/rendering/canvas-surface.ts:153, library/src/common/geometry/bezier.ts:38（ほか全体）
-- [ ] **T16-11 [nit] 同じ内容のコメントが複数箇所にある**
+- [x] **T16-11 [nit] 同じ内容のコメントが複数箇所にある**
   - locations: library/src/common/commands/command.ts:3, library/src/common/commands/line-commands.ts:2, library/src/common/commands/player-commands.ts:2, library/src/common/commands/field-commands.ts:15, library/src/common/design/field-font.ts:6, library/src/browser/rendering/field-renderer.ts:49, library/src/browser/rendering/field-renderer.ts:230, library/src/browser/rendering/player-renderer.ts:25, library/src/browser/rendering/player-renderer.ts:46, library/src/browser/rendering/player-renderer.ts:52, library/src/browser/rendering/player-renderer.ts:61, library/src/browser/rendering/line-renderer.ts:32, library/src/common/event/emitter.ts:44
-- [ ] **T16-12 [nit] 区切り見出しと、文末の「。」の抜け**
+- [x] **T16-12 [nit] 区切り見出しと、文末の「。」の抜け**
   - locations: library/src/common/editing/editor-controller.ts:187, library/src/common/editing/editor-controller.ts:293, library/src/common/editing/editor-controller.ts:313, library/src/common/editing/editor-controller.ts:422, library/src/common/editing/editor-controller.ts:503, library/vite.config.ts:47, library/vite.config.ts:49, library/vite.config.ts:60, library/vite.config.ts:66, library/vite.config.ts:69, library/vite.config.ts:71, library/scripts/generate-field-font.mjs:2-3, library/scripts/generate-field-font.mjs:7
-- [ ] **T16-13 [nit] 誤字、不正確な語、What の言い換え**
+- [x] **T16-13 [nit] 誤字、不正確な語、What の言い換え**
   - locations: library/src/common/design/metrics.ts:28, library/src/common/design/metrics.ts:39, library/src/common/model/player.ts:117, library/src/common/editing/editor-controller.ts:218, library/src/common/editing/editor-controller.ts:566, library/src/common/editing/editor-controller.ts:620, library/src/browser/rendering/field-renderer.ts:29, library/src/browser/rendering/field-renderer.ts:67, library/src/playmaker.ts:103, library/src/common/geometry/field.ts:85, library/src/browser/input/pointer-input.ts:31
 
 - 依存: T3、T6〜T14（コードが固まってから一括で行う）
 - 進み具合: T11 に入る前に、#75〜#83 で足したコメントとテスト名だけを writing-conventions に照らして先に直した。T16-4 の plays/presets.ts:1、T16-6 と T16-7 の toolbar.ts:1、T16-8 の image-export.ts のカバレッジを理由にした記述、T16-9 の formation.ts:25 は片付いている。同じファイルに残る冒頭ブロックや PRD 参照は、この項目のまま残す。field-font.ts は T11 で browser/theme/ へ移し、冒頭の PRD 参照も消した。
+  - 結果: 1 本で閉じた。監査のあとで行番号が大きく動いたので、locations を上から追うのではなく、src、vite.config.ts、scripts の全コメントを読み直した。T16-1 は block が route と同じ太さで T 字のバーを付けること、motion が矢印付きの破線であること、補間が全種別に効くことに合わせた。T16-5 は、ゴールラインが外枠と同じ太さで色だけが違うことに合わせた。T16-2 の json-summary は読むものが無いので外した。field.ts の「リーグ切替の API 化は将来課題」は、計画が無いので今の事実（API は無く NCAA で描く）だけを書いた。テスト名に残っていた PRD の章番号と「＝」も直した。完了条件の grep に加え、ユーザーの指示で「唯一の」「土台」「最も汎用的な」のような生成文めいた言い回しも直した。vite.config.ts の roadmap への参照は T18-1 で差し替える。demo/main.ts は T17 に残す。
 - 完了条件: `grep` で「＝」の略記、「→」、マイルストーン名、「DOM 非依存」の定型が見つからない。PRD 参照が D2 の基準に収まる。
 - 規模: M
 

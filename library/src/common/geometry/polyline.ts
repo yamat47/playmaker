@@ -1,6 +1,3 @@
-// ポリラインの純幾何（弧長・端の切り詰め）。DOM 非依存。
-// 描画前のサンプル済みパスを扱うため、座標は Canvas px 空間（CanvasPoint）で受ける。
-
 import type { CanvasPoint } from "./field.js";
 
 /** 隣り合う 2 点の組を先頭から順に返す。2 点未満なら何も返さない。 */
@@ -25,13 +22,10 @@ export function polylineLength(path: readonly CanvasPoint[]): number {
 }
 
 /**
- * 終点から弧長 distance だけ遡った点で終わる新しいポリラインを返す（元配列は変更しない）。
- *
- * 遡りは **累積長** で行う。最終区間だけを見ると、密にサンプルされた曲線では区間が短すぎて
- * 指定距離ぶん戻れない（終端に矢じりを置く用途では、線が先端まで伸びきって破綻する）。
- *
- * maxFraction は削りすぎて線が消えるのを防ぐ上限（全長に対する割合）。既定 1 は上限なし
- * ＝ distance が全長以上なら始点 1 点だけになる。
+ * 終点から折れ線に沿って distance だけ戻った点で終わる、新しい折れ線を返す。
+ * 最後の区間だけで戻らないのは、細かく刻んだ曲線では 1 区間が distance より短いため。
+ * maxFraction は削る長さの上限で、全長に対する割合で渡す。既定の 1 では上限が無く、
+ * distance が全長以上なら始点 1 点だけを返す。
  */
 export function trimPolylineEnd(
   path: readonly CanvasPoint[],

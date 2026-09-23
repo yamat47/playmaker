@@ -5,7 +5,6 @@ import type { PlayerShape } from "../model/player.js";
 import { DEFENSE_COLOR, deepFreeze } from "../presets/shared.js";
 import type { Formation, FormationPlayer } from "./formation.js";
 
-/** オフェンス選手テンプレート（色なし＝テーマ既定）。 */
 function off(
   label: string,
   lateralYard: number,
@@ -15,7 +14,6 @@ function off(
   return { position: { lateralYard, downfieldYard }, shape, label };
 }
 
-/** ディフェンス選手テンプレート（DEFENSE_COLOR で塗る）。 */
 function def(
   label: string,
   lateralYard: number,
@@ -25,7 +23,6 @@ function def(
   return { position: { lateralYard, downfieldYard }, shape, label, color: DEFENSE_COLOR };
 }
 
-// オフェンスライン（5 人・LOS 上）は全隊形で共通。
 const OFFENSIVE_LINE: FormationPlayer[] = [
   off("LT", 22.1, -0.5, "square"),
   off("LG", 24.4, -0.5, "square"),
@@ -34,7 +31,7 @@ const OFFENSIVE_LINE: FormationPlayer[] = [
   off("RT", 31.3, -0.5, "square"),
 ];
 
-// 4 ダウンの守備ライン（オーバーフロント）。4-3 系・ニッケル・ダイム・4-2-5 で共通。
+// 4 ダウンの守備ライン（オーバーフロント）。4-3、ニッケル、ダイム、4-2-5 で使う。
 const FRONT_4: FormationPlayer[] = [
   def("", 21.5, 1, "circle"),
   def("", 24.4, 1, "circle"),
@@ -42,7 +39,7 @@ const FRONT_4: FormationPlayer[] = [
   def("", 31.9, 1, "circle"),
 ];
 
-// 3 ダウンの守備ライン（オッドフロント）。3-4・3-3-5 で共通。
+// 3 ダウンの守備ライン（オッドフロント）。3-4 と 3-3-5 で使う。
 const FRONT_3: FormationPlayer[] = [
   def("", 23, 1, "circle"),
   def("", 26.7, 1, "circle"),
@@ -252,10 +249,6 @@ const DEFENSE_3_3_5: Formation = {
   ],
 };
 
-/**
- * 組み込みプリセット一覧（攻 7・守 6）。Toolbar はこれを攻守でグループ表示し、
- * 商用ソフトはこの配列を起点に独自テンプレートを足せる（PRD 5.6）。
- */
 export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreeze([
   I_FORMATION,
   SINGLEBACK_ACE,
@@ -272,7 +265,6 @@ export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreez
   DEFENSE_3_3_5,
 ]);
 
-/** id でプリセットを引く。未知 id は undefined（呼び出し側で無視する）。 */
 export function getFormationPreset(id: string): Formation | undefined {
   return FORMATION_PRESETS.find((f) => f.id === id);
 }

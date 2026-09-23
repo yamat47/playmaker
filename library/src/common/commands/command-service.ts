@@ -3,8 +3,8 @@ import type { ICommand } from "./command.js";
 import type { IUndoRedoService } from "./undo-redo-service.js";
 
 /**
- * 編集を実行する唯一の経路。コマンドの適用、取り消し、やり直しをすべてここで行い、
- * 履歴を Model と食い違わせない。
+ * 編集はすべてここを通す。コマンドの適用、取り消し、やり直しを 1 か所で行い、
+ * 履歴と Model を食い違わせない。
  */
 export interface ICommandService {
   readonly canUndo: boolean;

@@ -1,18 +1,11 @@
-// 線の曲線サンプリング（PRD 5.3 ルート線の「直線とベジェ曲線の両方をサポート」）。
-// DOM 非依存の純計算。レンダラを薄く保ち hit-test と同じ幾何を共有するため、
-// 曲線はここで「ヤード空間のポリライン」へサンプリングしてから描画/当たり判定する。
-
 import type { LineInterpolation } from "../model/line.js";
 import type { FieldPosition } from "../model/player.js";
 import { segments } from "./polyline.js";
 
-/** ベジェ 1 区間あたりのサンプル分割数。図用途では十分滑らかで安価。 */
+/** ベジェの 1 区間を何分割するか。プレー図の大きさでは、これで角が見えない。 */
 export const DEFAULT_BEZIER_SAMPLES_PER_SEGMENT = 16;
 
-/**
- * 3 次ベジェ B(t)（0 ≤ t ≤ 1）。p0→p1 を制御点 c1,c2 で曲げる基本プリミティブ。
- * Catmull-Rom から変換した制御点と組み合わせて waypoint を通る曲線を作る。
- */
+/** p0 から p1 へ、制御点 c1 と c2 で曲げた 3 次ベジェの、t（0 以上 1 以下）での位置。 */
 export function cubicBezierPoint(
   p0: FieldPosition,
   c1: FieldPosition,
@@ -33,10 +26,9 @@ export function cubicBezierPoint(
 }
 
 /**
- * p1→p2 区間を、隣接点 p0/p3 の接線で滑らかに通す Catmull-Rom 相当の
- * 3 次ベジェ制御点 [c1, c2] を返す（一様パラメタ化・標準の 1/6 係数）。
- * 端では p0=p1 / p3=p2 を渡す（呼び出し側で複製）。曲線は全制御点を必ず通る
- * ＝ route が waypoint を確実に経由する、図作成に望ましい性質。
+ * p1 から p2 への区間を、前後の点 p0 と p3 から決まる向きで通す 3 次ベジェの制御点 [c1, c2]。
+ * 一様な Catmull-Rom 曲線と同じ形になる。端の区間では、無い側の点に端の点そのものを渡す。
+ * waypoint をそのままベジェの制御点にしないのは、曲線が waypoint を通らなくなるため。
  */
 export function catmullRomBezierControls(
   p0: FieldPosition,
@@ -56,7 +48,7 @@ export function catmullRomBezierControls(
   ];
 }
 
-/** 連続する同一点を畳む（接線が 0 になり曲線が破綻するのを防ぐ）。 */
+/** 同じ座標が続くと向きが 0 になり曲線が崩れるので、1 つに畳む。 */
 function dedupeConsecutive(points: readonly FieldPosition[]): FieldPosition[] {
   const out: FieldPosition[] = [];
   for (const p of points) {
@@ -73,10 +65,8 @@ function dedupeConsecutive(points: readonly FieldPosition[]): FieldPosition[] {
 }
 
 /**
- * 制御点列を描画/hit-test 用のポリライン（ヤード空間）へ変換する。
- * - `straight` または実質 2 点以下: 制御点をそのまま結ぶ（コピー）
- * - `bezier`: 全点を通る Catmull-Rom 曲線を区間ごとにサンプリング
- * 返り値は常に新規配列。samplesPerSegment は 1 以上に丸める。
+ * 制御点の列を、描くときと当たり判定に使う折れ線にする。`straight` と、同じ座標を畳んで
+ * 2 点以下になる列は、制御点をそのまま結ぶ。返り値は新しい配列。samplesPerSegment は 1 以上に丸める。
  */
 export function sampleLinePath(
   points: readonly FieldPosition[],
@@ -89,13 +79,12 @@ export function sampleLinePath(
   }
   const steps = Math.max(1, Math.floor(samplesPerSegment));
 
-  // 端点は自身を複製して接線の参照に使う（曲線が端点を通るようにする）。
   const result: FieldPosition[] = pts.slice(0, 1);
   for (const [i, [p1, p2]] of [...segments(pts)].entries()) {
     const p0 = pts[i - 1] ?? p1;
     const p3 = pts[i + 2] ?? p2;
     const [c1, c2] = catmullRomBezierControls(p0, p1, p2, p3);
-    // t=0 は前区間の終端と重複するので (0,1] を刻む。
+    // t=0 の点は前の区間の終点と同じなので、t は 0 を除いて 1 まで刻む。
     for (let s = 1; s <= steps; s++) {
       result.push(cubicBezierPoint(p1, c1, c2, p2, s / steps));
     }

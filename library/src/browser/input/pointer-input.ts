@@ -35,7 +35,7 @@ export class PointerInput extends Disposable {
   ) {
     super();
     const canvas = surface.canvas;
-    // Esc / Enter / Undo・Redo を受け取れるようフォーカス可能にする。
+    // canvas は既定でフォーカスを受けないので、Esc、Enter、Undo と Redo のキーが届かない。
     canvas.tabIndex = 0;
 
     const toYard = (e: PointerEvent) => surface.clientToYard(e.clientX, e.clientY);
@@ -52,8 +52,7 @@ export class PointerInput extends Disposable {
       canvas.setPointerCapture(e.pointerId);
       controller.pointerDown(toYard(e));
     };
-    // draw-line のラバーバンドはボタン非押下でも追従させたいので常に渡す
-    // （interaction が無ければ controller 側で無視される）。
+    // 作図中の線は、ボタンを押していなくてもポインタに付いてくるので、移動は押下の有無によらず渡す。
     const onPointerMove = (e: PointerEvent) => {
       if (e.isPrimary) {
         controller.pointerMove(toYard(e));
@@ -81,7 +80,6 @@ export class PointerInput extends Disposable {
         controller.cancelInteraction();
       }
     };
-    // ダブルクリック = 作図確定（最後の点を終点に）。
     const onDoubleClick = () => controller.commitLine();
     const onKeyDown = (e: KeyboardEvent) => {
       if (isFormControl(e.target)) {

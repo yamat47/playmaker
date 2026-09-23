@@ -3,15 +3,13 @@ import { fieldFont } from "../theme/field-font.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 export class PlayerRenderer implements ILayerRenderer {
-  /** players を配列順（後の要素ほど上）に描く。 */
   draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const { geometry, metrics } = frame;
     const { players } = frame.scene;
     const fill = frame.theme("playerFill");
     const stroke = frame.theme("playerStroke");
     const labelColor = frame.theme("playerLabel");
-    // 半径は hit-test と一致させるため PLAYER_RADIUS_YARDS から導く（player.ts の不変条件）。
-    // 枠線・ラベルは D 比トークン（metrics）を使い、寸法を 1 か所へ集約する。
+    // 当たり判定と同じ半径で描く。
     const r = PLAYER_RADIUS_YARDS * geometry.scale;
     if (r <= 0) {
       return;
@@ -22,7 +20,6 @@ export class PlayerRenderer implements ILayerRenderer {
     for (const player of players) {
       const center = geometry.toCanvas(player.position);
 
-      // 影・グラデーションを持たない完全フラット。塗り → 枠線の順で描く。
       ctx.beginPath();
       const outline = playerMarkerOutline(player.shape, r);
       if (outline.kind === "circle") {
@@ -41,8 +38,8 @@ export class PlayerRenderer implements ILayerRenderer {
         ctx.fillStyle = labelColor;
         ctx.font = fieldFont(fontPx);
         ctx.textAlign = "center";
-        // textBaseline="middle" は em ボックス基準でフォント次第で上下にずれる。
-        // 実際の字面ボックス（actualBoundingBox）の中心をマーカー中心へ合わせる。
+        // textBaseline を middle にすると、字の em ボックスの中央に揃うので、フォントによって上下にずれる。
+        // 測った字面の中央をマーカーの中心に合わせる。
         ctx.textBaseline = "alphabetic";
         const tm = ctx.measureText(player.label);
         const labelY = center.y + (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent) / 2;

@@ -168,7 +168,7 @@ describe("migratePlayData", () => {
     expect(migrated.lines.map((l) => l.id)).toEqual(["rt", "rt-2"]);
   });
 
-  it("getData→JSON→migratePlayData の往復で同値に戻る（PRD 5.8 往復契約）", () => {
+  it("getData の値を JSON にして migratePlayData に渡すと、同じ値に戻る", () => {
     const persisted: PlayData = {
       version: 2,
       field: { zone: "redzone", losYard: 85 },

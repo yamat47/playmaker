@@ -1,8 +1,3 @@
-// 選手・線のヒットテスト（PRD 5.2 / 5.3 / 5.4 編集の土台）。DOM 非依存の純計算。
-// マーカーは凸図形でも当たり領域は外接円で近似する（戦術的厳密性より組み込み優先・PRD 4.1）。
-// 線はレンダラと同じサンプル後ポリラインへの距離で判定し、見た目と当たりを一致させる。
-// フィールドは縦横等倍スケールのため、ヤード空間の円判定が画面上の円と一致する。
-
 import { indexPlayersById, type Line, lineAnchorPoints } from "../model/line.js";
 import type { FieldPosition, Player } from "../model/player.js";
 import { PLAYER_RADIUS_YARDS } from "../model/player.js";
@@ -10,9 +5,8 @@ import { sampleLinePath } from "./bezier.js";
 import { segments } from "./polyline.js";
 
 /**
- * target（ヤード空間。画面 px は FieldGeometry.fromCanvas で変換）に最も手前で
- * 重なる選手を返す。描画順 = 配列順で後の要素ほど上に重なるため、末尾から走査する。
- * 当たり半径はマーカー半径と同一既定（描画と一致）。見つからなければ undefined。
+ * target に重なる選手のうち、いちばん上に描いたものを返す。後の要素ほど上に描くので末尾から探す。
+ * 四角の選手も外接円で当てる。形ごとに当たりを変えるほどの差が無いため。
  */
 export function hitTestPlayer(
   players: readonly Player[],
@@ -34,26 +28,25 @@ export function hitTestPlayer(
 }
 
 /**
- * 線の当たり許容半径（ヤード）。線は面積を持たないため、見た目の太さと無関係に
- * 「掴みやすさ」として持つ。選手半径よりやや細めに既定する（誤クリック抑制）。
+ * 線に当たったとみなす距離（ヤード）。線の太さでは細すぎて掴めないので、太さとは別に持つ。
+ * 選手の半径より小さくし、選手の近くを押したときに線を掴みにくくしている。
  */
 export const LINE_HIT_TOLERANCE_YARDS = 0.6;
 
-/** 点 p から線分 a–b への最短距離（ヤード空間）。退化（a=b）は点距離。 */
 export function distanceToSegment(p: FieldPosition, a: FieldPosition, b: FieldPosition): number {
   const abx = b.lateralYard - a.lateralYard;
   const aby = b.downfieldYard - a.downfieldYard;
   const apx = p.lateralYard - a.lateralYard;
   const apy = p.downfieldYard - a.downfieldYard;
   const lenSq = abx * abx + aby * aby;
-  // 射影パラメタ t を [0,1] に丸めて線分内に収める。退化時は t=0（= 点 a）。
+  // a と b が同じ点なら、a までの距離にする。
   const t = lenSq > 0 ? Math.max(0, Math.min(1, (apx * abx + apy * aby) / lenSq)) : 0;
   const dx = apx - t * abx;
   const dy = apy - t * aby;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-/** ポリライン（連続する線分列）への最短距離。点が 1 個ならその点距離、0 個なら +Infinity。 */
+/** 点が 0 個なら +Infinity。 */
 function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]): number {
   const only = points.length === 1 ? points[0] : undefined;
   if (only !== undefined) {
@@ -67,10 +60,8 @@ function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]):
 }
 
 /**
- * target（ヤード空間）に最も手前で重なる線を返す。レンダラと同じサンプル後
- * ポリライン（bezier は曲線、straight は直線）への距離で判定するため、見えている
- * 線とクリック判定が一致する。描画順 = 配列順で後の要素ほど上＝末尾から走査。
- * 起点選手が存在しない線は描画されないので hit 対象からも外す。
+ * target に重なる線のうち、いちばん上に描いたものを返す。描くときと同じ折れ線への距離で測るので、
+ * 曲線も見えている形のとおりに当たる。起点の選手が無い線は描かれないので、当てない。
  */
 export function hitTestLine(
   lines: readonly Line[],
@@ -98,7 +89,6 @@ export function hitTestLine(
 /** 選択中の線の waypoint と終点のハンドルを掴める半径（ヤード）。 */
 export const WAYPOINT_HANDLE_RADIUS_YARDS = 0.9;
 
-/** 2 点間の距離（ヤード）。 */
 export function pointDistance(a: FieldPosition, b: FieldPosition): number {
   return Math.hypot(a.lateralYard - b.lateralYard, a.downfieldYard - b.downfieldYard);
 }

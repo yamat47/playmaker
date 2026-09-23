@@ -1,8 +1,3 @@
-// フィールド（芝・刈り込みストライプ・ライン・ハッシュ・数字・エンドゾーン・パイロン・
-// ゴールポスト）を Canvas へ描く（PRD 5.1）。マーキングは実寸比率に忠実、寸法は
-// computeFieldMetrics（common）に集約する＝固定 px を散らさず表示サイズに追従する。
-// 座標決定は FieldGeometry に委譲し、本クラスは描画命令だけを持つ（VRT なしで薄く保つ）。
-
 import {
   DEFAULT_FIELD_LEAGUE,
   displayYardNumber,
@@ -16,33 +11,27 @@ import { fieldFont } from "../theme/field-font.js";
 import type { ThemeReader } from "../theme/tokens.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
-/**
- * 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。
- * フォントは同梱フォント固定でテーマ対象外（FIELD_FONT_FAMILY）。
- */
 interface FieldTheme {
   fieldColor: string;
-  /** 刈り込みストライプの濃い帯（芝ベースとの明度差はごく僅か）。 */
+  /** 5 ヤードおきに交互に敷く、芝の刈り込みの濃い帯。 */
   stripeColor: string;
-  /** アウトオブバウンズ／レターボックス余白。 */
+  /** サイドラインの外と、縦横比が合わない分の余白。 */
   oobColor: string;
   endzoneColor: string;
   lineColor: string;
-  /** ゴールライン（最重要境界。通常ラインより太く・純白）。 */
   goalLineColor: string;
   numberColor: string;
   pylonColor: string;
   goalpostColor: string;
 }
 
-// 数字の方向マーカー（"9yd マーク"相当）の寸法（ヤード）。数字を主役にするため小ぶり。
+// 数字の横に置く、近いほうのゴールを指す三角の寸法（ヤード）。数字より目立たないよう小さくする。
 const ARROW_LENGTH_YARDS = 0.8;
 const ARROW_HALF_WIDTH_YARDS = 0.3;
 const ARROW_OFFSET_FROM_NUMBER_YARDS = 2.5;
-// 番号の lateralYard（サイドラインから）。方向三角も同じ列に置いて縦に揃える。
+// 数字を置く、サイドラインからの距離。三角も同じ列に置いて縦に揃える。
 const NUMBER_FROM_SIDELINE_YARDS = 6;
-// 2 桁数字はヤードライン上に中央配置するため、桁間を空けて隙間にラインを収める
-// （実フィールド同様、数字がラインに食い込まない）。数字高に比例させ表示サイズに追従。
+// 2 桁の数字はヤードラインをまたいで置くので、本物のフィールドと同じく桁の間を空けてラインを通す。
 const NUMBER_DIGIT_SPACING_PER_HEIGHT = 0.18;
 
 function fieldTheme(read: ThemeReader): FieldTheme {
@@ -71,10 +60,8 @@ export class FieldRenderer implements ILayerRenderer {
     const top = geometry.yForAbsoluteYard(yardWindow.endYard);
     const bottom = geometry.yForAbsoluteYard(yardWindow.startYard);
 
-    // アウトオブバウンズ（レターボックス余白 + サイドライン外）を先に敷く。
     ctx.fillStyle = theme.oobColor;
     ctx.fillRect(0, 0, viewportWidth, viewportHeight);
-    // 芝ベース（イン領域）。
     ctx.fillStyle = theme.fieldColor;
     ctx.fillRect(left, top, right - left, bottom - top);
 
@@ -86,7 +73,7 @@ export class FieldRenderer implements ILayerRenderer {
     this.drawEndZoneMarkers(ctx, geometry, left, right, metrics, theme);
   }
 
-  /** 5yd 帯ごとに濃淡を交互にした刈り込みストライプ。EZ(0..100 外)には敷かない。 */
+  /** エンドゾーンには敷かない。 */
   private drawStripes(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
@@ -99,7 +86,7 @@ export class FieldRenderer implements ILayerRenderer {
     const to = Math.min(100, endYard);
     ctx.fillStyle = theme.stripeColor;
     for (let band = from; band < to; band += 5) {
-      // 絶対ヤード基準で帯の偶奇を決め、ゾーンを跨いでもストライプ位相を一定に保つ。
+      // 帯の偶奇を絶対ヤードで決め、ゾーンを切り替えても同じヤードに同じ濃さの帯が来るようにする。
       if ((band / 5) % 2 !== 0) {
         const yTop = geometry.yForAbsoluteYard(Math.min(band + 5, 100));
         const yBottom = geometry.yForAbsoluteYard(band);
@@ -108,7 +95,7 @@ export class FieldRenderer implements ILayerRenderer {
     }
   }
 
-  /** エンドゾーン（-10..0 / 100..110）が窓に映る範囲を単色で塗る。内部に線は引かない。 */
+  /** エンドゾーンのうち窓に映る範囲を塗る。中に線は引かない。 */
   private drawEndZones(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
@@ -131,8 +118,8 @@ export class FieldRenderer implements ILayerRenderer {
   }
 
   /**
-   * ハッシュ（NCAA: 中央 ±0.125W）とサイドライン 1yd 目盛を描く。リーグ表を引くだけで
-   * 切り替えられる。5yd 倍数は横断ラインが覆うため省き、EZ(0..100 外)には引かない。
+   * 1 ヤードごとのハッシュと、サイドラインの目盛を描く。5 ヤードの倍数はヤードラインが覆うので省き、
+   * エンドゾーンには引かない。
    */
   private drawHashes(
     ctx: CanvasRenderingContext2D,
@@ -169,10 +156,7 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.stroke();
   }
 
-  /**
-   * 5yd ヤードライン（0..100）と境界ボックスを太さ階層で描く。
-   * 階層: ゴールライン(別色・最太) > センター/境界(気持ち太め) > 通常 5yd。
-   */
+  /** 5 ヤードごとのヤードラインと、窓の外枠を描く。ゴールラインは外枠と同じ太さで、色で見分ける。 */
   private drawYardLines(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
@@ -202,7 +186,7 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.lineWidth = 1.5 * metrics.yardLineWidth;
     ctx.stroke(midPath);
 
-    // 境界ボックス（サイドライン + 窓上下端）。境界も気持ち太め。
+    // サイドラインと、窓の上下の端。
     ctx.lineWidth = metrics.goalLineWidth;
     ctx.beginPath();
     ctx.moveTo(left, top);
@@ -215,7 +199,6 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.lineTo(right, bottom);
     ctx.stroke();
 
-    // ゴールラインは最重要境界として最も目立たせる（別色・最太）。
     ctx.strokeStyle = theme.goalLineColor;
     ctx.lineWidth = metrics.goalLineWidth;
     ctx.stroke(goalPath);
@@ -241,10 +224,8 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
 
-    // 数字はヤードライン上に置くので、桁間の隙間 [-gap/2, +gap/2] を原点（＝ライン）の
-    // 中心に揃え、線が 2 桁のちょうど中央を通るようにする。各桁を実測幅で内側エッジから
-    // 配置するため、桁幅差や末尾字間に依らずズレない（ctx.letterSpacing は末尾字間も
-    // advance に含み textAlign:center を片寄らせるので使わない）。
+    // 桁の間の隙間の中心をヤードラインに合わせ、各桁は測った幅で隙間の端から置く。
+    // ctx.letterSpacing で空けないのは、末尾の字の後ろにも間隔が付き、中央揃えが片側へずれるため。
     const gap = metrics.numberHeight * NUMBER_DIGIT_SPACING_PER_HEIGHT;
     const drawRotatedLabel = (label: string, x: number, y: number, rotation: number): void => {
       const [head, tail] = [...label];
@@ -314,7 +295,7 @@ export class FieldRenderer implements ILayerRenderer {
       drawPylon(right, goalY);
       drawPylon(left, endY);
       drawPylon(right, endY);
-      // 自陣 EZ は画面下。ゴールポストの開き（uprights）はフィールド側（上＝-y）へ。
+      // 自陣のエンドゾーンは画面の下にあるので、ゴールポストの柱は上へ伸ばす。
       this.drawGoalpost(ctx, geometry, endY, -1, metrics, theme);
     }
     if (endYard > 100) {
@@ -324,12 +305,12 @@ export class FieldRenderer implements ILayerRenderer {
       drawPylon(right, goalY);
       drawPylon(left, endY);
       drawPylon(right, endY);
-      // 相手 EZ は画面上。uprights はフィールド側（下＝+y）へ。
+      // 相手のエンドゾーンは画面の上にあるので、ゴールポストの柱は下へ伸ばす。
       this.drawGoalpost(ctx, geometry, endY, 1, metrics, theme);
     }
   }
 
-  /** エンドライン中央のゴールポスト（crossbar + 2 本の uprights）。dir はフィールド方向の符号。 */
+  /** エンドラインの中央に、横木と 2 本の柱を描く。dir はフィールドへ向かう y の符号。 */
   private drawGoalpost(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,

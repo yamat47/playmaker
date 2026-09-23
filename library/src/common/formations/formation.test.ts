@@ -21,7 +21,7 @@ describe("normalizeFormation: 既定補完", () => {
   it("id/name/side 欠落・空白は既定へ、選手は id を落として取り込む", () => {
     const result = must(
       normalizeFormation({
-        // id 空白 → 既定 "formation"、name 欠落 → 既定、side 不正 → "offense"
+        // id は空白、name は無し、side は無い値なので、どれも既定になる。
         id: "   ",
         side: "kickoff",
         players: [{ id: "should-be-dropped", position: { lateralYard: 5, downfieldYard: 50 } }],

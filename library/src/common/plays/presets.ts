@@ -12,12 +12,10 @@ function pt(lateralYard: number, downfieldYard: number): FieldPosition {
   return { lateralYard, downfieldYard };
 }
 
-/** オフェンス選手（色なし＝テーマ既定）。 */
 function oP(id: string, label: string, lat: number, down: number, shape: PlayerShape): Player {
   return { id, position: { lateralYard: lat, downfieldYard: down }, shape, label };
 }
 
-/** ディフェンス選手（丸・DEFENSE_COLOR）。 */
 function dP(id: string, label: string, lat: number, down: number): Player {
   return {
     id,
@@ -28,7 +26,7 @@ function dP(id: string, label: string, lat: number, down: number): Player {
   };
 }
 
-/** 線 1 本。色は任意（オフェンス=テーマ既定で省略、ディフェンス=DEFENSE_COLOR）。 */
+/** オフェンスの線は color を省いてテーマの色で描き、ディフェンスの線には DEFENSE_COLOR を渡す。 */
 function ln(
   id: string,
   kind: LineKind,
@@ -75,7 +73,6 @@ function play(
   };
 }
 
-// オフェンスライン 5 人（全プレー共通）。
 function ol(): Player[] {
   return [
     oP("lt", "LT", 22.1, -0.5, "square"),
@@ -86,8 +83,8 @@ function ol(): Player[] {
   ];
 }
 
-// ニッケル系（4 ダウン＋ILB 2 枚）の共通前 6 枚。CB・ニッケル・セイフティは呼び出し側で足す
-// （カバレッジ/プレッシャーごとに DB の置き方が変わるため、変動分だけを各所で明示する）。
+// ニッケルの前の 6 人（4 ダウンと ILB 2 人）。CB、ニッケル、セイフティはカバレッジや
+// プレッシャーごとに置き方が変わるので、プレーごとに足す。
 function nickelFront(): Player[] {
   return [
     dP("de-l", "", 21.5, 1),
@@ -99,7 +96,7 @@ function nickelFront(): Player[] {
   ];
 }
 
-// 相手側（脇役）の配置のみ。線は持たせない。攻のプレー図ではこのフロントを添える。
+// オフェンスのプレー図に添える守備。配置だけで線は持たない。
 function defLook43(): Player[] {
   return [
     dP("de-l", "", 21.5, 1),
@@ -149,7 +146,7 @@ function defLookCover3(): Player[] {
   ];
 }
 
-// オフェンスの配置のみ（守のプレー図ではこの 2x2 を脇役として添える）。
+// ディフェンスのプレー図に添える 2x2 の攻撃。配置だけで線は持たない。
 function offLook(): Player[] {
   return [
     ...ol(),
@@ -666,10 +663,6 @@ const COVER_6 = play(
   ],
 );
 
-/**
- * 組み込みプレー図一覧（攻 10・守 8）。demo はこれを攻守・タイプで束ねて一覧表示し、
- * 商用ソフトはこの配列を起点に独自プレーを足せる。
- */
 export const PLAY_PRESETS: readonly PlayPreset[] = /* @__PURE__ */ deepFreeze([
   INSIDE_ZONE,
   OUTSIDE_ZONE,
@@ -691,7 +684,6 @@ export const PLAY_PRESETS: readonly PlayPreset[] = /* @__PURE__ */ deepFreeze([
   COVER_6,
 ]);
 
-/** id でプレー図プリセットを引く。未知 id は undefined（呼び出し側で無視する）。 */
 export function getPlayPreset(id: string): PlayPreset | undefined {
   return PLAY_PRESETS.find((p) => p.id === id);
 }

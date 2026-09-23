@@ -133,7 +133,7 @@ PRD 5.3「3 種類の線」の具体は未指定。戦術記法の厳密再現�
 - ゲート（しきい値）= **glob `src/common/**` のみ**に `lines/branches/functions/statements = 100` / `perFile: true`。`browser/` `playmaker.ts` `index.ts` は**測るが落とさない**（規約「common 全網羅・browser 最小限・VRT なし」と矛盾なく共存）
 - 逃げ道は **`/* v8 ignore start -- <Why> */ … /* v8 ignore stop */` のみ**（PR レビューで承認）。ただし **ignore は最終手段**で、まず「ガードが要らない実装」を優先する（`noUncheckedIndexedAccess` の索引ガードは `for...of`、冗長な防御は削除）。全未カバー箇所を「意図的・監査済みの判断」にする。`autoUpdate` は使わない（初日から 100 固定）
 - **`pnpm run test` = `vitest run --coverage`** に内蔵化。local-ci-runner / CI workflow / create-pr の 3 経路すべてにゲートが自動伝播し、定義箇所は vite.config.ts 1 か所。TDD 内側ループは `pnpm run test:watch`（カバレッジなし）で使い分け
-- レポーター = `["text", "html", "json-summary"]`（text=Claude/CI ログ用に未カバー行可視、html=人間用、json-summary=将来連携用）
+- レポーター = `["text", "html"]`（text=Claude/CI ログ用に未カバー行可視、html=人間用）。json-summary は読むものが無いので T16 で外した
 - 導入時の reality check で `emitter.ts`（dispose 後購読の実契約）と `hit-test.ts`（1 点ポリライン）にテスト追加。当初 ignore で除外した 3 箇所は**実装改善で解消**（hit-test の逆順 index ループ→`for...of`、冗長な空配列ガードは削除）。結果 **`src/` 内の `v8 ignore` は 0 件**で common 100% を達成
 
 ### 実装メモ：コマンド / Undo-Redo と Model の構造（2026-05-16, M4）

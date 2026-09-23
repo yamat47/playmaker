@@ -1,34 +1,24 @@
-// フォーメーションテンプレートのデータ表現（PRD 5.6）。DOM 非依存。
-// プリセット（presets.ts）と外部（商用ソフト）から渡るカスタム隊形の双方をこの型で扱う。
-// 戦術的厳密性より組み込みやすさ優先（PRD 4.1）: 隊形 = 選手テンプレートの名前付き集合。
-
 import { isNonEmptyString, isRecord } from "../model/guards.js";
 import type { IIdFactory } from "../model/id-factory.js";
 import { normalizePlayers, type Player } from "../model/player.js";
 import { isTeamSide, type TeamSide } from "../presets/shared.js";
 
 /**
- * 隊形に含まれる 1 人の選手テンプレート。`id` は持たない
- * （読み込み時に IdFactory で採番し直す＝既存選手・Undo 復活と衝突しない）。
+ * 隊形の 1 人。`id` は持たず、読み込むたびに振る。同じ隊形を 2 回読んでも、
+ * 図にいる選手とも Undo で戻る選手とも id がぶつからない。
  */
 export type FormationPlayer = Omit<Player, "id">;
 
-/**
- * フォーメーションテンプレート。読み込むと players を現在のプレー図へ自動配置する。
- * 商用ソフトはこの形でカスタム隊形を渡せる（PRD 5.6 外部受け入れ）。
- */
+/** 読み込むと、players を今の図に足す。プリセットのほかに、利用者が作った隊形も渡せる。 */
 export interface Formation {
-  /** 安定識別子（プリセットキー or 外部指定）。UI の選択値に使う。 */
   readonly id: string;
-  /** 表示名（日本語・UI 用）。 */
   readonly name: string;
   /** 読み込んだときの選手の配置には影響しない。 */
   readonly side: TeamSide;
-  /** 配置する選手テンプレート（1 つ以上）。 */
+  /** 1 人以上。 */
   readonly players: readonly FormationPlayer[];
 }
 
-/** Player から id を落として FormationPlayer 化する（テンプレートは id を持たない）。 */
 function toFormationPlayer(player: Player): FormationPlayer {
   return {
     position: player.position,
@@ -39,11 +29,9 @@ function toFormationPlayer(player: Player): FormationPlayer {
 }
 
 /**
- * 外部（商用ソフト）から渡るカスタム隊形を内部で安全な Formation へ正規化する。
- * 選手の正規化は normalizePlayers を再利用し（位置不正は除外・既定補完）、
- * id を落として FormationPlayer 化する。配置可能な選手が 1 人も無ければ復元不能として null。
- * id/name/side は欠落・不正でも落とさず既定で補完する（PRD 6.6 の堅牢性）。
- * 返り値は常に新規オブジェクトで入力を共有しない。
+ * 外から受け取った隊形を Formation に正規化する。選手は図の選手と同じ規則で正規化し、
+ * 置ける選手が 1 人もいなければ null を返す。id、name、side が欠けていても既定で補う。
+ * 返り値は新しいオブジェクトで、入力と参照を共有しない。
  */
 export function normalizeFormation(raw: unknown): Formation | null {
   if (!isRecord(raw)) {

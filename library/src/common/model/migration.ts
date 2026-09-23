@@ -1,37 +1,25 @@
-// PlayData の version 検出 → 旧→現行マイグレーション段適用 → 構造正規化を
-// 1 本の公開境界 funnel にまとめる（PRD 6.6 データバージョニング）。
-//
-// 永続化・復元は商用ソフトの責務（PRD 5.8）。ここへ復元されてくる blob は
-// 現行版 / 旧版・版なし / 未来版（新しい lib で保存→古い lib で復元）/ 破損 JSON の
-// いずれもありうる。よって「決して投げず、常に現行スキーマへ寄せる」公開境界の
-// 防御作法を resolvePlayData / normalizeFormation / resolveImageExportSize と揃え、
-// inbound 経路（PlayModel 構築・Playmaker.setPlayData）の唯一の入口にする。
-
 import { isFiniteNumber, isRecord } from "./guards.js";
 import { migrateV1ToV2 } from "./migration-v2.js";
 import { type PlayData, resolvePlayData } from "./play-data.js";
 
 /**
- * 旧版 blob を 1 つ上の版の形へ寄せる段。構造の最終正規化は resolvePlayData が
- * 担うので、各段は「次版で意味が変わる項目だけ」を変換すればよい。
+ * 古い版のデータを 1 つ上の版の形へ寄せる段。段を通したあとで resolvePlayData が形を整えるので、
+ * 段は次の版で意味が変わる項目だけを変換すればよい。
  */
 export interface PlayDataMigration {
-  /** この段を適用すると version はこの値になる（段は `to` 昇順に適用）。 */
+  /** この段を通したあとの版。 */
   readonly to: number;
   migrate(data: Readonly<Record<string, unknown>>): Record<string, unknown>;
 }
 
-/**
- * 旧版を現行へ寄せる段（`to` 昇順）。スキーマを進めるときは
- * CURRENT_PLAY_DATA_VERSION を上げ、ここへ段を 1 つ足し、その段の単体テストを書く。
- */
+/** `to` の小さい順に並べる。 */
 export const PLAY_DATA_MIGRATIONS: readonly PlayDataMigration[] = [
   { to: 2, migrate: migrateV1ToV2 },
 ];
 
 /**
- * blob から宣言バージョンを取り出す。数値（有限）でなければ「版の宣言なし」とみなし
- * 0 を返す＝最初期の未バージョン化データ扱いで現行へ引き上げる対象になる。
+ * データに書かれた版を読む。有限の数でなければ 0 を返し、版を持たなかった最初期のデータとして
+ * すべての段を通す。
  */
 export function readDeclaredVersion(raw: unknown): number {
   if (isRecord(raw) && isFiniteNumber(raw.version)) {
@@ -41,10 +29,8 @@ export function readDeclaredVersion(raw: unknown): number {
 }
 
 /**
- * 宣言版より新しい段だけを `to` 昇順に適用する純粋エンジン。段は引数注入なので
- * UI/レジストリ無しで全分岐を単体テストできる（VSCode 流のフェイク注入）。
- * オブジェクトでない blob は段適用せず素通し（構造正規化が既定補完する）。
- * 宣言版が最終段以上なら適用段が無く blob はそのまま＝未来版の前方互換。
+ * 書かれた版より新しい段だけを、渡した順に通す。オブジェクトでない値は段を通さずにそのまま返す。
+ * 最後の段より新しい版のデータも、段を通さずにそのまま返す。
  */
 export function applyPlayDataMigrations(
   raw: unknown,
@@ -64,15 +50,13 @@ export function applyPlayDataMigrations(
 }
 
 /**
- * 永続化された任意の blob を現行スキーマの PlayData にする唯一の公開境界 funnel。
- * 版検出 → 旧→現行の段適用 → 構造正規化（resolvePlayData）。決して投げず、
- * version は常に CURRENT_PLAY_DATA_VERSION に確定し、内部状態と切り離した新規
- * オブジェクトを返す（受け手が書き換えても波及しない＝PRD 5.8 の往復契約）。
+ * どの版で保存したデータでも、今の版の PlayData にする。壊れたデータを渡しても投げない。
+ * 返り値は新しいオブジェクトで、入力と参照を共有しない。
  * 選手、線、waypoint は MAX_PLAYERS、MAX_LINES、MAX_WAYPOINTS_PER_LINE の個数までしか読まない。
  */
 export function migratePlayData(raw: unknown): PlayData {
   const declared = readDeclaredVersion(raw);
   const migrated = applyPlayDataMigrations(raw, declared, PLAY_DATA_MIGRATIONS);
-  // resolvePlayData は CURRENT を刻むので、未来版も含め version は現行に確定する。
+  // 新しい版のデータも、resolvePlayData が version を今の版に書き換える。
   return resolvePlayData(migrated);
 }

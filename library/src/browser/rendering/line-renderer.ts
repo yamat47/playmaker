@@ -1,8 +1,3 @@
-// 線（route / block / motion）を Canvas へ描く（PRD 5.3）。動作ごとに記法を変える:
-// route/motion = 塗り三角の矢印、block = 直角バー（T 字キャップ）。色でなく記法で区別する。
-// 線の幾何（起点選手の解決・waypoint 連結・曲線サンプル）と寸法トークンは common に委譲し、
-// 本クラスは「サンプル後ポリラインを種別ごとの見た目で描く」命令だけを持つ（VRT なしで薄く保つ）。
-
 import {
   arrowHeadVertices,
   blockCapEndpoints,
@@ -25,7 +20,7 @@ const LINE_COLOR_TOKENS = {
 } as const satisfies Record<LineKind, ThemeTokenName>;
 
 export class LineRenderer implements ILayerRenderer {
-  /** lines を配列順（後の要素ほど上）に描く。起点選手が見つからない線は描かない。 */
+  /** 起点の選手が見つからない線は描かない。 */
   draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const { geometry, metrics } = frame;
     const { lines, players } = frame.scene;
@@ -58,10 +53,9 @@ export class LineRenderer implements ILayerRenderer {
         ctx.setLineDash([...metrics.motionDash]);
       }
 
-      // 矢印付きの線は矢じりの根元で止める＝線が三角へ潜らず先端が鋭く整う。弧長で正確に
-      // 遡らないと線が先端近くまで伸びきり、太さ一定の線の丸キャップが先細りの三角から
-      // はみ出して先端に「丸いドット」が生える。ブロックは T 字キャップを当てるため終点まで
-      // 引く。矢じりの向き/位置は元 path から得る。
+      // 矢印を付ける線は、矢じりの根元で止める。先端まで引くと、線の丸いキャップが細くなる三角の先から
+      // はみ出して、先端に点が付いたように見える。block は T 字のバーを当てるので終点まで引く。
+      // 矢じりの向きと位置は、止める前の path から求める。
       const strokePath = isBlock ? path : trimForArrowHead(path, metrics.arrowLength);
       ctx.beginPath();
       // 空のパスへの最初の lineTo は moveTo として働く。
@@ -71,7 +65,6 @@ export class LineRenderer implements ILayerRenderer {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 記法で区別: 走路は矢印、ブロックは T 字キャップ。
       if (isBlock) {
         this.drawBlockCap(ctx, path, color, metrics, width);
       } else {
@@ -81,12 +74,11 @@ export class LineRenderer implements ILayerRenderer {
     }
   }
 
-  /** block は route と同じ太さ。記法（T 字）で区別するため色・太さに頼らない。 */
   private widthFor(kind: LineKind, metrics: FieldMetrics): number {
     return kind === "block" ? metrics.blockWidth : metrics.routeWidth;
   }
 
-  /** 終点に、進行方向へ向けた塗り三角の矢じりを描く（route / motion）。 */
+  /** 終点に、進む向きへ向けた三角の矢じりを描く。 */
   private drawArrowHead(
     ctx: CanvasRenderingContext2D,
     path: readonly CanvasPoint[],
@@ -107,7 +99,7 @@ export class LineRenderer implements ILayerRenderer {
     ctx.fill();
   }
 
-  /** 終点に、進行方向と直交する T 字バーを描く（block）。矢印と一目で見分けるため。 */
+  /** 終点に、進む向きと直交する T 字のバーを描く。 */
   private drawBlockCap(
     ctx: CanvasRenderingContext2D,
     path: readonly CanvasPoint[],

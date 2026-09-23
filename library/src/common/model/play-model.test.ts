@@ -140,6 +140,12 @@ describe("PlayModel 選手の追加・更新", () => {
 
     expect(() => model.updatePlayer(player("ghost"))).toThrow(/unknown player id "ghost"/);
   });
+
+  it("無い id の選手を引くと throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.getPlayer("ghost")).toThrow(/unknown player id "ghost"/);
+  });
 });
 
 describe("PlayModel の id 重複の拒否", () => {
@@ -430,6 +436,12 @@ describe("PlayModel 線の追加・挿入・削除・更新", () => {
     // 他の線は据え置き（差し替え三項分岐の両側）。
     expect(model.findLine("la")?.kind).toBe("route");
     expect(() => model.updateLine(line("ghost", "a"))).toThrow(/unknown line id "ghost"/);
+  });
+
+  it("無い id の線を引くと throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.getLine("ghost")).toThrow(/unknown line id "ghost"/);
   });
 });
 

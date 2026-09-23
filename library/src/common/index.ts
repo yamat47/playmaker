@@ -54,6 +54,7 @@ export {
 export {
   type FieldPosition,
   PLAYER_RADIUS_YARDS,
+  PLAYER_SHAPE_VALUES,
   type Player,
   type PlayerShape,
 } from "./model/player.js";

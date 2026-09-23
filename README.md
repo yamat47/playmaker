@@ -73,7 +73,7 @@ const playmaker = new Playmaker(container, {
 | `dispose()` | DOM・購読・リソースを解放 |
 
 再エクスポート: 型 `PlayData` `Player` `Line` `FieldPosition` `Formation`
-`ImageExportOptions` `PlayerShape`(6 種) `LineKind`(`route`/`block`/`motion`)
+`ImageExportOptions` `PlayerShape`(`circle`/`square`) `LineKind`(`route`/`block`/`motion`)
 `LineInterpolation`(`straight`/`bezier`) ほか、値 `FORMATION_PRESETS`
 `getFormationPreset(id)` `migratePlayData(raw)` `CURRENT_PLAY_DATA_VERSION`。
 

@@ -10,17 +10,13 @@ import {
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,
+  PLAYER_SHAPE_VALUES,
   type Player,
-  type PlayerShape,
   toDisposable,
 } from "../../common/index.js";
 import { LINE_COLOR_PALETTE } from "../theme/line-palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
 import { THEME_TOKENS, type ThemeReader } from "../theme/tokens.js";
-
-// 形状の語彙は 2 種に絞る（丸=スキル系、四角=ライン系）。多種混在は図を散らかす。
-// 旧データが持つ他形状はモデル・レンダラ側で引き続き受理する（描画の後方互換）。
-const SHAPES: readonly PlayerShape[] = ["circle", "square"];
 
 /** color input は hex のみ受け付けるため、非 hex は既定にフォールバックする。 */
 function toHex(value: string | undefined, fallback: string): string {
@@ -72,7 +68,7 @@ export class PropertyPanel extends Disposable {
     if (player !== undefined) {
       this.addTitle("選手");
       this.addText("ラベル", player.label, (v) => controller.updateSelectedPlayer({ label: v }));
-      this.addSelect("形状", SHAPES, player.shape, (v) =>
+      this.addSelect("形状", PLAYER_SHAPE_VALUES, player.shape, (v) =>
         controller.updateSelectedPlayer({ shape: v }),
       );
       // 色の無い選手は塗りの既定色で描くので、入力にも同じ色を出す。

@@ -20,7 +20,7 @@ import {
 } from "./layer.js";
 
 /**
- * Canvas の大きさと DPR を受け持ち、渡された図を層ごとに描く。
+ * Canvas の大きさ、DPR、再描画の時機を受け持ち、渡された図を層ごとに描く。
  * 何を描くか（プレビューの合成、選択の強調）は EditorController が決める。
  */
 export class CanvasSurface extends Disposable {
@@ -29,6 +29,9 @@ export class CanvasSurface extends Disposable {
   private readonly layers: SurfaceLayers;
   private scene: SceneData;
   private overlay: EditorOverlay = { kind: "none" };
+  private frameRequest: number | undefined;
+  // 破棄するときに、DPR の見張りをまとめて外す。
+  private readonly lifetime = new AbortController();
 
   constructor(
     parent: HTMLElement,
@@ -52,21 +55,32 @@ export class CanvasSurface extends Disposable {
 
     const observer = new ResizeObserver(() => this.resize());
     observer.observe(parent);
-    this._register(toDisposable(() => observer.disconnect()));
+    this._register(
+      toDisposable(() => {
+        observer.disconnect();
+        this.lifetime.abort();
+        this.cancelFrame();
+      }),
+    );
 
+    this.watchDevicePixelRatio();
     this.resize();
     this.renderWhenFontReady();
   }
 
   /** テーマ変数は描くたびに読み直すので、ホストが変数を変えたあとに呼べば反映される。 */
   refresh(): void {
-    this.render();
+    this.invalidate();
   }
 
+  /**
+   * 図とオーバーレイを差し替える。描くのは次のフレームなので、
+   * 同じフレームの中で何度差し替えても描くのは 1 回になる。
+   */
   setScene(scene: SceneData, overlay: EditorOverlay): void {
     this.scene = scene;
     this.overlay = overlay;
-    this.render();
+    this.invalidate();
   }
 
   /** マウスイベントの clientX / clientY を、フィールドのヤードの位置に変える。 */
@@ -114,7 +128,7 @@ export class CanvasSurface extends Disposable {
     fonts.load(fontSpec).then(
       () => {
         if (!this.isDisposed) {
-          this.render();
+          this.invalidate();
         }
       },
       () => {
@@ -131,7 +145,40 @@ export class CanvasSurface extends Disposable {
     this.canvas.height = Math.max(1, Math.round(clientHeight * dpr));
     // 以降は CSS px の座標で描く。geometry も CSS px で求める。
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // バッファを作り直すと中身が消えるので、次のフレームを待たずに描く。
+    this.cancelFrame();
     this.render();
+  }
+
+  // resolution の media query は、今の DPR と合わなくなったときに 1 回だけ change を出す。
+  // ブラウザの拡大率やモニタが変わるたびに、新しい DPR で張り直す。
+  private watchDevicePixelRatio(): void {
+    const query = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    query.addEventListener(
+      "change",
+      () => {
+        this.resize();
+        this.watchDevicePixelRatio();
+      },
+      { once: true, signal: this.lifetime.signal },
+    );
+  }
+
+  private invalidate(): void {
+    if (this.frameRequest !== undefined) {
+      return;
+    }
+    this.frameRequest = requestAnimationFrame(() => {
+      this.frameRequest = undefined;
+      this.render();
+    });
+  }
+
+  private cancelFrame(): void {
+    if (this.frameRequest !== undefined) {
+      cancelAnimationFrame(this.frameRequest);
+      this.frameRequest = undefined;
+    }
   }
 
   private render(): void {

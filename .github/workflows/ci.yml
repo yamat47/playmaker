@@ -55,3 +55,30 @@ jobs:
 
       - name: Build (Vite library mode)
         run: pnpm run build
+
+  # Chromium の取得と起動に時間がかかるので、verify と並べて走らせる。
+  browser-test:
+    name: browser test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: yamat47/github-toolkit/actions/checkout@main
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js with pnpm and install dependencies
+        uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@main
+        with:
+          node-version-file: .node-version
+          package-json-file: library/package.json
+          cache-dependency-path: library/pnpm-lock.yaml
+          working-directory: library
+          install-args: --frozen-lockfile --ignore-scripts
+
+      - name: Install Chromium
+        # lockfile の playwright が想定する版の Chromium と、それを動かす OS のパッケージを入れる
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser test (Vitest Browser Mode)
+        run: pnpm run test:browser

@@ -12,7 +12,7 @@ import {
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
   yardLinesInWindow,
 } from "../../common/index.js";
-import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
+import { fieldFont } from "../theme/field-font.js";
 import type { ThemeReader } from "../theme/tokens.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
@@ -237,8 +237,7 @@ export class FieldRenderer implements ILayerRenderer {
     const arrowBaseHalfPx = ARROW_HALF_WIDTH_YARDS * geometry.scale;
     const halfArrowLength = ARROW_LENGTH_YARDS / 2;
 
-    // ctx.font は CSS var() を解釈できないため、同梱フォントの実体名を直接書く。
-    ctx.font = `700 ${metrics.numberHeight}px ${FIELD_FONT_FAMILY}`;
+    ctx.font = fieldFont(metrics.numberHeight);
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
 

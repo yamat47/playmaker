@@ -3,7 +3,7 @@
 // → ロジックは common 単体テストで網羅し、ここは VRT なしでも薄く保てる。
 
 import { PLAYER_RADIUS_YARDS, playerMarkerOutline } from "../../common/index.js";
-import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
+import { fieldFont } from "../theme/field-font.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 export class PlayerRenderer implements ILayerRenderer {
@@ -46,7 +46,7 @@ export class PlayerRenderer implements ILayerRenderer {
 
       if (player.label !== "") {
         ctx.fillStyle = labelColor;
-        ctx.font = `700 ${fontPx}px ${FIELD_FONT_FAMILY}`;
+        ctx.font = fieldFont(fontPx);
         ctx.textAlign = "center";
         // textBaseline="middle" は em ボックス基準でフォント次第で上下にずれる。
         // 実際の字面ボックス（actualBoundingBox）の中心をマーカー中心へ合わせる。

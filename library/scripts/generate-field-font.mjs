@@ -1,10 +1,7 @@
-// フィールド描画専用フォント（同梱・外部指定不可）のサブセット woff2 を生成する。
-// 入力: assets/fonts/SairaCondensed-Bold.ttf（OFL。再生成のため vendor 済み）
-// 出力: src/assets/playmaker-saira-subset.woff2（FontFace で登録し、ビルドで JS へ inline）
-//
-// 収録文字は「ヤード数字 + 選手ラベル」で実際に出る英数字と基本記号に限定する
-// （サブセット B）。未収録グリフは FIELD_FONT_FAMILY の sans-serif フォールバックへ逃がす。
-// 再生成: `make font`（コンテナの中で動く）
+// フィールドに描く文字のフォントを、使う文字だけに絞った woff2 にする。`make font` で動かす。
+// 元の ttf は作り直せるようにリポジトリに置いてある（SIL OFL 1.1）。
+// ヤードの数字と選手のラベルに出る英数字と記号だけを入れ、ほかの文字は sans-serif で描く。
+// フォントはビルドで JS に埋め込むので、使わない文字の分だけライブラリが大きくなる。
 
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -18,7 +15,7 @@ const OUTPUT = resolve(root, "src/assets/playmaker-saira-subset.woff2");
 const digits = "0123456789";
 const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const lower = "abcdefghijklmnopqrstuvwxyz";
-// 選手ラベルで現実的に使う記号（例: "C/G" "H-back" "WILL/MIKE"）+ 空白。
+// 選手のラベルに使いそうな記号（例: "C/G"、"H-back"、"WILL/MIKE"）と空白。
 const symbols = " .-/&'(),:#+";
 const CHARS = digits + upper + lower + symbols;
 

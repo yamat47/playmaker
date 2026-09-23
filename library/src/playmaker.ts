@@ -150,14 +150,13 @@ export class Playmaker implements IDisposable {
     this.draw();
   }
 
-  /** 現在のフィールドゾーン。 */
   get fieldZone(): FieldZone {
     return this.session.fieldZone;
   }
 
   /**
-   * フィールドゾーンを切り替える（PRD 5.1）。コマンド経由なので Undo/onChange の対象。
-   * view モードでもプログラム API としては有効（編集 UI は出さないだけ）。
+   * LOS をそのゾーンの既定の位置へ移し、選手と線も一緒に動かす。
+   * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
    */
   setFieldZone(zone: FieldZone): void {
     if (this.ignoreAfterDispose("setFieldZone")) {

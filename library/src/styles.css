@@ -125,9 +125,17 @@
 .playmaker-panel__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   font-size: 0.85rem;
+}
+
+/* ラベルの箱を消し、中の文字と入力を、ラベルの外に置く部品と同じ行の flex に並べる。 */
+.playmaker-panel__label {
+  display: contents;
+}
+
+.playmaker-panel__row-text {
+  margin-right: auto;
 }
 
 .playmaker-panel__row input,
@@ -162,4 +170,19 @@
 .playmaker-panel__swatch[aria-pressed="true"] {
   outline: 2px solid currentColor;
   outline-offset: 1px;
+}
+
+.playmaker-panel__reset {
+  flex: 0 0 auto;
+  font: inherit;
+  padding: 2px 6px;
+  border: 1px solid var(--_playmaker-ui-border);
+  border-radius: 4px;
+  background: var(--_playmaker-ui-surface);
+  color: var(--_playmaker-ui-text);
+  cursor: pointer;
+}
+
+.playmaker-panel__reset:hover {
+  border-color: var(--_playmaker-ui-accent);
 }

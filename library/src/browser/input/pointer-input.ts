@@ -4,6 +4,7 @@ import {
   type IEditorActions,
   type IEditorGestures,
   type IEditorScene,
+  resolveKeyAction,
   toDisposable,
 } from "../../common/index.js";
 
@@ -86,24 +87,26 @@ export class PointerInput extends Disposable {
       if (isFormControl(e.target)) {
         return;
       }
-      const mod = e.metaKey || e.ctrlKey;
-      if (e.key === "Escape") {
-        controller.cancelInteraction();
-      } else if (e.key === "Enter") {
-        // ボタン上の Enter はそのボタンを押す操作なので、作図の確定と二重にしない。
-        if (!(e.target instanceof HTMLButtonElement)) {
-          controller.commitLine();
-        }
-      } else if (mod && (e.key === "z" || e.key === "Z")) {
-        e.preventDefault();
-        if (e.shiftKey) {
-          controller.redo();
-        } else {
+      switch (resolveKeyAction(e)) {
+        case "cancel-interaction":
+          controller.cancelInteraction();
+          return;
+        case "commit-line":
+          // ボタン上の Enter はそのボタンを押す操作なので、作図の確定と二重にしない。
+          if (!(e.target instanceof HTMLButtonElement)) {
+            controller.commitLine();
+          }
+          return;
+        case "undo":
+          e.preventDefault();
           controller.undo();
-        }
-      } else if (mod && (e.key === "y" || e.key === "Y")) {
-        e.preventDefault();
-        controller.redo();
+          return;
+        case "redo":
+          e.preventDefault();
+          controller.redo();
+          return;
+        case null:
+          return;
       }
     };
 

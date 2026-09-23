@@ -449,11 +449,13 @@ PR 単位で、依存順に並べる。
 
 ### T13 入力と内蔵 UI（browser）
 
-- [ ] **T13-1 [should] PropertyPanel が確定のたびに DOM を作り直し、フォーカスを失う**
+- [x] **T13-1 [should] PropertyPanel が確定のたびに DOM を作り直し、フォーカスを失う**
   - locations: library/src/browser/ui/property-panel.ts:29-31, library/src/browser/ui/property-panel.ts:44-59, library/src/browser/ui/property-panel.ts:103-124, library/src/browser/ui/property-panel.ts:107, library/src/browser/ui/property-panel.ts:117, library/src/browser/ui/toolbar.ts:69, library/src/browser/ui/toolbar.ts:129-142
   - 対応: 選択の kind と id が変わったときだけ作り直し、それ以外は値だけ更新する。JSON キーの比較は削除する。onDidChangeViewState を購読する。
-- [ ] **T13-2 [should] 選択肢に英語の enum 値がそのまま表示されている**
+  - 結論（T13b）: 入力を作る関数が値を書き込む関数を返し、パネルは表示中の要素の kind と id を覚える。同じ要素のあいだは値だけを書き込む。途中で、スウォッチの組を label で包んでいたせいで「色」の文字を押すと先頭の色に変わるバグを見つけたので、組には role="group" で名前を付け、行は div にした。
+- [x] **T13-2 [should] 選択肢に英語の enum 値がそのまま表示されている**
   - locations: library/src/browser/ui/property-panel.ts:18-20, library/src/browser/ui/property-panel.ts:172-178
+  - 結論（T13b）: 表示名の表はツールバーの TOOL_LABELS と同じく、パネルのファイルに置いた（丸 / 四角、ルート / ブロック / モーション、直線 / 曲線）。
 - [x] **T13-3 [should] 形状を 2 種に確定し、残り 4 種を型・レンダラから削除する**（D18）
   - locations: library/src/browser/ui/property-panel.ts:16-18, library/src/common/model/player.ts:9, library/src/common/model/player.ts:14, library/src/common/geometry/player-marker.ts
   - 対応: PlayerShape を circle / square だけにし、多角形描画のコードを消す。未知の形状は既定へ寄せる正規化だけ残す。PRD 5.2 の更新は T18。
@@ -461,13 +463,15 @@ PR 単位で、依存順に並べる。
   - 結論（T13a）: PLAYER_SHAPE_VALUES を circle と square だけにし、パネルの選択肢もこの配列から作る。正方形の輪郭は半辺の長さだけを返して rect で描き、多角形の辺の数と回転の表は消した。README の型の説明も直した。PRD は T18 で直す。
 - [ ] **T13-4 [should] ツールバーとパネルが canvas に重なり、フィールドを隠す**（D17）
   - locations: library/src/styles.css:67-81, library/src/styles.css:129-142, library/src/playmaker.ts:193-197
-- [ ] **T13-5 [should] キー割り当てが browser 層にあり、テストされていない**
+- [x] **T13-5 [should] キー割り当てが browser 層にあり、テストされていない**
   - locations: library/src/browser/input/pointer-input.ts:33-51, library/src/browser/ui/property-panel.ts:23, library/src/browser/ui/property-panel.ts:48, library/src/browser/ui/property-panel.ts:118
   - 対応: `common/input/keymap.ts` の resolveKeyAction、toHexColor、太さ入力の検証を common へ移し、テストする。
-- [ ] **T13-6 [nit] 色未指定の選手でカラー入力の初期色がテーマの塗りと合わない。既定に戻す UI もない**
+  - 結論（T13b）: resolveKeyAction は `common/input/keymap.ts`、hex の書式の判定は `common/design/color.ts` の isHexColor、太さの判定は `common/model/line.ts` の isLineThickness にした。isLineThickness は正規化とパネルの両方が使う。色の書き方をそろえる処理は canvas が要るので browser に残した（T13-9）。フォーム部品とボタン上の Enter をキー操作から外す判定は、target の型を見るので browser に残した。
+- [x] **T13-6 [nit] 色未指定の選手でカラー入力の初期色がテーマの塗りと合わない。既定に戻す UI もない**
   - locations: library/src/browser/ui/property-panel.ts:133, library/src/styles.css:35
   - 対応: 既定色はテーマの解決値を使う。D11 が A なら既定ボタンを足す。
   - 進み具合: 既定色は T11 でテーマの解決値にした。残りは既定に戻すボタン。
+  - 結論（T13b）: 選手の色、線の色、線の太さの行に「既定」ボタンを置き、パッチの null で値を消す。既定のときも押せるままにする。押した直後に無効にすると、フォーカスが body へ落ちる（T13-7 と同じ問題）。
 - [ ] **T13-7 [should] 最後の 1 手を戻すと「元に戻す」が無効になってフォーカスが body に落ち、以降のショートカットが効かない**
   - locations: library/src/browser/ui/toolbar.ts（sync で disabled にする箇所）, library/src/browser/input/pointer-input.ts（keydown を root で受ける箇所）
   - 問題: keydown は root で受けるが、無効化されたボタンからフォーカスが外れると、キーは root の外（body）に届く。T2 の demo 確認で見つけた。
@@ -476,15 +480,16 @@ PR 単位で、依存順に並べる。
   - locations: library/src/browser/ui/toolbar.ts
   - 問題: 上限に達すると EditorController は何もしないが、ボタンは押せるままで、押しても反応がない理由が分からない。
   - 対応: EditorViewState に上限に達したかを足し、ボタンを無効にするか理由を示す。
-- [ ] **T13-9 [nit] ホストがテーマ変数に hex 以外の色を書くと、色の入力とスウォッチの選択表示がずれる**（T11 で追加）
+- [x] **T13-9 [nit] ホストがテーマ変数に hex 以外の色を書くと、色の入力とスウォッチの選択表示がずれる**（T11 で追加）
   - locations: library/src/browser/ui/property-panel.ts（toHex と addLineColor）, library/src/browser/theme/theme-reader.ts
   - 問題: color input は 6 桁の hex しか受け付けないので、`rgb()` や色名を書くと入力は既定色になる。スウォッチは解決した文字列をそのまま Line.color に保存し、保存済みの色と文字列で比べるので、書き方が違うと選択中に見えない。
   - 対応: reader で色を正規化する段を 1 つ設け（canvas の fillStyle に通すなど）、hex が要る箇所はそこから読む。
+  - 結論（T13b）: `browser/theme/css-color.ts` の normalizeCssColor が fillStyle に通して書き方をそろえ、createThemeReader が読んだ値をすべてこれに通す。色として読めない値は空と同じに扱い、既定の色にする。canvas も同じ reader を使うので、読めない値のときに直前の部品の色で描いていた問題も直った。パネルは保存済みの Line.color も同じ関数に通してスウォッチと比べ、hex にできない半透明の色は色の入力に既定色を出す。
 
 - 依存: T9、T11、T12、D17、D18
 - 完了条件: キーボードだけで連続して編集できる。UI が canvas に重ならない。表示はすべて日本語になる。
 - 規模: M
-- 進み具合: 3 本に分ける。T13a（T13-3）を閉じた。T13b はパネル（T13-1、T13-2、T13-5、T13-6、T13-9）、T13c は配置とフォーカスと上限（T13-4、T13-7、T13-8）。
+- 進み具合: 3 本に分ける。T13a（T13-3）と T13b（T13-1、T13-2、T13-5、T13-6、T13-9）を閉じた。残りは T13c の配置とフォーカスと上限（T13-4、T13-7、T13-8）。
 
 ---
 

@@ -1,4 +1,5 @@
 export { Disposable, DisposableStore, toDisposable } from "./base/lifecycle.js";
+export { isHexColor } from "./design/color.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EDITOR_TOOL_VALUES,
@@ -31,10 +32,12 @@ export {
   trimForArrowHead,
 } from "./geometry/line-decoration.js";
 export { playerMarkerOutline } from "./geometry/player-marker.js";
+export { resolveKeyAction } from "./input/keymap.js";
 export { isOneOf } from "./model/guards.js";
 export {
   DEFAULT_LINE_THICKNESS,
   indexPlayersById,
+  isLineThickness,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,

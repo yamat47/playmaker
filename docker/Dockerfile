@@ -27,10 +27,20 @@ ENV IN_CONTAINER=1
 
 # pnpm は packageManager と同じ版を焼き込む。ずれていると pnpm が起動のたびに
 # 指定版をダウンロードし直し、docker compose run --rm では毎回それが起きる。
-# package.json は依存更新のたびに変わるので、キャッシュが崩れても安い最後の層に置く
+# package.json は依存更新のたびに変わるので、それを読む層は最後にまとめる
 COPY library/package.json /tmp/package.json
-RUN npm install -g "$(node -p "require('/tmp/package.json').packageManager")" \
-  && rm /tmp/package.json
+RUN npm install -g "$(node -p "require('/tmp/package.json').packageManager")"
+
+# ブラウザテストの Chromium は、lockfile の playwright が想定する版を、動かすのに要る OS のライブラリと
+# 一緒に入れる。テストは headless でしか動かさないので headless shell だけにする。
+# node_modules はまだ無いので、npx で lockfile と同じ版の playwright を使う。
+# 置き場所を固定しておかないと root のホームに入り、node ユーザーから見えない。
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+COPY library/pnpm-lock.yaml /tmp/pnpm-lock.yaml
+RUN version="$(sed -n 's/^  playwright@\([0-9.]*\):$/\1/p' /tmp/pnpm-lock.yaml | head -n 1)" \
+  && test -n "$version" \
+  && npx -y "playwright@$version" install --with-deps --only-shell chromium \
+  && rm -rf /tmp/package.json /tmp/pnpm-lock.yaml /var/lib/apt/lists/*
 
 USER node
 WORKDIR /workspace/library

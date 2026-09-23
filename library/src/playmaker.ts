@@ -72,11 +72,11 @@ export interface PlaymakerOptions {
    * 最初のモード。既定は "edit"。"view" は編集 UI を置かず、ポインタとキーの操作も受けない。
    * あとから `setMode` で切り替えられる。
    */
-  mode?: PlaymakerMode;
+  mode?: PlaymakerMode | undefined;
   /** 最初に表示する図。`restorePlayData` と同じく、形を確かめずに受け取って今のスキーマへ寄せる。 */
   initialData?: unknown;
   /** 構築時に `onDidChange` へ登録するリスナ。解除するには Playmaker を dispose する。 */
-  onChange?: (data: PlayData) => void;
+  onChange?: ((data: PlayData) => void) | undefined;
 }
 
 /**

@@ -79,14 +79,39 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 | `refresh()` | テーマの CSS 変数を変えたあとに、図とパネルの色を読み直す |
 | `dispose()` | DOM・購読・リソースを解放。以降の変更は何もせず、開発時だけ警告を出す |
 
-再エクスポート: 型 `PlayData` `PlayDataInput` `Player` `Line` `FieldPosition` `Formation`
-`ImageExportOptions` `PlayerShape`(`circle`/`square`) `LineKind`(`route`/`block`/`motion`)
-`LineInterpolation`(`straight`/`bezier`) `Event` `IDisposable` ほか、値 `FORMATION_PRESETS`
-`getFormationPreset(id)` `FIELD_ZONE_VALUES` `FIELD_ZONE_LABELS` `migratePlayData(raw)`
-`CURRENT_PLAY_DATA_VERSION`。
+再エクスポート:
 
-プリセット id: `i-formation` / `shotgun-spread`（攻）、`defense-4-3` /
-`defense-nickel`（守）。商用ソフト側のカスタム隊形も `loadFormation` に渡せる。
+- 型: `PlaymakerOptions` `PlaymakerMode` `PlayData` `PlayDataInput` `FieldState` `FieldZone`
+  `FieldPosition` `Player` `PlayerShape`(`circle`/`square`) `Line` `LineKind`(`route`/`block`/`motion`)
+  `LineInterpolation`(`straight`/`bezier`) `Formation` `FormationPlayer` `PlayPreset` `PlayCategory`
+  `TeamSide` `ImageExportOptions` `Event` `IDisposable`
+- 値: `FORMATION_PRESETS` `getFormationPreset(id)` `PLAY_PRESETS` `getPlayPreset(id)`
+  `FIELD_ZONE_VALUES` `FIELD_ZONE_LABELS` `migratePlayData(raw)` `CURRENT_PLAY_DATA_VERSION`
+
+### プリセット
+
+同梱のフォーメーションとプレーは、一覧を `FORMATION_PRESETS` と `PLAY_PRESETS` の配列で、
+1 件を `getFormationPreset(id)` と `getPlayPreset(id)` で取り出せる。未知の id には `undefined` を返す。
+
+```ts
+import { getFormationPreset } from "playmaker";
+
+// フォーメーションは今の図に選手を足す。攻守を順に重ねられる。
+const offense = getFormationPreset("i-formation");
+if (offense) playmaker.loadFormation(offense);
+```
+
+```ts
+import { PLAY_PRESETS } from "playmaker";
+
+// プレーは線まで描き込んだ図で、data を読み込むと今の図と置き換わる。
+const play = PLAY_PRESETS[0];
+if (play) playmaker.setPlayData(play.data);
+```
+
+どちらも `name` と `side`（`offense` / `defense`）を持つので、一覧の見出しや攻守の分け方に使える。
+プレーはさらに `category`、`personnel`、`summary` を持つ。
+商用ソフト側で管理するカスタムの隊形も `loadFormation` に渡せる。選手の位置は LOS からの相対で書く。
 
 ### データ連携とバージョニング
 

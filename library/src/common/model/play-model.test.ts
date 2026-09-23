@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { mutable } from "../../test-support/mutable.js";
-import type { PlayData } from "./play-data.js";
+import { CURRENT_PLAY_DATA_VERSION, LOS_YARD_BY_ZONE, type PlayData } from "./play-data.js";
 import { PlayModel } from "./play-model.js";
 
 function seed(): PlayData {
@@ -38,15 +38,18 @@ describe("PlayModel 構築", () => {
   it("版なしの旧来 blob も migratePlayData 経由で現行版へ寄せて取り込む", () => {
     // 商用ソフトが永続化した未バージョン化データの再読込（PRD 6.6 唯一の入口）。
     const legacy = {
-      field: { zone: "redzone", losYard: 85 },
-      players: [{ id: "wr", position: { lateralYard: 5, downfieldYard: 50 }, shape: "square" }],
-    } as unknown as PlayData;
+      field: { zone: "redzone" },
+      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 90 }, shape: "square" }],
+    };
 
     const model = new PlayModel(legacy);
 
-    expect(model.getData().version).toBe(1);
+    expect(model.getData().version).toBe(CURRENT_PLAY_DATA_VERSION);
     expect(model.getFieldZone()).toBe("redzone");
-    expect(model.findPlayer("wr")?.shape).toBe("square");
+    expect(model.findPlayer("wr")).toMatchObject({
+      shape: "square",
+      position: { lateralYard: 5, downfieldYard: 90 - LOS_YARD_BY_ZONE.redzone },
+    });
   });
 });
 

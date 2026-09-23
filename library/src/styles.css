@@ -135,6 +135,10 @@
   display: contents;
 }
 
+.playmaker-panel__row span {
+  margin-right: auto;
+}
+
 .playmaker-panel__row input,
 .playmaker-panel__row select {
   font: inherit;
@@ -167,4 +171,19 @@
 .playmaker-panel__swatch[aria-pressed="true"] {
   outline: 2px solid currentColor;
   outline-offset: 1px;
+}
+
+.playmaker-panel__reset {
+  flex: 0 0 auto;
+  font: inherit;
+  padding: 2px 6px;
+  border: 1px solid var(--_playmaker-ui-border);
+  border-radius: 4px;
+  background: var(--_playmaker-ui-surface);
+  color: var(--_playmaker-ui-text);
+  cursor: pointer;
+}
+
+.playmaker-panel__reset:hover {
+  border-color: var(--_playmaker-ui-accent);
 }

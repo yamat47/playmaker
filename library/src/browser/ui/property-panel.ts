@@ -109,7 +109,11 @@ export class PropertyPanel extends Disposable {
     const setShape = this.addSelect("形状", PLAYER_SHAPE_VALUES, SHAPE_LABELS, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
-    const setColor = this.addColor("色", (v) => controller.updateSelectedPlayer({ color: v }));
+    const setColor = this.addColor(
+      "色",
+      (v) => controller.updateSelectedPlayer({ color: v }),
+      () => controller.updateSelectedPlayer({ color: null }),
+    );
     // 色の無い選手は塗りの既定色で描くので、入力にも同じ色を出す。
     const read = createThemeReader(this.element);
     const fill = toHex(read("playerFill"), THEME_TOKENS.playerFill.fallback);
@@ -133,9 +137,15 @@ export class PropertyPanel extends Disposable {
       (v) => controller.updateSelectedLine({ interpolation: v }),
     );
     const read = createThemeReader(this.element);
-    const setColor = this.addLineColor(read, (v) => controller.updateSelectedLine({ color: v }));
-    const setThickness = this.addNumber("太さ", (v) =>
-      controller.updateSelectedLine({ thickness: v }),
+    const setColor = this.addLineColor(
+      read,
+      (v) => controller.updateSelectedLine({ color: v }),
+      () => controller.updateSelectedLine({ color: null }),
+    );
+    const setThickness = this.addNumber(
+      "太さ",
+      (v) => controller.updateSelectedLine({ thickness: v }),
+      () => controller.updateSelectedLine({ thickness: null }),
     );
     return (line) => {
       setKind(line.kind);
@@ -152,21 +162,21 @@ export class PropertyPanel extends Disposable {
     this.element.appendChild(h);
   }
 
-  private addRow(labelText: string, control: HTMLElement): void {
+  private addRow(labelText: string, control: HTMLElement, onReset?: () => void): void {
     const label = document.createElement("label");
     label.className = "playmaker-panel__label";
     label.append(this.createRowText(labelText), control);
-    this.appendRow(label);
+    this.appendRow(labelText, [label], onReset);
   }
 
   /**
    * ボタンを並べた行。label で包むと、文字を押したときに先頭のボタンが押されるので、
    * ボタンの組に名前を付ける。
    */
-  private addGroupRow(labelText: string, group: HTMLElement): void {
+  private addGroupRow(labelText: string, group: HTMLElement, onReset: () => void): void {
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", labelText);
-    this.appendRow(this.createRowText(labelText), group);
+    this.appendRow(labelText, [this.createRowText(labelText), group], onReset);
   }
 
   private createRowText(text: string): HTMLElement {
@@ -175,10 +185,27 @@ export class PropertyPanel extends Disposable {
     return span;
   }
 
-  private appendRow(...children: HTMLElement[]): void {
+  /**
+   * onReset を渡すと、値を消してテーマの既定に戻すボタンを行の末尾に置く。
+   * 既定のときもボタンは押せるままにする。押した直後に無効にすると、フォーカスが body へ落ちる。
+   */
+  private appendRow(
+    labelText: string,
+    children: readonly HTMLElement[],
+    onReset: (() => void) | undefined,
+  ): void {
     const row = document.createElement("div");
     row.className = "playmaker-panel__row";
     row.append(...children);
+    if (onReset !== undefined) {
+      const reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "playmaker-panel__reset";
+      reset.textContent = "既定";
+      reset.setAttribute("aria-label", `${labelText}を既定に戻す`);
+      reset.addEventListener("click", onReset);
+      row.appendChild(reset);
+    }
     this.element.appendChild(row);
   }
 
@@ -192,7 +219,11 @@ export class PropertyPanel extends Disposable {
     };
   }
 
-  private addNumber(labelText: string, onChange: (v: number) => void): (value: number) => void {
+  private addNumber(
+    labelText: string,
+    onChange: (v: number) => void,
+    onReset: () => void,
+  ): (value: number) => void {
     const input = document.createElement("input");
     input.type = "number";
     input.min = "0.25";
@@ -203,17 +234,21 @@ export class PropertyPanel extends Disposable {
         onChange(n);
       }
     });
-    this.addRow(labelText, input);
+    this.addRow(labelText, input, onReset);
     return (value) => {
       input.value = String(value);
     };
   }
 
-  private addColor(labelText: string, onChange: (v: string) => void): (hex: string) => void {
+  private addColor(
+    labelText: string,
+    onChange: (v: string) => void,
+    onReset: () => void,
+  ): (hex: string) => void {
     const input = document.createElement("input");
     input.type = "color";
     input.addEventListener("change", () => onChange(input.value));
-    this.addRow(labelText, input);
+    this.addRow(labelText, input, onReset);
     return (hex) => {
       input.value = hex;
     };
@@ -222,6 +257,7 @@ export class PropertyPanel extends Disposable {
   private addLineColor(
     read: ThemeReader,
     onChange: (v: string) => void,
+    onReset: () => void,
   ): (value: string | undefined) => void {
     const group = document.createElement("div");
     group.className = "playmaker-panel__swatches";
@@ -237,7 +273,7 @@ export class PropertyPanel extends Disposable {
       group.appendChild(btn);
       return { btn, color };
     });
-    this.addGroupRow("色", group);
+    this.addGroupRow("色", group, onReset);
     return (value) => {
       for (const { btn, color } of swatches) {
         btn.setAttribute(

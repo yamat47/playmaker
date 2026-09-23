@@ -15,7 +15,7 @@ paths:
 
 - 置き場は `src/common/specs/<機能>.test.ts`。機能ごとに 1 ファイルにし、ソースファイルごとには置かない
 - 入口は `src/test-support/play-driver.ts` の `openPlay`。操作はヤード座標（`yd(lateral, downfield)`）で行い、
-  クリックとドラッグは `click` と `drag` を使う。ツールの切替、Undo、パネルからの編集は `editor` を直接呼ぶ
+  クリック、ドラッグ、作図の開始は `click`、`drag`、`startLine` を使う。ツールの切替、Undo、パネルからの編集は `editor` を直接呼ぶ
 - 観測するのは、session の読み取り（`getPlayData()`、`getSnapshot()`、`fieldZone`）と `loadFormation` の戻り値、
   表示状態（`editor.getViewState()`、`editor.getFrame()`、`editor.getSelectedPlayer()`、`editor.getSelectedLine()`）、
   通知（`onChange`、`notified`、`session.onDidChange`、`session.onDidReset`）だけにする

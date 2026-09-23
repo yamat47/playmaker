@@ -17,8 +17,10 @@ export interface ICommand {
 
 /** apply で控えた値を undo で取り出す。apply より前に undo されたら throw する。 */
 export function requireApplied<T>(value: T | undefined, command: ICommand): T {
+  /* v8 ignore start -- 履歴は apply が済んだコマンドしか積まないので、編集の操作からは届かない。 */
   if (value === undefined) {
     throw new Error(`${command.label}: apply より前に undo された`);
   }
+  /* v8 ignore stop */
   return value;
 }

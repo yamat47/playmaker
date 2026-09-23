@@ -22,6 +22,8 @@ export interface PlayDriver {
   click(at: FieldPosition): void;
   /** from で押し、to まで動かして離す。 */
   drag(from: FieldPosition, to: FieldPosition): void;
+  /** 作図ツールに切り替え、from にいる選手を押して描き始める。 */
+  startLine(from: FieldPosition): void;
 }
 
 /** 仕様テストの入口。利用者がする操作をヤード座標で行い、図、表示状態、通知を観測する。 */
@@ -52,6 +54,10 @@ export function openPlay(data: unknown): PlayDriver {
       session.controller.pointerDown(from);
       session.controller.pointerMove(to);
       session.controller.pointerUp(to);
+    },
+    startLine(from) {
+      session.controller.setTool("draw-line");
+      session.controller.pointerDown(from);
     },
   };
 }

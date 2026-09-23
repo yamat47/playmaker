@@ -4,8 +4,7 @@ import { openPlay, type PlayDriver, yd } from "../../test-support/play-driver.js
 import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 
 function startDrawingFromA(play: PlayDriver): PlayDriver {
-  play.editor.setTool("draw-line");
-  play.editor.pointerDown(yd(10, 0));
+  play.startLine(yd(10, 0));
   return play;
 }
 

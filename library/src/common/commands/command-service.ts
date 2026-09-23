@@ -1,4 +1,3 @@
-import type { Event } from "../base/event.js";
 import type { IPlayModel } from "../model/play-model.js";
 import type { ICommand } from "./command.js";
 import type { IUndoRedoService } from "./undo-redo-service.js";
@@ -8,8 +7,6 @@ import type { IUndoRedoService } from "./undo-redo-service.js";
  * 履歴を Model と食い違わせない。
  */
 export interface ICommandService {
-  /** 履歴が変わるたびに 1 回発火する。Model の変更通知より後に来る。 */
-  readonly onDidChangeHistory: Event<void>;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   /**
@@ -30,10 +27,6 @@ export class CommandService implements ICommandService {
   constructor(model: IPlayModel, history: IUndoRedoService) {
     this.model = model;
     this.history = history;
-  }
-
-  get onDidChangeHistory(): Event<void> {
-    return this.history.onDidChange;
   }
 
   get canUndo(): boolean {

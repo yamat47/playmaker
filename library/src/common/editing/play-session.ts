@@ -18,10 +18,8 @@ interface PlayDocument {
 function openDocument(data: unknown, onDidEdit: () => void): PlayDocument {
   const store = new DisposableStore();
   const model = store.add(new PlayModel(data));
-  const history = store.add(new UndoRedoService());
-  const controller = store.add(
-    new EditorController(model, new CommandService(model, history), new IdFactory()),
-  );
+  const commands = new CommandService(model, new UndoRedoService());
+  const controller = store.add(new EditorController(model, commands, new IdFactory()));
   store.add(model.onDidChange(onDidEdit));
   return { store, model, controller };
 }

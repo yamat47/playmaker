@@ -35,8 +35,7 @@ function openWithTwoLines() {
 /** 作図で足して選んだ線を、Undo で消した図。選択はその線を指したまま残る。 */
 function openWithVanishedLine() {
   const play = openPlay(twoPlayersWithRoute());
-  play.editor.setTool("draw-line");
-  play.editor.pointerDown(yd(20, 0));
+  play.startLine(yd(20, 0));
   play.editor.pointerDown(yd(30, 8));
   play.editor.commitLine();
   play.editor.undo();

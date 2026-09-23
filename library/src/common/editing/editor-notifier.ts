@@ -5,7 +5,7 @@ import type { Player } from "../model/player.js";
 import { type EditorViewState, isSameSelection } from "./editor.js";
 
 /** 表示状態の通知は、この値の組が前回の通知（まだ通知していなければ構築時）と違うときだけ出す。 */
-export interface ViewSnapshot {
+interface ViewSnapshot {
   readonly state: EditorViewState;
   readonly player: Player | undefined;
   readonly line: Line | undefined;
@@ -80,11 +80,6 @@ export class EditorNotifier extends Disposable {
 
   markSceneChanged(): void {
     this.sceneChanged = true;
-    this.flushIfIdle();
-  }
-
-  /** 表示状態は通知の前に読み直して前回と比べるので、変わったかもしれないときに呼べばよい。 */
-  markViewStateChanged(): void {
     this.flushIfIdle();
   }
 

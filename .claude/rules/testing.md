@@ -17,7 +17,7 @@ paths:
 - 入口は `src/test-support/play-driver.ts` の `openPlay`。操作はヤード座標（`yd(lateral, downfield)`）で行い、
   クリックとドラッグは `click` と `drag` を使う。ツールの切替、Undo、パネルからの編集は `editor` を直接呼ぶ
 - 観測するのは、session の読み取り（`getPlayData()`、`getSnapshot()`、`fieldZone`）と `loadFormation` の戻り値、
-  表示状態（`editor.getViewState()`、`editor.getFrame()`）、
+  表示状態（`editor.getViewState()`、`editor.getFrame()`、`editor.getSelectedPlayer()`、`editor.getSelectedLine()`）、
   通知（`onChange`、`notified`、`session.onDidChange`、`session.onDidReset`）だけにする
 - 購読していない状態を確かめるときだけ、`openPlay` を使わずに `PlaySession` を直接作る
 - コマンド、interaction、preview、PlayModel のような内部のモジュールを import しない。

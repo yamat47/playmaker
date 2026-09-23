@@ -74,7 +74,10 @@ export class Playmaker extends Disposable {
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
     super();
     this.mode = options.mode ?? "edit";
-    this.session = this._register(new PlaySession(options.initialData, options.onChange));
+    this.session = this._register(new PlaySession(options.initialData));
+    if (options.onChange !== undefined) {
+      this._register(this.session.onDidChange(options.onChange));
+    }
 
     this.root = document.createElement("div");
     this.root.className = "playmaker-root";

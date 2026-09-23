@@ -191,4 +191,4 @@ VS Code では「Dev Containers: Reopen in Container」で開くと、`library/`
 Dev Containers のターミナルからも同じ `make` ターゲットが使える（`up` / `down` などコンテナ操作系はホストから）。
 
 今の設計とその理由は `docs/design.md`、要件は `docs/prd.md`、
-テストの規約は `.claude/rules/testing.md`、コメントやコミットの書き方は `.claude/skills/writing-conventions/` を参照。
+コーディング規約は `.claude/rules/testing.md` と `.claude/skills/writing-conventions/`、`.claude/skills/typescript-idioms/` を参照。

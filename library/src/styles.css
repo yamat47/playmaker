@@ -22,6 +22,26 @@
 .playmaker-stage {
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * 編集 UI は canvas に描かず HTML で置くので、PNG に書き出すときに UI が入らない。
+ * canvas に重ねるとフィールドが隠れるので、grid で canvas の上と横に並べる。
+ */
+.playmaker-root[data-mode="edit"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "toolbar toolbar"
+    "stage panel";
+  gap: 8px;
+}
+
+.playmaker-root[data-mode="edit"] .playmaker-stage {
+  grid-area: stage;
 }
 
 .playmaker-canvas {
@@ -38,12 +58,8 @@
   touch-action: none;
 }
 
-/* 編集 UI は Canvas の上に HTML で重ねる。PNG に書き出すとき、UI を含めずに済むため。 */
 .playmaker-toolbar {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
+  grid-area: toolbar;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -102,10 +118,12 @@
 }
 
 .playmaker-panel {
-  position: absolute;
-  top: 56px;
-  right: 8px;
+  grid-area: panel;
+  align-self: start;
+  box-sizing: border-box;
   width: 200px;
+  max-height: 100%;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;

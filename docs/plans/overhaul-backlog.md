@@ -547,33 +547,38 @@ PR 単位で、依存順に並べる。
   - T15b1 選択と選手の編集（done）。選択、選手の追加、ドラッグ、削除、値の編集を `selection.test.ts` と `players.test.ts` に移し、player-commands と patch の単体テストを消した。選手と線の Update コマンドが自前で持っていた未知 id の throw は編集の操作から届かないので、PlayModel の `getPlayer` と `getLine` に寄せた。
   - T15b2 線の編集（done）。作図、ハンドルのドラッグ、線の削除と値の編集、上限を `drawing.test.ts` と `lines.test.ts` に移し、line-commands、interaction、preview の単体テストを消した。打点を waypoint と終点に分ける関数の「点が無い」分岐は届かなかったので、確定のときに長さを測る前に分けるようにした。ツール切替で作図をやめるときの通知の順序は、ツール切替のテストと一緒に T15b3 で移す。
   - T15b3 履歴、ゾーン、隊形と通知（done）。Undo と Redo、ゾーンの切替、ツールの切替を `history.test.ts`、`field-zone.test.ts`、`tools.test.ts` に移し、隊形の読み込みを `loading.test.ts` に足した。editor-controller、undo-redo-service、command-service、edit-flow、field-commands、formation-commands、editor-notifier の単体テストを消した。どこからも呼ばれていなかった `getTool` は消した。T8-1 で足した履歴の通知（`onDidChangeHistory`）も消した。controller の編集はすべて batch の中で起き、batch の終わりに canUndo と canRedo を読み直すので、購読しても何も変わらなかった。controller を通さない編集の経路ができたら足し直す。apply の前に undo されたときの throw は、履歴が apply 済みのコマンドしか積まないので届かず、理由付きの `v8 ignore` にした。コマンドが throw したときに履歴を動かさない約束も、編集の操作からは届かないのでテストを持たない。
-- T15c ブラウザテスト。Browser Mode を入れ、Docker イメージにも Chromium を入れる。
+  - T15b4 残した単体テストの書き方（done）。T15-1、T15-2、T15-5〜T15-7 を片付けた。プリセットはプリセットごとの `it.each` にし、件数の固定をやめた。形状、種別、起点の選手の検査は、正規化しても変わらないことで確かめる（正規化はどれも弾くか既定に寄せるので、壊れていれば差が出る）。寸法は係数を写さず、幅と 1 ヤードの px のどちらに比例するかで確かめる。
+- T15c ブラウザテスト。Browser Mode を入れ、Docker イメージにも Chromium を入れる。Chromium は Dockerfile と CI の両方で、lockfile の playwright と同じ版の `playwright install --with-deps chromium` で入れる（2026-09-23 に決着）。Debian の chromium は版が playwright の想定とずれるので使わない。cloud 版のセッションでは `/opt/pw-browsers` の Chromium を環境変数で指す。
 
 controller の構造を分けるか（ジェスチャの解釈を切り出すか）は、T15b のあとで設計上の理由だけで決める。
 
-- [ ] **T15-1 [should] テスト名とコメントがカバレッジの分岐に引きずられている**
+- [x] **T15-1 [should] テスト名とコメントがカバレッジの分岐に引きずられている**
   - locations: library/src/common/editing/editor-controller.test.ts:342, library/src/common/editing/editor-controller.test.ts:414, library/src/common/editing/editor-controller.test.ts:599, library/src/common/editing/editor-controller.test.ts:827-839, library/src/common/commands/player-commands.test.ts:119, library/src/common/commands/line-commands.test.ts:106, library/src/common/model/play-model.test.ts:125, library/src/common/model/play-model.test.ts:147, library/src/common/model/play-model.test.ts:169, library/src/common/model/play-model.test.ts:292, library/src/common/geometry/hit-test.test.ts:175, library/src/common/model/migration.test.ts:52
-- [ ] **T15-2 [should] 1 つの it に複数の振る舞いを詰め込んでいる**
+- [x] **T15-2 [should] 1 つの it に複数の振る舞いを詰め込んでいる**
   - locations: library/src/common/editing/editor-controller.test.ts:141, library/src/common/editing/editor-controller.test.ts:239, library/src/common/editing/editor-controller.test.ts:249, library/src/common/editing/editor-controller.test.ts:301, library/src/common/editing/editor-controller.test.ts:321, library/src/common/editing/editor-controller.test.ts:497, library/src/common/editing/editor-controller.test.ts:649, library/src/common/editing/editor-controller.test.ts:669, library/src/common/editing/editor-controller.test.ts:689, library/src/common/editing/editor-controller.test.ts:731, library/src/common/editing/editor-controller.test.ts:799, library/src/common/commands/line-commands.test.ts:44, library/src/common/commands/line-commands.test.ts:115, library/src/common/commands/player-commands.test.ts:89, library/src/common/commands/player-commands.test.ts:128, library/src/common/model/play-model.test.ts:96, library/src/common/model/play-model.test.ts:272, library/src/common/model/play-model.test.ts:285
 - [x] **T15-3 [should] 「コマンドを出さない」系の検証が間接的で、フェイクの ICommandService を使っていない（常に真になる assert もある）**
   - locations: library/src/common/editing/editor-controller.test.ts:32, library/src/common/editing/editor-controller.test.ts:290, library/src/common/editing/editor-controller.test.ts:383, library/src/common/editing/editor-controller.test.ts:556, library/src/common/editing/editor-controller.test.ts:618-629, library/src/common/editing/editor-controller.test.ts:640, library/src/common/editing/editor-controller.test.ts:699, library/src/common/editing/editor-controller.test.ts:750
 - [x] **T15-4 [should] editor-controller.test.ts（839 行）を機能ごとに分け、Arrange の重複を解消する**
   - locations: library/src/common/editing/editor-controller.test.ts:1, library/src/common/editing/editor-controller.test.ts:4, library/src/common/editing/editor-controller.test.ts:362, library/src/common/editing/editor-controller.test.ts:415, library/src/common/editing/editor-controller.test.ts:498, library/src/common/editing/editor-controller.test.ts:568
-- [ ] **T15-5 [should] プリセットの健全性テストが for ループにまとめられ、名前と検証内容もずれている**
+- [x] **T15-5 [should] プリセットの健全性テストが for ループにまとめられ、名前と検証内容もずれている**
   - locations: library/src/common/formations/presets.test.ts:15, library/src/common/formations/presets.test.ts:37, library/src/common/plays/presets.test.ts:9, library/src/common/plays/presets.test.ts:23, library/src/common/plays/presets.test.ts:47, library/src/common/plays/presets.test.ts:62
-- [ ] **T15-6 [nit] 実装の係数を写しただけのテスト、弱い定数テスト、何も検証しない型テスト、重複テスト**
+- [x] **T15-6 [nit] 実装の係数を写しただけのテスト、弱い定数テスト、何も検証しない型テスト、重複テスト**
   - locations: library/src/common/design/metrics.test.ts:6, library/src/common/design/metrics.test.ts:28, library/src/common/model/player.test.ts:27, library/src/common/geometry/hit-test.test.ts:164, library/src/common/formations/formation.test.ts:90-103, library/src/common/editing/id-factory.test.ts:33
-- [ ] **T15-7 [nit] AAA のコメントが一部のテストにしかない**
+- [x] **T15-7 [nit] AAA のコメントが一部のテストにしかない**
   - locations: library/src/common/event/emitter.test.ts:70, library/src/common/event/emitter.test.ts:82
   - 対応: コメントを削り、空行で段を区切る書き方に揃える。
 - [ ] **T15-8 [nit] setPlayData で controller が作り直されるので、利用側がそのたびに通知を購読し直している**（T15a で追加）
   - locations: library/src/playmaker.ts:127, library/src/test-support/play-driver.ts:33-38
   - 対応: PlaySession が scene と表示状態の通知を転送し、作り直しを内側で吸収するか。controller の構造を分けるかと一緒に、T15b のあとで決める。
+- [ ] **T15-9 [should] PlayModel の単体テストが、仕様テストで確かめている振る舞いを重ねて確かめている**（T15b4 で追加）
+  - locations: library/src/common/model/play-model.test.ts, library/src/common/model/play-model.ts（insertLine の位置の丸め）
+  - 問題: testing.md の単体テストの対象に PlayModel は無い。選手を消すと線も消えること、戻すと元の並びに戻ること、1 回だけ通知することは specs/players.test.ts などでも確かめている。
+  - 対応: 仕様テストから届く分は消し、届かない約束（未知の id や重複した id での throw、件数の上限、構築時の migrate）だけ残す。insertLine の範囲外の位置を丸める処理は、履歴が記録した範囲内の位置でしか呼ばれないので、届かないコードとして消す。
 
 - 依存: T5-5、T9、T10（コードの形が固まってから）
 - 完了条件: 編集の振る舞いが仕様テストで確かめられ、実装に依存するテストが残っていない。Playmaker の結線をブラウザテストで確かめている。common 100% を維持する。
 - 規模: L（T15-0、T15a、T15b、T15c）
-- 進み具合: T15-0、T15a、T15b1、T15b2、T15b3 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。T15-1、T15-2、T15-5〜T15-7 は残した単体テスト（play-model、hit-test、migration、プリセット、metrics など）の分が残っている。
+- 進み具合: T15-0、T15a、T15b1〜T15b4 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。残りは T15-8、T15-9 と T15c。
 
 ---
 

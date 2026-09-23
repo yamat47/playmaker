@@ -625,19 +625,20 @@ controller の構造は分けない（2026-09-23 に決着）。ジェスチャ�
 
 ---
 
-### T17 demo の整備
+### T17 demo の整備 (done)
 
-- [ ] **T17-1 [should] demo が公開 API の手本になっていない**
+- [x] **T17-1 [should] demo が公開 API の手本になっていない**
   - locations: library/demo/main.ts:27, library/demo/main.ts:410-419, library/demo/main.ts:511-523, library/demo/main.ts:534, library/demo/main.ts:579, library/demo/main.ts:598, library/demo/main.ts:602, library/src/playmaker.ts:18, library/vite.config.ts:14-18
   - 対応: フォーメーションの読込は `loadFormation` を使う。モードの切替は `setMode` を使う。空の PlayData の組み立ては 1 関数にまとめ、`as PlayData` をなくす。CSS は `import "playmaker/styles.css"` で明示的に読む。要素の取得は instanceof で確かめる。
 - [x] **T17-2 [nit] PNG 出力ハンドラにエラー処理がない**（T5-2 の lint に当たるので T5 で対応した）
   - locations: library/demo/main.ts:550-560, library/demo/main.ts:598
   - 対応: try/catch で包み、失敗を status に表示する。catch は `instanceof Error` で狭める。
-- [ ] **T17-3 [nit] 件数のコメントと区切り見出し**
+- [x] **T17-3 [nit] 件数のコメントと区切り見出し**
   - locations: library/demo/main.ts:2, library/demo/main.ts:45, library/demo/main.ts:354, library/demo/main.ts:509, library/demo/main.ts:575
-  - 対応: main.ts:45 の DEFENSE_COLOR の再定義は、T6-6 で移した共有の定数を使う。
+  - 対応: 件数は fixture の配列から表示する。DEFENSE_COLOR は demo の中に残す。共有の定数は公開していないので、使うと「公開 API だけで動く」に反する。密度ストレスの図は demo 自身のデータなので、色も demo で決める（2026-09-23 にユーザーが決定）。
 
 - 依存: T14
+- 進み具合: 1 本で閉じた。フォーメーションの読込は `loadFormation` にしたので、押すと図を差し替えずに今の図へ選手を足す（攻守を重ねられ、Undo で戻せる）。上限で置けなかったときは、表示中の名前とレールの強調を変えない。モードの切替は T14 で `setMode` になっていた。CSS は利用者と同じく `playmaker/styles.css` を別に読み、vite の alias にこの指定子を足した。ファイル冒頭の定型ブロック、PRD の章番号、「→」、区切り見出しも消した。Docker が無い環境だったので、run-demo の代わりに dev サーバーを make pnpm で起動し、Chromium で全ボタンを操作して確かめた。
 - 完了条件: demo が公開 API だけで動き、キャストがない。run-demo で全操作を確かめる。
 - 規模: S
 

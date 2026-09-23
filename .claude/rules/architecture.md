@@ -16,7 +16,7 @@ Playmaker はアメフトのプレー図を作成・表示する UI フレーム
 
 ```
 src/
-  common/    # DOM 非依存の純ロジック。node 単体テストで機能カバレッジを全網羅
+  common/    # DOM 非依存の純ロジック。node のテストで機能カバレッジを全網羅
   browser/   # DOM / Canvas 依存。common に依存
   playmaker.ts  # 公開エントリ。層を結線し options と onChange を提供する
 ```
@@ -39,7 +39,7 @@ PNG の書き出しは図の層だけで描くので、選択の強調やハン�
 純粋な `PlayModel`（`common`）が状態を持ち、`onChange` / イベントを発火。View（`browser`）は購読して描画。View からモデルを直接書き換えない。
 
 ### 3. コマンドパターン
-すべての編集操作を `ICommand`（apply / undo）として表現し、Undo/Redo を単一機構に統一。UI なしで `common` 単体テストできる形にする。
+すべての編集操作を `ICommand`（apply / undo）として表現し、Undo/Redo を単一機構に統一。UI なしで `common` のテストから確かめられる形にする。
 `apply` は Model を変えたかを返し、何も変えなかった操作は `CommandService` が履歴に積まない。
 
 ### 4. ライフサイクル

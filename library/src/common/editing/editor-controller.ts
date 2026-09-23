@@ -95,10 +95,6 @@ export class EditorController extends Disposable implements IEditorController {
     this._register(this.commands.onDidChangeHistory(() => this.notifier.markViewStateChanged()));
   }
 
-  getTool(): EditorTool {
-    return this.tool;
-  }
-
   getSelection(): EditorSelection {
     return this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
       ? null

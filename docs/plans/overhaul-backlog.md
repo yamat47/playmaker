@@ -554,6 +554,7 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/design/metrics.ts:28, library/src/common/design/metrics.ts:39, library/src/common/model/player.ts:117, library/src/common/editing/editor-controller.ts:218, library/src/common/editing/editor-controller.ts:566, library/src/common/editing/editor-controller.ts:620, library/src/browser/rendering/field-renderer.ts:29, library/src/browser/rendering/field-renderer.ts:67, library/src/playmaker.ts:103, library/src/common/geometry/field.ts:85, library/src/browser/input/pointer-input.ts:31
 
 - 依存: T3、T6〜T14（コードが固まってから一括で行う）
+- 進み具合: T11 に入る前に、#75〜#83 で足したコメントとテスト名だけを writing-conventions に照らして先に直した。T16-4 の plays/presets.ts:1、T16-6 と T16-7 の toolbar.ts:1、T16-8 の image-export.ts のカバレッジを理由にした記述、T16-9 の formation.ts:25 は片付いている。同じファイルに残る冒頭ブロックや PRD 参照は、この項目のまま残す。
 - 完了条件: `grep` で「＝」の略記、「→」、マイルストーン名、「DOM 非依存」の定型が見つからない。PRD 参照が D2 の基準に収まる。
 - 規模: M
 

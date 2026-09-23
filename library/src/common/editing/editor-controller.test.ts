@@ -1251,3 +1251,43 @@ describe("EditorController: 履歴の通知", () => {
     expect(changes).toHaveBeenCalledOnce();
   });
 });
+
+describe("EditorController: 中心から外れた位置を掴んだドラッグ", () => {
+  it("選手は掴んだ点とポインタのずれを保って動き、離した位置にもずれが残る", () => {
+    const { controller, model } = setup();
+    controller.pointerDown({ lateralYard: 10.5, downfieldYard: 0.25 }); // p-a の中心から外れた点
+
+    controller.pointerMove({ lateralYard: 14.5, downfieldYard: 3.25 });
+    const preview = controller.getRenderModel().players.find((p) => p.id === "p-a");
+    controller.pointerUp({ lateralYard: 14.5, downfieldYard: 3.25 });
+
+    expect(preview?.position).toEqual({ lateralYard: 14, downfieldYard: 3 });
+    expect(model.findPlayer("p-a")?.position).toEqual({ lateralYard: 14, downfieldYard: 3 });
+  });
+
+  it("waypoint は掴んだ点とポインタのずれを保って動く", () => {
+    const { controller, model } = setup();
+    controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 を選択
+    controller.pointerDown({ lateralYard: 15.5, downfieldYard: 2.25 }); // waypoint 0 の中心から外れた点
+
+    controller.pointerMove({ lateralYard: 18.5, downfieldYard: 4.25 });
+    const handle = controller.getOverlay();
+    controller.pointerUp({ lateralYard: 18.5, downfieldYard: 4.25 });
+
+    expect(handle).toMatchObject({ waypointHandles: [{ lateralYard: 18, downfieldYard: 4 }] });
+    expect(model.findLine("l-1")?.waypoints).toEqual([{ lateralYard: 18, downfieldYard: 4 }]);
+  });
+
+  it("終点は掴んだ点とポインタのずれを保って動く", () => {
+    const { controller, model } = setup();
+    controller.pointerDown({ lateralYard: 25, downfieldYard: 5 }); // l-1 を選択
+    controller.pointerDown({ lateralYard: 25.5, downfieldYard: 5.25 }); // 終点の中心から外れた点
+
+    controller.pointerMove({ lateralYard: 28.5, downfieldYard: 8.25 });
+    const handle = controller.getOverlay();
+    controller.pointerUp({ lateralYard: 28.5, downfieldYard: 8.25 });
+
+    expect(handle).toMatchObject({ endpointHandle: { lateralYard: 28, downfieldYard: 8 } });
+    expect(model.findLine("l-1")?.end).toEqual({ lateralYard: 28, downfieldYard: 8 });
+  });
+});

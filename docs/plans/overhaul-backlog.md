@@ -286,27 +286,30 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T8 コマンドと履歴の再編
+### T8 コマンドと履歴の再編 (done)
 
-- [ ] **T8-1 [should] UndoRedoService と CommandService がどちらも model を持ち、apply の経路が 2 本ある。履歴イベントもない**（T1-1 の恒久策）
+- [x] **T8-1 [should] UndoRedoService と CommandService がどちらも model を持ち、apply の経路が 2 本ある。履歴イベントもない**（T1-1 の恒久策）
   - locations: library/src/common/commands/command-service.ts:16-26, library/src/common/undoRedo/undo-redo-service.ts:11-19, library/src/common/undoRedo/undo-redo-service.ts:26, library/src/common/undoRedo/undo-redo-service.ts:42-59, library/src/common/editing/editor-controller.ts:176-181, library/src/common/editing/editor-controller.ts:495-501
   - 対応: IUndoRedoService は model を持たない純粋なスタックにし、onDidChange を持たせる。ICommandService を execute、undo、redo、canUndo、canRedo の唯一の実行者にする。実行は「先に実行し、成功したらスタックを移す」順にする。clear は削除する。
-- [ ] **T8-2 [should] コマンドの定型（apply 未実行の throw と、find→差し替え→previous 保持）が 8 回繰り返されている**
+  - 結論: IUndoRedoService は peekUndo、peekRedo、push、markUndone、markRedone だけを持つ。ICommandService は履歴の変化を onDidChangeHistory で流す。EditorController は ICommandService と IIdFactory だけに依存する。T1-1 の「発火を編集の後へ遅らせる」仕組みは、T9 でイベントを分けるまで残した。
+- [x] **T8-2 [should] コマンドの定型（apply 未実行の throw と、find→差し替え→previous 保持）が 8 回繰り返されている**
   - locations: library/src/common/commands/field-commands.ts:20-24, library/src/common/commands/line-commands.ts:47-52, library/src/common/commands/line-commands.ts:68-94, library/src/common/commands/line-commands.ts:110-126, library/src/common/commands/line-commands.ts:142-155, library/src/common/commands/player-commands.ts:47-52, library/src/common/commands/player-commands.ts:68-81, library/src/common/commands/player-commands.ts:97-121
   - 対応: `requireApplied` を置く。コマンドは UpdateLine と UpdatePlayer に統合し、SetLineWaypoints、SetLineEnd、MovePlayer は削除する。パッチの適用は `applyLinePatch` と `applyPlayerPatch` の純関数にする。
   - 補足: T7 で null による「既定に戻す」を入れたので、UpdateLine と UpdatePlayer は今、Line と Player のフィールドを 1 つずつ書き写して組み立てている。フィールドを足すとパッチの適用で黙って落ちるので、applyLinePatch と applyPlayerPatch では `...current` を起点にし、「undefined は現状維持、null は消す」の規則を 1 か所にまとめる（EditorController の patchChangesAnything も同じ規則を持つ）。
-- [ ] **T8-3 [nit] ディレクトリ名 `undoRedo/` だけがキャメルケース**
+  - 結論: パッチの型、適用、patchChangesAnything を `commands/patch.ts` に集めた。コマンドの構築時のコピーは残した。型は readonly でも、呼び出し側は書き換えられる値を渡せるので、redo の結果が揺れないよう境界で切り離す。
+- [x] **T8-3 [nit] ディレクトリ名 `undoRedo/` だけがキャメルケース**
   - locations: library/src/common/undoRedo/undo-redo-service.ts:1
   - 対応: commands/ に統合する。
-- [ ] **T8-4 [should] removePlayers が途中の未知 id で throw すると、それまでの削除が通知なしで状態に残る**
+- [x] **T8-4 [should] removePlayers が途中の未知 id で throw すると、それまでの削除が通知なしで状態に残る**
   - locations: library/src/common/model/play-model.ts（removePlayers と removePlayerCore）
   - 問題: 1 件ずつ state を書き換えてから次の id を探すので、後ろの id が無いと前の削除だけが残る。onDidChange も出ず、コマンドは履歴に積まれないので Undo でも戻せない。T1-2 で addPlayers は先に全件を検証する形に直したが、removePlayers は変更前からこの挙動のまま。
   - 対応: 書き換える前に全 id の実在を確かめる。T8-1 の「コマンドが throw してもスタックが壊れない」テストと合わせて、状態も変わらないことを確かめる。
 
-- [ ] **T8-5 [should] 件数の上限が外部データの正規化にしか掛かっていない**（T6-7 の残り）
+- [x] **T8-5 [should] 件数の上限が外部データの正規化にしか掛かっていない**（T6-7 の残り）
   - locations: library/src/common/commands/player-commands.ts（AddPlayerCommand）, library/src/common/commands/formation-commands.ts, library/src/common/commands/line-commands.ts（AddLineCommand、SetLineWaypointsCommand）, library/src/common/editing/editor-controller.ts（loadFormation と作図の確定）, library/src/common/model/play-model.ts（addPlayers、addLine）
   - 問題: 作図での打点、選手の追加、`loadFormation` の繰り返しでは MAX_PLAYERS などを超えられる。超えた図は `getPlayData` から戻したときに黙って切り詰められ、ホストが `loadFormation` を繰り返せば描画の負荷も上限なく増える。公開 API の JSDoc にはこの切り詰めを書いてある。
   - 対応: 上限を PlayModel の不変条件にし、追加系のコマンドは上限で止める（UI のボタンも無効にする）か、今のまま JSDoc の注記で済ませるかを決める。
+  - 結論: 上限を PlayModel の不変条件にした。選手と線の追加、線の差し替え、選手の復元で超えると throw する。EditorController は超える操作を事前に止める。上限に達したら選手を追加しない。読むと超えるフォーメーションは、隊形が欠けるので丸ごと読まない。線が上限の本数なら作図を始めず、作図中は終点を含めて waypoint の上限 + 1 点より先の打点を無視する。上限に達したことを UI で知らせる表示は、T14 の公開 API 整理に合わせて検討する。
 
 - 依存: T6、T7
 - 完了条件: EditorController が ICommandService だけに依存する。履歴の変化で通知が出る。コマンドが throw してもスタックが壊れないことをテストで確かめる。

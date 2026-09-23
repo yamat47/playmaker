@@ -2,24 +2,9 @@
 // 位置決定は common の FieldGeometry に委譲し、本クラスは描画命令だけを持つ
 // → ロジックは common 単体テストで網羅し、ここは VRT なしでも薄く保てる。
 
-import {
-  type FieldGeometry,
-  type FieldMetrics,
-  PLAYER_RADIUS_YARDS,
-  type Player,
-  type PlayerShape,
-} from "../../common/index.js";
+import { PLAYER_RADIUS_YARDS, type PlayerShape } from "../../common/index.js";
 import { FIELD_FONT_FAMILY } from "../theme/field-font.js";
-
-/** 色は CSS 変数（--playmaker-*）由来。商用ソフトが上書きできる（PRD 6.5）。 */
-export interface PlayerTheme {
-  /** player.color 未指定時の塗り。 */
-  fillColor: string;
-  /** マーカーの輪郭（芝とのコントラスト確保）。 */
-  strokeColor: string;
-  /** ラベル文字色。 */
-  labelColor: string;
-}
+import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 // 正多角形の頂点角（apex を上に向ける）。circle は arc で特別扱い。
 // 当たり領域（hit-test）は半径 r の外接円なので、全頂点を r 上に置き整合させる。
@@ -46,18 +31,14 @@ const SHAPE_ROTATION: Record<Exclude<PlayerShape, "circle">, number> = {
 // 外接円のまま＝hit-test の一様性（player.ts の不変条件）は崩さない。
 const CIRCLE_DRAW_SCALE = 0.82;
 
-export class PlayerRenderer {
-  /**
-   * players を配列順（後の要素ほど上）に描く。
-   * ctx は CanvasSurface 側で DPR 変換済み（CSS px 空間で描いてよい）。
-   */
-  draw(
-    ctx: CanvasRenderingContext2D,
-    geometry: FieldGeometry,
-    players: readonly Player[],
-    theme: PlayerTheme,
-    metrics: FieldMetrics,
-  ): void {
+export class PlayerRenderer implements ILayerRenderer {
+  /** players を配列順（後の要素ほど上）に描く。 */
+  draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
+    const { geometry, metrics } = frame;
+    const { players } = frame.scene;
+    const fill = frame.theme("playerFill");
+    const stroke = frame.theme("playerStroke");
+    const labelColor = frame.theme("playerLabel");
     // 半径は hit-test と一致させるため PLAYER_RADIUS_YARDS から導く（player.ts の不変条件）。
     // 枠線・ラベルは D 比トークン（metrics）を使い、寸法を 1 か所へ集約する。
     const r = PLAYER_RADIUS_YARDS * geometry.scale;
@@ -77,14 +58,14 @@ export class PlayerRenderer {
       } else {
         this.tracePolygon(ctx, x, y, r, player.shape);
       }
-      ctx.fillStyle = player.color ?? theme.fillColor;
+      ctx.fillStyle = player.color ?? fill;
       ctx.fill();
       ctx.lineWidth = strokeWidth;
-      ctx.strokeStyle = theme.strokeColor;
+      ctx.strokeStyle = stroke;
       ctx.stroke();
 
       if (player.label !== "") {
-        ctx.fillStyle = theme.labelColor;
+        ctx.fillStyle = labelColor;
         ctx.font = `700 ${fontPx}px ${FIELD_FONT_FAMILY}`;
         ctx.textAlign = "center";
         // textBaseline="middle" は em ボックス基準でフォント次第で上下にずれる。

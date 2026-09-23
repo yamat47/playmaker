@@ -30,6 +30,7 @@ export {
   blockCapEndpoints,
   trimForArrowHead,
 } from "./geometry/line-decoration.js";
+export { playerMarkerOutline } from "./geometry/player-marker.js";
 export { isOneOf } from "./model/guards.js";
 export {
   DEFAULT_LINE_THICKNESS,

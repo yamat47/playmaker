@@ -386,20 +386,24 @@ PR 単位で、依存順に並べる。
 
 ---
 
-### T11 テーマとトークン（browser）
+### T11 テーマとトークン（browser） (done)
 
-- [ ] **T11-1 [should] テーマ既定値が 4 か所に分かれて定義され、値が食い違っている**
+- [x] **T11-1 [should] テーマ既定値が 4 か所に分かれて定義され、値が食い違っている**
   - locations: library/src/styles.css:25-45, library/src/browser/rendering/canvas-surface.ts:148, library/src/browser/rendering/canvas-surface.ts:239-257, library/src/common/design/line-palette.ts:14-17, library/src/browser/ui/property-panel.ts:133
   - 問題: 選手の色 input の既定値 #1e3fae が、実際の塗り #2b4c72 と一致しない。
   - 対応: `THEME_TOKENS` を 1 つだけ定義し、全箇所をそこから解決する。線パレットには専用の変数を用意する。
-- [ ] **T11-2 [should] CSS 変数を .playmaker-root 自身で宣言しているため祖先からの上書きが届かず、テーマを変えても再描画されない**
+  - 結論（2026-09-23 にユーザーと決着）: Canvas に描く色の既定値は `browser/theme/tokens.ts` の THEME_TOKENS だけに置き、描く前に getComputedStyle で解決する。ツールバーとパネルの色は CSS だけで決まるので、既定値は styles.css の内部用の変数（`--_playmaker-ui-*`）に 1 回だけ書く。選手の色の入力の既定値は、塗りの既定色を読む。
+- [x] **T11-2 [should] CSS 変数を .playmaker-root 自身で宣言しているため祖先からの上書きが届かず、テーマを変えても再描画されない**
   - locations: library/src/styles.css:22-46, library/src/browser/rendering/canvas-surface.ts:262-268, library/src/browser/ui/property-panel.ts:141-145
   - 対応: 使う側で `var(--x, 既定値)` と書く。`refresh()` を追加する（公開は T14）。
-- [ ] **T11-3 [nit] CSS 変数の命名がばらばらで、ハードコード色や効いていない CSS も残っている**
+  - 結論: 公開の変数は .playmaker-root で宣言しない。CanvasSurface と PropertyPanel に refresh を足した。Playmaker から呼べるようにするのは T14-6。
+- [x] **T11-3 [nit] CSS 変数の命名がばらばらで、ハードコード色や効いていない CSS も残っている**
+  - 結論（2026-09-23 にユーザーと決着）: `--playmaker-<部位>-<部品>` に揃え、-color や -bg の接尾辞はやめた。ハンドルの縁取り、押されたボタンの文字色、スウォッチの枠をテーマ変数にした。view モードで UI を隠す CSS は、UI をそもそも作らないので消した。README の変数一覧も合わせた。
   - locations: library/src/styles.css:25-45, library/src/styles.css:100, library/src/styles.css:187, library/src/styles.css:197-201, library/src/browser/rendering/canvas-surface.ts:189, library/src/browser/rendering/canvas-surface.ts:206
-- [ ] **T11-4 [nit] common/design/ に CSS の知識（変数名とフォント名）がある**
+- [x] **T11-4 [nit] common/design/ に CSS の知識（変数名とフォント名）がある**
   - locations: library/src/common/design/line-palette.ts:1-18, library/src/common/design/field-font.ts:1-8
   - 対応: `browser/theme/` へ移す。
+  - 結論: getComputedStyle を使う reader は theme-reader.ts に分けた。テストは DOM の型を持たないので、値だけのファイルを直接読めるようにするため。
 
 - 依存: T10
 - 完了条件: 既定値の定義が 1 か所になる。ホストが祖先要素で変数を上書きすると、refresh 後に反映される。
@@ -456,6 +460,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T13-6 [nit] 色未指定の選手でカラー入力の初期色がテーマの塗りと合わない。既定に戻す UI もない**
   - locations: library/src/browser/ui/property-panel.ts:133, library/src/styles.css:35
   - 対応: 既定色はテーマの解決値を使う。D11 が A なら既定ボタンを足す。
+  - 進み具合: 既定色は T11 でテーマの解決値にした。残りは既定に戻すボタン。
 - [ ] **T13-7 [should] 最後の 1 手を戻すと「元に戻す」が無効になってフォーカスが body に落ち、以降のショートカットが効かない**
   - locations: library/src/browser/ui/toolbar.ts（sync で disabled にする箇所）, library/src/browser/input/pointer-input.ts（keydown を root で受ける箇所）
   - 問題: keydown は root で受けるが、無効化されたボタンからフォーカスが外れると、キーは root の外（body）に届く。T2 の demo 確認で見つけた。
@@ -464,6 +469,10 @@ PR 単位で、依存順に並べる。
   - locations: library/src/browser/ui/toolbar.ts
   - 問題: 上限に達すると EditorController は何もしないが、ボタンは押せるままで、押しても反応がない理由が分からない。
   - 対応: EditorViewState に上限に達したかを足し、ボタンを無効にするか理由を示す。
+- [ ] **T13-9 [nit] ホストがテーマ変数に hex 以外の色を書くと、色の入力とスウォッチの選択表示がずれる**（T11 で追加）
+  - locations: library/src/browser/ui/property-panel.ts（toHex と addLineColor）, library/src/browser/theme/theme-reader.ts
+  - 問題: color input は 6 桁の hex しか受け付けないので、`rgb()` や色名を書くと入力は既定色になる。スウォッチは解決した文字列をそのまま Line.color に保存し、保存済みの色と文字列で比べるので、書き方が違うと選択中に見えない。
+  - 対応: reader で色を正規化する段を 1 つ設け（canvas の fillStyle に通すなど）、hex が要る箇所はそこから読む。
 
 - 依存: T9、T11、T12、D17、D18
 - 完了条件: キーボードだけで連続して編集できる。UI が canvas に重ならない。表示はすべて日本語になる。
@@ -554,7 +563,7 @@ PR 単位で、依存順に並べる。
   - locations: library/src/common/design/metrics.ts:28, library/src/common/design/metrics.ts:39, library/src/common/model/player.ts:117, library/src/common/editing/editor-controller.ts:218, library/src/common/editing/editor-controller.ts:566, library/src/common/editing/editor-controller.ts:620, library/src/browser/rendering/field-renderer.ts:29, library/src/browser/rendering/field-renderer.ts:67, library/src/playmaker.ts:103, library/src/common/geometry/field.ts:85, library/src/browser/input/pointer-input.ts:31
 
 - 依存: T3、T6〜T14（コードが固まってから一括で行う）
-- 進み具合: T11 に入る前に、#75〜#83 で足したコメントとテスト名だけを writing-conventions に照らして先に直した。T16-4 の plays/presets.ts:1、T16-6 と T16-7 の toolbar.ts:1、T16-8 の image-export.ts のカバレッジを理由にした記述、T16-9 の formation.ts:25 は片付いている。同じファイルに残る冒頭ブロックや PRD 参照は、この項目のまま残す。
+- 進み具合: T11 に入る前に、#75〜#83 で足したコメントとテスト名だけを writing-conventions に照らして先に直した。T16-4 の plays/presets.ts:1、T16-6 と T16-7 の toolbar.ts:1、T16-8 の image-export.ts のカバレッジを理由にした記述、T16-9 の formation.ts:25 は片付いている。同じファイルに残る冒頭ブロックや PRD 参照は、この項目のまま残す。field-font.ts は T11 で browser/theme/ へ移し、冒頭の PRD 参照も消した。
 - 完了条件: `grep` で「＝」の略記、「→」、マイルストーン名、「DOM 非依存」の定型が見つからない。PRD 参照が D2 の基準に収まる。
 - 規模: M
 
@@ -586,6 +595,7 @@ PR 単位で、依存順に並べる。
 - [ ] **T18-2 [should] README の公開 API とカスタマイズの説明が実物と合っていない**
   - locations: README.md:56, README.md:67-81, README.md:101, README.md:114-119, library/src/playmaker.ts:19-44, library/src/common/design/field-font.ts:8
   - 対応: 公開 API は T14 の結果に一致させる。プリセットは件数を書かず、取得方法だけ書く。フィールドの文字は同梱フォントに固定であることを書く。変数一覧は THEME_TOKENS と一致させる。上書きは任意の祖先要素でできると書く。
+  - 進み具合: カスタマイズの節は T11 で書き直した（同梱フォントに固定、変数一覧、祖先要素での上書き）。残りは公開 API とプリセットの説明。
 
 - 依存: T1〜T17
 - 完了条件: roadmap が削除され、design.md から現状の設計が読める。README の API 表が export と一致する。この台帳を閉じる。

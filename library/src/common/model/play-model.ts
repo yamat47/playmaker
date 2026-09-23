@@ -22,7 +22,7 @@ export interface LineRemoval {
 }
 
 /**
- * プレー図の状態。起点の選手が消えた線を残さないことはこの型が守る。
+ * プレー図の状態。実装は、起点の選手が消えた線を残さない。
  * 削除と差し替えは、戻すのに要る変更前の値を返す。
  */
 export interface IPlayModel {

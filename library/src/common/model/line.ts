@@ -32,7 +32,7 @@ export const DEFAULT_LINE_KIND: LineKind = "route";
 /** 補間を指定しないときの既定。 */
 export const DEFAULT_LINE_INTERPOLATION: LineInterpolation = "straight";
 
-/** 太さ未指定時の倍率。種別ごとの既定の太さでそのまま描く。 */
+/** 太さを指定しないときの倍率。種別ごとの既定の太さでそのまま描く。 */
 export const DEFAULT_LINE_THICKNESS = 1;
 
 /**

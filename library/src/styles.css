@@ -130,6 +130,11 @@
   font-size: 0.85rem;
 }
 
+/* ラベルの箱を消し、中の文字と入力を、ラベルの外に置く部品と同じ行の flex に並べる。 */
+.playmaker-panel__label {
+  display: contents;
+}
+
 .playmaker-panel__row input,
 .playmaker-panel__row select {
   font: inherit;

@@ -153,11 +153,14 @@ export class PropertyPanel extends Disposable {
   }
 
   private addRow(labelText: string, control: HTMLElement): void {
-    const row = document.createElement("label");
+    const row = document.createElement("div");
     row.className = "playmaker-panel__row";
+    const label = document.createElement("label");
+    label.className = "playmaker-panel__label";
     const span = document.createElement("span");
     span.textContent = labelText;
-    row.append(span, control);
+    label.append(span, control);
+    row.appendChild(label);
     this.element.appendChild(row);
   }
 

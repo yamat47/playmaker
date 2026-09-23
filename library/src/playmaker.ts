@@ -42,6 +42,18 @@ export {
 
 export type PlaymakerMode = "view" | "edit";
 
+// バンドラは process.env.NODE_ENV を文字列に置き換える。置き換えずにブラウザで読み込むと
+// process が無く ReferenceError になるので、そのときは本番とみなす。
+declare const process: { readonly env: { readonly NODE_ENV?: string } };
+
+function isDevelopment(): boolean {
+  try {
+    return process.env.NODE_ENV !== "production";
+  } catch {
+    return false;
+  }
+}
+
 export interface PlaymakerOptions {
   /** 既定は "edit"。"view" は読み取り専用（編集 UI を出さない・PRD 5.5）。 */
   mode?: PlaymakerMode;
@@ -60,6 +72,8 @@ export interface PlaymakerOptions {
 /**
  * container の中にプレー図を描き、edit モードでは編集 UI も置く。
  * dispose すると、置いた要素をすべて取り除く。
+ * dispose したあとの変更は例外を投げずに何もせず、開発時だけ console.warn で知らせる。
+ * getPlayData と fieldZone は、dispose した時点の図を返す。
  */
 export class Playmaker implements IDisposable {
   readonly mode: PlaymakerMode;
@@ -110,6 +124,9 @@ export class Playmaker implements IDisposable {
    * view モードでもプログラム API としては有効（編集 UI は出さないだけ）。
    */
   setFieldZone(zone: FieldZone): void {
+    if (this.ignoreAfterDispose("setFieldZone")) {
+      return;
+    }
     this.session.setFieldZone(zone);
   }
 
@@ -121,6 +138,9 @@ export class Playmaker implements IDisposable {
    * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
    */
   loadFormation(formation: Formation): boolean {
+    if (this.ignoreAfterDispose("loadFormation")) {
+      return false;
+    }
     return this.session.loadFormation(formation);
   }
 
@@ -132,6 +152,9 @@ export class Playmaker implements IDisposable {
    * 件数の上限は `initialData` と同じで、超えた分は捨てる。
    */
   setPlayData(data: PlayData): void {
+    if (this.ignoreAfterDispose("setPlayData")) {
+      return;
+    }
     this.session.setPlayData(data);
   }
 
@@ -152,15 +175,28 @@ export class Playmaker implements IDisposable {
    * view と edit のどちらのモードでも使える。
    * 同梱フォントを読み込み終えてから描くので、構築の直後に呼んでもヤードの数字と選手のラベルは同梱フォントになる。
    * フォントを読み込めなかったときは代わりのフォントで描く。
-   * canvas を確保できないときや PNG に変換できないときは、例外を投げずに reject する。
+   * canvas を確保できないとき、PNG に変換できないとき、dispose したあとは、例外を投げずに reject する。
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {
+    if (this.store.isDisposed) {
+      return Promise.reject(new Error("Playmaker: dispose したあとは PNG を書き出せません。"));
+    }
     return this.surface.exportToPngBlob(this.session.getSnapshot(), options);
   }
 
   dispose(): void {
     this.ui.dispose();
     this.store.dispose();
+  }
+
+  private ignoreAfterDispose(method: string): boolean {
+    if (!this.store.isDisposed) {
+      return false;
+    }
+    if (isDevelopment()) {
+      console.warn(`Playmaker: dispose したあとに ${method} を呼んだので、何もしません。`);
+    }
+    return true;
   }
 
   private attachUi(): void {

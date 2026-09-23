@@ -146,6 +146,15 @@ describe("選手のドラッグ", () => {
     expect(positionOf(play.session.getPlayData(), "far")).toEqual(yd(10, 16));
   });
 
+  it("押さずにポインタを動かして離しても、通知を出さない", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.editor.pointerMove(yd(10, 0));
+    play.editor.pointerUp(yd(10, 0));
+
+    expect(play.notified).not.toHaveBeenCalled();
+  });
+
   it("ドラッグの途中で選手を削除すると、離しても削除のほかに何も積まない", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.pointerDown(yd(10, 0));
@@ -185,6 +194,14 @@ describe("選手の削除", () => {
     expect(play.session.getPlayData()).toEqual(playData([player("b", 20, 0)]));
   });
 
+  it("選手と線を一緒に消しても、onChange は 1 回だけ呼ぶ", () => {
+    const play = openWithASelected();
+
+    play.editor.deleteSelection();
+
+    expect(play.onChange).toHaveBeenCalledOnce();
+  });
+
   it("削除を Undo すると、選手と線が元の並びに戻る", () => {
     const play = openWithASelected();
     play.editor.deleteSelection();
@@ -192,6 +209,16 @@ describe("選手の削除", () => {
     play.editor.undo();
 
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
+  it("削除を Undo してから Redo すると、選手と線をまた消す", () => {
+    const play = openWithASelected();
+    play.editor.deleteSelection();
+    play.editor.undo();
+
+    play.editor.redo();
+
+    expect(play.session.getPlayData()).toEqual(playData([player("b", 20, 0)]));
   });
 });
 

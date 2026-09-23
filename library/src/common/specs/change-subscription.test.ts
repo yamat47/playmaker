@@ -39,6 +39,12 @@ describe("編集の購読", () => {
     expect(play.session.getPlayData().players[0]?.position).toEqual(yd(10, 0));
   });
 
+  it("途中の操作が無ければ、描く図は確定した図をそのまま使う", () => {
+    const play = openPlay(initialData());
+
+    expect(play.editor.getFrame().scene).toBe(play.session.getSnapshot());
+  });
+
   it("選手をドラッグして動かすたびに、描き直しの通知を出す", () => {
     const play = openPlay(initialData());
     play.editor.pointerDown(yd(10, 0));
@@ -135,6 +141,16 @@ describe("編集の購読", () => {
     editor.setFieldZone("redzone");
 
     expect(play.onChange).not.toHaveBeenCalled();
+  });
+
+  it("破棄したあとの編集では、描き直しの通知も出さない", () => {
+    const play = openPlay(initialData());
+    const editor = play.editor;
+
+    play.session.dispose();
+    editor.setFieldZone("redzone");
+
+    expect(play.notified).not.toHaveBeenCalled();
   });
 
   it("購読していなくても編集できる", () => {

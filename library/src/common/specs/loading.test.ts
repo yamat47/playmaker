@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { playData, player } from "../../test-support/fixtures.js";
+import { manyPlayers, playData, player } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
 import type { Formation } from "../formations/formation.js";
 import type { PlayData } from "../model/play-data.js";
+import { MAX_PLAYERS } from "../model/player.js";
 
 function initialData(): PlayData {
   return playData([player("a", 10, 0)]);
@@ -14,6 +15,23 @@ const formation: Formation = {
   side: "offense",
   players: [{ position: { lateralYard: 30, downfieldYard: -5 }, shape: "circle", label: "B" }],
 };
+
+const pair: Formation = {
+  id: "pair",
+  name: "2 人",
+  side: "offense",
+  players: [
+    { position: { lateralYard: 30, downfieldYard: -5 }, shape: "circle", label: "C" },
+    {
+      position: { lateralYard: 32, downfieldYard: -5 },
+      shape: "square",
+      label: "D",
+      color: "#c62828",
+    },
+  ],
+};
+
+const empty: Formation = { ...formation, players: [] };
 
 /** 型を持たない外部の JSON から来た、位置の無い選手だけの隊形。 */
 function brokenFormation(): Formation {
@@ -117,5 +135,94 @@ describe("隊形の読み込み", () => {
     expect(play.session.getPlayData()).toEqual(initialData());
     expect(play.editor.getViewState().canUndo).toBe(false);
     expect(play.onChange).not.toHaveBeenCalled();
+  });
+
+  it("隊形の選手には、図にある選手と重ならない id を振る", () => {
+    const play = openPlay(playData([player("player-1", 10, 0)]));
+
+    play.session.loadFormation(pair);
+
+    const ids = play.session.getPlayData().players.map((p) => p.id);
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it("隊形の選手の位置、形、ラベル、色をそのまま置く", () => {
+    const play = openPlay(playData());
+
+    play.session.loadFormation(pair);
+
+    expect(play.session.getPlayData().players).toEqual([
+      { id: "player-1", ...pair.players[0] },
+      { id: "player-2", ...pair.players[1] },
+    ]);
+  });
+
+  it("読み込むと、選択を外す", () => {
+    const play = openPlay(initialData());
+    play.click(yd(10, 0));
+
+    play.session.loadFormation(formation);
+
+    expect(play.editor.getViewState().selection).toBeNull();
+  });
+
+  it("作図の途中で読み込むと、作図をやめる", () => {
+    const play = openPlay(initialData());
+    play.startLine(yd(10, 0));
+
+    play.session.loadFormation(formation);
+
+    expect(play.editor.getViewState().isDrawing).toBe(false);
+  });
+
+  it("読み込んだあとに Undo すると、隊形の選手だけが消える", () => {
+    const play = openPlay(initialData());
+    play.session.loadFormation(pair);
+
+    play.editor.undo();
+
+    expect(play.session.getPlayData()).toEqual(initialData());
+  });
+
+  it("読み込むと MAX_PLAYERS 人を超える隊形は、1 人も置かず履歴にも積まない", () => {
+    const play = openPlay(playData(manyPlayers(MAX_PLAYERS - 1)));
+
+    play.session.loadFormation(pair);
+
+    expect(play.session.getPlayData().players).toHaveLength(MAX_PLAYERS - 1);
+    expect(play.editor.getViewState().canUndo).toBe(false);
+  });
+
+  it("読み込むと MAX_PLAYERS 人を超える隊形は false を返す", () => {
+    const play = openPlay(playData(manyPlayers(MAX_PLAYERS - 1)));
+
+    const loaded = play.session.loadFormation(pair);
+
+    expect(loaded).toBe(false);
+  });
+
+  it("読み込んでちょうど MAX_PLAYERS 人になる隊形は置く", () => {
+    const play = openPlay(playData(manyPlayers(MAX_PLAYERS - 2)));
+
+    play.session.loadFormation(pair);
+
+    expect(play.session.getPlayData().players).toHaveLength(MAX_PLAYERS);
+  });
+
+  it("ツールバーから選手のいない隊形を読むと、false を返す", () => {
+    const play = openPlay(initialData());
+
+    const loaded = play.editor.loadFormation(empty);
+
+    expect(loaded).toBe(false);
+  });
+
+  it("ツールバーから選手のいない隊形を読んでも、選択は外さない", () => {
+    const play = openPlay(initialData());
+    play.click(yd(10, 0));
+
+    play.editor.loadFormation(empty);
+
+    expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "a" });
   });
 });

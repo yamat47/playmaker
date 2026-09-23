@@ -56,15 +56,22 @@ describe("PlayModel 構築", () => {
 });
 
 describe("PlayModel 参照系", () => {
-  it("読み取った図を書き換えても、モデルの図は変わらず通知も出ない", () => {
+  it("読み取った図を書き換えても、モデルの図は変わらない", () => {
     const model = new PlayModel(seed());
-    const listener = vi.fn();
-    model.onDidChange(listener);
 
     const snap = mutable(model.getData());
     must(snap.players[0]).label = "edited";
 
     expect(model.findPlayer("a")?.label).toBe("a");
+  });
+
+  it("図を読み取るだけでは通知しない", () => {
+    const model = new PlayModel(seed());
+    const listener = vi.fn();
+    model.onDidChange(listener);
+
+    model.getData();
+
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -76,11 +83,16 @@ describe("PlayModel 参照系", () => {
     expect(model.getFieldZone()).toBe("redzone");
   });
 
-  it("id が一致する選手と線を返し、なければ undefined を返す", () => {
+  it("選手を id で探すと、その選手を返し、無い id なら undefined を返す", () => {
     const model = new PlayModel(seed());
 
     expect(model.findPlayer("b")).toEqual(player("b"));
     expect(model.findPlayer("zzz")).toBeUndefined();
+  });
+
+  it("線を id で探すと、その線を返し、無い id なら undefined を返す", () => {
+    const model = new PlayModel(seed());
+
     expect(model.findLine("la")).toEqual(line("la", "a"));
     expect(model.findLine("zzz")).toBeUndefined();
   });
@@ -230,15 +242,22 @@ describe("PlayModel.removePlayer / restorePlayer", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it("線の出ていない選手は、線を消さずに消せて戻せる", () => {
+  it("線の出ていない選手を消しても、線は消えない", () => {
     const model = new PlayModel(seed());
 
     const removal = model.removePlayer("c");
+
     expect(removal.removedLines).toEqual([]);
     expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc"]);
+  });
+
+  it("線の出ていない選手を消して戻すと、元の並びに戻る", () => {
+    const model = new PlayModel(seed());
+    const removal = model.removePlayer("c");
 
     model.restorePlayer(removal);
-    expect(model.getData().players.map((p) => p.id)).toEqual(["a", "b", "c"]);
+
+    expect(model.getData()).toEqual(seed());
   });
 
   it("無い id の選手を消そうとすると throw する", () => {
@@ -357,26 +376,39 @@ describe("PlayModel の件数の上限", () => {
     expect(() => model.restorePlayer(removal)).toThrow("PlayModel: too many lines");
   });
 
-  it("線はちょうど MAX_LINES 本まで足せ、それを超える追加は throw する", () => {
+  it("線はちょうど MAX_LINES 本まで足せる", () => {
     const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [] });
+
     for (const l of lines(MAX_LINES)) {
       model.addLine(l);
     }
 
     expect(model.getSnapshot().lines).toHaveLength(MAX_LINES);
+  });
+
+  it("MAX_LINES 本を超える線の追加は throw する", () => {
+    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [] });
+    for (const l of lines(MAX_LINES)) {
+      model.addLine(l);
+    }
+
     expect(() => model.addLine(line("extra", "p0"))).toThrow("PlayModel: too many lines");
   });
 
-  it("waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線は、追加も差し替えも throw する", () => {
-    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [line("l", "p0")] });
-    const tooMany = waypoints(MAX_WAYPOINTS_PER_LINE + 1);
+  it("waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線を足すと throw する", () => {
+    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [] });
 
-    expect(() => model.addLine({ ...line("x", "p0"), waypoints: tooMany })).toThrow(
-      "PlayModel: too many waypoints",
-    );
-    expect(() => model.updateLine({ ...line("l", "p0"), waypoints: tooMany })).toThrow(
-      "PlayModel: too many waypoints",
-    );
+    expect(() =>
+      model.addLine({ ...line("x", "p0"), waypoints: waypoints(MAX_WAYPOINTS_PER_LINE + 1) }),
+    ).toThrow("PlayModel: too many waypoints");
+  });
+
+  it("waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線に差し替えると throw する", () => {
+    const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [line("l", "p0")] });
+
+    expect(() =>
+      model.updateLine({ ...line("l", "p0"), waypoints: waypoints(MAX_WAYPOINTS_PER_LINE + 1) }),
+    ).toThrow("PlayModel: too many waypoints");
   });
 
   it("waypoint がちょうど MAX_WAYPOINTS_PER_LINE 個の線は差し替えられる", () => {
@@ -400,18 +432,24 @@ describe("PlayModel 線の追加・挿入・削除・更新", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it("線を位置を指定して差し込むと、その位置に並び、範囲外の位置は端に寄せる", () => {
+  it("線を位置を指定して差し込むと、その位置に並ぶ", () => {
     const model = new PlayModel({ ...seed(), lines: [line("x", "a"), line("y", "b")] });
 
     model.insertLine(line("mid", "c"), 1);
+
     expect(model.getData().lines.map((l) => l.id)).toEqual(["x", "mid", "y"]);
+  });
+
+  it("線を範囲外の位置に差し込むと、近いほうの端に並ぶ", () => {
+    const model = new PlayModel({ ...seed(), lines: [line("x", "a"), line("y", "b")] });
 
     model.insertLine(line("head", "c"), -5);
     model.insertLine(line("tail", "c"), 999);
-    expect(model.getData().lines.map((l) => l.id)).toEqual(["head", "x", "mid", "y", "tail"]);
+
+    expect(model.getData().lines.map((l) => l.id)).toEqual(["head", "x", "y", "tail"]);
   });
 
-  it("線を消すと、戻すための線と位置を返して通知し、無い id は throw する", () => {
+  it("線を消すと、戻すための線と位置を返して、1 回だけ通知する", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn();
     model.onDidChange(listener);
@@ -421,10 +459,15 @@ describe("PlayModel 線の追加・挿入・削除・更新", () => {
     expect(removal).toEqual({ line: line("lb", "b"), index: 1 });
     expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lc"]);
     expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("無い id の線を消そうとすると throw する", () => {
+    const model = new PlayModel(seed());
+
     expect(() => model.removeLine("ghost")).toThrow(/unknown line id "ghost"/);
   });
 
-  it("線を更新すると同じ id を差し替えて差し替え前の線を返し、未知の id は throw する", () => {
+  it("線を更新すると同じ id を差し替え、差し替え前の線を返す", () => {
     const model = new PlayModel(seed());
 
     const prev = model.updateLine({ ...line("lb", "b"), kind: "motion" });
@@ -432,6 +475,11 @@ describe("PlayModel 線の追加・挿入・削除・更新", () => {
     expect(prev).toEqual(line("lb", "b"));
     expect(model.findLine("lb")?.kind).toBe("motion");
     expect(model.findLine("la")?.kind).toBe("route");
+  });
+
+  it("無い id の線を差し替えようとすると throw する", () => {
+    const model = new PlayModel(seed());
+
     expect(() => model.updateLine(line("ghost", "a"))).toThrow(/unknown line id "ghost"/);
   });
 

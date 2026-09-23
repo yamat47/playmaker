@@ -201,18 +201,24 @@ export class Playmaker implements IDisposable {
 
   private attachUi(): void {
     this.ui.dispose();
-    this.ui = new DisposableStore();
+    this.ui = this.createUi();
+    this.draw();
+  }
+
+  private createUi(): DisposableStore {
+    const ui = new DisposableStore();
     const controller = this.session.controller;
-    const draw = (): void => {
-      const { scene, overlay } = controller.getFrame();
-      this.surface.setScene(scene, overlay);
-    };
-    this.ui.add(controller.onDidChangeScene(draw));
+    ui.add(controller.onDidChangeScene(() => this.draw()));
     if (this.mode === "edit") {
-      this.ui.add(new Toolbar(this.root, controller));
-      this.ui.add(new PropertyPanel(this.root, controller));
-      this.ui.add(new PointerInput(this.root, this.surface, controller));
+      ui.add(new Toolbar(this.root, controller));
+      ui.add(new PropertyPanel(this.root, controller));
+      ui.add(new PointerInput(this.root, this.surface, controller));
     }
-    draw();
+    return ui;
+  }
+
+  private draw(): void {
+    const { scene, overlay } = this.session.controller.getFrame();
+    this.surface.setScene(scene, overlay);
   }
 }

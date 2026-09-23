@@ -413,19 +413,21 @@ PR 単位で、依存順に並べる。
 
 ### T12 描画パイプライン（browser）
 
-- [ ] **T12-1 [should] IRenderer がない（規約と実装の衝突）**（D1）
+- [x] **T12-1 [should] IRenderer がない（規約と実装の衝突）**（D1）
   - locations: library/src/browser/rendering/canvas-surface.ts:30-32, library/src/browser/rendering/canvas-surface.ts:38, library/src/browser/rendering/field-renderer.ts, library/src/browser/rendering/line-renderer.ts:34-41, library/src/browser/rendering/player-renderer.ts:54-60, library/src/browser/input/pointer-input.ts:6-9
   - 規約: `.claude/rules/architecture.md` の「描画の IF はまだない」の行を、導入した `ILayerRenderer` の説明に書き換え、IF の一覧に足す。
-- [ ] **T12-2 [should] CanvasSurface の責務が多すぎ、DPR の変化にも追従しない**
+  - 結論（T12a）: `ILayerRenderer { draw(ctx, frame) }` と `RenderFrame`（geometry、metrics、図、テーマの reader）を `browser/rendering/layer.ts` に置いた。3 つのレンダラと OverlayRenderer がこれを実装し、CanvasSurface は図の層と編集の層を受け取る（既定は createDefaultLayers）。図の層は RenderFrame、編集の層だけがオーバーレイを足した EditorRenderFrame を受け取るので、書き出しにオーバーレイが紛れ込まないことを型で守る。テーマの色は各レンダラが reader から読む。層を差し替える口を Playmaker の公開 API に出すかは T14-6 で決める。PointerInput は CanvasSurface ではなく、自分で定義した IPointerSurface に依存する。
+- [x] **T12-2 [should] CanvasSurface の責務が多すぎ、DPR の変化にも追従しない**
   - locations: library/src/browser/rendering/canvas-surface.ts:38-59, library/src/browser/rendering/canvas-surface.ts:53, library/src/browser/rendering/canvas-surface.ts:67-83, library/src/browser/rendering/canvas-surface.ts:101-110, library/src/browser/rendering/canvas-surface.ts:120-140, library/src/browser/rendering/canvas-surface.ts:179-226, library/src/browser/rendering/canvas-surface.ts:232-269
   - 対応: 次のように分ける。
     - overlay の描画は OverlayRenderer にする。
     - PNG 出力は `renderPlayToCanvas` にし、画面描画と共有する。
     - 再描画は rAF で束ねる invalidate にする。
     - DPR は matchMedia の change を監視する。
+  - 結論（T12a）: PNG の書き出しと画面の描画は、どちらも renderLayers で図の層を描く（台帳の renderPlayToCanvas に当たる）。書き出しは編集の層を通さない。再描画は requestAnimationFrame で 1 回にまとめる。大きさが変わったときはバッファが消えるので、待たずにすぐ描く。geometry は状態として持たず、描くときと座標を変換するときに、その都度 host の大きさとゾーンから求める。`geometry!:` もここで外した。
 - [ ] **T12-3 [should] exportToPng がフォントの読み込みを待たず、同期 throw と reject が混在し、幅に上限もない**
   - locations: library/src/browser/rendering/canvas-surface.ts:36, library/src/browser/rendering/canvas-surface.ts:67-83, library/src/browser/rendering/canvas-surface.ts:120-140, library/src/common/export/image-export.ts:39-43, library/src/playmaker.ts:161-163
-  - 対応: async にし、`document.fonts.load` を待ち、失敗はすべて reject にする。MAX_EXPORT_WIDTH を設ける。`geometry!:` を外す。fonts は `in` で狭める。
+  - 対応: async にし、`document.fonts.load` を待ち、失敗はすべて reject にする。MAX_EXPORT_WIDTH を設ける。fonts は `in` で狭める。`geometry!:` は T12a で外した。
 - [ ] **T12-4 [nit] CSS の適用が遅れると、同梱フォントでの再描画が行われない**
   - locations: library/src/browser/rendering/canvas-surface.ts:67-70
   - 対応: loadingdone を購読する。
@@ -438,6 +440,7 @@ PR 単位で、依存順に並べる。
 - 依存: T11、T7、D1
 - 完了条件: レンダラが RenderFrame に揃い、注入できる。構築直後に書き出した PNG も同梱フォントで描かれる。DPR を変えても鮮明なまま。
 - 規模: L。T12-1 と T12-2 を先に、T12-3〜T12-6 を後に分けてもよい。
+- 進み具合: T12a（T12-1、T12-2）を閉じた。残りは T12b（T12-3〜T12-5）。
 
 ---
 

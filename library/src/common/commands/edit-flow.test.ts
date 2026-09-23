@@ -26,7 +26,7 @@ describe("編集フロー統合", () => {
     commands.execute(
       new AddPlayerCommand({
         id: "qb",
-        position: { lateralYard: 26, absoluteYard: 48 },
+        position: { lateralYard: 26, downfieldYard: 48 },
         shape: "circle",
         label: "QB",
       }),
@@ -38,10 +38,10 @@ describe("編集フロー統合", () => {
 
   it("選手削除はカスケードでも 1 回発火、undo で線ごと完全復元", () => {
     const seed: PlayData = {
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [
-        { id: "wr", position: { lateralYard: 4, absoluteYard: 50 }, shape: "circle", label: "WR" },
+        { id: "wr", position: { lateralYard: 4, downfieldYard: 50 }, shape: "circle", label: "WR" },
       ],
       lines: [
         {
@@ -49,7 +49,7 @@ describe("編集フロー統合", () => {
           kind: "route",
           startPlayerId: "wr",
           waypoints: [],
-          end: { lateralYard: 4, absoluteYard: 62 },
+          end: { lateralYard: 4, downfieldYard: 62 },
           interpolation: "straight",
         },
       ],
@@ -59,8 +59,8 @@ describe("編集フロー統合", () => {
     commands.execute(new RemovePlayerCommand("wr"));
     expect(onChange).toHaveBeenCalledTimes(1); // 選手+線の除去でも 1 回
     expect(must(onChange.mock.lastCall)[0]).toEqual({
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [],
       lines: [],
     });
@@ -79,7 +79,7 @@ describe("編集フロー統合", () => {
     commands.execute(
       new AddPlayerCommand({
         id: "p",
-        position: { lateralYard: 5, absoluteYard: 50 },
+        position: { lateralYard: 5, downfieldYard: 50 },
         shape: "circle",
         label: "p",
       }),
@@ -90,7 +90,7 @@ describe("編集フロー統合", () => {
         kind: "route",
         startPlayerId: "p",
         waypoints: [],
-        end: { lateralYard: 5, absoluteYard: 60 },
+        end: { lateralYard: 5, downfieldYard: 60 },
         interpolation: "straight",
       }),
     );
@@ -113,7 +113,7 @@ describe("編集フロー統合", () => {
     commands.execute(
       new AddPlayerCommand({
         id: "q",
-        position: { lateralYard: 9, absoluteYard: 50 },
+        position: { lateralYard: 9, downfieldYard: 50 },
         shape: "circle",
         label: "q",
       }),

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fieldStateForZone, LOS_YARD_BY_ZONE } from "../model/play-data.js";
 import {
   clampToZoneWindow,
   DEFAULT_FIELD_LEAGUE,
@@ -104,7 +105,7 @@ describe("yardLinesInWindow", () => {
 
 describe("FieldGeometry", () => {
   it("横が制約になる場合は幅基準でフィットし上下に余白が出る", () => {
-    const g = new FieldGeometry(1000, 600, "middle");
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.scale).toBeCloseTo(1000 / FIELD_WIDTH_YARDS, 10);
     expect(g.fieldPixelWidth).toBeCloseTo(1000, 10);
@@ -114,7 +115,7 @@ describe("FieldGeometry", () => {
   });
 
   it("縦が制約になる場合は高さ基準でフィットし左右に余白が出る", () => {
-    const g = new FieldGeometry(2000, 300, "middle");
+    const g = new FieldGeometry(2000, 300, fieldStateForZone("middle"));
 
     expect(g.scale).toBeCloseTo(10, 10);
     expect(g.fieldPixelHeight).toBeCloseTo(300, 10);
@@ -123,14 +124,14 @@ describe("FieldGeometry", () => {
   });
 
   it("横方向: 0 が左サイドライン、FIELD_WIDTH が右サイドライン", () => {
-    const g = new FieldGeometry(1000, 600, "middle");
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.xForLateralYard(0)).toBeCloseTo(g.offsetX, 10);
     expect(g.xForLateralYard(FIELD_WIDTH_YARDS)).toBeCloseTo(g.offsetX + g.fieldPixelWidth, 10);
   });
 
   it("縦方向: 窓の奥(endYard)が上端、手前(startYard)が下端、中点が中央", () => {
-    const g = new FieldGeometry(1000, 600, "middle");
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.yForAbsoluteYard(65)).toBeCloseTo(g.offsetY, 10);
     expect(g.yForAbsoluteYard(35)).toBeCloseTo(g.offsetY + g.fieldPixelHeight, 10);
@@ -138,8 +139,8 @@ describe("FieldGeometry", () => {
   });
 
   it("ゾーンが変われば同じ絶対ヤードでも縦位置が変わる", () => {
-    const middle = new FieldGeometry(1000, 600, "middle");
-    const redzone = new FieldGeometry(1000, 600, "redzone");
+    const middle = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
+    const redzone = new FieldGeometry(1000, 600, fieldStateForZone("redzone"));
 
     // 50 は middle 窓の中央だが redzone(75..110) では窓外で下端より下になる。
     expect(middle.yForAbsoluteYard(50)).toBeCloseTo(
@@ -151,17 +152,17 @@ describe("FieldGeometry", () => {
     );
   });
 
-  it("toCanvas は横・縦の変換を合成する", () => {
-    const g = new FieldGeometry(1000, 600, "middle");
+  it("toCanvas は LOS からの位置を、LOS の絶対ヤードに足してから縦に変換する", () => {
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("redzone"));
 
-    expect(g.toCanvas(FIELD_WIDTH_YARDS / 2, 50)).toEqual({
+    expect(g.toCanvas({ lateralYard: FIELD_WIDTH_YARDS / 2, downfieldYard: 5 })).toEqual({
       x: g.xForLateralYard(FIELD_WIDTH_YARDS / 2),
-      y: g.yForAbsoluteYard(50),
+      y: g.yForAbsoluteYard(LOS_YARD_BY_ZONE.redzone + 5),
     });
   });
 
   it("containsYard は窓の端を含み窓外を除外する", () => {
-    const g = new FieldGeometry(1000, 600, "middle");
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.containsYard(35)).toBe(true);
     expect(g.containsYard(65)).toBe(true);
@@ -171,70 +172,75 @@ describe("FieldGeometry", () => {
   });
 
   it("ビューポートが 0 や負でも NaN を出さない（縮退耐性）", () => {
-    const g = new FieldGeometry(0, -10, "middle");
+    const g = new FieldGeometry(0, -10, fieldStateForZone("middle"));
 
     expect(g.scale).toBe(0);
     expect(g.fieldPixelWidth).toBe(0);
     expect(Number.isNaN(g.offsetX)).toBe(false);
-    expect(Number.isNaN(g.toCanvas(10, 50).x)).toBe(false);
+    expect(Number.isNaN(g.toCanvas({ lateralYard: 10, downfieldYard: 0 }).x)).toBe(false);
   });
 
   it("逆変換は forward と往復で一致する（横）", () => {
-    const g = new FieldGeometry(1000, 600, "middle");
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.lateralYardForX(g.xForLateralYard(0))).toBeCloseTo(0, 10);
     expect(g.lateralYardForX(g.xForLateralYard(20))).toBeCloseTo(20, 10);
   });
 
   it("逆変換は forward と往復で一致する（縦・ゾーン非依存の絶対ヤード）", () => {
-    const g = new FieldGeometry(1000, 600, "redzone");
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("redzone"));
 
     expect(g.absoluteYardForY(g.yForAbsoluteYard(95))).toBeCloseTo(95, 10);
     expect(g.absoluteYardForY(g.yForAbsoluteYard(110))).toBeCloseTo(110, 10);
   });
 
   it("fromCanvas は toCanvas の逆（点の往復）", () => {
-    const g = new FieldGeometry(1000, 600, "middle");
-    const canvas = g.toCanvas(26.6, 52);
+    const g = new FieldGeometry(1000, 600, fieldStateForZone("own-redzone"));
+    const canvas = g.toCanvas({ lateralYard: 26.6, downfieldYard: 2 });
 
     const back = g.fromCanvas(canvas);
 
     expect(back.lateralYard).toBeCloseTo(26.6, 10);
-    expect(back.absoluteYard).toBeCloseTo(52, 10);
+    expect(back.downfieldYard).toBeCloseTo(2, 10);
   });
 
   it("縮退ビューポートでも逆変換は NaN を出さない", () => {
-    const g = new FieldGeometry(0, 0, "middle");
+    const g = new FieldGeometry(0, 0, fieldStateForZone("middle"));
 
     const back = g.fromCanvas({ x: 100, y: 100 });
 
     expect(Number.isNaN(back.lateralYard)).toBe(false);
-    expect(Number.isNaN(back.absoluteYard)).toBe(false);
+    expect(Number.isNaN(back.downfieldYard)).toBe(false);
   });
 });
 
 describe("clampToZoneWindow", () => {
+  const middle = fieldStateForZone("middle");
+
   it("窓の中の位置はそのまま返す", () => {
-    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 50 }, "middle")).toEqual({
+    expect(clampToZoneWindow({ lateralYard: 10, downfieldYard: 5 }, middle)).toEqual({
       lateralYard: 10,
-      absoluteYard: 50,
+      downfieldYard: 5,
     });
   });
 
   it("サイドラインの外はサイドライン上へ寄せる", () => {
-    expect(clampToZoneWindow({ lateralYard: -3, absoluteYard: 50 }, "middle").lateralYard).toBe(0);
-    expect(clampToZoneWindow({ lateralYard: 99, absoluteYard: 50 }, "middle").lateralYard).toBe(
+    expect(clampToZoneWindow({ lateralYard: -3, downfieldYard: 0 }, middle).lateralYard).toBe(0);
+    expect(clampToZoneWindow({ lateralYard: 99, downfieldYard: 0 }, middle).lateralYard).toBe(
       FIELD_WIDTH_YARDS,
     );
   });
 
-  it("窓の手前と奥の外は、そのゾーンの窓の端へ寄せる", () => {
-    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 0 }, "middle").absoluteYard).toBe(35);
-    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 90 }, "middle").absoluteYard).toBe(
-      65,
+  it("窓の手前と奥の外は、LOS から見た窓の端へ寄せる", () => {
+    expect(clampToZoneWindow({ lateralYard: 10, downfieldYard: -50 }, middle).downfieldYard).toBe(
+      -15,
     );
-    expect(clampToZoneWindow({ lateralYard: 10, absoluteYard: 200 }, "redzone").absoluteYard).toBe(
-      110,
+    expect(clampToZoneWindow({ lateralYard: 10, downfieldYard: 40 }, middle).downfieldYard).toBe(
+      15,
+    );
+    const redzone = fieldStateForZone("redzone");
+    expect(clampToZoneWindow({ lateralYard: 10, downfieldYard: 200 }, redzone).downfieldYard).toBe(
+      110 - LOS_YARD_BY_ZONE.redzone,
     );
   });
 });

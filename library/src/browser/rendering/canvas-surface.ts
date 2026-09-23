@@ -126,7 +126,7 @@ export class CanvasSurface extends Disposable {
     if (!ctx) {
       throw new Error("Playmaker: エクスポート用 2D canvas context を取得できませんでした。");
     }
-    const geometry = new FieldGeometry(width, height, data.field.zone);
+    const geometry = new FieldGeometry(width, height, data.field);
     this.drawPlay(ctx, geometry, data, this.makeReader());
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
@@ -141,7 +141,7 @@ export class CanvasSurface extends Disposable {
 
   private render(): void {
     const { clientWidth, clientHeight } = this.canvas.parentElement ?? this.canvas;
-    this.geometry = new FieldGeometry(clientWidth, clientHeight, this.data.field.zone);
+    this.geometry = new FieldGeometry(clientWidth, clientHeight, this.data.field);
     // getComputedStyle はスタイル再計算を誘発しうるため 1 render = 1 回に束ねる。
     const read = this.makeReader();
     this.drawPlay(this.ctx, this.geometry, this.data, read);
@@ -182,10 +182,7 @@ export class CanvasSurface extends Disposable {
     if (selectedPlayerId !== undefined) {
       const player = this.data.players.find((p) => p.id === selectedPlayerId);
       if (player) {
-        const { x, y } = this.geometry.toCanvas(
-          player.position.lateralYard,
-          player.position.absoluteYard,
-        );
+        const { x, y } = this.geometry.toCanvas(player.position);
         const r = PLAYER_RADIUS_YARDS * this.geometry.scale + 4;
         this.ctx.beginPath();
         this.ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -207,7 +204,7 @@ export class CanvasSurface extends Disposable {
       this.ctx.stroke();
     };
     for (const wp of waypointHandles) {
-      const { x, y } = this.geometry.toCanvas(wp.lateralYard, wp.absoluteYard);
+      const { x, y } = this.geometry.toCanvas(wp);
       this.ctx.beginPath();
       this.ctx.rect(x - handleHalf, y - handleHalf, handleHalf * 2, handleHalf * 2);
       paintHandle();
@@ -215,10 +212,7 @@ export class CanvasSurface extends Disposable {
 
     // 終点ハンドルは waypoint（四角）と区別できるよう円で描く（先端の掴み所を明示）。
     if (endpointHandle !== undefined) {
-      const { x, y } = this.geometry.toCanvas(
-        endpointHandle.lateralYard,
-        endpointHandle.absoluteYard,
-      );
+      const { x, y } = this.geometry.toCanvas(endpointHandle);
       this.ctx.beginPath();
       this.ctx.arc(x, y, handleHalf + 1, 0, Math.PI * 2);
       paintHandle();

@@ -35,15 +35,15 @@ describe("PLAYER_RADIUS_YARDS", () => {
 describe("normalizePlayers", () => {
   it("正当な選手はそのまま保持しつつ欠落を既定で補完する", () => {
     const result = normalizePlayers([
-      { id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "square", label: "QB" },
-      { id: "wr", position: { lateralYard: 5, absoluteYard: 50 } },
+      { id: "qb", position: { lateralYard: 26, downfieldYard: 48 }, shape: "square", label: "QB" },
+      { id: "wr", position: { lateralYard: 5, downfieldYard: 50 } },
     ]);
 
     expect(result).toEqual([
-      { id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "square", label: "QB" },
+      { id: "qb", position: { lateralYard: 26, downfieldYard: 48 }, shape: "square", label: "QB" },
       {
         id: "wr",
-        position: { lateralYard: 5, absoluteYard: 50 },
+        position: { lateralYard: 5, downfieldYard: 50 },
         shape: DEFAULT_PLAYER_SHAPE,
         label: "",
       },
@@ -52,8 +52,8 @@ describe("normalizePlayers", () => {
 
   it("color は非空文字列のときだけ保持する", () => {
     const [withColor, blankColor] = normalizePlayers([
-      { id: "a", position: { lateralYard: 1, absoluteYard: 2 }, color: "#ff0000" },
-      { id: "b", position: { lateralYard: 1, absoluteYard: 2 }, color: "   " },
+      { id: "a", position: { lateralYard: 1, downfieldYard: 2 }, color: "#ff0000" },
+      { id: "b", position: { lateralYard: 1, downfieldYard: 2 }, color: "   " },
     ]);
 
     expect(withColor?.color).toBe("#ff0000");
@@ -71,10 +71,10 @@ describe("normalizePlayers", () => {
       null,
       "player",
       { id: "no-pos" },
-      { id: "nan", position: { lateralYard: Number.NaN, absoluteYard: 0 } },
-      { id: "infinite", position: { lateralYard: 0, absoluteYard: Number.POSITIVE_INFINITY } },
-      { id: "str", position: { lateralYard: "1", absoluteYard: 2 } },
-      { id: "ok", position: { lateralYard: 1, absoluteYard: 2 } },
+      { id: "nan", position: { lateralYard: Number.NaN, downfieldYard: 0 } },
+      { id: "infinite", position: { lateralYard: 0, downfieldYard: Number.POSITIVE_INFINITY } },
+      { id: "str", position: { lateralYard: "1", downfieldYard: 2 } },
+      { id: "ok", position: { lateralYard: 1, downfieldYard: 2 } },
     ]);
 
     expect(result.map((p) => p.id)).toEqual(["ok"]);
@@ -82,15 +82,15 @@ describe("normalizePlayers", () => {
 
   it("id が無い/空なら index 由来の決定的 id を割り当てる", () => {
     const result = normalizePlayers([
-      { position: { lateralYard: 0, absoluteYard: 0 } },
-      { id: "  ", position: { lateralYard: 0, absoluteYard: 0 } },
+      { position: { lateralYard: 0, downfieldYard: 0 } },
+      { id: "  ", position: { lateralYard: 0, downfieldYard: 0 } },
     ]);
 
     expect(result.map((p) => p.id)).toEqual(["p0", "p1"]);
   });
 
   it("入力配列・要素・位置を共有しない新規オブジェクトを返す（Model 専有）", () => {
-    const input = [{ id: "a", position: { lateralYard: 1, absoluteYard: 2 } }];
+    const input = [{ id: "a", position: { lateralYard: 1, downfieldYard: 2 } }];
 
     const [normalized] = normalizePlayers(input);
 
@@ -100,7 +100,7 @@ describe("normalizePlayers", () => {
 });
 
 describe("normalizePlayers の件数上限", () => {
-  const at = (i: number) => ({ id: `p${i}`, position: { lateralYard: 5, absoluteYard: i } });
+  const at = (i: number) => ({ id: `p${i}`, position: { lateralYard: 5, downfieldYard: i } });
 
   it("MAX_PLAYERS 人を超える選手は先頭の MAX_PLAYERS 人だけ残す", () => {
     const raw = Array.from({ length: MAX_PLAYERS + 5 }, (_, i) => at(i));
@@ -120,18 +120,18 @@ describe("normalizePlayers の件数上限", () => {
 
 describe("parseFieldPosition", () => {
   it("有限な座標を持つオブジェクトを新しい位置として返す", () => {
-    const raw = { lateralYard: 5, absoluteYard: 50, extra: true };
+    const raw = { lateralYard: 5, downfieldYard: 50, extra: true };
 
     const position = parseFieldPosition(raw);
 
-    expect(position).toEqual({ lateralYard: 5, absoluteYard: 50 });
+    expect(position).toEqual({ lateralYard: 5, downfieldYard: 50 });
     expect(position).not.toBe(raw);
   });
 
   it("座標が欠けているか数でなければ null を返す", () => {
     expect(parseFieldPosition({ lateralYard: 5 })).toBeNull();
-    expect(parseFieldPosition({ lateralYard: "5", absoluteYard: 50 })).toBeNull();
-    expect(parseFieldPosition({ lateralYard: 5, absoluteYard: Number.NaN })).toBeNull();
+    expect(parseFieldPosition({ lateralYard: "5", downfieldYard: 50 })).toBeNull();
+    expect(parseFieldPosition({ lateralYard: 5, downfieldYard: Number.NaN })).toBeNull();
   });
 
   it("オブジェクトでなければ null を返す", () => {
@@ -144,7 +144,7 @@ describe("clonePlayer", () => {
   it("位置まで複製し元と共有しない", () => {
     const original: Player = {
       id: "x",
-      position: { lateralYard: 3, absoluteYard: 4 },
+      position: { lateralYard: 3, downfieldYard: 4 },
       shape: "diamond",
       label: "X",
       color: "#00f",
@@ -160,7 +160,7 @@ describe("clonePlayer", () => {
   it("color 未指定なら複製にも color を持たせない", () => {
     const copy = clonePlayer({
       id: "x",
-      position: { lateralYard: 0, absoluteYard: 0 },
+      position: { lateralYard: 0, downfieldYard: 0 },
       shape: "circle",
       label: "",
     });

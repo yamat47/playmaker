@@ -24,7 +24,7 @@ describe("normalizeFormation: 既定補完", () => {
         // id 空白 → 既定 "formation"、name 欠落 → 既定、side 不正 → "offense"
         id: "   ",
         side: "kickoff",
-        players: [{ id: "should-be-dropped", position: { lateralYard: 5, absoluteYard: 50 } }],
+        players: [{ id: "should-be-dropped", position: { lateralYard: 5, downfieldYard: 50 } }],
       }),
     );
 
@@ -33,7 +33,7 @@ describe("normalizeFormation: 既定補完", () => {
     expect(result.side).toBe("offense");
     // FormationPlayer は id を持たない（shape/label は normalizePlayers が既定補完）。
     expect(result.players).toEqual([
-      { position: { lateralYard: 5, absoluteYard: 50 }, shape: "circle", label: "" },
+      { position: { lateralYard: 5, downfieldYard: 50 }, shape: "circle", label: "" },
     ]);
     expect("id" in must(result.players[0])).toBe(false);
   });
@@ -45,8 +45,8 @@ describe("normalizeFormation: 既定補完", () => {
         name: "ニッケル",
         side: "defense",
         players: [
-          { position: { lateralYard: 7, absoluteYard: 53 }, shape: "hexagon", color: "#c62828" },
-          { position: { lateralYard: 46, absoluteYard: 53 }, shape: "hexagon" },
+          { position: { lateralYard: 7, downfieldYard: 53 }, shape: "hexagon", color: "#c62828" },
+          { position: { lateralYard: 46, downfieldYard: 53 }, shape: "hexagon" },
         ],
       }),
     );
@@ -60,7 +60,7 @@ describe("normalizeFormation: 既定補完", () => {
 
   it("返り値は入力と切り離されている（位置を書き換えても波及しない）", () => {
     const input = {
-      players: [{ position: { lateralYard: 1, absoluteYard: 2 } }],
+      players: [{ position: { lateralYard: 1, downfieldYard: 2 } }],
     };
     const result = must(normalizeFormation(input));
 
@@ -77,7 +77,7 @@ describe("Formation 型は typed なテンプレートとして組み立てら�
       name: "I フォーメーション",
       side: "offense",
       players: [
-        { position: { lateralYard: 26.7, absoluteYard: 49.5 }, shape: "square", label: "C" },
+        { position: { lateralYard: 26.7, downfieldYard: 49.5 }, shape: "square", label: "C" },
       ],
     };
     const players: readonly Omit<Player, "id">[] = offense.players;

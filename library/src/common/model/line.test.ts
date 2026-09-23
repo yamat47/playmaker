@@ -48,12 +48,12 @@ describe("normalizeLines", () => {
           id: "r1",
           kind: "route",
           startPlayerId: "wr",
-          waypoints: [{ lateralYard: 10, absoluteYard: 55 }],
-          end: { lateralYard: 12, absoluteYard: 62 },
+          waypoints: [{ lateralYard: 10, downfieldYard: 55 }],
+          end: { lateralYard: 12, downfieldYard: 62 },
           interpolation: "bezier",
         },
         // kind/interpolation/id 欠落 → 既定補完。
-        { startPlayerId: "qb", end: { lateralYard: 26, absoluteYard: 40 } },
+        { startPlayerId: "qb", end: { lateralYard: 26, downfieldYard: 40 } },
       ],
       PLAYER_IDS,
     );
@@ -63,8 +63,8 @@ describe("normalizeLines", () => {
         id: "r1",
         kind: "route",
         startPlayerId: "wr",
-        waypoints: [{ lateralYard: 10, absoluteYard: 55 }],
-        end: { lateralYard: 12, absoluteYard: 62 },
+        waypoints: [{ lateralYard: 10, downfieldYard: 55 }],
+        end: { lateralYard: 12, downfieldYard: 62 },
         interpolation: "bezier",
       },
       {
@@ -72,7 +72,7 @@ describe("normalizeLines", () => {
         kind: DEFAULT_LINE_KIND,
         startPlayerId: "qb",
         waypoints: [],
-        end: { lateralYard: 26, absoluteYard: 40 },
+        end: { lateralYard: 26, downfieldYard: 40 },
         interpolation: DEFAULT_LINE_INTERPOLATION,
       },
     ]);
@@ -83,13 +83,13 @@ describe("normalizeLines", () => {
       [
         {
           startPlayerId: "qb",
-          end: { lateralYard: 1, absoluteYard: 2 },
+          end: { lateralYard: 1, downfieldYard: 2 },
           color: "#ff0000",
           thickness: 4,
         },
         {
           startPlayerId: "qb",
-          end: { lateralYard: 1, absoluteYard: 2 },
+          end: { lateralYard: 1, downfieldYard: 2 },
           color: "  ",
           thickness: -1,
         },
@@ -106,10 +106,10 @@ describe("normalizeLines", () => {
   it("起点選手が実在しない線は復元不能として捨てる（dangling 参照）", () => {
     const result = normalizeLines(
       [
-        { startPlayerId: "ghost", end: { lateralYard: 1, absoluteYard: 2 } },
-        { startPlayerId: "", end: { lateralYard: 1, absoluteYard: 2 } },
-        { end: { lateralYard: 1, absoluteYard: 2 } },
-        { startPlayerId: "qb", end: { lateralYard: 1, absoluteYard: 2 } },
+        { startPlayerId: "ghost", end: { lateralYard: 1, downfieldYard: 2 } },
+        { startPlayerId: "", end: { lateralYard: 1, downfieldYard: 2 } },
+        { end: { lateralYard: 1, downfieldYard: 2 } },
+        { startPlayerId: "qb", end: { lateralYard: 1, downfieldYard: 2 } },
       ],
       PLAYER_IDS,
     );
@@ -123,9 +123,9 @@ describe("normalizeLines", () => {
         null,
         "line",
         { startPlayerId: "qb" },
-        { startPlayerId: "qb", end: { lateralYard: Number.NaN, absoluteYard: 0 } },
-        { startPlayerId: "qb", end: { lateralYard: 0, absoluteYard: "5" } },
-        { id: "ok", startPlayerId: "qb", end: { lateralYard: 0, absoluteYard: 5 } },
+        { startPlayerId: "qb", end: { lateralYard: Number.NaN, downfieldYard: 0 } },
+        { startPlayerId: "qb", end: { lateralYard: 0, downfieldYard: "5" } },
+        { id: "ok", startPlayerId: "qb", end: { lateralYard: 0, downfieldYard: 5 } },
       ],
       PLAYER_IDS,
     );
@@ -139,26 +139,26 @@ describe("normalizeLines", () => {
         {
           startPlayerId: "qb",
           waypoints: [
-            { lateralYard: 1, absoluteYard: 2 },
-            { lateralYard: Number.POSITIVE_INFINITY, absoluteYard: 2 },
+            { lateralYard: 1, downfieldYard: 2 },
+            { lateralYard: Number.POSITIVE_INFINITY, downfieldYard: 2 },
             "bad",
-            { lateralYard: 3, absoluteYard: 4 },
+            { lateralYard: 3, downfieldYard: 4 },
           ],
-          end: { lateralYard: 5, absoluteYard: 6 },
+          end: { lateralYard: 5, downfieldYard: 6 },
         },
       ],
       PLAYER_IDS,
     );
 
     expect(line?.waypoints).toEqual([
-      { lateralYard: 1, absoluteYard: 2 },
-      { lateralYard: 3, absoluteYard: 4 },
+      { lateralYard: 1, downfieldYard: 2 },
+      { lateralYard: 3, downfieldYard: 4 },
     ]);
   });
 
   it("waypoints が配列でなければ空配列にする", () => {
     const [line] = normalizeLines(
-      [{ startPlayerId: "qb", waypoints: "nope", end: { lateralYard: 0, absoluteYard: 0 } }],
+      [{ startPlayerId: "qb", waypoints: "nope", end: { lateralYard: 0, downfieldYard: 0 } }],
       PLAYER_IDS,
     );
 
@@ -168,8 +168,8 @@ describe("normalizeLines", () => {
   it("id が無い/空なら index 由来の決定的 id を割り当てる", () => {
     const result = normalizeLines(
       [
-        { startPlayerId: "qb", end: { lateralYard: 0, absoluteYard: 0 } },
-        { id: "  ", startPlayerId: "qb", end: { lateralYard: 0, absoluteYard: 0 } },
+        { startPlayerId: "qb", end: { lateralYard: 0, downfieldYard: 0 } },
+        { id: "  ", startPlayerId: "qb", end: { lateralYard: 0, downfieldYard: 0 } },
       ],
       PLAYER_IDS,
     );
@@ -187,8 +187,8 @@ describe("normalizeLines", () => {
     const input = [
       {
         startPlayerId: "qb",
-        waypoints: [{ lateralYard: 1, absoluteYard: 2 }],
-        end: { lateralYard: 3, absoluteYard: 4 },
+        waypoints: [{ lateralYard: 1, downfieldYard: 2 }],
+        end: { lateralYard: 3, downfieldYard: 4 },
       },
     ];
 
@@ -201,7 +201,7 @@ describe("normalizeLines", () => {
 });
 
 describe("normalizeLines の件数上限", () => {
-  const end = { lateralYard: 5, absoluteYard: 60 };
+  const end = { lateralYard: 5, downfieldYard: 60 };
 
   it("MAX_LINES 本を超える線は先頭の MAX_LINES 本だけ残す", () => {
     const raw = Array.from({ length: MAX_LINES + 5 }, (_, i) => ({
@@ -219,13 +219,13 @@ describe("normalizeLines の件数上限", () => {
   it("MAX_WAYPOINTS_PER_LINE 個を超える waypoint は先頭から上限の個数だけ残す", () => {
     const waypoints = Array.from({ length: MAX_WAYPOINTS_PER_LINE + 5 }, (_, i) => ({
       lateralYard: 5,
-      absoluteYard: i,
+      downfieldYard: i,
     }));
 
     const [line] = normalizeLines([{ startPlayerId: "qb", waypoints, end }], PLAYER_IDS);
 
     expect(line?.waypoints).toHaveLength(MAX_WAYPOINTS_PER_LINE);
-    expect(line?.waypoints.at(-1)?.absoluteYard).toBe(MAX_WAYPOINTS_PER_LINE - 1);
+    expect(line?.waypoints.at(-1)?.downfieldYard).toBe(MAX_WAYPOINTS_PER_LINE - 1);
   });
 });
 
@@ -235,8 +235,8 @@ describe("cloneLine", () => {
       id: "x",
       kind: "motion",
       startPlayerId: "qb",
-      waypoints: [{ lateralYard: 1, absoluteYard: 2 }],
-      end: { lateralYard: 3, absoluteYard: 4 },
+      waypoints: [{ lateralYard: 1, downfieldYard: 2 }],
+      end: { lateralYard: 3, downfieldYard: 4 },
       interpolation: "bezier",
       color: "#00f",
       thickness: 3,
@@ -257,7 +257,7 @@ describe("cloneLine", () => {
       kind: "route",
       startPlayerId: "qb",
       waypoints: [],
-      end: { lateralYard: 0, absoluteYard: 0 },
+      end: { lateralYard: 0, downfieldYard: 0 },
       interpolation: "straight",
     });
 
@@ -275,15 +275,15 @@ describe("lineAnchorPoints", () => {
       id: "r",
       kind: "route",
       startPlayerId: "wr",
-      waypoints: [{ lateralYard: 6, absoluteYard: 55 }],
-      end: { lateralYard: 7, absoluteYard: 60 },
+      waypoints: [{ lateralYard: 6, downfieldYard: 55 }],
+      end: { lateralYard: 7, downfieldYard: 60 },
       interpolation: "straight",
     };
 
     expect(lineAnchorPoints(line, byId)).toEqual([
-      { lateralYard: 5, absoluteYard: 50 },
-      { lateralYard: 6, absoluteYard: 55 },
-      { lateralYard: 7, absoluteYard: 60 },
+      { lateralYard: 5, downfieldYard: 50 },
+      { lateralYard: 6, downfieldYard: 55 },
+      { lateralYard: 7, downfieldYard: 60 },
     ]);
   });
 
@@ -293,7 +293,7 @@ describe("lineAnchorPoints", () => {
       kind: "route",
       startPlayerId: "missing",
       waypoints: [],
-      end: { lateralYard: 0, absoluteYard: 0 },
+      end: { lateralYard: 0, downfieldYard: 0 },
       interpolation: "straight",
     };
 
@@ -305,8 +305,8 @@ describe("lineAnchorPoints", () => {
       id: "r",
       kind: "route",
       startPlayerId: "qb",
-      waypoints: [{ lateralYard: 1, absoluteYard: 2 }],
-      end: { lateralYard: 3, absoluteYard: 4 },
+      waypoints: [{ lateralYard: 1, downfieldYard: 2 }],
+      end: { lateralYard: 3, downfieldYard: 4 },
       interpolation: "straight",
     };
 

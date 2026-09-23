@@ -14,8 +14,8 @@ import {
 
 function seed(): PlayData {
   return {
-    version: 1,
-    field: { zone: "middle" },
+    version: 2,
+    field: { zone: "middle", losYard: 50 },
     players: [player("a")],
     lines: [line("l1"), line("l2"), line("l3")],
   };
@@ -84,6 +84,18 @@ describe("UpdateLineCommand", () => {
     expect(model.findLine("l1")).toEqual(line("l1"));
   });
 
+  it("色と太さに null を渡すと値を消して既定に戻し、undo で元の値に戻す", () => {
+    const model = new PlayModel(seed());
+    new UpdateLineCommand("l1", { color: "#abc", thickness: 2 }).apply(model);
+    const cmd = new UpdateLineCommand("l1", { color: null, thickness: null });
+
+    cmd.apply(model);
+    expect(model.findLine("l1")).toEqual(line("l1"));
+
+    cmd.undo(model);
+    expect(model.findLine("l1")).toEqual({ ...line("l1"), color: "#abc", thickness: 2 });
+  });
+
   it("空 patch は現状維持（全項目の未指定分岐）", () => {
     const model = new PlayModel(seed());
     const cmd = new UpdateLineCommand("l1", {});
@@ -106,12 +118,12 @@ describe("UpdateLineCommand", () => {
 describe("SetLineWaypointsCommand", () => {
   it("waypoint 列を差し替え、undo で元へ戻す。構築後の改変は無効", () => {
     const model = new PlayModel(seed());
-    const wps = [{ lateralYard: 10, absoluteYard: 55 }];
+    const wps = [{ lateralYard: 10, downfieldYard: 55 }];
     const cmd = new SetLineWaypointsCommand("l1", wps);
     must(wps[0]).lateralYard = 999;
 
     cmd.apply(model);
-    expect(model.findLine("l1")?.waypoints).toEqual([{ lateralYard: 10, absoluteYard: 55 }]);
+    expect(model.findLine("l1")?.waypoints).toEqual([{ lateralYard: 10, downfieldYard: 55 }]);
 
     cmd.undo(model);
     expect(model.findLine("l1")?.waypoints).toEqual([]);
@@ -130,21 +142,21 @@ describe("SetLineWaypointsCommand", () => {
 describe("SetLineEndCommand", () => {
   it("終点だけを差し替え waypoint は不変、undo で元へ戻す。構築後の改変は無効", () => {
     const model = new PlayModel(seed());
-    const end = { lateralYard: 12, absoluteYard: 70 };
+    const end = { lateralYard: 12, downfieldYard: 70 };
     const cmd = new SetLineEndCommand("l1", end);
     end.lateralYard = 999;
 
     cmd.apply(model);
-    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 12, absoluteYard: 70 });
+    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 12, downfieldYard: 70 });
     expect(model.findLine("l1")?.waypoints).toEqual([]);
 
     cmd.undo(model);
-    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 5, absoluteYard: 60 });
+    expect(model.findLine("l1")?.end).toEqual({ lateralYard: 5, downfieldYard: 60 });
   });
 
   it("未知 id の apply と apply 前 undo は throw する", () => {
     const model = new PlayModel(seed());
-    const end = { lateralYard: 0, absoluteYard: 0 };
+    const end = { lateralYard: 0, downfieldYard: 0 };
 
     expect(() => new SetLineEndCommand("ghost", end).apply(model)).toThrow(
       /unknown line id "ghost"/,

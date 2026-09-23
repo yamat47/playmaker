@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { line, player } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { mutable } from "../../test-support/mutable.js";
-import type { PlayData } from "./play-data.js";
+import { CURRENT_PLAY_DATA_VERSION, LOS_YARD_BY_ZONE, type PlayData } from "./play-data.js";
 import { PlayModel } from "./play-model.js";
 
 function seed(): PlayData {
   return {
-    version: 1,
-    field: { zone: "middle" },
+    version: 2,
+    field: { zone: "middle", losYard: 50 },
     players: [player("a"), player("b"), player("c")],
     lines: [line("la", "a"), line("lb", "b"), line("lc", "a")],
   };
@@ -19,8 +19,8 @@ describe("PlayModel 構築", () => {
     const model = new PlayModel();
 
     expect(model.getData()).toEqual({
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [],
       lines: [],
     });
@@ -39,14 +39,17 @@ describe("PlayModel 構築", () => {
     // 商用ソフトが永続化した未バージョン化データの再読込（PRD 6.6 唯一の入口）。
     const legacy = {
       field: { zone: "redzone" },
-      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square" }],
-    } as unknown as PlayData;
+      players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 90 }, shape: "square" }],
+    };
 
     const model = new PlayModel(legacy);
 
-    expect(model.getData().version).toBe(1);
+    expect(model.getData().version).toBe(CURRENT_PLAY_DATA_VERSION);
     expect(model.getFieldZone()).toBe("redzone");
-    expect(model.findPlayer("wr")?.shape).toBe("square");
+    expect(model.findPlayer("wr")).toMatchObject({
+      shape: "square",
+      position: { lateralYard: 5, downfieldYard: 90 - LOS_YARD_BY_ZONE.redzone },
+    });
   });
 });
 
@@ -82,6 +85,15 @@ describe("PlayModel 参照系", () => {
 });
 
 describe("PlayModel.setFieldZone", () => {
+  it("ゾーンを切り替えると LOS もそのゾーンの既定へ移り、選手の LOS からの位置は変わらない", () => {
+    const model = new PlayModel(seed());
+
+    model.setFieldZone("redzone");
+
+    expect(model.getData().field).toEqual({ zone: "redzone", losYard: LOS_YARD_BY_ZONE.redzone });
+    expect(model.findPlayer("a")).toEqual(player("a"));
+  });
+
   it("ゾーンを変更しスナップショットを 1 回発火する", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn<(data: PlayData) => void>();

@@ -72,7 +72,7 @@ describe("migratePlayData", () => {
   it("undefined/破損 blob でも投げず空の現行 PlayData を返す", () => {
     const empty = {
       version: CURRENT_PLAY_DATA_VERSION,
-      field: { zone: "middle" },
+      field: { zone: "middle", losYard: 50 },
       players: [],
       lines: [],
     };
@@ -85,10 +85,15 @@ describe("migratePlayData", () => {
 
   it("正当な現行 PlayData は構造を保ち入力と切り離した新規オブジェクトを返す", () => {
     const input: PlayData = {
-      version: 1,
-      field: { zone: "redzone" },
+      version: 2,
+      field: { zone: "redzone", losYard: 85 },
       players: [
-        { id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "circle", label: "QB" },
+        {
+          id: "qb",
+          position: { lateralYard: 26, downfieldYard: 48 },
+          shape: "circle",
+          label: "QB",
+        },
       ],
       lines: [
         {
@@ -96,7 +101,7 @@ describe("migratePlayData", () => {
           kind: "route",
           startPlayerId: "qb",
           waypoints: [],
-          end: { lateralYard: 30, absoluteYard: 56 },
+          end: { lateralYard: 30, downfieldYard: 56 },
           interpolation: "straight",
         },
       ],
@@ -110,7 +115,7 @@ describe("migratePlayData", () => {
     expect(migrated.lines[0]).not.toBe(input.lines[0]);
   });
 
-  it("版なしの旧来 blob を現行版へ引き上げ、復元可能な構造は保持する", () => {
+  it("版なしの旧来 blob を現行版へ引き上げ、絶対ヤードを LOS からの位置に直す", () => {
     // 商用ソフト初期の未バージョン化データ（version フィールドが無い）。
     const legacy = {
       field: { zone: "own-redzone" },
@@ -120,9 +125,9 @@ describe("migratePlayData", () => {
     const migrated = migratePlayData(legacy);
 
     expect(migrated.version).toBe(CURRENT_PLAY_DATA_VERSION);
-    expect(migrated.field.zone).toBe("own-redzone");
+    expect(migrated.field).toEqual({ zone: "own-redzone", losYard: 10 });
     expect(migrated.players).toEqual([
-      { id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square", label: "" },
+      { id: "wr", position: { lateralYard: 5, downfieldYard: 40 }, shape: "square", label: "" },
     ]);
     expect(migrated.lines).toEqual([]);
   });
@@ -131,7 +136,7 @@ describe("migratePlayData", () => {
     const future = {
       version: 99,
       field: { zone: "middle" },
-      players: [{ id: "qb", position: { lateralYard: 26, absoluteYard: 48 }, shape: "circle" }],
+      players: [{ id: "qb", position: { lateralYard: 26, downfieldYard: 48 }, shape: "circle" }],
       lines: [],
       futureOnlyField: { whatever: true },
     } as unknown;
@@ -145,15 +150,15 @@ describe("migratePlayData", () => {
 
   it("id が重複した blob も、選手と線の id を一意にして取り込む", () => {
     const duplicated = {
-      version: 1,
+      version: 2,
       field: { zone: "middle" },
       players: [
-        { id: "x", position: { lateralYard: 7, absoluteYard: 49 } },
-        { id: "x", position: { lateralYard: 9, absoluteYard: 49 } },
+        { id: "x", position: { lateralYard: 7, downfieldYard: 49 } },
+        { id: "x", position: { lateralYard: 9, downfieldYard: 49 } },
       ],
       lines: [
-        { id: "rt", startPlayerId: "x", end: { lateralYard: 7, absoluteYard: 55 } },
-        { id: "rt", startPlayerId: "x", end: { lateralYard: 9, absoluteYard: 55 } },
+        { id: "rt", startPlayerId: "x", end: { lateralYard: 7, downfieldYard: 55 } },
+        { id: "rt", startPlayerId: "x", end: { lateralYard: 9, downfieldYard: 55 } },
       ],
     } as unknown;
 
@@ -165,18 +170,18 @@ describe("migratePlayData", () => {
 
   it("getData→JSON→migratePlayData の往復で同値に戻る（PRD 5.8 往復契約）", () => {
     const persisted: PlayData = {
-      version: 1,
-      field: { zone: "redzone" },
+      version: 2,
+      field: { zone: "redzone", losYard: 85 },
       players: [
-        { id: "x", position: { lateralYard: 7, absoluteYard: 49 }, shape: "circle", label: "X" },
+        { id: "x", position: { lateralYard: 7, downfieldYard: 49 }, shape: "circle", label: "X" },
       ],
       lines: [
         {
           id: "rt",
           kind: "route",
           startPlayerId: "x",
-          waypoints: [{ lateralYard: 7, absoluteYard: 55 }],
-          end: { lateralYard: 13, absoluteYard: 59 },
+          waypoints: [{ lateralYard: 7, downfieldYard: 55 }],
+          end: { lateralYard: 13, downfieldYard: 59 },
           interpolation: "bezier",
         },
       ],

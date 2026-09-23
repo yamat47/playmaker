@@ -6,11 +6,11 @@ import type { FieldPosition, Player, PlayerShape } from "../model/player.js";
 import { clonePlayer } from "../model/player.js";
 import type { ICommand } from "./command.js";
 
-/** プロパティ編集で差し替え可能な項目（ラベル・形状・色）。指定キーのみ上書きする。 */
+/** 指定したキーだけを差し替える。色は null で値を消し、既定に戻す。 */
 export interface PlayerPatch {
-  label?: string;
-  shape?: PlayerShape;
-  color?: string;
+  readonly label?: string;
+  readonly shape?: PlayerShape;
+  readonly color?: string | null;
 }
 
 /** 選手を 1 人追加する。undo は同 id の削除。 */
@@ -100,13 +100,15 @@ export class UpdatePlayerCommand implements ICommand {
     if (current === undefined) {
       throw new Error(`UpdatePlayerCommand: unknown player id "${this.playerId}"`);
     }
-    // patch は「指定キーのみ差し替え・未指定は現状維持」。undefined を「クリア」と解釈しない。
+    // undefined は現状維持、null は値を消して既定に戻す。
     const { label, shape, color } = this.patch;
+    const nextColor = color === undefined ? current.color : (color ?? undefined);
     this.previous = model.updatePlayer({
-      ...current,
-      ...(label === undefined ? {} : { label }),
-      ...(shape === undefined ? {} : { shape }),
-      ...(color === undefined ? {} : { color }),
+      id: current.id,
+      position: current.position,
+      shape: shape ?? current.shape,
+      label: label ?? current.label,
+      ...(nextColor === undefined ? {} : { color: nextColor }),
     });
   }
 

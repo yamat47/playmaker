@@ -123,7 +123,7 @@ type Interaction =
       readonly playerId: string;
       readonly origin: FieldPosition;
       readonly offsetLat: number;
-      readonly offsetAbs: number;
+      readonly offsetDownfield: number;
       current: FieldPosition;
     }
   | {
@@ -132,7 +132,7 @@ type Interaction =
       readonly index: number;
       readonly origin: FieldPosition;
       readonly offsetLat: number;
-      readonly offsetAbs: number;
+      readonly offsetDownfield: number;
       current: FieldPosition;
     }
   | {
@@ -140,7 +140,7 @@ type Interaction =
       readonly lineId: string;
       readonly origin: FieldPosition;
       readonly offsetLat: number;
-      readonly offsetAbs: number;
+      readonly offsetDownfield: number;
       current: FieldPosition;
     }
   | {
@@ -154,7 +154,7 @@ type Interaction =
   | null;
 
 function samePosition(a: FieldPosition, b: FieldPosition): boolean {
-  return a.lateralYard === b.lateralYard && a.absoluteYard === b.absoluteYard;
+  return a.lateralYard === b.lateralYard && a.downfieldYard === b.downfieldYard;
 }
 
 // 2 点間距離（ヤード）。geometry の primitive を退化線分（同一点 = 点距離）として
@@ -165,12 +165,12 @@ function pointDistance(a: FieldPosition, b: FieldPosition): number {
 
 // 掴んだ点とポインタのずれを保ったまま、ドラッグ対象を置く位置。
 function dragTarget(
-  drag: { readonly offsetLat: number; readonly offsetAbs: number },
+  drag: { readonly offsetLat: number; readonly offsetDownfield: number },
   pos: FieldPosition,
 ): FieldPosition {
   return {
     lateralYard: pos.lateralYard + drag.offsetLat,
-    absoluteYard: pos.absoluteYard + drag.offsetAbs,
+    downfieldYard: pos.downfieldYard + drag.offsetDownfield,
   };
 }
 
@@ -185,10 +185,15 @@ function polylineLengthYards(start: FieldPosition, points: readonly FieldPositio
 }
 
 // パッチの指定キーのうち、現在値と違うものが 1 つでもあるか。
-function patchChangesAnything<T>(current: T, patch: Partial<T>): boolean {
-  return (Object.keys(patch) as (keyof T)[]).some(
-    (key) => patch[key] !== undefined && patch[key] !== current[key],
-  );
+function patchChangesAnything<T>(
+  current: T,
+  patch: { readonly [K in keyof T]?: T[K] | null },
+): boolean {
+  return (Object.keys(patch) as (keyof T)[]).some((key) => {
+    const value = patch[key];
+    // null は値を消して既定に戻す指定なので、値のない現状とは同じとみなす。
+    return value !== undefined && (value ?? undefined) !== current[key];
+  });
 }
 
 function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
@@ -584,7 +589,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private clampToField(pos: FieldPosition): FieldPosition {
-    return clampToZoneWindow(pos, this.model.getFieldZone());
+    return clampToZoneWindow(pos, this.model.getSnapshot().field);
   }
 
   private selectPointerDown(pos: FieldPosition): void {
@@ -603,7 +608,7 @@ export class EditorController extends Disposable implements IEditorController {
             lineId: line.id,
             origin,
             offsetLat: origin.lateralYard - pos.lateralYard,
-            offsetAbs: origin.absoluteYard - pos.absoluteYard,
+            offsetDownfield: origin.downfieldYard - pos.downfieldYard,
             current: { ...origin },
           };
           this._onDidChange.fire();
@@ -618,7 +623,7 @@ export class EditorController extends Disposable implements IEditorController {
             index,
             origin,
             offsetLat: origin.lateralYard - pos.lateralYard,
-            offsetAbs: origin.absoluteYard - pos.absoluteYard,
+            offsetDownfield: origin.downfieldYard - pos.downfieldYard,
             current: { ...origin },
           };
           this._onDidChange.fire();
@@ -636,7 +641,7 @@ export class EditorController extends Disposable implements IEditorController {
         playerId: player.id,
         origin,
         offsetLat: origin.lateralYard - pos.lateralYard,
-        offsetAbs: origin.absoluteYard - pos.absoluteYard,
+        offsetDownfield: origin.downfieldYard - pos.downfieldYard,
         current: origin,
       };
       this._onDidChange.fire();

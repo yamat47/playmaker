@@ -3,6 +3,7 @@
 // （DOM が小さく、編集はコマンド確定時に走るので作り直しても支障ない）。
 
 import {
+  DEFAULT_LINE_THICKNESS,
   Disposable,
   type IEditorController,
   isOneOf,
@@ -74,7 +75,7 @@ export class PropertyPanel extends Disposable {
         controller.updateSelectedLine({ interpolation: v }),
       );
       this.addLineColor(line.color, (v) => controller.updateSelectedLine({ color: v }));
-      this.addNumber("太さ", line.thickness ?? 2, (v) =>
+      this.addNumber("太さ", line.thickness ?? DEFAULT_LINE_THICKNESS, (v) =>
         controller.updateSelectedLine({ thickness: v }),
       );
       return;
@@ -112,8 +113,8 @@ export class PropertyPanel extends Disposable {
   private addNumber(labelText: string, value: number, onChange: (v: number) => void): void {
     const input = document.createElement("input");
     input.type = "number";
-    input.min = "1";
-    input.step = "0.5";
+    input.min = "0.25";
+    input.step = "0.25";
     input.value = String(value);
     input.addEventListener("change", () => {
       const n = Number(input.value);

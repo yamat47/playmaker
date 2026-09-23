@@ -6,6 +6,7 @@ import {
   Disposable,
   EDITOR_TOOL_VALUES,
   type EditorTool,
+  FIELD_ZONE_LABELS,
   FIELD_ZONE_VALUES,
   type FieldZone,
   FORMATION_PRESETS,
@@ -21,12 +22,6 @@ const TOOL_LABELS = {
   "add-player": "選手を追加",
   "draw-line": "線を描く",
 } satisfies Record<EditorTool, string>;
-
-const ZONE_LABELS = {
-  "own-redzone": "自陣RZ",
-  middle: "中央",
-  redzone: "相手RZ",
-} satisfies Record<FieldZone, string>;
 
 const SIDE_LABELS = {
   offense: "オフェンス",
@@ -58,7 +53,7 @@ export class Toolbar extends Disposable {
     this.deleteButton = this.addButton("削除", () => controller.deleteSelection());
     this.addSeparator();
     for (const zone of FIELD_ZONE_VALUES) {
-      const btn = this.addButton(ZONE_LABELS[zone], () => controller.setFieldZone(zone));
+      const btn = this.addButton(FIELD_ZONE_LABELS[zone], () => controller.setFieldZone(zone));
       this.zoneButtons.set(zone, btn);
     }
     this.addSeparator();

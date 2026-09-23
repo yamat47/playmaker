@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
+import { clampToZoneWindow } from "../geometry/field.js";
+import { FIELD_ZONE_VALUES, fieldStateForZone } from "../model/play-data.js";
 import { isPlayerShape } from "../model/player.js";
 import { isTeamSide } from "../presets/shared.js";
 import { normalizeFormation } from "./formation.js";
@@ -22,7 +24,7 @@ describe("FORMATION_PRESETS データ健全性", () => {
       for (const p of formation.players) {
         expect(isPlayerShape(p.shape)).toBe(true);
         expect(Number.isFinite(p.position.lateralYard)).toBe(true);
-        expect(Number.isFinite(p.position.absoluteYard)).toBe(true);
+        expect(Number.isFinite(p.position.downfieldYard)).toBe(true);
         // 守は赤で塗り、攻は色なし（テーマ既定）。
         if (formation.side === "defense") {
           expect(p.color).toBe("#8f4034");
@@ -33,13 +35,12 @@ describe("FORMATION_PRESETS データ健全性", () => {
     }
   });
 
-  it("各プリセットは middle ゾーン窓 (abs 35..65) とフィールド幅に収まる", () => {
+  it.each(FIELD_ZONE_VALUES)("%s ゾーンでもプリセットの選手が窓に収まる", (zone) => {
+    const field = fieldStateForZone(zone);
+
     for (const formation of FORMATION_PRESETS) {
       for (const p of formation.players) {
-        expect(p.position.absoluteYard).toBeGreaterThanOrEqual(35);
-        expect(p.position.absoluteYard).toBeLessThanOrEqual(65);
-        expect(p.position.lateralYard).toBeGreaterThanOrEqual(0);
-        expect(p.position.lateralYard).toBeLessThanOrEqual(53.3);
+        expect(clampToZoneWindow(p.position, field)).toEqual(p.position);
       }
     }
   });

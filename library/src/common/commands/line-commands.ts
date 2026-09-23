@@ -7,12 +7,12 @@ import type { IPlayModel, LineRemoval } from "../model/play-model.js";
 import type { FieldPosition } from "../model/player.js";
 import type { ICommand } from "./command.js";
 
-/** プロパティ編集で差し替え可能な項目（種別・補間・色・太さ）。指定キーのみ上書きする。 */
+/** 指定したキーだけを差し替える。色と太さは null で値を消し、既定に戻す。 */
 export interface LinePatch {
-  kind?: LineKind;
-  interpolation?: LineInterpolation;
-  color?: string;
-  thickness?: number;
+  readonly kind?: LineKind;
+  readonly interpolation?: LineInterpolation;
+  readonly color?: string | null;
+  readonly thickness?: number | null;
 }
 
 /** 線を 1 本追加する。undo は同 id の削除。 */
@@ -72,14 +72,19 @@ export class UpdateLineCommand implements ICommand {
     if (current === undefined) {
       throw new Error(`UpdateLineCommand: unknown line id "${this.lineId}"`);
     }
-    // patch は「指定キーのみ差し替え・未指定は現状維持」。undefined を「クリア」と解釈しない。
+    // undefined は現状維持、null は値を消して既定に戻す。
     const { kind, interpolation, color, thickness } = this.patch;
+    const nextColor = color === undefined ? current.color : (color ?? undefined);
+    const nextThickness = thickness === undefined ? current.thickness : (thickness ?? undefined);
     this.previous = model.updateLine({
-      ...current,
-      ...(kind === undefined ? {} : { kind }),
-      ...(interpolation === undefined ? {} : { interpolation }),
-      ...(color === undefined ? {} : { color }),
-      ...(thickness === undefined ? {} : { thickness }),
+      id: current.id,
+      kind: kind ?? current.kind,
+      startPlayerId: current.startPlayerId,
+      waypoints: current.waypoints,
+      end: current.end,
+      interpolation: interpolation ?? current.interpolation,
+      ...(nextColor === undefined ? {} : { color: nextColor }),
+      ...(nextThickness === undefined ? {} : { thickness: nextThickness }),
     });
   }
 

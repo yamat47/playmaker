@@ -10,10 +10,10 @@ import { LoadFormationCommand } from "./formation-commands.js";
 
 function formationPlayers(): Player[] {
   return [
-    { id: "f-1", position: { lateralYard: 5, absoluteYard: 50 }, shape: "circle", label: "C" },
+    { id: "f-1", position: { lateralYard: 5, downfieldYard: 50 }, shape: "circle", label: "C" },
     {
       id: "f-2",
-      position: { lateralYard: 9, absoluteYard: 50 },
+      position: { lateralYard: 9, downfieldYard: 50 },
       shape: "square",
       label: "G",
       color: "#c62828",
@@ -28,10 +28,10 @@ describe("LoadFormationCommand", () => {
 
   it("apply は既存選手を保ったまま一括追加し 1 回発火、undo で一括削除、redo で再追加", () => {
     const model = new PlayModel({
-      version: 1,
-      field: { zone: "middle" },
+      version: 2,
+      field: { zone: "middle", losYard: 50 },
       players: [
-        { id: "e-1", position: { lateralYard: 1, absoluteYard: 1 }, shape: "circle", label: "E" },
+        { id: "e-1", position: { lateralYard: 1, downfieldYard: 1 }, shape: "circle", label: "E" },
       ],
       lines: [],
     });

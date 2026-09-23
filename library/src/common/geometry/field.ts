@@ -2,7 +2,7 @@
 // browser の描画/入力はすべてこの層を通してヤード↔ピクセルを扱う。
 // 戦術的厳密性より組み込みやすさ優先（PRD 4.1）。実寸は合理的近似でよい。
 
-import type { FieldZone } from "../model/play-data.js";
+import type { FieldState, FieldZone } from "../model/play-data.js";
 import type { FieldPosition } from "../model/player.js";
 
 /** フィールド幅（サイドライン間）= 規定 160 ft = 53.33 yd。 */
@@ -99,11 +99,14 @@ export function zoneWindowLength(zone: FieldZone): number {
  * 位置をゾーン窓の中（左右はサイドライン間、縦は窓の端から端）へ寄せる。
  * 画面の外で離したドラッグや余白へのクリックで、見えない位置に選手や点を置かないためのもの。
  */
-export function clampToZoneWindow(position: FieldPosition, zone: FieldZone): FieldPosition {
-  const { startYard, endYard } = fieldZoneWindow(zone);
+export function clampToZoneWindow(position: FieldPosition, field: FieldState): FieldPosition {
+  const { startYard, endYard } = fieldZoneWindow(field.zone);
   return {
     lateralYard: Math.min(Math.max(position.lateralYard, 0), FIELD_WIDTH_YARDS),
-    absoluteYard: Math.min(Math.max(position.absoluteYard, startYard), endYard),
+    downfieldYard: Math.min(
+      Math.max(position.downfieldYard, startYard - field.losYard),
+      endYard - field.losYard,
+    ),
   };
 }
 
@@ -148,14 +151,15 @@ export interface CanvasPoint {
  * 表示窓（フィールド幅 × ゾーン窓 30yd）をビューポートへアスペクト比維持で
  * 中央フィットさせ、ヤード座標と Canvas ピクセル座標を相互変換する。
  *
- * - lateralYard: 0 = 左サイドライン … FIELD_WIDTH_YARDS = 右サイドライン
- * - absoluteYard: -10..110（EZ 含む。窓外も計算可能。可視判定は containsYard）
- * - 大きい absoluteYard ほど画面上（y 小）= 攻撃方向。
+ * フィールドの線や番号は絶対ヤード（-10..110。窓外も計算できる）で、選手と線は
+ * LOS からの位置（FieldPosition）で扱う。大きいヤードほど画面の上（攻撃方向）。
  */
 export class FieldGeometry {
   readonly viewportWidth: number;
   readonly viewportHeight: number;
   readonly zone: FieldZone;
+  /** LOS の絶対ヤード。FieldPosition の downfieldYard はここからの距離。 */
+  readonly losYard: number;
   readonly window: YardWindow;
   /** px / yard。アスペクト維持のため縦横共通。 */
   readonly scale: number;
@@ -165,11 +169,12 @@ export class FieldGeometry {
   readonly offsetX: number;
   readonly offsetY: number;
 
-  constructor(viewportWidth: number, viewportHeight: number, zone: FieldZone) {
+  constructor(viewportWidth: number, viewportHeight: number, field: FieldState) {
     this.viewportWidth = viewportWidth;
     this.viewportHeight = viewportHeight;
-    this.zone = zone;
-    this.window = fieldZoneWindow(zone);
+    this.zone = field.zone;
+    this.losYard = field.losYard;
+    this.window = fieldZoneWindow(field.zone);
     const windowLength = this.window.endYard - this.window.startYard;
     const w = Math.max(0, viewportWidth);
     const h = Math.max(0, viewportHeight);
@@ -189,10 +194,10 @@ export class FieldGeometry {
     return this.offsetY + (this.window.endYard - absoluteYard) * this.scale;
   }
 
-  toCanvas(lateralYard: number, absoluteYard: number): CanvasPoint {
+  toCanvas(position: FieldPosition): CanvasPoint {
     return {
-      x: this.xForLateralYard(lateralYard),
-      y: this.yForAbsoluteYard(absoluteYard),
+      x: this.xForLateralYard(position.lateralYard),
+      y: this.yForAbsoluteYard(this.losYard + position.downfieldYard),
     };
   }
 
@@ -213,7 +218,7 @@ export class FieldGeometry {
   fromCanvas(point: CanvasPoint): FieldPosition {
     return {
       lateralYard: this.lateralYardForX(point.x),
-      absoluteYard: this.absoluteYardForY(point.y),
+      downfieldYard: this.absoluteYardForY(point.y) - this.losYard,
     };
   }
 

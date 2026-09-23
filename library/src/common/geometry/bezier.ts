@@ -26,8 +26,8 @@ export function cubicBezierPoint(
   const d = t * t * t;
   return {
     lateralYard: a * p0.lateralYard + b * c1.lateralYard + c * c2.lateralYard + d * p1.lateralYard,
-    absoluteYard:
-      a * p0.absoluteYard + b * c1.absoluteYard + c * c2.absoluteYard + d * p1.absoluteYard,
+    downfieldYard:
+      a * p0.downfieldYard + b * c1.downfieldYard + c * c2.downfieldYard + d * p1.downfieldYard,
   };
 }
 
@@ -46,11 +46,11 @@ export function catmullRomBezierControls(
   return [
     {
       lateralYard: p1.lateralYard + (p2.lateralYard - p0.lateralYard) / 6,
-      absoluteYard: p1.absoluteYard + (p2.absoluteYard - p0.absoluteYard) / 6,
+      downfieldYard: p1.downfieldYard + (p2.downfieldYard - p0.downfieldYard) / 6,
     },
     {
       lateralYard: p2.lateralYard - (p3.lateralYard - p1.lateralYard) / 6,
-      absoluteYard: p2.absoluteYard - (p3.absoluteYard - p1.absoluteYard) / 6,
+      downfieldYard: p2.downfieldYard - (p3.downfieldYard - p1.downfieldYard) / 6,
     },
   ];
 }
@@ -63,9 +63,9 @@ function dedupeConsecutive(points: readonly FieldPosition[]): FieldPosition[] {
     if (
       last === undefined ||
       last.lateralYard !== p.lateralYard ||
-      last.absoluteYard !== p.absoluteYard
+      last.downfieldYard !== p.downfieldYard
     ) {
-      out.push({ lateralYard: p.lateralYard, absoluteYard: p.absoluteYard });
+      out.push({ lateralYard: p.lateralYard, downfieldYard: p.downfieldYard });
     }
   }
   return out;

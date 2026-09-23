@@ -8,6 +8,7 @@
 // inbound 経路（PlayModel 構築・Playmaker.setPlayData）の唯一の入口にする。
 
 import { isFiniteNumber, isRecord } from "./guards.js";
+import { migrateV1ToV2 } from "./migration-v2.js";
 import { type PlayData, resolvePlayData } from "./play-data.js";
 
 /**
@@ -21,16 +22,12 @@ export interface PlayDataMigration {
 }
 
 /**
- * 旧→現行のマイグレーション段（`to` 昇順）。v1 が最初の版なので現状は空。
- *
- * スキーマを v2 へ進めるとき:
- *   1. play-data.ts の CURRENT_PLAY_DATA_VERSION を 2 にする
- *   2. ここへ `{ to: 2, migrate }` を足す（v1 blob を v2 の形へ寄せる）
- *   3. その段の単体テストを書く
- * エンジン applyPlayDataMigrations は段を注入して全分岐を単体テスト済みなので、
- * 段を足しても funnel 自体の経路は緑のまま拡張できる（PRD 6.6 の契約点）。
+ * 旧版を現行へ寄せる段（`to` 昇順）。スキーマを進めるときは
+ * CURRENT_PLAY_DATA_VERSION を上げ、ここへ段を 1 つ足し、その段の単体テストを書く。
  */
-export const PLAY_DATA_MIGRATIONS: readonly PlayDataMigration[] = [];
+export const PLAY_DATA_MIGRATIONS: readonly PlayDataMigration[] = [
+  { to: 2, migrate: migrateV1ToV2 },
+];
 
 /**
  * blob から宣言バージョンを取り出す。数値（有限）でなければ「版の宣言なし」とみなし

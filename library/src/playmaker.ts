@@ -1,6 +1,7 @@
 import { CanvasSurface, PointerInput, PropertyPanel, Toolbar } from "./browser/index.js";
 import {
   DisposableStore,
+  type EditorOverlay,
   type Event,
   type FieldZone,
   type Formation,
@@ -42,6 +43,8 @@ export {
 
 export type PlaymakerMode = "view" | "edit";
 
+const NO_OVERLAY: EditorOverlay = { kind: "none" };
+
 // バンドラは process.env.NODE_ENV を文字列に置き換える。置き換えずにブラウザで読み込むと
 // process が無く ReferenceError になるので、そのときは本番とみなす。
 declare const process: { readonly env: { readonly NODE_ENV?: string } };
@@ -55,7 +58,10 @@ function isDevelopment(): boolean {
 }
 
 export interface PlaymakerOptions {
-  /** 既定は "edit"。"view" は読み取り専用（編集 UI を出さない・PRD 5.5）。 */
+  /**
+   * 最初のモード。既定は "edit"。"view" は編集 UI を置かず、ポインタとキーの操作も受けない。
+   * あとから `setMode` で切り替えられる。
+   */
   mode?: PlaymakerMode;
   /**
    * 初期表示するプレー図データ。商用ソフトが永続化した PlayData をそのまま渡せる。
@@ -76,7 +82,6 @@ export interface PlaymakerOptions {
  * getPlayData と fieldZone は、dispose した時点の図を返す。
  */
 export class Playmaker implements IDisposable {
-  readonly mode: PlaymakerMode;
   /**
    * 編集コマンドと Undo / Redo の確定ごとに 1 回、最新の図の深いコピーを渡す。
    * `version` は常に現行なので、受け取った値をそのまま永続化できる。
@@ -89,11 +94,12 @@ export class Playmaker implements IDisposable {
   private readonly root: HTMLElement;
   private readonly surface: CanvasSurface;
   private readonly session: PlaySession;
-  // 今の controller に付けた描画の購読、UI、入力。setPlayData で controller が変わると付け直す。
+  private currentMode: PlaymakerMode;
+  // 今の controller に付けた描画の購読、UI、入力。controller かモードが変わると付け直す。
   private ui: DisposableStore;
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
-    this.mode = options.mode ?? "edit";
+    this.currentMode = options.mode ?? "edit";
     this.session = this.store.add(new PlaySession(options.initialData));
     this.onDidChange = this.session.onDidChange;
     if (options.onChange !== undefined) {
@@ -102,7 +108,7 @@ export class Playmaker implements IDisposable {
 
     this.root = document.createElement("div");
     this.root.className = "playmaker-root";
-    this.root.dataset.mode = this.mode;
+    this.root.dataset.mode = this.currentMode;
     container.appendChild(this.root);
     this.store.add(toDisposable(() => this.root.remove()));
 
@@ -113,6 +119,26 @@ export class Playmaker implements IDisposable {
     // CanvasSurface は構築したときに同じ図を描くので、ここでは描き直さない。
     this.ui = this.createUi();
     this.store.add(this.session.onDidReset(() => this.attachUi()));
+  }
+
+  get mode(): PlaymakerMode {
+    return this.currentMode;
+  }
+
+  /**
+   * モードを切り替える。図と Undo の履歴は残し、編集 UI とポインタ、キーの入力だけを付け外しする。
+   * view にすると、ドラッグや作図の途中の操作は取り消し、選択の強調も描かない。
+   */
+  setMode(mode: PlaymakerMode): void {
+    if (this.ignoreAfterDispose("setMode") || mode === this.currentMode) {
+      return;
+    }
+    this.currentMode = mode;
+    this.root.dataset.mode = mode;
+    if (mode === "view") {
+      this.session.controller.cancelInteraction();
+    }
+    this.attachUi();
   }
 
   /** 現在のフィールドゾーン。 */
@@ -210,7 +236,7 @@ export class Playmaker implements IDisposable {
     const ui = new DisposableStore();
     const controller = this.session.controller;
     ui.add(controller.onDidChangeScene(() => this.draw()));
-    if (this.mode === "edit") {
+    if (this.currentMode === "edit") {
       ui.add(new Toolbar(this.root, controller));
       ui.add(new PropertyPanel(this.root, controller));
       ui.add(new PointerInput(this.root, this.surface, controller));
@@ -220,6 +246,6 @@ export class Playmaker implements IDisposable {
 
   private draw(): void {
     const { scene, overlay } = this.session.controller.getFrame();
-    this.surface.setScene(scene, overlay);
+    this.surface.setScene(scene, this.currentMode === "edit" ? overlay : NO_OVERLAY);
   }
 }

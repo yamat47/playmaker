@@ -119,6 +119,11 @@ export class PointerInput extends Disposable {
     canvas.addEventListener("lostpointercapture", onPointerAbort, { signal });
     canvas.addEventListener("dblclick", onDoubleClick, { signal });
     root.addEventListener("keydown", onKeyDown, { signal });
-    this._register(toDisposable(() => listeners.abort()));
+    this._register(
+      toDisposable(() => {
+        listeners.abort();
+        canvas.removeAttribute("tabindex");
+      }),
+    );
   }
 }

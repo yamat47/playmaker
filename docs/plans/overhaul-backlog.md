@@ -571,15 +571,16 @@ controller の構造は分けない（2026-09-23 に決着）。ジェスチャ�
   - locations: library/src/playmaker.ts:127, library/src/test-support/play-driver.ts:33-38
   - 対応: PlaySession が scene と表示状態の通知を転送し、作り直しを内側で吸収するか。controller の構造を分けるかと一緒に、T15b のあとで決める。
   - 結論: PlaySession が今の controller の onDidChangeScene と onDidChangeViewState を転送する。読み直したときは onDidReset のあとに両方を 1 回ずつ出す。表示状態は比べずに出す（図も表示状態も入れ替わるため）。Playmaker の描画と driver は購読を 1 回で済ませる。Toolbar、PropertyPanel、PointerInput は controller を握るので、UI の付け直しには onDidReset が残る。session の表示状態の通知を本番で購読しているものは今は無く、driver だけが使う。
-- [ ] **T15-9 [should] PlayModel の単体テストが、仕様テストで確かめている振る舞いを重ねて確かめている**（T15b4 で追加）
+- [x] **T15-9 [should] PlayModel の単体テストが、仕様テストで確かめている振る舞いを重ねて確かめている**（T15b4 で追加）
   - locations: library/src/common/model/play-model.test.ts, library/src/common/model/play-model.ts（insertLine の位置の丸め）
   - 問題: testing.md の単体テストの対象に PlayModel は無い。選手を消すと線も消えること、戻すと元の並びに戻ること、1 回だけ通知することは specs/players.test.ts などでも確かめている。
   - 対応: 仕様テストから届く分は消し、届かない約束（未知の id や重複した id での throw、件数の上限、構築時の migrate）だけ残す。insertLine の範囲外の位置を丸める処理は、履歴が記録した範囲内の位置でしか呼ばれないので、届かないコードとして消す。
+  - 結論: 残した単体テストは、未知の id と重複した id での throw、一括削除で 1 人も消さずに throw すること、件数の上限、構築時の移行だけにした。仕様テストから届いていなかった「ほかの選手の線を挟んで 2 本の線を持つ選手の削除を Undo したときの並び」は、先に specs/players.test.ts へ足した。insertLine の丸めは消し、位置の範囲は JSDoc の契約にした。範囲外で throw する案は、同じく届かない分岐を足すことになるので採らなかった。T6-4 で足した hasPlayer は、どこからも呼ばれていなかったので消した。
 
 - 依存: T5-5、T9、T10（コードの形が固まってから）
 - 完了条件: 編集の振る舞いが仕様テストで確かめられ、実装に依存するテストが残っていない。Playmaker の結線をブラウザテストで確かめている。common 100% を維持する。
 - 規模: L（T15-0、T15a、T15b、T15c）
-- 進み具合: T15-0、T15a、T15b1〜T15b4、T15-8 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。残りは T15-9 と T15c。
+- 進み具合: T15-0、T15a、T15b1〜T15b4、T15-8、T15-9 を閉じた。T15-3 と T15-4 は editor-controller.test.ts ごと消えた。残りは T15c。
 
 ---
 

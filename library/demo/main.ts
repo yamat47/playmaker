@@ -1,9 +1,3 @@
-// ローカル確認用 playground のエントリ。「Sideline Slate」筐体で以下を目視する:
-// - 左レールのプリセット・ライブラリ（フォーメーション 13・プレー図 16）をワンクリック読込
-// - 中央フィールドでの内蔵 UI（ツールバー/プロパティパネル）編集と view/edit 切替
-// - PNG エクスポート（編集 UI を含まない）
-// - 開発者ドロワー: PlayData 往復（getPlayData→restorePlayData・版なし/未来版の migration）と
-//   密度ストレス（選手 22 + 線 20）を手動目視する fixture
 import {
   CURRENT_PLAY_DATA_VERSION,
   FORMATION_PRESETS,
@@ -16,24 +10,26 @@ import {
   Playmaker,
   type PlayPreset,
 } from "playmaker";
+// 配布版の JS は CSS を読み込まないので、利用者と同じく別に読む。
+import "playmaker/styles.css";
 
-function need<T extends HTMLElement>(id: string): T {
+function need<T extends HTMLElement>(id: string, type: new () => T): T {
   const el = document.getElementById(id);
-  if (el === null) {
-    throw new Error(`#${id} が見つかりません`);
+  if (!(el instanceof type)) {
+    throw new Error(`#${id} の ${type.name} が見つかりません`);
   }
-  return el as T;
+  return el;
 }
 
-const mountPoint = need("stage");
-const libraryScroll = need("library-scroll");
-const statusEl = need("status");
-const jsonArea = need<HTMLTextAreaElement>("json");
-const dataStatus = need("data-status");
-const infoName = need("playinfo-name");
-const infoChip = need("playinfo-chip");
-const infoPers = need("playinfo-pers");
-const infoSummary = need("playinfo-summary");
+const mountPoint = need("stage", HTMLElement);
+const libraryScroll = need("library-scroll", HTMLElement);
+const statusEl = need("status", HTMLElement);
+const jsonArea = need("json", HTMLTextAreaElement);
+const dataStatus = need("data-status", HTMLElement);
+const infoName = need("playinfo-name", HTMLElement);
+const infoChip = need("playinfo-chip", HTMLElement);
+const infoPers = need("playinfo-pers", HTMLElement);
+const infoSummary = need("playinfo-summary", HTMLElement);
 
 // 静的 HTML のボタン/コンテナは HMR を跨いで生き残る。signal でリスナを束ねて再読込時に
 // 外し、コンテナは作り直す前に空にする（束ねないとホットリロードごとに多重登録される）。
@@ -42,7 +38,6 @@ const { signal } = demoLifetime;
 
 const DEFENSE_COLOR = "#8f4034";
 
-// タイプ分類 → コールシート色タグ（ラン/パス/RPO/カバレッジ/プレッシャー）。
 const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
   "run-zone": { label: "RUN", color: "var(--cat-run)" },
   "run-gap": { label: "RUN", color: "var(--cat-run)" },
@@ -55,8 +50,8 @@ const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
   pressure: { label: "PRES", color: "var(--cat-pres)" },
 };
 
-// 密度ストレス用 fixture（選手 22 + 線 20）。PRD 6.2 を手動目視するため demo に常設し、
-// 2 形状（丸/四角）・3 線種・straight/bezier・複数 waypoint を 1 ロードで漏れなく確認する。
+// 要素が多い図でも描画と操作が重くならないかを目で確かめる図。丸と四角、3 種の線、
+// straight と bezier、waypoint を複数持つ線を、1 回の読み込みですべて出す。
 const STRESS_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.7, downfieldYard: -1 }, shape: "square", label: "C" },
   { id: "ol-lg", position: { lateralYard: 24.4, downfieldYard: -1 }, shape: "square", label: "LG" },
@@ -339,12 +334,11 @@ function refreshJson(): void {
 statusEl.textContent = "onChange 待ち（編集すると更新されます）";
 const playmaker = new Playmaker(mountPoint, { initialData: PLAY_PRESETS[0]?.data, onChange });
 
-// ---- 左レール: プリセット・ライブラリ ----
 let activeButton: HTMLButtonElement | null = null;
 
-function setActive(button: HTMLButtonElement): void {
+function setActive(button: HTMLButtonElement | null): void {
   activeButton?.classList.remove("is-active");
-  button.classList.add("is-active");
+  button?.classList.add("is-active");
   activeButton = button;
 }
 
@@ -395,13 +389,12 @@ function subTitle(text: string, offense: boolean): HTMLElement {
   return el;
 }
 
-function loadFormation(formation: Formation): void {
-  const players: Player[] = formation.players.map((p, i) => ({ ...p, id: `${formation.id}-${i}` }));
+function replacePlayKeepingZone(players: readonly Player[], lines: readonly Line[]): void {
   playmaker.setPlayData({
     version: CURRENT_PLAY_DATA_VERSION,
-    field: playmaker.getPlayData().field,
+    field: { zone: playmaker.fieldZone },
     players,
-    lines: [],
+    lines,
   });
   refreshJson();
 }
@@ -415,10 +408,11 @@ interface PresetRow {
   name: string;
   tag: string;
   tagColor: string;
-  select: () => void;
+  /** 図を読み込めなかったときは false を返す。 */
+  select: () => boolean;
 }
 
-// 1 行ぶんの見た目と読込処理を item から導く（フォーメーション/プレー図で差分はここだけ）。
+// フォーメーションとプレー図で違うのは 1 行の見た目と押したときの処理だけなので、それを toRow で受け取る。
 function addSection<T extends { id: string; side: "offense" | "defense" }>(
   items: readonly T[],
   side: "offense" | "defense",
@@ -435,8 +429,9 @@ function addSection<T extends { id: string; side: "offense" | "defense" }>(
     const button = presetButton(row.name, row.tag, row.tagColor);
     button.dataset.presetId = item.id;
     button.addEventListener("click", () => {
-      setActive(button);
-      row.select();
+      if (row.select()) {
+        setActive(button);
+      }
     });
     libraryScroll.append(button);
   }
@@ -449,13 +444,17 @@ function formationRow(formation: Formation): PresetRow {
     tag: offense ? "OFF" : "DEF",
     tagColor: offense ? "var(--off)" : "var(--def)",
     select: () => {
-      loadFormation(formation);
+      if (!playmaker.loadFormation(formation)) {
+        infoSummary.textContent = `${formation.name} は、選手の上限を超えるので置きませんでした。`;
+        return false;
+      }
       setInfo(
         formation.name,
         null,
         "Formation",
-        "選手配置のみ（ライン無し）。現在の図を差し替えます。",
+        "今の図に選手を足しました（線は付きません）。攻守の隊形を重ねられます。",
       );
+      return true;
     },
   };
 }
@@ -469,6 +468,7 @@ function playRow(preset: PlayPreset): PresetRow {
     select: () => {
       loadPlay(preset);
       setInfo(preset.name, meta, preset.personnel, preset.summary);
+      return true;
     },
   };
 }
@@ -494,8 +494,7 @@ if (initialPreset !== undefined) {
   }
 }
 
-// ---- トップバー ----
-const modeButton = need<HTMLButtonElement>("mode-toggle");
+const modeButton = need("mode-toggle", HTMLButtonElement);
 modeButton.addEventListener(
   "click",
   () => {
@@ -512,18 +511,11 @@ function syncModeButton(): void {
 }
 syncModeButton();
 
-need<HTMLButtonElement>("clear").addEventListener(
+need("clear", HTMLButtonElement).addEventListener(
   "click",
   () => {
-    playmaker.setPlayData({
-      version: CURRENT_PLAY_DATA_VERSION,
-      field: playmaker.getPlayData().field,
-      players: [],
-      lines: [],
-    });
-    refreshJson();
-    activeButton?.classList.remove("is-active");
-    activeButton = null;
+    replacePlayKeepingZone([], []);
+    setActive(null);
     setInfo("—", null, "", "");
   },
   { signal },
@@ -541,7 +533,7 @@ async function downloadPng(): Promise<void> {
   statusEl.textContent = `PNG 出力（${playmaker.mode} モード・${Math.round(blob.size / 1024)}KB）`;
 }
 
-need<HTMLButtonElement>("export-png").addEventListener(
+need("export-png", HTMLButtonElement).addEventListener(
   "click",
   () => {
     downloadPng().catch((error: unknown) => {
@@ -552,8 +544,8 @@ need<HTMLButtonElement>("export-png").addEventListener(
   { signal },
 );
 
-const drawer = need("drawer");
-const devToggle = need<HTMLButtonElement>("dev-toggle");
+const drawer = need("drawer", HTMLElement);
+const devToggle = need("dev-toggle", HTMLButtonElement);
 devToggle.addEventListener(
   "click",
   () => {
@@ -563,20 +555,17 @@ devToggle.addEventListener(
   { signal },
 );
 
-// ---- 開発者ドロワー: 往復・migration・密度ストレスの目視 ----
-need<HTMLButtonElement>("load-stress").addEventListener(
+need("load-stress", HTMLButtonElement).addEventListener(
   "click",
   () => {
-    playmaker.setPlayData({
-      version: CURRENT_PLAY_DATA_VERSION,
-      field: playmaker.getPlayData().field,
-      players: STRESS_PLAYERS,
-      lines: STRESS_LINES,
-    });
-    refreshJson();
-    activeButton?.classList.remove("is-active");
-    activeButton = null;
-    setInfo("密度ストレス", null, "選手 22・線 20", "描画・操作の体感速度を手動目視する fixture。");
+    replacePlayKeepingZone(STRESS_PLAYERS, STRESS_LINES);
+    setActive(null);
+    setInfo(
+      "密度ストレス",
+      null,
+      `選手 ${STRESS_PLAYERS.length}・線 ${STRESS_LINES.length}`,
+      "描画・操作の体感速度を手動目視する fixture。",
+    );
   },
   { signal },
 );
@@ -586,7 +575,8 @@ function loadFromJsonText(): void {
   try {
     parsed = JSON.parse(jsonArea.value);
   } catch (error) {
-    dataStatus.textContent = `JSON 解析エラー: ${(error as Error).message}`;
+    const reason = error instanceof Error ? error.message : String(error);
+    dataStatus.textContent = `JSON 解析エラー: ${reason}`;
     return;
   }
   playmaker.restorePlayData(parsed);
@@ -599,7 +589,7 @@ function loadFixture(blob: unknown): void {
   loadFromJsonText();
 }
 
-need<HTMLButtonElement>("json-export").addEventListener(
+need("json-export", HTMLButtonElement).addEventListener(
   "click",
   () => {
     refreshJson();
@@ -607,8 +597,8 @@ need<HTMLButtonElement>("json-export").addEventListener(
   },
   { signal },
 );
-need<HTMLButtonElement>("json-import").addEventListener("click", loadFromJsonText, { signal });
-need<HTMLButtonElement>("json-legacy").addEventListener(
+need("json-import", HTMLButtonElement).addEventListener("click", loadFromJsonText, { signal });
+need("json-legacy", HTMLButtonElement).addEventListener(
   "click",
   () =>
     loadFixture({
@@ -617,7 +607,7 @@ need<HTMLButtonElement>("json-legacy").addEventListener(
     }),
   { signal },
 );
-need<HTMLButtonElement>("json-future").addEventListener(
+need("json-future", HTMLButtonElement).addEventListener(
   "click",
   () =>
     loadFixture({

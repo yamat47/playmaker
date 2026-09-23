@@ -10,6 +10,8 @@ const baseState: EditorViewState = {
   canRedo: false,
   fieldZone: "middle",
   isDrawing: false,
+  remainingPlayerSlots: 10,
+  canStartLine: true,
 };
 
 function setup(initial: ViewSnapshot = { state: baseState, player: undefined, line: undefined }) {

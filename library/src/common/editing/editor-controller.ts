@@ -104,6 +104,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   getViewState(): EditorViewState {
+    const { players, lines } = this.model.getSnapshot();
     return {
       tool: this.tool,
       selection: this.getSelection(),
@@ -111,6 +112,8 @@ export class EditorController extends Disposable implements IEditorController {
       canRedo: this.commands.canRedo,
       fieldZone: this.model.getFieldZone(),
       isDrawing: this.interaction?.type === "draw-line",
+      remainingPlayerSlots: MAX_PLAYERS - players.length,
+      canStartLine: lines.length < MAX_LINES,
     };
   }
 

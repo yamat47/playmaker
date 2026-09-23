@@ -34,7 +34,6 @@ describe("readDeclaredVersion", () => {
 });
 
 describe("applyPlayDataMigrations", () => {
-  // 段注入で「適用/スキップ」両分岐を UI/レジストリ無しに検証する（VSCode 流フェイク注入）。
   const steps: readonly PlayDataMigration[] = [
     { to: 1, migrate: (d) => ({ ...d, v1: true }) },
     { to: 2, migrate: (d) => ({ ...d, v2: true }) },
@@ -48,10 +47,11 @@ describe("applyPlayDataMigrations", () => {
     });
   });
 
-  it("宣言版以下の段はスキップする（境界 to === declared も適用しない）", () => {
-    // declared=1: to:1 はスキップ（false 分岐）、to:2 のみ適用。
+  it("宣言版と同じ版へ移す段は適用しない", () => {
     expect(applyPlayDataMigrations({ base: true }, 1, steps)).toEqual({ base: true, v2: true });
-    // declared=2: 全段スキップ＝未来版の前方互換（素通し）。
+  });
+
+  it("宣言版がすべての段より新しければ、どの段も適用しない", () => {
     expect(applyPlayDataMigrations({ base: true }, 2, steps)).toEqual({ base: true });
   });
 

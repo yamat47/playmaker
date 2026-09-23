@@ -153,13 +153,21 @@ describe("hitTestLine", () => {
     expect(hitTestLine([], players, { lateralYard: 0, downfieldYard: 0 })).toBeUndefined();
   });
 
-  it("許容半径は引数で上書きでき、既定は公開定数", () => {
+  it("許容半径を渡すと、その距離までの点だけ当たる", () => {
     const l = line("r1");
     const target = { lateralYard: 6, downfieldYard: 55 };
 
     expect(hitTestLine([l], players, target, 0.5)).toBeUndefined();
     expect(hitTestLine([l], players, target, 2)).toBe(l);
-    expect(LINE_HIT_TOLERANCE_YARDS).toBeGreaterThan(0);
+  });
+
+  it("許容半径を渡さなければ、LINE_HIT_TOLERANCE_YARDS までの点が当たる", () => {
+    const l = line("r1");
+    const near = { lateralYard: 5 + LINE_HIT_TOLERANCE_YARDS * 0.99, downfieldYard: 55 };
+    const far = { lateralYard: 5 + LINE_HIT_TOLERANCE_YARDS * 1.01, downfieldYard: 55 };
+
+    expect(hitTestLine([l], players, near)).toBe(l);
+    expect(hitTestLine([l], players, far)).toBeUndefined();
   });
 
   it("許容半径が 0 以下なら例外", () => {
@@ -169,9 +177,8 @@ describe("hitTestLine", () => {
     expect(() => hitTestLine([l], players, { lateralYard: 0, downfieldYard: 0 }, -1)).toThrow();
   });
 
-  describe("退化した 1 点線（起点選手位置と終点が同座標・waypoints 空）", () => {
-    // wr の position は (5, 50)。end も同座標にすると anchors が [P, P] となり
-    // dedupeConsecutive で [P]（1 点）へ縮約され distanceToPolyline の length===1 分岐を通る。
+  describe("終点が起点の選手と同じ位置にあり、waypoint もない線", () => {
+    // wr は (5, 50) にいる。
     const degenerate = line("degen", { end: { lateralYard: 5, downfieldYard: 50 } });
 
     it("その点と同座標（距離 0）は許容半径内で hit する", () => {
@@ -180,7 +187,7 @@ describe("hitTestLine", () => {
       );
     });
 
-    it("許容半径より離れた点は undefined（境界値）", () => {
+    it("許容半径より離れた点は undefined", () => {
       expect(
         hitTestLine([degenerate], players, { lateralYard: 5, downfieldYard: 55 }),
       ).toBeUndefined();

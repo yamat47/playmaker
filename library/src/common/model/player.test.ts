@@ -5,7 +5,6 @@ import {
   isPlayerShape,
   MAX_PLAYERS,
   normalizePlayers,
-  PLAYER_RADIUS_YARDS,
   type Player,
   parseFieldPosition,
 } from "./player.js";
@@ -22,12 +21,6 @@ describe("isPlayerShape", () => {
     expect(isPlayerShape(undefined)).toBe(false);
     expect(isPlayerShape(0)).toBe(false);
     expect(isPlayerShape({ shape: "circle" })).toBe(false);
-  });
-});
-
-describe("PLAYER_RADIUS_YARDS", () => {
-  it("正の半径である（描画と hit-test の共有定数）", () => {
-    expect(PLAYER_RADIUS_YARDS).toBeGreaterThan(0);
   });
 });
 

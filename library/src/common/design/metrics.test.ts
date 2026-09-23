@@ -3,35 +3,50 @@ import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 import { computeFieldMetrics } from "./metrics.js";
 
 describe("computeFieldMetrics", () => {
-  it("通常サイズで W/U 比率から各寸法を導く", () => {
-    const W = 580;
-    const U = 10.875;
-    const m = computeFieldMetrics(W, U);
-    const D = 2 * PLAYER_RADIUS_YARDS * U;
+  it("フィールドの幅だけを 2 倍にすると、ヤードラインとゴールラインだけが 2 倍の太さになる", () => {
+    const base = computeFieldMetrics(580, 10.875);
 
-    expect(m.yardLineWidth).toBeCloseTo(0.0021 * W);
-    expect(m.goalLineWidth).toBeCloseTo(2 * 0.0021 * W);
-    expect(m.hashTickLength).toBeCloseTo(0.375 * U);
-    expect(m.numberHeight).toBeCloseTo(2.4 * U);
-    expect(m.tokenDiameter).toBeCloseTo(D);
-    expect(m.markerStroke).toBeCloseTo(D / 14);
-    expect(m.markerLabelFont).toBeCloseTo(0.5 * D);
-    expect(m.routeWidth).toBeCloseTo(0.11 * D);
-    expect(m.blockWidth).toBeCloseTo(m.routeWidth);
-    expect(m.blockCapLength).toBeCloseTo(0.4 * D);
-    expect(m.arrowLength).toBeCloseTo(0.72 * D);
-    expect(m.arrowHalfWidth).toBeCloseTo(0.24 * D);
-    expect(m.motionDash[0]).toBeCloseTo(1.1 * U);
-    expect(m.motionDash[1]).toBeCloseTo(0.7 * U);
+    expect(computeFieldMetrics(1160, 10.875)).toEqual({
+      ...base,
+      yardLineWidth: 2 * base.yardLineWidth,
+      goalLineWidth: 2 * base.goalLineWidth,
+    });
   });
 
-  it("ゴールラインは通常ヤードラインの 2 倍", () => {
+  it("1 ヤードの px だけを 2 倍にすると、ヤードラインとゴールライン以外のどの寸法も 2 倍になる", () => {
+    const base = computeFieldMetrics(580, 10.875);
+    const { yardLineWidth, goalLineWidth, ...byYard } = base;
+    const scaled = Object.fromEntries(
+      Object.entries(byYard).map(([key, value]) => [
+        key,
+        typeof value === "number" ? value * 2 : value.map((v) => v * 2),
+      ]),
+    );
+
+    expect(computeFieldMetrics(580, 21.75)).toEqual({ yardLineWidth, goalLineWidth, ...scaled });
+  });
+
+  it("選手マーカーの直径は、当たり判定の半径を 1 ヤードの px で直径にしたもの", () => {
+    expect(computeFieldMetrics(580, 10.875).tokenDiameter).toBeCloseTo(
+      2 * PLAYER_RADIUS_YARDS * 10.875,
+    );
+  });
+
+  it("ゴールラインは通常のヤードラインの 2 倍の太さで描く", () => {
     const m = computeFieldMetrics(580, 10.875);
+
     expect(m.goalLineWidth).toBeCloseTo(2 * m.yardLineWidth);
+  });
+
+  it("block の線は route と同じ太さで描く", () => {
+    const m = computeFieldMetrics(580, 10.875);
+
+    expect(m.blockWidth).toBe(m.routeWidth);
   });
 
   it("極小フィールドでは最小値（ライン 1px・数字 10px・線 1.5px）に張り付く", () => {
     const m = computeFieldMetrics(100, 1.875);
+
     expect(m.yardLineWidth).toBe(1);
     expect(m.numberHeight).toBe(10);
     expect(m.routeWidth).toBe(1.5);
@@ -40,6 +55,7 @@ describe("computeFieldMetrics", () => {
 
   it("縮退ビューポート（0）でも NaN を返さず最小値へ丸める", () => {
     const m = computeFieldMetrics(0, 0);
+
     expect(m.yardLineWidth).toBe(1);
     expect(m.goalLineWidth).toBe(2);
     expect(m.hashTickLength).toBe(0);
@@ -54,6 +70,7 @@ describe("computeFieldMetrics", () => {
 
   it("負の入力は 0 として扱う", () => {
     const m = computeFieldMetrics(-10, -5);
+
     expect(m.yardLineWidth).toBe(1);
     expect(m.hashTickLength).toBe(0);
     expect(m.tokenDiameter).toBe(0);

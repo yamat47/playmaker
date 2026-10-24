@@ -3,6 +3,7 @@
 # GitHub Actions は github-toolkit を @main で参照するため対象外。
 #  - minor / patch はエコシステムごとにまとめて 1 PR（ノイズ削減）
 #  - major は個別 PR（破壊的変更を 1 件ずつレビューするため、あえてグループ化しない）
+#  - vitest と @vitest/* だけは major も含めて 1 PR（同じ版でしか動かないため）
 version: 2
 
 updates:
@@ -22,6 +23,18 @@ updates:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
     groups:
+      # 依存は最初に当てはまったグループに入るので、dev-dependencies より前に置く。
+      # vitest だけを上げると、版を揃えるよう求めるプラグインと食い違う。
+      vitest:
+        patterns:
+          - vitest
+          - "@vitest/*"
+      # セキュリティ更新も既定では 1 パッケージずつ来るので、同じ組でまとめる。
+      vitest-security:
+        applies-to: security-updates
+        patterns:
+          - vitest
+          - "@vitest/*"
       production-dependencies:
         dependency-type: production
         update-types:

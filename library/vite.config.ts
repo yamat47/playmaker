@@ -73,7 +73,9 @@ export default defineConfig({
         },
       },
       // build 用の dts plugin を引き継がないよう、root の設定は extends しない。
+      // Vitest 5 から inline project の extends は既定で true なので、false を明示する。
       {
+        extends: false,
         test: {
           name: "browser",
           include: ["src/**/*.browser.test.ts"],
@@ -85,7 +87,7 @@ export default defineConfig({
             // テストの iframe が Playwright のページ（1280x720）に収まらないと、Vitest は iframe を縮めて映す。
             // 縮めると userEvent に渡す要素内の位置が操作によってずれるので、縮めずに済む大きさにする。
             viewport: { width: 1000, height: 640 },
-            // 失敗したときのスクリーンショットはテストの隣の __screenshots__ に書き出される。
+            // 失敗したときのスクリーンショットは .vitest/attachments/ に書き出される。
             // 画面を見比べる運用はしないので撮らない。
             screenshotFailures: false,
           },
@@ -102,10 +104,11 @@ export default defineConfig({
       // text はログで未カバーの行を見るため、html は手元でソースと並べて見るため。
       reporter: ["text", "html"],
       thresholds: {
-        // 全体の平均では、よく網羅したファイルが網羅の薄いファイルを隠すので、ファイルごとに判定する。
-        perFile: true,
         // 落とすのは common だけにする。browser と playmaker.ts は DOM が要り、node のテストでは届かない。
         "src/common/**": {
+          // 全体の平均では、よく網羅したファイルが網羅の薄いファイルを隠すので、ファイルごとに判定する。
+          // Vitest 5 から、トップレベルの perFile は glob の閾値に効かない。
+          perFile: true,
           lines: 100,
           branches: 100,
           functions: 100,

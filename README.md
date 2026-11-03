@@ -183,7 +183,7 @@ Node / pnpm はホストに入れず、Docker コンテナの中で動かす。�
 
 ```sh
 make setup          # イメージをビルドして依存を入れる（初回・Dockerfile 変更時）
-make up             # library/demo/ playground を http://localhost:5173 で起動（make down で停止）
+make up             # library/demo/ playground を http://localhost:5173 で起動（make down で停止）。/gallery.html で全プリセットを一覧
 make test           # Vitest（common 層 100% カバレッジゲート内蔵）。FILE= で 1 ファイルだけ
 make test-browser   # Vitest Browser Mode で、Playmaker の結線を Chromium で確かめる
 make typecheck      # tsc -b（common・browser・test・browser-test・tooling の 5 つの tsconfig）

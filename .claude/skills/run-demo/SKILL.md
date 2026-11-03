@@ -16,7 +16,8 @@ dev サーバーは Docker の `dev` サービスで動く。ホストで `pnpm 
 2. `make up` が失敗したら `docker compose -f docker/compose.yaml logs --tail 50 dev` で原因を見る
    （`node_modules` が空なら `make install`、イメージが古ければ `make setup`）
 3. ブラウザ（chrome-devtools MCP など）で http://localhost:5173/ を開き、変更箇所を操作して確かめる。
-   コンソールエラーも確認する
+   コンソールエラーも確認する。プリセットや描画を変えたときは http://localhost:5173/gallery.html で、
+   同梱する全プリセットを view モードで一画面に並べて見比べる
 4. ソースを編集すると自動でリロードされる（ホスト側の編集はポーリングで拾う）。
    `library/vite.config.ts` や依存を変えたときは `make down && make up`
 5. 確認が終わったら、ユーザーが使い続けると言っていない限り `make down` で止める

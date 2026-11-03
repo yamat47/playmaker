@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playmaker プリセット一覧</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Saira+Condensed:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/page.css" />
+    <style>
+      /* 同梱するプリセットを全部 view モードで並べ、配置と線の崩れを一画面で見つけるためのページ。 */
+      .gallery {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 16px 20px 48px;
+      }
+      .gallery .group__title {
+        padding: 24px 0 4px;
+      }
+      .gallery .group__sub {
+        padding: 12px 0 8px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+        gap: 16px;
+      }
+
+      /* 紙のカード。見出しの下に、中央ゾーンの窓と同じ縦横比でフィールドを置く。 */
+      .tile {
+        background: var(--surface);
+        border-radius: 4px;
+        box-shadow: var(--shadow-4);
+        overflow: hidden;
+      }
+      .tile__head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--divider);
+      }
+      .tile__name {
+        font-family: var(--display);
+        font-weight: 500;
+        font-size: 18px;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tile__note {
+        font-size: 12px;
+        color: var(--ink-dim);
+        white-space: nowrap;
+      }
+      .tile__stage {
+        aspect-ratio: 53 / 30;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__name">Playmaker</span>
+        <span class="brand__tag">プリセット一覧</span>
+      </div>
+      <div class="topbar__spacer"></div>
+      <div class="topbar__actions">
+        <a class="btn" href="/">デモへ戻る</a>
+      </div>
+    </header>
+    <main id="gallery" class="gallery"></main>
+    <script type="module" src="/gallery.ts"></script>
+  </body>
+</html>

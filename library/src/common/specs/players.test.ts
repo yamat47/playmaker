@@ -4,6 +4,7 @@ import {
   manyPlayers,
   playData,
   player,
+  positionOf,
   twoPlayersWithRoute,
 } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
@@ -12,10 +13,6 @@ import { MAX_PLAYERS } from "../model/player.js";
 
 function withPlayers(count: number): PlayData {
   return playData(manyPlayers(count));
-}
-
-function positionOf(data: Pick<PlayData, "players">, id: string) {
-  return data.players.find((p) => p.id === id)?.position;
 }
 
 /** 選手 a を選んだ図。 */

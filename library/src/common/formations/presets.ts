@@ -3,7 +3,7 @@
 // どのゾーンで読み込んでも窓に収まる。名称は英語で書く。フィールド上の表記を英語に揃えるため。
 
 import type { PlayerShape } from "../model/player.js";
-import { DEFENSE_COLOR, deepFreeze } from "../presets/shared.js";
+import { deepFreeze } from "../presets/shared.js";
 import type { Formation, FormationPlayer } from "./formation.js";
 
 function off(
@@ -21,7 +21,7 @@ function def(
   downfieldYard: number,
   shape: PlayerShape,
 ): FormationPlayer {
-  return { position: { lateralYard, downfieldYard }, shape, label, color: DEFENSE_COLOR };
+  return { position: { lateralYard, downfieldYard }, shape, label };
 }
 
 const OFFENSIVE_LINE: FormationPlayer[] = [

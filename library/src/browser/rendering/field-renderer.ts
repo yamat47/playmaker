@@ -14,8 +14,6 @@ import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 interface FieldTheme {
   readonly fieldColor: string;
-  /** 5 ヤードおきに交互に敷く、芝の刈り込みの濃い帯。 */
-  readonly stripeColor: string;
   /** サイドラインの外と、縦横比が合わない分の余白。 */
   readonly oobColor: string;
   readonly endzoneColor: string;
@@ -49,7 +47,6 @@ const NUMBER_DIGIT_SPACING_PER_HEIGHT = 0.18;
 function fieldTheme(read: ThemeReader): FieldTheme {
   return {
     fieldColor: read("fieldGrass"),
-    stripeColor: read("fieldStripe"),
     oobColor: read("fieldOob"),
     endzoneColor: read("fieldEndzone"),
     lineColor: read("fieldLine"),
@@ -79,34 +76,11 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.fillStyle = theme.fieldColor;
     ctx.fillRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
 
-    this.drawStripes(ctx, geometry, bounds, theme);
     this.drawEndZones(ctx, geometry, bounds, theme);
     this.drawHashes(ctx, geometry, bounds, metrics, theme);
     this.drawYardLines(ctx, geometry, bounds, metrics, theme);
     this.drawNumbers(ctx, geometry, metrics, theme);
     this.drawEndZoneMarkers(ctx, geometry, bounds, metrics, theme);
-  }
-
-  /** エンドゾーンには敷かない。 */
-  private drawStripes(
-    ctx: CanvasRenderingContext2D,
-    geometry: FieldGeometry,
-    { left, right }: FieldBounds,
-    theme: FieldTheme,
-  ): void {
-    const { startYard, endYard } = geometry.yardWindow;
-    const step = YARD_LINE_INTERVAL_YARDS;
-    const from = Math.max(0, Math.floor(startYard / step) * step);
-    const to = Math.min(100, endYard);
-    ctx.fillStyle = theme.stripeColor;
-    for (let band = from; band < to; band += step) {
-      // 帯の偶奇を絶対ヤードで決め、ゾーンを切り替えても同じヤードに同じ濃さの帯が来るようにする。
-      if ((band / step) % 2 !== 0) {
-        const yTop = geometry.yForAbsoluteYard(Math.min(band + step, 100));
-        const yBottom = geometry.yForAbsoluteYard(band);
-        ctx.fillRect(left, yTop, right - left, yBottom - yTop);
-      }
-    }
   }
 
   /** エンドゾーンのうち窓に映る範囲を塗る。中に線は引かない。 */

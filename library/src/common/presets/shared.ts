@@ -8,9 +8,6 @@ export function isTeamSide(value: unknown): value is TeamSide {
   return isOneOf(value, TEAM_SIDE_VALUES);
 }
 
-/** プリセットのディフェンス選手の色。オフェンスの既定の色と見分けられるよう、くすませた赤にする。 */
-export const DEFENSE_COLOR = "#8f4034";
-
 /**
  * 値とその中のオブジェクトをすべて凍結して返す。プリセットは全利用者が共有するので、
  * 1 人が書き換えると他の読み込み結果まで変わってしまう。

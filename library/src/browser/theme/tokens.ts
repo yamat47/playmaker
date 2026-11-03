@@ -1,8 +1,15 @@
-// 線パレットの 4 色は、既定の線、選手の縁と塗り、パイロンの色から選ぶ。
-const GOLD = "#c49a3c";
-const CHALK = "#eef2ec";
-const NAVY = "#2b4c72";
-const ORANGE = "#d06a30";
+// Material Design のパレット。配色の考え方は docs/design.md の「テーマ」にある。
+const WHITE = "#ffffff";
+const BLACK = "#212121";
+const RED = "#d32f2f";
+const BLUE = "#1976d2";
+const GREEN = "#388e3c";
+const ORANGE = "#ff9800";
+const GREY_100 = "#f5f5f5";
+const GREY_200 = "#eeeeee";
+const GREY_400 = "#bdbdbd";
+const GREY_500 = "#9e9e9e";
+const GREY_700 = "#616161";
 
 interface ThemeToken {
   readonly property: `--playmaker-${string}`;
@@ -14,31 +21,27 @@ interface ThemeToken {
  * ツールバーとパネルの色は CSS だけで決まるので、ここには置かない。
  */
 export const THEME_TOKENS = {
-  fieldGrass: { property: "--playmaker-field-grass", fallback: "#3f7a46" },
-  fieldStripe: { property: "--playmaker-field-stripe", fallback: "#3a7341" },
-  fieldOob: { property: "--playmaker-field-oob", fallback: "#284b2f" },
-  fieldEndzone: { property: "--playmaker-field-endzone", fallback: "#20503c" },
-  fieldLine: { property: "--playmaker-field-line", fallback: "rgba(236, 240, 234, 0.82)" },
-  fieldNumber: { property: "--playmaker-field-number", fallback: "rgba(236, 240, 234, 0.72)" },
-  fieldGoalLine: { property: "--playmaker-field-goal-line", fallback: "rgba(255, 255, 255, 0.92)" },
-  fieldPylon: { property: "--playmaker-field-pylon", fallback: ORANGE },
-  fieldGoalpost: { property: "--playmaker-field-goalpost", fallback: "#c2a64a" },
-  fieldGrid: { property: "--playmaker-field-grid", fallback: "rgba(236, 240, 234, 0.3)" },
-  playerFill: { property: "--playmaker-player-fill", fallback: NAVY },
-  playerStroke: { property: "--playmaker-player-stroke", fallback: CHALK },
-  playerLabel: { property: "--playmaker-player-label", fallback: "#ffffff" },
-  lineRoute: { property: "--playmaker-line-route", fallback: GOLD },
-  lineBlock: { property: "--playmaker-line-block", fallback: GOLD },
-  lineMotion: { property: "--playmaker-line-motion", fallback: GOLD },
-  lineSwatch1: { property: "--playmaker-line-swatch-1", fallback: GOLD },
-  lineSwatch2: { property: "--playmaker-line-swatch-2", fallback: CHALK },
-  lineSwatch3: { property: "--playmaker-line-swatch-3", fallback: NAVY },
-  lineSwatch4: { property: "--playmaker-line-swatch-4", fallback: ORANGE },
-  selection: { property: "--playmaker-selection", fallback: "#ff9800" },
-  selectionOutline: {
-    property: "--playmaker-selection-outline",
-    fallback: "rgba(255, 255, 255, 0.9)",
-  },
+  fieldGrass: { property: "--playmaker-field-grass", fallback: WHITE },
+  fieldOob: { property: "--playmaker-field-oob", fallback: GREY_200 },
+  fieldEndzone: { property: "--playmaker-field-endzone", fallback: GREY_100 },
+  fieldLine: { property: "--playmaker-field-line", fallback: GREY_500 },
+  fieldNumber: { property: "--playmaker-field-number", fallback: GREY_400 },
+  fieldGoalLine: { property: "--playmaker-field-goal-line", fallback: GREY_700 },
+  fieldPylon: { property: "--playmaker-field-pylon", fallback: GREY_500 },
+  fieldGoalpost: { property: "--playmaker-field-goalpost", fallback: GREY_500 },
+  fieldGrid: { property: "--playmaker-field-grid", fallback: "rgba(0, 0, 0, 0.1)" },
+  playerFill: { property: "--playmaker-player-fill", fallback: BLACK },
+  playerStroke: { property: "--playmaker-player-stroke", fallback: WHITE },
+  playerLabel: { property: "--playmaker-player-label", fallback: WHITE },
+  lineRoute: { property: "--playmaker-line-route", fallback: BLACK },
+  lineBlock: { property: "--playmaker-line-block", fallback: BLACK },
+  lineMotion: { property: "--playmaker-line-motion", fallback: BLACK },
+  lineSwatch1: { property: "--playmaker-line-swatch-1", fallback: BLACK },
+  lineSwatch2: { property: "--playmaker-line-swatch-2", fallback: RED },
+  lineSwatch3: { property: "--playmaker-line-swatch-3", fallback: BLUE },
+  lineSwatch4: { property: "--playmaker-line-swatch-4", fallback: GREEN },
+  selection: { property: "--playmaker-selection", fallback: ORANGE },
+  selectionOutline: { property: "--playmaker-selection-outline", fallback: WHITE },
 } as const satisfies Record<string, ThemeToken>;
 
 export type ThemeTokenName = keyof typeof THEME_TOKENS;

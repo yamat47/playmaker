@@ -253,7 +253,7 @@ describe("線の削除", () => {
 
     play.editor.deleteSelection();
 
-    expect(play.editor.getViewState().selection).toBeNull();
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
   it("削除を Undo すると、線が元の並びに戻る", () => {
@@ -387,7 +387,7 @@ describe("消えた線の選択", () => {
   it("選んだ線が Undo で消えると、表示状態は無選択になる", () => {
     const play = openWithVanishedLine();
 
-    expect(play.editor.getViewState().selection).toBeNull();
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
   it("選んだ線が Undo で消えると、選択中の線を返さない", () => {

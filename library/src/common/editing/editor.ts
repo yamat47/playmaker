@@ -10,15 +10,20 @@ export const EDITOR_TOOL_VALUES = ["select", "add-player", "draw-line"] as const
 
 export type EditorTool = (typeof EDITOR_TOOL_VALUES)[number];
 
-/** 選択は id の希望であり、対象が消えても解除しない。読み取るときに実在を確かめる。 */
+/**
+ * 選択は id の希望であり、対象が消えても解除しない。読み取るときに実在を確かめる。
+ * 何も選んでいないことは、EditorOverlay と同じく `kind: "none"` で表す。
+ */
 export type EditorSelection =
   | { readonly kind: "player"; readonly id: string }
   | { readonly kind: "line"; readonly id: string }
-  | null;
+  | { readonly kind: "none" };
+
+export const NO_SELECTION: EditorSelection = { kind: "none" };
 
 export function isSameSelection(a: EditorSelection, b: EditorSelection): boolean {
-  if (a === null || b === null) {
-    return a === b;
+  if (a.kind === "none" || b.kind === "none") {
+    return a.kind === b.kind;
   }
   return a.kind === b.kind && a.id === b.id;
 }

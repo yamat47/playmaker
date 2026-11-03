@@ -4,7 +4,7 @@ import { canLoadFormation, type EditorViewState, isToolAvailable } from "./edito
 
 const state: EditorViewState = {
   tool: "select",
-  selection: null,
+  selection: { kind: "none" },
   canUndo: false,
   canRedo: false,
   fieldZone: "middle",

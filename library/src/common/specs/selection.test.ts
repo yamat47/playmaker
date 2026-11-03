@@ -64,7 +64,7 @@ describe("クリックでの選択", () => {
 
     play.click(yd(45, -10));
 
-    expect(play.editor.getViewState().selection).toBeNull();
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
   it("何も選んでいないときに空白をクリックしても、通知を出さない", () => {
@@ -109,7 +109,7 @@ describe("消えた対象の選択", () => {
   it("選んだ選手が Undo で消えると、表示状態は無選択になる", () => {
     const play = openWithVanishedSelection();
 
-    expect(play.editor.getViewState().selection).toBeNull();
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
   it("選んだ選手が Undo で消えると、選択中の選手を返さない", () => {
@@ -134,7 +134,7 @@ describe("選択の削除", () => {
 
     play.editor.deleteSelection();
 
-    expect(play.editor.getViewState().selection).toBeNull();
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
   it("何も選んでいないときに削除しても、図も履歴も変えず通知もしない", () => {

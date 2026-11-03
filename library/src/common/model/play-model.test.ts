@@ -145,6 +145,47 @@ describe("PlayModel の id 重複の拒否", () => {
   });
 });
 
+describe("PlayModel の添字", () => {
+  it("線の本数より大きい添字や負の添字に線を差し込もうとすると throw する", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.insertLine(line("ld", "a"), 4)).toThrow(
+      "PlayModel: line index out of range: 4 (0..3)",
+    );
+    expect(() => model.insertLine(line("ld", "a"), -1)).toThrow("line index out of range");
+    expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc"]);
+  });
+
+  it("線の本数ちょうどの添字には、末尾として差し込める", () => {
+    const model = new PlayModel(seed());
+
+    model.insertLine(line("ld", "a"), 3);
+
+    expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc", "ld"]);
+  });
+
+  it("選手の添字が今の並びの外を指す削除の記録では、戻さずに throw する", () => {
+    const model = new PlayModel(seed());
+    const removal = model.removePlayer("b");
+
+    expect(() => model.restorePlayer({ ...removal, index: 3 })).toThrow(
+      "PlayModel: player index out of range: 3 (0..2)",
+    );
+    expect(model.getData().players.map((p) => p.id)).toEqual(["a", "c"]);
+  });
+
+  it("線の添字が今の並びの外を指す削除の記録では、戻さずに throw する", () => {
+    const model = new PlayModel(seed());
+    const removal = model.removePlayer("b");
+    const removedLines = removal.removedLines.map((r) => ({ ...r, index: 5 }));
+
+    expect(() => model.restorePlayer({ ...removal, removedLines })).toThrow(
+      "PlayModel: line index out of range: 5 (0..2)",
+    );
+    expect(model.getData().players.map((p) => p.id)).toEqual(["a", "c"]);
+  });
+});
+
 describe("PlayModel の一括削除", () => {
   it("無い id が混じっていると、先に並んだ選手も消さずに throw し、通知もしない", () => {
     const model = new PlayModel(seed());

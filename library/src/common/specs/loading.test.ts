@@ -184,7 +184,7 @@ describe("隊形の読み込み", () => {
 
     play.session.loadFormation(formation);
 
-    expect(play.editor.getViewState().selection).toBeNull();
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
   it("作図の途中で読み込むと、作図をやめる", () => {

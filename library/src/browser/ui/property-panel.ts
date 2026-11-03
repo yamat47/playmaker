@@ -43,6 +43,19 @@ const INTERPOLATION_LABELS = {
   bezier: "曲線",
 } satisfies Record<LineInterpolation, string>;
 
+/** 選択中の要素。選択は 1 つなので、選手と線が同時に来ることは型で起こらない。 */
+type SelectedItem =
+  | { readonly kind: "player"; readonly player: Player }
+  | { readonly kind: "line"; readonly line: Line }
+  | { readonly kind: "none" };
+
+/** 入力に渡す値と、値が変わったときに呼ぶ関数。onReset を渡すと、既定に戻すボタンが付く。 */
+interface InputOptions<T> {
+  readonly label: string;
+  readonly onChange: (value: T) => void;
+  readonly onReset?: () => void;
+}
+
 /** 表示中の入力と、選択中の要素の値をその入力に書き込む関数。 */
 type ShownFields =
   | { readonly kind: "player"; readonly id: string; readonly update: (player: Player) => void }
@@ -80,54 +93,74 @@ export class PropertyPanel extends Disposable {
   }
 
   private sync(): void {
-    const player = this.controller.getSelectedPlayer();
-    const line = this.controller.getSelectedLine();
+    const selected = this.selectedItem();
     const shown = this.shown;
-    if (player !== undefined && shown?.kind === "player" && shown.id === player.id) {
-      shown.update(player);
-    } else if (line !== undefined && shown?.kind === "line" && shown.id === line.id) {
-      shown.update(line);
-    } else if (player !== undefined || line !== undefined || shown?.kind !== "hint") {
-      replaceKeepingFocus(this.element, this.focusFallback, () => {
-        this.shown = this.rebuild(player, line);
-      });
+    if (selected.kind === "player" && shown?.kind === "player" && shown.id === selected.player.id) {
+      shown.update(selected.player);
+      return;
     }
+    if (selected.kind === "line" && shown?.kind === "line" && shown.id === selected.line.id) {
+      shown.update(selected.line);
+      return;
+    }
+    if (selected.kind === "none" && shown?.kind === "hint") {
+      return;
+    }
+    replaceKeepingFocus(this.element, this.focusFallback, () => {
+      this.shown = this.rebuild(selected);
+    });
   }
 
-  private rebuild(player: Player | undefined, line: Line | undefined): ShownFields {
-    this.element.replaceChildren();
+  private selectedItem(): SelectedItem {
+    const player = this.controller.getSelectedPlayer();
     if (player !== undefined) {
-      const update = this.addPlayerFields();
-      update(player);
-      return { kind: "player", id: player.id, update };
+      return { kind: "player", player };
     }
+    const line = this.controller.getSelectedLine();
     if (line !== undefined) {
-      const update = this.addLineFields();
-      update(line);
-      return { kind: "line", id: line.id, update };
+      return { kind: "line", line };
     }
-    const hint = document.createElement("p");
-    hint.className = "playmaker-panel__hint";
-    hint.textContent = "対象を選択するとプロパティを編集できます";
-    this.element.appendChild(hint);
-    return { kind: "hint" };
+    return { kind: "none" };
+  }
+
+  private rebuild(selected: SelectedItem): ShownFields {
+    this.element.replaceChildren();
+    switch (selected.kind) {
+      case "player": {
+        const update = this.addPlayerFields();
+        update(selected.player);
+        return { kind: "player", id: selected.player.id, update };
+      }
+      case "line": {
+        const update = this.addLineFields();
+        update(selected.line);
+        return { kind: "line", id: selected.line.id, update };
+      }
+      case "none": {
+        const hint = document.createElement("p");
+        hint.className = "playmaker-panel__hint";
+        hint.textContent = "対象を選択するとプロパティを編集できます";
+        this.element.appendChild(hint);
+        return { kind: "hint" };
+      }
+    }
   }
 
   private addPlayerFields(): (player: Player) => void {
     const controller = this.controller;
     this.addTitle("選手");
-    const setLabel = this.addInput("ラベル", "text", (v) =>
-      controller.updateSelectedPlayer({ label: v }),
-    );
+    const setLabel = this.addInput("text", {
+      label: "ラベル",
+      onChange: (v) => controller.updateSelectedPlayer({ label: v }),
+    });
     const setShape = this.addSelect("形状", PLAYER_SHAPE_VALUES, SHAPE_LABELS, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
-    const setColor = this.addInput(
-      "色",
-      "color",
-      (v) => controller.updateSelectedPlayer({ color: v }),
-      () => controller.updateSelectedPlayer({ color: null }),
-    );
+    const setColor = this.addInput("color", {
+      label: "色",
+      onChange: (v) => controller.updateSelectedPlayer({ color: v }),
+      onReset: () => controller.updateSelectedPlayer({ color: null }),
+    });
     // 色の無い選手は塗りの既定色で描くので、入力にも同じ色を出す。
     const read = createThemeReader(this.element);
     const fill = toHex(read("playerFill")) ?? THEME_TOKENS.playerFill.fallback;
@@ -151,16 +184,16 @@ export class PropertyPanel extends Disposable {
       (v) => controller.updateSelectedLine({ interpolation: v }),
     );
     const read = createThemeReader(this.element);
-    const setColor = this.addLineColor(
-      read,
-      (v) => controller.updateSelectedLine({ color: v }),
-      () => controller.updateSelectedLine({ color: null }),
-    );
-    const setThickness = this.addNumber(
-      "太さ",
-      (v) => controller.updateSelectedLine({ thickness: v }),
-      () => controller.updateSelectedLine({ thickness: null }),
-    );
+    const setColor = this.addLineColor(read, {
+      label: "色",
+      onChange: (v) => controller.updateSelectedLine({ color: v }),
+      onReset: () => controller.updateSelectedLine({ color: null }),
+    });
+    const setThickness = this.addNumber({
+      label: "太さ",
+      onChange: (v) => controller.updateSelectedLine({ thickness: v }),
+      onReset: () => controller.updateSelectedLine({ thickness: null }),
+    });
     return (line) => {
       setKind(line.kind);
       setInterpolation(line.interpolation);
@@ -187,7 +220,11 @@ export class PropertyPanel extends Disposable {
    * ボタンを並べた行。label で包むと、文字を押したときに先頭のボタンが押されるので、
    * ボタンの組に名前を付ける。
    */
-  private addGroupRow(labelText: string, group: HTMLElement, onReset: () => void): void {
+  private addGroupRow(
+    labelText: string,
+    group: HTMLElement,
+    onReset: (() => void) | undefined,
+  ): void {
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", labelText);
     this.appendRow(labelText, [this.createRowText(labelText), group], onReset);
@@ -225,25 +262,19 @@ export class PropertyPanel extends Disposable {
   }
 
   private addInput(
-    labelText: string,
     type: "text" | "color",
-    onChange: (v: string) => void,
-    onReset?: () => void,
+    { label, onChange, onReset }: InputOptions<string>,
   ): (value: string) => void {
     const input = document.createElement("input");
     input.type = type;
     input.addEventListener("change", () => onChange(input.value));
-    this.addRow(labelText, input, onReset);
+    this.addRow(label, input, onReset);
     return (value) => {
       input.value = value;
     };
   }
 
-  private addNumber(
-    labelText: string,
-    onChange: (v: number) => void,
-    onReset: () => void,
-  ): (value: number) => void {
+  private addNumber({ label, onChange, onReset }: InputOptions<number>): (value: number) => void {
     const input = document.createElement("input");
     input.type = "number";
     input.min = "0.25";
@@ -254,7 +285,7 @@ export class PropertyPanel extends Disposable {
         onChange(n);
       }
     });
-    this.addRow(labelText, input, onReset);
+    this.addRow(label, input, onReset);
     return (value) => {
       input.value = String(value);
     };
@@ -262,8 +293,7 @@ export class PropertyPanel extends Disposable {
 
   private addLineColor(
     read: ThemeReader,
-    onChange: (v: string) => void,
-    onReset: () => void,
+    { label, onChange, onReset }: InputOptions<string>,
   ): (value: string | undefined) => void {
     const group = document.createElement("div");
     group.className = "playmaker-panel__swatches";
@@ -279,7 +309,7 @@ export class PropertyPanel extends Disposable {
       group.appendChild(btn);
       return { btn, color };
     });
-    this.addGroupRow("色", group, onReset);
+    this.addGroupRow(label, group, onReset);
     return (value) => {
       // 保存済みの色は外から渡されたデータのこともあるので、テーマの色と同じ書き方にそろえて比べる。
       const current = value === undefined ? undefined : normalizeCssColor(value);

@@ -3,19 +3,20 @@ import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 import { computeFieldMetrics } from "./metrics.js";
 
 describe("computeFieldMetrics", () => {
-  it("フィールドの幅だけを 2 倍にすると、ヤードラインとゴールラインだけが 2 倍の太さになる", () => {
+  it("フィールドの幅だけを 2 倍にすると、ヤードライン、センターのライン、ゴールラインだけが 2 倍の太さになる", () => {
     const base = computeFieldMetrics(580, 10.875);
 
     expect(computeFieldMetrics(1160, 10.875)).toEqual({
       ...base,
       yardLineWidth: 2 * base.yardLineWidth,
+      midfieldLineWidth: 2 * base.midfieldLineWidth,
       goalLineWidth: 2 * base.goalLineWidth,
     });
   });
 
-  it("1 ヤードの px だけを 2 倍にすると、ヤードラインとゴールライン以外のどの寸法も 2 倍になる", () => {
+  it("1 ヤードの px だけを 2 倍にすると、ヤードライン系の太さ以外のどの寸法も 2 倍になる", () => {
     const base = computeFieldMetrics(580, 10.875);
-    const { yardLineWidth, goalLineWidth, ...byYard } = base;
+    const { yardLineWidth, midfieldLineWidth, goalLineWidth, ...byYard } = base;
     const scaled = Object.fromEntries(
       Object.entries(byYard).map(([key, value]) => [
         key,
@@ -23,7 +24,12 @@ describe("computeFieldMetrics", () => {
       ]),
     );
 
-    expect(computeFieldMetrics(580, 21.75)).toEqual({ yardLineWidth, goalLineWidth, ...scaled });
+    expect(computeFieldMetrics(580, 21.75)).toEqual({
+      yardLineWidth,
+      midfieldLineWidth,
+      goalLineWidth,
+      ...scaled,
+    });
   });
 
   it("選手マーカーの直径は、当たり判定の半径を 1 ヤードの px で直径にしたもの", () => {
@@ -44,13 +50,15 @@ describe("computeFieldMetrics", () => {
     expect(m.blockWidth).toBe(m.routeWidth);
   });
 
-  it("極小フィールドでは最小値（ライン 1px・数字 10px・線 1.5px）に張り付く", () => {
+  it("極小フィールドでは最小値（ライン 1px・数字 10px・線 1.5px・パイロン 3px・ゴールポスト 2px）に張り付く", () => {
     const m = computeFieldMetrics(100, 1.875);
 
     expect(m.yardLineWidth).toBe(1);
     expect(m.numberHeight).toBe(10);
     expect(m.routeWidth).toBe(1.5);
     expect(m.blockWidth).toBe(1.5);
+    expect(m.pylonSize).toBe(3);
+    expect(m.goalpostStroke).toBe(2);
   });
 
   it("縮退ビューポート（0）でも NaN を返さず最小値へ丸める", () => {
@@ -66,6 +74,9 @@ describe("computeFieldMetrics", () => {
     expect(m.routeWidth).toBe(1.5);
     expect(m.arrowLength).toBe(0);
     expect(m.motionDash).toEqual([0, 0]);
+    expect(m.pylonSize).toBe(3);
+    expect(m.goalpostCrossbarHalfLength).toBe(0);
+    expect(m.goalpostStroke).toBe(2);
   });
 
   it("負の入力は 0 として扱う", () => {

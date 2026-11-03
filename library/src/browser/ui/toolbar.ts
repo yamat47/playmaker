@@ -165,7 +165,7 @@ export class Toolbar extends Disposable {
     }
     setEnabled(this.undoButton, state.canUndo);
     setEnabled(this.redoButton, state.canRedo);
-    setEnabled(this.deleteButton, state.selection !== null);
+    setEnabled(this.deleteButton, state.selection.kind !== "none");
     setEnabled(this.commitButton, state.isDrawing);
     setEnabled(this.cancelButton, state.isDrawing);
     this.syncFormationPicker(state);

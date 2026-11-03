@@ -1,269 +1,43 @@
-// 縦は LOS からの位置（LOS が 0 で、攻撃方向が正）で、横はセンターを 26.5 ヤード（フィールドの中央）に置く。
-// 位置はすべて 0.5 ヤードの格子点で書く。読み込みで格子へ丸まるが、ソースの数値も格子点に揃えておく。
-// どのゾーンで読み込んでも窓に収まる。名称は英語で書く。フィールド上の表記を英語に揃えるため。
+// 配置は presets/alignments.ts にあり、プレーのプリセットと共有する。ここでは id を外して隊形にする。
 
-import type { PlayerShape } from "../model/player.js";
-import { deepFreeze } from "../presets/shared.js";
-import type { Formation, FormationPlayer } from "./formation.js";
+import type { Player } from "../model/player.js";
+import {
+  bunch,
+  defense34,
+  defense43,
+  defense335,
+  defense425,
+  dime,
+  empty,
+  iFormation,
+  NICKEL_BASE,
+  nickel,
+  pistol,
+  shotgunSpread,
+  singlebackAce,
+  trips,
+} from "../presets/alignments.js";
+import { deepFreeze, type TeamSide } from "../presets/shared.js";
+import { type Formation, toFormationPlayer } from "./formation.js";
 
-function off(
-  label: string,
-  lateralYard: number,
-  downfieldYard: number,
-  shape: PlayerShape,
-): FormationPlayer {
-  return { position: { lateralYard, downfieldYard }, shape, label };
+function formation(id: string, name: string, side: TeamSide, players: Player[]): Formation {
+  return { id, name, side, players: players.map(toFormationPlayer) };
 }
-
-function def(
-  label: string,
-  lateralYard: number,
-  downfieldYard: number,
-  shape: PlayerShape,
-): FormationPlayer {
-  return { position: { lateralYard, downfieldYard }, shape, label };
-}
-
-const OFFENSIVE_LINE: FormationPlayer[] = [
-  off("LT", 21.5, -0.5, "square"),
-  off("LG", 24, -0.5, "square"),
-  off("C", 26.5, -0.5, "square"),
-  off("RG", 29, -0.5, "square"),
-  off("RT", 31.5, -0.5, "square"),
-];
-
-// 4 ダウンの守備ライン（オーバーフロント）。4-3、ニッケル、ダイム、4-2-5 で使う。
-const FRONT_4: FormationPlayer[] = [
-  def("", 21.5, 1, "circle"),
-  def("", 24, 1, "circle"),
-  def("", 29, 1, "circle"),
-  def("", 31.5, 1, "circle"),
-];
-
-// 3 ダウンの守備ライン（オッドフロント）。3-4 と 3-3-5 で使う。
-const FRONT_3: FormationPlayer[] = [
-  def("", 23, 1, "circle"),
-  def("", 26.5, 1, "circle"),
-  def("", 30, 1, "circle"),
-];
-
-const I_FORMATION: Formation = {
-  id: "i-formation",
-  name: "I-Formation",
-  side: "offense",
-  players: [
-    ...OFFENSIVE_LINE,
-    off("Y", 34, -0.5, "square"),
-    off("QB", 26.5, -2.5, "circle"),
-    off("FB", 26.5, -5, "circle"),
-    off("RB", 26.5, -7.5, "circle"),
-    off("X", 6.5, -0.5, "circle"),
-    off("Z", 46.5, -1, "circle"),
-  ],
-};
-
-const SINGLEBACK_ACE: Formation = {
-  id: "singleback-ace",
-  name: "Singleback Ace",
-  side: "offense",
-  players: [
-    ...OFFENSIVE_LINE,
-    off("Y", 34, -0.5, "square"),
-    off("QB", 26.5, -2.5, "circle"),
-    off("RB", 26.5, -6.5, "circle"),
-    off("X", 6, -0.5, "circle"),
-    off("H", 40, -1.5, "circle"),
-    off("Z", 47, -1, "circle"),
-  ],
-};
-
-const SHOTGUN_SPREAD: Formation = {
-  id: "shotgun-spread",
-  name: "Shotgun Spread",
-  side: "offense",
-  players: [
-    ...OFFENSIVE_LINE,
-    off("QB", 26.5, -5, "circle"),
-    off("RB", 29.5, -5, "circle"),
-    off("X", 5.5, -0.5, "circle"),
-    off("Y", 13, -1, "circle"),
-    off("H", 40, -1, "circle"),
-    off("Z", 47.5, -0.5, "circle"),
-  ],
-};
-
-const TRIPS: Formation = {
-  id: "trips",
-  name: "Trips",
-  side: "offense",
-  players: [
-    ...OFFENSIVE_LINE,
-    off("QB", 26.5, -5, "circle"),
-    off("RB", 24, -5, "circle"),
-    off("X", 5.5, -0.5, "circle"),
-    off("Y", 34.5, -1, "square"),
-    off("H", 41, -1.5, "circle"),
-    off("Z", 47.5, -1, "circle"),
-  ],
-};
-
-const EMPTY: Formation = {
-  id: "empty",
-  name: "Empty",
-  side: "offense",
-  players: [
-    ...OFFENSIVE_LINE,
-    off("QB", 26.5, -5, "circle"),
-    off("X", 5, -0.5, "circle"),
-    off("F", 12, -1.5, "circle"),
-    off("Y", 34.5, -1, "square"),
-    off("H", 41, -1.5, "circle"),
-    off("Z", 48, -1, "circle"),
-  ],
-};
-
-const PISTOL: Formation = {
-  id: "pistol",
-  name: "Pistol",
-  side: "offense",
-  players: [
-    ...OFFENSIVE_LINE,
-    off("Y", 34, -0.5, "square"),
-    off("QB", 26.5, -4.5, "circle"),
-    off("RB", 26.5, -7.5, "circle"),
-    off("X", 6, -0.5, "circle"),
-    off("H", 40, -1.5, "circle"),
-    off("Z", 47, -1, "circle"),
-  ],
-};
-
-const BUNCH: Formation = {
-  id: "bunch",
-  name: "Bunch",
-  side: "offense",
-  players: [
-    ...OFFENSIVE_LINE,
-    off("QB", 26.5, -5, "circle"),
-    off("RB", 24, -5, "circle"),
-    off("X", 5.5, -0.5, "circle"),
-    off("Z", 37, -1, "circle"),
-    off("H", 34.5, -2, "circle"),
-    off("Y", 39.5, -2, "circle"),
-  ],
-};
-
-const DEFENSE_4_3: Formation = {
-  id: "defense-4-3",
-  name: "4-3",
-  side: "defense",
-  players: [
-    ...FRONT_4,
-    def("W", 22, 4, "circle"),
-    def("M", 26.5, 4, "circle"),
-    def("S", 31.5, 4, "circle"),
-    def("", 7, 3, "circle"),
-    def("", 46, 3, "circle"),
-    def("FS", 24, 9, "circle"),
-    def("SS", 30, 8, "circle"),
-  ],
-};
-
-const DEFENSE_3_4: Formation = {
-  id: "defense-3-4",
-  name: "3-4",
-  side: "defense",
-  players: [
-    ...FRONT_3,
-    def("W", 19, 3, "circle"),
-    def("M", 24.5, 4, "circle"),
-    def("T", 29, 4, "circle"),
-    def("S", 34.5, 3, "circle"),
-    def("", 7, 3, "circle"),
-    def("", 46, 3, "circle"),
-    def("FS", 24, 9, "circle"),
-    def("SS", 30, 9, "circle"),
-  ],
-};
-
-const DEFENSE_NICKEL: Formation = {
-  id: "defense-nickel",
-  name: "Nickel",
-  side: "defense",
-  players: [
-    ...FRONT_4,
-    def("M", 23.5, 4, "circle"),
-    def("W", 31, 4, "circle"),
-    def("N", 14, 4.5, "circle"),
-    def("", 7, 3, "circle"),
-    def("", 46, 3, "circle"),
-    def("FS", 22, 9.5, "circle"),
-    def("SS", 31, 9.5, "circle"),
-  ],
-};
-
-const DEFENSE_DIME: Formation = {
-  id: "defense-dime",
-  name: "Dime",
-  side: "defense",
-  players: [
-    ...FRONT_4,
-    def("M", 26.5, 4, "circle"),
-    def("N", 14, 4, "circle"),
-    def("$", 39, 4, "circle"),
-    def("", 7, 3, "circle"),
-    def("", 46, 3, "circle"),
-    def("FS", 22, 9, "circle"),
-    def("SS", 31, 9, "circle"),
-  ],
-};
-
-const DEFENSE_4_2_5: Formation = {
-  id: "defense-4-2-5",
-  name: "4-2-5",
-  side: "defense",
-  players: [
-    ...FRONT_4,
-    def("M", 24.5, 4, "circle"),
-    def("W", 30, 4, "circle"),
-    def("N", 39, 4.5, "circle"),
-    def("", 7, 3, "circle"),
-    def("", 46, 3, "circle"),
-    def("FS", 24, 9, "circle"),
-    def("SS", 30, 8, "circle"),
-  ],
-};
-
-const DEFENSE_3_3_5: Formation = {
-  id: "defense-3-3-5",
-  name: "3-3-5",
-  side: "defense",
-  players: [
-    ...FRONT_3,
-    def("W", 20, 4, "circle"),
-    def("M", 26.5, 4, "circle"),
-    def("S", 33, 4, "circle"),
-    def("N", 14, 4.5, "circle"),
-    def("", 7, 3, "circle"),
-    def("", 46, 3, "circle"),
-    def("FS", 24, 9, "circle"),
-    def("SS", 30, 8, "circle"),
-  ],
-};
 
 export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreeze([
-  I_FORMATION,
-  SINGLEBACK_ACE,
-  SHOTGUN_SPREAD,
-  TRIPS,
-  EMPTY,
-  PISTOL,
-  BUNCH,
-  DEFENSE_4_3,
-  DEFENSE_3_4,
-  DEFENSE_NICKEL,
-  DEFENSE_DIME,
-  DEFENSE_4_2_5,
-  DEFENSE_3_3_5,
+  formation("i-formation", "I-Formation", "offense", iFormation()),
+  formation("singleback-ace", "Singleback Ace", "offense", singlebackAce()),
+  formation("shotgun-spread", "Shotgun Spread", "offense", shotgunSpread()),
+  formation("trips", "Trips", "offense", trips()),
+  formation("empty", "Empty", "offense", empty()),
+  formation("pistol", "Pistol", "offense", pistol()),
+  formation("bunch", "Bunch", "offense", bunch()),
+  formation("defense-4-3", "4-3 Over", "defense", defense43()),
+  formation("defense-3-4", "3-4", "defense", defense34()),
+  formation("defense-nickel", "Nickel", "defense", nickel(NICKEL_BASE)),
+  formation("defense-dime", "Dime", "defense", dime()),
+  formation("defense-4-2-5", "4-2-5", "defense", defense425()),
+  formation("defense-3-3-5", "3-3-5", "defense", defense335()),
 ]);
 
 export function getFormationPreset(id: string): Formation | undefined {

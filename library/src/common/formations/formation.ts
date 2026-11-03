@@ -20,7 +20,7 @@ export interface Formation {
 }
 
 /** 省略できるキーの扱いを clonePlayer と揃え、選手に値が増えてもここを直さずに済ませる。 */
-function toFormationPlayer(player: Player): FormationPlayer {
+export function toFormationPlayer(player: Player): FormationPlayer {
   const { id: _id, ...template } = clonePlayer(player);
   return template;
 }

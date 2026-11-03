@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { overlappingMarkers } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { resolvePlayData } from "../model/play-data.js";
@@ -35,6 +36,14 @@ describe("PLAY_PRESETS", () => {
     const colors = [...preset.data.players, ...preset.data.lines].map((item) => item.color);
 
     expect(colors.filter((color) => color !== undefined)).toEqual([]);
+  });
+
+  it.each(PLAY_PRESETS)("$id は選手全員にラベルを付ける", (preset) => {
+    expect(preset.data.players.filter((p) => p.label === "")).toEqual([]);
+  });
+
+  it.each(PLAY_PRESETS)("$id の選手のマーカーは重ならない", (preset) => {
+    expect(overlappingMarkers(preset.data.players)).toEqual([]);
   });
 
   it.each(PLAY_PRESETS)("$id の選手と線の点は、どれも窓に収まる", (preset) => {

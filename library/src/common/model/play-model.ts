@@ -65,7 +65,7 @@ export interface IPlayModel {
   removePlayers(ids: readonly string[]): PlayerRemoval[];
   /**
    * removePlayer で消した選手と線を、元の並びへ戻す。
-   * 同じ id の選手が既にあるか、戻すと上限を超えるときは throw する。
+   * 同じ id の選手が既にあるか、戻すと上限を超えるか、添字が今の並びの外を指すときは throw する。
    */
   restorePlayer(removal: PlayerRemoval): void;
   /** 同じ id の選手を差し替え、差し替える前の選手を返す。 */
@@ -75,14 +75,18 @@ export interface IPlayModel {
    * waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線も throw する。
    */
   addLine(line: Line): void;
-  /** index は 0 から線の本数までで渡す。addLine と同じ条件で throw する。 */
+  /** index は 0 から線の本数までで渡し、外れると throw する。ほかは addLine と同じ条件で throw する。 */
   insertLine(line: Line, index: number): void;
   removeLine(id: string): LineRemoval;
   /** 同じ id の線を差し替え、差し替える前の線を返す。waypoint が MAX_WAYPOINTS_PER_LINE 個を超えると throw する。 */
   updateLine(line: Line): Line;
 }
 
-function insertAt<T>(items: readonly T[], index: number, item: T): T[] {
+// 削除の記録に無い添字で差し込むと、slice が黙って端へ寄せ、Undo で並びが崩れたことに気づけない。
+function insertAt<T>(items: readonly T[], index: number, item: T, what: string): T[] {
+  if (!Number.isInteger(index) || index < 0 || index > items.length) {
+    throw new Error(`PlayModel: ${what} index out of range: ${index} (0..${items.length})`);
+  }
   return [...items.slice(0, index), item, ...items.slice(index)];
 }
 
@@ -233,11 +237,11 @@ export class PlayModel extends Disposable implements IPlayModel {
       removal.player.id,
       "PlayModel.restorePlayer: duplicate player id",
     );
-    const players = insertAt(this.state.players, removal.index, removal.player);
+    const players = insertAt(this.state.players, removal.index, removal.player, "player");
     // 元の添字の小さい順に差し込むと、消す前の並びに戻る。
     let lines = this.state.lines;
     for (const { line, index } of [...removal.removedLines].sort((a, b) => a.index - b.index)) {
-      lines = insertAt(lines, index, line);
+      lines = insertAt(lines, index, line, "line");
     }
     this.commit({ ...this.state, players, lines });
   }
@@ -257,7 +261,7 @@ export class PlayModel extends Disposable implements IPlayModel {
 
   insertLine(line: Line, index: number): void {
     assertNewId(this.state.lines, line.id, "PlayModel: duplicate line id");
-    this.commit({ ...this.state, lines: insertAt(this.state.lines, index, line) });
+    this.commit({ ...this.state, lines: insertAt(this.state.lines, index, line, "line") });
   }
 
   removeLine(id: string): LineRemoval {

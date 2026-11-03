@@ -210,12 +210,14 @@ session は今の controller の `onDidChangeScene` と `onDidChangeViewState` �
 
 ## 配布
 
-- `library/` を git 依存としてサブディレクトリ指定で入れ、`prepare` でインストール時に `dist/` を作る。ビルド成果物はコミットせず、版は git タグで固定する。npm には公開しない（PRD 8.4）
+- npm に `@yamat47/playmaker` として公開する（MIT）。パッケージの根は `library/` で、`files` は `dist/` だけなので、ビルド成果物はコミットしない。LICENSE と npm 用の README はパッケージの根に置き、GitHub が読む LICENSE はリポジトリの根にも同じものを置く
+- 版は `library/package.json` の `version` と git のタグ `vX.Y.Z` で、タグを push すると `release.yml` が typecheck、lint、node のテスト、build を通してから公開する。公開は取り消せないので、タグは CI が通った main のコミットにだけ打つ。認証は npm の trusted publishing（OIDC）で、トークンを持たない。Actions の environment `release` に縛り、environment は infra-github が宣言する
+- trusted publisher はレジストリに在るパッケージにしか登録できないので、初回の公開だけは手順が違う。npm で publish できる granular access token を作り、environment `release` の secret `NPM_TOKEN` に置いてタグを push する。公開できたら、npmjs.com のパッケージの設定で trusted publisher（このリポジトリ、`release.yml`、environment `release`）を登録し、secret とトークンを消す。登録は 2 日以内に 1 回公開を通さないと失効するので、次の版の前に済ませる
+- CDN（jsDelivr）から読む利用者のために、`jsdelivr` と `unpkg` でファイル名を付けない URL が ESM を返すようにしてある。依存が無く、フォントを JS に同梱しているので、CDN からは JS と CSS の 2 つの URL で済む
 - 出力は ESM だけにした。利用側はバンドラを通すので CJS は要らず、CJS も出すと require した利用者に ESM 用の型が渡って型と実体がずれる
-- CSS は `playmaker/styles.css` として別に読み込む。`sideEffects` は CSS だけを指定する
+- CSS は `@yamat47/playmaker/styles.css` として別に読み込む。`sideEffects` は CSS だけを指定する
 - 型定義は vite-plugin-dts が書き出し、api-extractor で `dist/playmaker.d.ts` の 1 ファイルに束ねる。起点を `src` に固定するため、build 専用の `tsconfig.build.json` を使う
 
-プライベートレジストリへの移行は、商用ソフトのリポジトリで使い始めるときに考え直す。
 
 ## ツールチェーン
 
@@ -223,7 +225,7 @@ session は今の controller の `onDidChangeScene` と `onDidChangeViewState` �
 
 Node と pnpm はホストに入れず、Docker のコンテナの中で動かす。コマンドの入口は `Makefile` で、手順は `CLAUDE.md` にある。cloud 版の Claude Code では、Docker の代わりに SessionStart hook が環境を作る（これも `CLAUDE.md` にある）。
 
-CI（`.github/workflows/ci.yml`）は型検査、lint、テスト、build の `verify` と、Chromium でブラウザテストを動かす `browser-test` の 2 つのジョブを並べる。CI はランナーの上で直接動かす。setup-node の pnpm store のキャッシュが、コンテナでの実行より速いためである。install では `prepare` の build を飛ばし、build を 1 回にしている。
+CI（`.github/workflows/ci.yml`）は型検査、lint、テスト、build の `verify` と、Chromium でブラウザテストを動かす `browser-test` の 2 つのジョブを並べる。CI はランナーの上で直接動かす。setup-node の pnpm store のキャッシュが、コンテナでの実行より速いためである。
 
 Actions は SHA で固定するのが原則だが、自分で管理している `yamat47/github-toolkit` だけは `@main` を追いかける。上流の action の SHA 固定と Dependabot での更新は toolkit 側で行う。toolkit の main の変更はレビューを通らずに次の CI から入るので、この例外は toolkit を自分で管理しているあいだだけ成り立つ。
 

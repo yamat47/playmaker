@@ -4,48 +4,35 @@
 TypeScript ライブラリ。商用ソフトウェアに組み込む「図作成コア」であり、
 永続化・認証・共有などホスト側の責務は持たない（詳細は `docs/prd.md`）。
 
-クローズドな商用ソフト専用部品として管理する（npm 公開・OSS 化はしない）。
+npm に `@yamat47/playmaker` として公開している（MIT）。デモは https://playmaker-demo.yamat47.me/ にある。
 
 ## インストール
 
-プライベートリポジトリの git 依存として参照する。パッケージ本体はリポジトリの
-`library/` にあるので、サブディレクトリを指定する（pnpm の `path:`）。`prepare` スクリプトが
-インストール時に `dist/`（ESM / 型 / CSS）をビルドするため、ビルド成果物は
-コミットしない。バージョンは **git タグ**で固定する。
-
-```jsonc
-// 利用側 package.json
-{
-  "dependencies": {
-    "playmaker": "git+ssh://git@github.com/yamat47/playmaker.git#v1.0.0&path:/library"
-  }
-}
+```sh
+npm install @yamat47/playmaker
 ```
 
-pnpm 11 は依存のビルドスクリプトを既定で実行せず、未承認のものがあると install を
-失敗させる。`prepare` で `dist/` を作るには、利用側の `pnpm-workspace.yaml` の
-`allowBuilds` で playmaker を許可する。キーはタグではなく、**タグが指すコミットの SHA** で
-書く必要がある（`playmaker: true` やタグ名のキーでは許可されない）。
+出力は ESM だけなので、利用側はバンドラを通す。モダンブラウザと PC のマウス操作を想定する。
+バンドラを通さないページでは、CDN から読み込める。依存は無く、フォントは JS に同梱してある。
+URL の `0.1.0` は使う版に置き換える。
 
-```yaml
-# 利用側 pnpm-workspace.yaml
-allowBuilds:
-  "playmaker@git+ssh://git@github.com/yamat47/playmaker.git#<コミット SHA>&path:/library": true
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yamat47/playmaker@0.1.0/dist/playmaker.css" />
+<script type="module">
+  import { Playmaker } from "https://cdn.jsdelivr.net/npm/@yamat47/playmaker@0.1.0/dist/playmaker.js";
+</script>
 ```
 
-正確なキーは、許可せずに `pnpm install` したときのエラーメッセージにそのまま表示される。
-タグを上げたら SHA も変わるので、このキーも書き換える。
-
-Node.js 24 以上が必要。プライベートレジストリ（GitHub Packages 等）への昇格は、
-商用リポジトリ着手時に再評価する余地として残している。
+版は git のタグ `vX.Y.Z` と同じで、タグを push すると `.github/workflows/release.yml` が公開する。
+スコープなしの `playmaker` は別のパッケージなので、必ず `@yamat47/` を付ける。
 
 ## 使い方
 
 コンテナ要素とオプションを渡すだけで組み込める。スタイルは別途読み込む。
 
 ```ts
-import { Playmaker, type PlayData } from "playmaker";
-import "playmaker/styles.css";
+import { Playmaker, type PlayData } from "@yamat47/playmaker";
+import "@yamat47/playmaker/styles.css";
 
 const container = document.getElementById("play")!;
 
@@ -95,7 +82,7 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 1 件を `getFormationPreset(id)` と `getPlayPreset(id)` で取り出せる。未知の id には `undefined` を返す。
 
 ```ts
-import { getFormationPreset } from "playmaker";
+import { getFormationPreset } from "@yamat47/playmaker";
 
 // フォーメーションは今の図に選手を足す。攻守を順に重ねられる。
 const offense = getFormationPreset("i-formation");
@@ -103,7 +90,7 @@ if (offense) playmaker.loadFormation(offense);
 ```
 
 ```ts
-import { PLAY_PRESETS } from "playmaker";
+import { PLAY_PRESETS } from "@yamat47/playmaker";
 
 // プレーは線まで描き込んだ図で、data を読み込むと今の図と置き換わる。
 const play = PLAY_PRESETS[0];

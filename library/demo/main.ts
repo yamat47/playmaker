@@ -53,17 +53,17 @@ const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
 // 要素が多い図でも描画と操作が重くならないかを目で確かめる図。丸と四角、3 種の線、
 // straight と bezier、waypoint を複数持つ線を、1 回の読み込みですべて出す。
 const STRESS_PLAYERS: Player[] = [
-  { id: "ol-c", position: { lateralYard: 26.7, downfieldYard: -1 }, shape: "square", label: "C" },
-  { id: "ol-lg", position: { lateralYard: 24.4, downfieldYard: -1 }, shape: "square", label: "LG" },
+  { id: "ol-c", position: { lateralYard: 26.5, downfieldYard: -1 }, shape: "square", label: "C" },
+  { id: "ol-lg", position: { lateralYard: 24, downfieldYard: -1 }, shape: "square", label: "LG" },
   { id: "ol-rg", position: { lateralYard: 29, downfieldYard: -1 }, shape: "square", label: "RG" },
-  { id: "ol-lt", position: { lateralYard: 22.1, downfieldYard: -1 }, shape: "square", label: "LT" },
-  { id: "ol-rt", position: { lateralYard: 31.3, downfieldYard: -1 }, shape: "square", label: "RT" },
-  { id: "qb", position: { lateralYard: 26.7, downfieldYard: -3.5 }, shape: "circle", label: "QB" },
-  { id: "rb", position: { lateralYard: 26.7, downfieldYard: -7 }, shape: "circle", label: "RB" },
+  { id: "ol-lt", position: { lateralYard: 21.5, downfieldYard: -1 }, shape: "square", label: "LT" },
+  { id: "ol-rt", position: { lateralYard: 31.5, downfieldYard: -1 }, shape: "square", label: "RT" },
+  { id: "qb", position: { lateralYard: 26.5, downfieldYard: -3.5 }, shape: "circle", label: "QB" },
+  { id: "rb", position: { lateralYard: 26.5, downfieldYard: -7 }, shape: "circle", label: "RB" },
   { id: "wr-x", position: { lateralYard: 7, downfieldYard: -0.5 }, shape: "circle", label: "X" },
   { id: "wr-z", position: { lateralYard: 46, downfieldYard: -0.5 }, shape: "circle", label: "Z" },
   { id: "wr-y", position: { lateralYard: 38, downfieldYard: -2 }, shape: "circle", label: "Y" },
-  { id: "te", position: { lateralYard: 33.6, downfieldYard: -1 }, shape: "square", label: "TE" },
+  { id: "te", position: { lateralYard: 34, downfieldYard: -1 }, shape: "square", label: "TE" },
   {
     id: "de-l",
     position: { lateralYard: 21.5, downfieldYard: 1 },
@@ -73,7 +73,7 @@ const STRESS_PLAYERS: Player[] = [
   },
   {
     id: "dt-l",
-    position: { lateralYard: 24.4, downfieldYard: 1 },
+    position: { lateralYard: 24, downfieldYard: 1 },
     shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
@@ -87,7 +87,7 @@ const STRESS_PLAYERS: Player[] = [
   },
   {
     id: "de-r",
-    position: { lateralYard: 31.9, downfieldYard: 1 },
+    position: { lateralYard: 31.5, downfieldYard: 1 },
     shape: "circle",
     label: "",
     color: DEFENSE_COLOR,
@@ -101,14 +101,14 @@ const STRESS_PLAYERS: Player[] = [
   },
   {
     id: "lb-m",
-    position: { lateralYard: 26.7, downfieldYard: 4 },
+    position: { lateralYard: 26.5, downfieldYard: 4 },
     shape: "circle",
     label: "M",
     color: DEFENSE_COLOR,
   },
   {
     id: "lb-s",
-    position: { lateralYard: 31.4, downfieldYard: 4 },
+    position: { lateralYard: 31.5, downfieldYard: 4 },
     shape: "circle",
     label: "S",
     color: DEFENSE_COLOR,
@@ -149,7 +149,7 @@ const STRESS_LINES: Line[] = [
     kind: "block",
     startPlayerId: "ol-c",
     waypoints: [],
-    end: { lateralYard: 26.7, downfieldYard: 0.6 },
+    end: { lateralYard: 26.5, downfieldYard: 0.5 },
     interpolation: "straight",
   },
   {
@@ -157,7 +157,7 @@ const STRESS_LINES: Line[] = [
     kind: "block",
     startPlayerId: "ol-lg",
     waypoints: [],
-    end: { lateralYard: 24.4, downfieldYard: 0.6 },
+    end: { lateralYard: 24, downfieldYard: 0.5 },
     interpolation: "straight",
   },
   {
@@ -165,7 +165,7 @@ const STRESS_LINES: Line[] = [
     kind: "block",
     startPlayerId: "ol-rg",
     waypoints: [],
-    end: { lateralYard: 29, downfieldYard: 0.6 },
+    end: { lateralYard: 29, downfieldYard: 0.5 },
     interpolation: "straight",
   },
   {
@@ -173,7 +173,7 @@ const STRESS_LINES: Line[] = [
     kind: "block",
     startPlayerId: "ol-lt",
     waypoints: [],
-    end: { lateralYard: 21.8, downfieldYard: 0.6 },
+    end: { lateralYard: 21.5, downfieldYard: 0.5 },
     interpolation: "straight",
   },
   {
@@ -181,7 +181,7 @@ const STRESS_LINES: Line[] = [
     kind: "block",
     startPlayerId: "ol-rt",
     waypoints: [],
-    end: { lateralYard: 31.7, downfieldYard: 0.6 },
+    end: { lateralYard: 31.5, downfieldYard: 0.5 },
     interpolation: "straight",
   },
   {

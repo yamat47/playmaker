@@ -1,4 +1,5 @@
-// 縦は LOS からの位置（LOS が 0 で、攻撃方向が正）で、横はセンターを 26.7 ヤード付近に置く。
+// 縦は LOS からの位置（LOS が 0 で、攻撃方向が正）で、横はセンターを 26.5 ヤード（フィールドの中央）に置く。
+// 位置はすべて 0.5 ヤードの格子点で書く。読み込みで格子へ丸まるが、ソースの数値も格子点に揃えておく。
 // どのゾーンで読み込んでも窓に収まる。名称は英語で書く。フィールド上の表記を英語に揃えるため。
 
 import type { PlayerShape } from "../model/player.js";
@@ -24,26 +25,26 @@ function def(
 }
 
 const OFFENSIVE_LINE: FormationPlayer[] = [
-  off("LT", 22.1, -0.5, "square"),
-  off("LG", 24.4, -0.5, "square"),
-  off("C", 26.7, -0.5, "square"),
+  off("LT", 21.5, -0.5, "square"),
+  off("LG", 24, -0.5, "square"),
+  off("C", 26.5, -0.5, "square"),
   off("RG", 29, -0.5, "square"),
-  off("RT", 31.3, -0.5, "square"),
+  off("RT", 31.5, -0.5, "square"),
 ];
 
 // 4 ダウンの守備ライン（オーバーフロント）。4-3、ニッケル、ダイム、4-2-5 で使う。
 const FRONT_4: FormationPlayer[] = [
   def("", 21.5, 1, "circle"),
-  def("", 24.4, 1, "circle"),
+  def("", 24, 1, "circle"),
   def("", 29, 1, "circle"),
-  def("", 31.9, 1, "circle"),
+  def("", 31.5, 1, "circle"),
 ];
 
 // 3 ダウンの守備ライン（オッドフロント）。3-4 と 3-3-5 で使う。
 const FRONT_3: FormationPlayer[] = [
   def("", 23, 1, "circle"),
-  def("", 26.7, 1, "circle"),
-  def("", 30.4, 1, "circle"),
+  def("", 26.5, 1, "circle"),
+  def("", 30, 1, "circle"),
 ];
 
 const I_FORMATION: Formation = {
@@ -52,10 +53,10 @@ const I_FORMATION: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("Y", 33.6, -0.5, "square"),
-    off("QB", 26.7, -2.5, "circle"),
-    off("FB", 26.7, -5, "circle"),
-    off("RB", 26.7, -7.5, "circle"),
+    off("Y", 34, -0.5, "square"),
+    off("QB", 26.5, -2.5, "circle"),
+    off("FB", 26.5, -5, "circle"),
+    off("RB", 26.5, -7.5, "circle"),
     off("X", 6.5, -0.5, "circle"),
     off("Z", 46.5, -1, "circle"),
   ],
@@ -67,9 +68,9 @@ const SINGLEBACK_ACE: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("Y", 33.6, -0.5, "square"),
-    off("QB", 26.7, -2.5, "circle"),
-    off("RB", 26.7, -6.5, "circle"),
+    off("Y", 34, -0.5, "square"),
+    off("QB", 26.5, -2.5, "circle"),
+    off("RB", 26.5, -6.5, "circle"),
     off("X", 6, -0.5, "circle"),
     off("H", 40, -1.5, "circle"),
     off("Z", 47, -1, "circle"),
@@ -82,7 +83,7 @@ const SHOTGUN_SPREAD: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("QB", 26.7, -5, "circle"),
+    off("QB", 26.5, -5, "circle"),
     off("RB", 29.5, -5, "circle"),
     off("X", 5.5, -0.5, "circle"),
     off("Y", 13, -1, "circle"),
@@ -97,7 +98,7 @@ const TRIPS: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("QB", 26.7, -5, "circle"),
+    off("QB", 26.5, -5, "circle"),
     off("RB", 24, -5, "circle"),
     off("X", 5.5, -0.5, "circle"),
     off("Y", 34.5, -1, "square"),
@@ -112,7 +113,7 @@ const EMPTY: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("QB", 26.7, -5, "circle"),
+    off("QB", 26.5, -5, "circle"),
     off("X", 5, -0.5, "circle"),
     off("F", 12, -1.5, "circle"),
     off("Y", 34.5, -1, "square"),
@@ -127,9 +128,9 @@ const PISTOL: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("Y", 33.6, -0.5, "square"),
-    off("QB", 26.7, -4.5, "circle"),
-    off("RB", 26.7, -7.5, "circle"),
+    off("Y", 34, -0.5, "square"),
+    off("QB", 26.5, -4.5, "circle"),
+    off("RB", 26.5, -7.5, "circle"),
     off("X", 6, -0.5, "circle"),
     off("H", 40, -1.5, "circle"),
     off("Z", 47, -1, "circle"),
@@ -142,12 +143,12 @@ const BUNCH: Formation = {
   side: "offense",
   players: [
     ...OFFENSIVE_LINE,
-    off("QB", 26.7, -5, "circle"),
+    off("QB", 26.5, -5, "circle"),
     off("RB", 24, -5, "circle"),
     off("X", 5.5, -0.5, "circle"),
     off("Z", 37, -1, "circle"),
-    off("H", 34.3, -2.2, "circle"),
-    off("Y", 39.7, -2.2, "circle"),
+    off("H", 34.5, -2, "circle"),
+    off("Y", 39.5, -2, "circle"),
   ],
 };
 
@@ -158,8 +159,8 @@ const DEFENSE_4_3: Formation = {
   players: [
     ...FRONT_4,
     def("W", 22, 4, "circle"),
-    def("M", 26.7, 4, "circle"),
-    def("S", 31.4, 4, "circle"),
+    def("M", 26.5, 4, "circle"),
+    def("S", 31.5, 4, "circle"),
     def("", 7, 3, "circle"),
     def("", 46, 3, "circle"),
     def("FS", 24, 9, "circle"),
@@ -206,7 +207,7 @@ const DEFENSE_DIME: Formation = {
   side: "defense",
   players: [
     ...FRONT_4,
-    def("M", 26.7, 4, "circle"),
+    def("M", 26.5, 4, "circle"),
     def("N", 14, 4, "circle"),
     def("$", 39, 4, "circle"),
     def("", 7, 3, "circle"),
@@ -239,7 +240,7 @@ const DEFENSE_3_3_5: Formation = {
   players: [
     ...FRONT_3,
     def("W", 20, 4, "circle"),
-    def("M", 26.7, 4, "circle"),
+    def("M", 26.5, 4, "circle"),
     def("S", 33, 4, "circle"),
     def("N", 14, 4.5, "circle"),
     def("", 7, 3, "circle"),

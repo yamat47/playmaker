@@ -138,7 +138,11 @@ export class Playmaker implements IDisposable {
    * view にすると、ドラッグや作図の途中の操作は取り消し、選択の強調も描かない。
    */
   setMode(mode: PlaymakerMode): void {
-    if (this.ignoreAfterDispose("setMode") || mode === this.currentMode) {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("setMode");
+      return;
+    }
+    if (mode === this.currentMode) {
       return;
     }
     this.currentMode = mode;
@@ -159,7 +163,8 @@ export class Playmaker implements IDisposable {
    * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
    */
   setFieldZone(zone: FieldZone): void {
-    if (this.ignoreAfterDispose("setFieldZone")) {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("setFieldZone");
       return;
     }
     this.session.setFieldZone(zone);
@@ -173,7 +178,8 @@ export class Playmaker implements IDisposable {
    * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
    */
   loadFormation(formation: Formation): boolean {
-    if (this.ignoreAfterDispose("loadFormation")) {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("loadFormation");
       return false;
     }
     return this.session.loadFormation(formation);
@@ -186,7 +192,8 @@ export class Playmaker implements IDisposable {
    * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
    */
   setPlayData(data: PlayDataInput): void {
-    if (this.ignoreAfterDispose("setPlayData")) {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("setPlayData");
       return;
     }
     this.session.setPlayData(data);
@@ -199,7 +206,8 @@ export class Playmaker implements IDisposable {
    * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
    */
   restorePlayData(raw: unknown): void {
-    if (this.ignoreAfterDispose("restorePlayData")) {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("restorePlayData");
       return;
     }
     this.session.setPlayData(raw);
@@ -234,7 +242,8 @@ export class Playmaker implements IDisposable {
    * ホストが祖先の要素で変数を変えたあとに呼ぶ。
    */
   refresh(): void {
-    if (this.ignoreAfterDispose("refresh")) {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("refresh");
       return;
     }
     this.surface.refresh();
@@ -246,14 +255,11 @@ export class Playmaker implements IDisposable {
     this.store.dispose();
   }
 
-  private ignoreAfterDispose(method: string): boolean {
-    if (!this.store.isDisposed) {
-      return false;
-    }
+  /** dispose したあとの呼び出しは何もしないので、開発時だけそのことを知らせる。 */
+  private warnIgnoredAfterDispose(method: string): void {
     if (isDevelopment()) {
       console.warn(`Playmaker: dispose したあとに ${method} を呼んだので、何もしません。`);
     }
-    return true;
   }
 
   private replaceUi(): void {

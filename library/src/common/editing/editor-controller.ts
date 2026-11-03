@@ -18,6 +18,7 @@ import {
 } from "../commands/player-commands.js";
 import { type Formation, instantiateFormation } from "../formations/formation.js";
 import { clampToZoneWindow } from "../geometry/field.js";
+import { snapToGrid } from "../geometry/grid.js";
 import { hitLineHandle, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
 import type { IIdFactory } from "../model/id-factory.js";
 import { type Line, MAX_LINES } from "../model/line.js";
@@ -51,14 +52,11 @@ import {
   dragPatch,
   dragPosition,
   type Interaction,
+  isSamePosition,
   startDrag,
   startDrawing,
 } from "./interaction.js";
 import { composePreview, computeOverlay } from "./preview.js";
-
-function isSamePosition(a: FieldPosition, b: FieldPosition): boolean {
-  return a.lateralYard === b.lateralYard && a.downfieldYard === b.downfieldYard;
-}
 
 /**
  * ツール、選択、ジェスチャを受けてコマンドを発行する。Model を直接書き換えない。
@@ -180,7 +178,12 @@ export class EditorController extends Disposable implements IEditorController {
       if (isSamePosition(moved, interaction.origin)) {
         return;
       }
-      const command = this.dropCommand(interaction, this.clampToField(moved));
+      const to = this.clampToField(moved);
+      // 同じ格子点に収まる動きは図を変えないので、履歴にも通知にも載せない。
+      if (isSamePosition(to, interaction.origin)) {
+        return;
+      }
+      const command = this.dropCommand(interaction, to);
       if (command !== undefined) {
         this.commands.execute(command);
       }
@@ -309,8 +312,9 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.markSceneChanged();
   }
 
+  // 窓の端（横はサイドライン、縦は LOS から整数ヤード）はどれも格子点なので、寄せてから丸めても窓の外へは出ない。
   private clampToField(pos: FieldPosition): FieldPosition {
-    return clampToZoneWindow(pos, this.model.getSnapshot().field);
+    return snapToGrid(clampToZoneWindow(pos, this.model.getSnapshot().field));
   }
 
   // ドラッグ中に対象が消えていたら undefined を返し、コマンドを出さない。

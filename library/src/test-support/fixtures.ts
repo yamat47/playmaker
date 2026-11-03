@@ -4,7 +4,11 @@ import {
   fieldStateForZone,
   type PlayData,
 } from "../common/model/play-data.js";
-import type { Player } from "../common/model/player.js";
+import type { FieldPosition, Player } from "../common/model/player.js";
+
+export function positionOf(data: Pick<PlayData, "players">, id: string): FieldPosition | undefined {
+  return data.players.find((p) => p.id === id)?.position;
+}
 
 export function player(id: string, lateralYard = 5, downfieldYard = 50): Player {
   return { id, position: { lateralYard, downfieldYard }, shape: "circle", label: id };

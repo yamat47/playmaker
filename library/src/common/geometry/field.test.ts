@@ -15,17 +15,30 @@ import {
 } from "./field.js";
 
 describe("ハッシュのリーグ別位置", () => {
-  it("既定は NCAA で、サイドラインから 20yd（中央±0.125W）に来る", () => {
+  it("既定は NCAA で、サイドラインから 20yd に来る", () => {
     expect(DEFAULT_FIELD_LEAGUE).toBe("ncaa");
     const offset = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE.ncaa;
-    expect(offset).toBeCloseTo(FIELD_WIDTH_YARDS * 0.125);
-    expect(FIELD_WIDTH_YARDS / 2 - offset).toBeCloseTo(20);
+    expect(FIELD_WIDTH_YARDS / 2 - offset).toBe(20);
+  });
+
+  it("どのリーグのハッシュも、フィールドの中央から 0.5yd の格子点に乗る", () => {
+    for (const offset of Object.values(HASH_CENTER_OFFSET_YARDS_BY_LEAGUE)) {
+      expect((FIELD_WIDTH_YARDS / 2 + offset) % 0.5).toBe(0);
+    }
   });
 
   it("NFHS > NCAA > NFL の順で中央オフセットが大きい（ハッシュが広い）", () => {
     const { ncaa, nfl, nfhs } = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
     expect(nfhs).toBeGreaterThan(ncaa);
     expect(ncaa).toBeGreaterThan(nfl);
+  });
+});
+
+describe("LOS の位置", () => {
+  it("どのゾーンの LOS も 0.5yd の格子点にあり、LOS 基準の格子が絶対ヤードの格子と一致する", () => {
+    for (const losYard of Object.values(LOS_YARD_BY_ZONE)) {
+      expect(losYard % 0.5).toBe(0);
+    }
   });
 });
 
@@ -91,13 +104,13 @@ describe("yardLinesInWindow", () => {
 
 describe("FieldGeometry", () => {
   it("横が制約になる場合は幅基準でフィットし上下に余白が出る", () => {
-    const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
+    const g = new FieldGeometry(530, 400, fieldStateForZone("middle"));
 
-    expect(g.scale).toBeCloseTo(1000 / FIELD_WIDTH_YARDS, 10);
-    expect(g.fieldPixelWidth).toBeCloseTo(1000, 10);
-    expect(g.fieldPixelHeight).toBeCloseTo(562.5, 10);
+    expect(g.scale).toBeCloseTo(10, 10);
+    expect(g.fieldPixelWidth).toBeCloseTo(530, 10);
+    expect(g.fieldPixelHeight).toBeCloseTo(300, 10);
     expect(g.offsetX).toBeCloseTo(0, 10);
-    expect(g.offsetY).toBeCloseTo(18.75, 10);
+    expect(g.offsetY).toBeCloseTo(50, 10);
   });
 
   it("縦が制約になる場合は高さ基準でフィットし左右に余白が出る", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { line, playData, player, twoPlayersWithRoute } from "../../test-support/fixtures.js";
 import { openPlay, type PlayDriver, yd } from "../../test-support/play-driver.js";
+import { FIELD_WIDTH_YARDS } from "../geometry/field.js";
 import { type Line, MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 
 function startDrawingFromA(play: PlayDriver): PlayDriver {
@@ -94,7 +95,7 @@ describe("打点", () => {
     expect(play.editor.getViewState().isDrawing).toBe(true);
   });
 
-  it("直前に打った点のすぐ近くを押しても、点を打たない", () => {
+  it("直前に打った点と同じ格子点を押しても、点を打たない", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
     play.editor.pointerDown(yd(18.1, 10));
@@ -104,12 +105,22 @@ describe("打点", () => {
     expect(addedLine(play)).toMatchObject({ waypoints: [], end: yd(18, 10) });
   });
 
+  it("直前に打った点の隣の格子点を押すと、点を打つ", () => {
+    const play = openDrawingFromA();
+    play.editor.pointerDown(yd(18, 10));
+    play.editor.pointerDown(yd(18.5, 10));
+
+    play.editor.commitLine();
+
+    expect(addedLine(play)).toMatchObject({ waypoints: [yd(18, 10)], end: yd(18.5, 10) });
+  });
+
   it("窓の外へ動かすと、描く線の終点は窓の端で止まる", () => {
     const play = openDrawingFromA();
 
     play.editor.pointerMove(yd(99, 0));
 
-    expect(play.editor.getFrame().scene.lines.at(-1)?.end).toEqual(yd(160 / 3, 0));
+    expect(play.editor.getFrame().scene.lines.at(-1)?.end).toEqual(yd(FIELD_WIDTH_YARDS, 0));
   });
 
   it("窓の外を押すと、窓の端に点を打つ", () => {

@@ -5,6 +5,7 @@ import {
   type FieldGeometry,
   type FieldMetrics,
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
+  YARD_LINE_INTERVAL_YARDS,
   yardLinesInWindow,
 } from "../../common/index.js";
 import { fieldFont } from "../theme/field-font.js";
@@ -36,8 +37,6 @@ interface FieldBounds {
 /** ゴールポストの柱を伸ばす向き。自陣のエンドゾーンは画面の下にあるので上へ、相手のは下へ伸ばす。 */
 type UprightDirection = "toward-top" | "toward-bottom";
 
-// ヤードラインと芝の帯の間隔（ヤード）。
-const YARD_LINE_INTERVAL_YARDS = 5;
 // 数字の横に置く、近いほうのゴールを指す三角の寸法（ヤード）。数字より目立たないよう小さくする。
 const ARROW_LENGTH_YARDS = 0.8;
 const ARROW_HALF_WIDTH_YARDS = 0.3;

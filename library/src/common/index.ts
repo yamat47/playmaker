@@ -27,8 +27,10 @@ export {
   FIELD_WIDTH_YARDS,
   FieldGeometry,
   HASH_CENTER_OFFSET_YARDS_BY_LEAGUE,
+  YARD_LINE_INTERVAL_YARDS,
   yardLinesInWindow,
 } from "./geometry/field.js";
+export { GRID_STEP_YARDS, snapToGrid } from "./geometry/grid.js";
 export { WAYPOINT_HANDLE_RADIUS_YARDS } from "./geometry/hit-test.js";
 export {
   arrowHeadVertices,

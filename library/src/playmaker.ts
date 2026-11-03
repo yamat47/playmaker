@@ -42,9 +42,11 @@ export type {
 } from "./common/index.js";
 export {
   CURRENT_PLAY_DATA_VERSION,
+  FIELD_WIDTH_YARDS,
   FIELD_ZONE_LABELS,
   FIELD_ZONE_VALUES,
   FORMATION_PRESETS,
+  GRID_STEP_YARDS,
   getFormationPreset,
   getPlayPreset,
   migratePlayData,
@@ -52,8 +54,6 @@ export {
 } from "./common/index.js";
 
 export type PlaymakerMode = "view" | "edit";
-
-const NO_OVERLAY: EditorOverlay = { kind: "none" };
 
 // バンドラは process.env.NODE_ENV を文字列に置き換える。置き換えずにブラウザで読み込むと
 // process が無く ReferenceError になるので、そのときは本番とみなす。
@@ -121,7 +121,8 @@ export class Playmaker implements IDisposable {
     const stage = document.createElement("div");
     stage.className = "playmaker-stage";
     this.root.appendChild(stage);
-    this.surface = this.store.add(new CanvasSurface(stage, this.session.getSnapshot()));
+    const { scene, overlay } = this.session.controller.getFrame();
+    this.surface = this.store.add(new CanvasSurface(stage, scene, this.surfaceOverlay(overlay)));
     // CanvasSurface は最初の大きさが決まったときに今の図を描くので、ここでは描かない。
     this.ui = this.createUi();
     this.store.add(this.session.onDidChangeScene(() => this.draw()));
@@ -284,6 +285,11 @@ export class Playmaker implements IDisposable {
 
   private draw(): void {
     const { scene, overlay } = this.session.controller.getFrame();
-    this.surface.setScene(scene, this.currentMode === "edit" ? overlay : NO_OVERLAY);
+    this.surface.setScene(scene, this.surfaceOverlay(overlay));
+  }
+
+  /** view モードでは undefined を返し、格子や選択の強調のような編集中だけの層を描かせない。 */
+  private surfaceOverlay(overlay: EditorOverlay): EditorOverlay | undefined {
+    return this.currentMode === "edit" ? overlay : undefined;
   }
 }

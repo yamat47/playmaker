@@ -77,6 +77,7 @@ describe("computeFieldMetrics", () => {
     expect(m.pylonSize).toBe(3);
     expect(m.goalpostCrossbarHalfLength).toBe(0);
     expect(m.goalpostStroke).toBe(2);
+    expect(m.gridDotRadius).toBe(0.75);
   });
 
   it("負の入力は 0 として扱う", () => {

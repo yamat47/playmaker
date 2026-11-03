@@ -1,10 +1,23 @@
+import { pointDistance } from "../common/geometry/hit-test.js";
 import type { Line } from "../common/model/line.js";
 import {
   CURRENT_PLAY_DATA_VERSION,
   fieldStateForZone,
   type PlayData,
 } from "../common/model/play-data.js";
-import type { FieldPosition, Player } from "../common/model/player.js";
+import { type FieldPosition, PLAYER_RADIUS_YARDS, type Player } from "../common/model/player.js";
+
+/** マーカーが重なる（中心の距離が直径に満たない）選手の組。 */
+export function overlappingMarkers(
+  players: readonly Pick<Player, "position">[],
+): [FieldPosition, FieldPosition][] {
+  return players.flatMap(({ position: a }, i) =>
+    players
+      .slice(i + 1)
+      .filter(({ position: b }) => pointDistance(a, b) < PLAYER_RADIUS_YARDS * 2)
+      .map(({ position: b }): [FieldPosition, FieldPosition] => [a, b]),
+  );
+}
 
 export function positionOf(data: Pick<PlayData, "players">, id: string): FieldPosition | undefined {
   return data.players.find((p) => p.id === id)?.position;

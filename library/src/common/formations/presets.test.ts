@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { overlappingMarkers } from "../../test-support/fixtures.js";
 import { must } from "../../test-support/must.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { FIELD_ZONE_VALUES, fieldStateForZone } from "../model/play-data.js";
@@ -31,6 +32,14 @@ describe("FORMATION_PRESETS", () => {
 
   it.each(FORMATION_PRESETS)("$id は選手に色を付けず、テーマの既定の色で描かせる", (formation) => {
     expect(formation.players.filter((p) => p.color !== undefined)).toEqual([]);
+  });
+
+  it.each(FORMATION_PRESETS)("$id は選手全員にラベルを付ける", (formation) => {
+    expect(formation.players.filter((p) => p.label === "")).toEqual([]);
+  });
+
+  it.each(FORMATION_PRESETS)("$id の選手のマーカーは重ならない", (formation) => {
+    expect(overlappingMarkers(formation.players)).toEqual([]);
   });
 
   it.each(FIELD_ZONE_VALUES)(

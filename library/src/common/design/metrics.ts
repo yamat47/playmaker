@@ -37,6 +37,9 @@ const ARROW_LENGTH_PER_D = 0.72;
 const ARROW_HALF_WIDTH_PER_D = 0.24;
 const MOTION_DASH_ON_PER_U = 1.1;
 const MOTION_DASH_OFF_PER_U = 0.7;
+// 編集中に敷く格子の点。目印になればよいので、ハッシュより細く、消えない最小の大きさは残す。
+const GRID_DOT_RADIUS_PER_U = 0.08;
+const GRID_DOT_RADIUS_MIN_PX = 0.75;
 
 /** 描くときの寸法（px）。 */
 export interface FieldMetrics {
@@ -63,6 +66,8 @@ export interface FieldMetrics {
   readonly arrowHalfWidth: number;
   /** motion の破線の [描く長さ, 空ける長さ]。 */
   readonly motionDash: readonly [number, number];
+  /** 編集中に敷く格子の点の半径。 */
+  readonly gridDotRadius: number;
 }
 
 /** 大きさ 0 のビューポートでも NaN を返さない。 */
@@ -91,5 +96,6 @@ export function computeFieldMetrics(fieldPixelWidth: number, unitPx: number): Fi
     arrowLength: ARROW_LENGTH_PER_D * d,
     arrowHalfWidth: ARROW_HALF_WIDTH_PER_D * d,
     motionDash: [MOTION_DASH_ON_PER_U * u, MOTION_DASH_OFF_PER_U * u],
+    gridDotRadius: Math.max(GRID_DOT_RADIUS_MIN_PX, GRID_DOT_RADIUS_PER_U * u),
   };
 }

@@ -1,6 +1,7 @@
 import type { EditorOverlay, FieldGeometry, FieldMetrics, SceneData } from "../../common/index.js";
 import type { ThemeReader } from "../theme/tokens.js";
 import { FieldRenderer } from "./field-renderer.js";
+import { GridRenderer } from "./grid-renderer.js";
 import { LineRenderer } from "./line-renderer.js";
 import { OverlayRenderer } from "./overlay-renderer.js";
 import { PlayerRenderer } from "./player-renderer.js";
@@ -31,18 +32,27 @@ export interface ILayerRenderer<F extends RenderFrame = RenderFrame> {
 }
 
 /**
- * 図を描く層と、編集中だけ重ねる層。PNG の書き出しは図の層だけで描くので、
- * 選択の強調やハンドルは書き出した画像に入らない。
+ * 図を描く層（field と play）と、編集中だけ挟む層（backdrop と editor）。描く順は
+ * field、backdrop、play、editor。PNG の書き出しと view モードは図の層だけで描くので、
+ * 格子、選択の強調、ハンドルは書き出した画像と読み取り専用の画面に入らない。
  */
 export interface SurfaceLayers {
+  /** フィールド。図の層のうち、編集中の backdrop より下に描くもの。 */
+  readonly field: readonly ILayerRenderer[];
+  /** 編集中だけ、フィールドの上で線と選手の下に敷く層。位置の格子を置く。 */
+  readonly backdrop: readonly ILayerRenderer<EditorRenderFrame>[];
+  /** 線と選手。 */
   readonly play: readonly ILayerRenderer[];
+  /** 編集中だけ、図の上に重ねる層。 */
   readonly editor: readonly ILayerRenderer<EditorRenderFrame>[];
 }
 
 /** 線は選手の下に描く。上に描くと、線の根元が選手のマーカーに重なって見える。 */
 export function createDefaultLayers(): SurfaceLayers {
   return {
-    play: [new FieldRenderer(), new LineRenderer(), new PlayerRenderer()],
+    field: [new FieldRenderer()],
+    backdrop: [new GridRenderer()],
+    play: [new LineRenderer(), new PlayerRenderer()],
     editor: [new OverlayRenderer()],
   };
 }

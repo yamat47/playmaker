@@ -29,7 +29,7 @@ export class CanvasSurface extends Disposable {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly layers: SurfaceLayers;
   private scene: SceneData;
-  private overlay: EditorOverlay = { kind: "none" };
+  private overlay: EditorOverlay | undefined;
   private frameRequest: number | undefined;
   private dpr = 0;
   // 破棄するときに、DPR の見張りをまとめて外す。
@@ -38,10 +38,12 @@ export class CanvasSurface extends Disposable {
   constructor(
     parent: HTMLElement,
     scene: SceneData,
+    overlay: EditorOverlay | undefined,
     layers: SurfaceLayers = createDefaultLayers(),
   ) {
     super();
     this.scene = scene;
+    this.overlay = overlay;
     this.layers = layers;
 
     this.canvas = document.createElement("canvas");
@@ -79,8 +81,9 @@ export class CanvasSurface extends Disposable {
   /**
    * 図とオーバーレイを差し替える。描くのは次のフレームなので、
    * 同じフレームの中で何度差し替えても描くのは 1 回になる。
+   * overlay を省くと、格子と選択の強調のような編集中だけの層を描かない（view モード）。
    */
-  setScene(scene: SceneData, overlay: EditorOverlay): void {
+  setScene(scene: SceneData, overlay: EditorOverlay | undefined): void {
     this.scene = scene;
     this.overlay = overlay;
     this.invalidate();
@@ -93,7 +96,7 @@ export class CanvasSurface extends Disposable {
   }
 
   /**
-   * 指定したプレー図を PNG（Blob）として書き出す。図の層だけで描くので、選択の強調と
+   * 指定したプレー図を PNG（Blob）として書き出す。図の層だけで描くので、格子、選択の強調、
    * ハンドルは入らない。配色は画面と同じテーマ変数から読む。
    * 同梱フォントを読み込み終えてから描くので、構築の直後でも数字とラベルは同梱フォントになる。
    */
@@ -111,7 +114,7 @@ export class CanvasSurface extends Disposable {
       throw new Error("Playmaker: エクスポート用 2D canvas context を取得できませんでした。");
     }
     const geometry = new FieldGeometry(width, height, data.field);
-    renderLayers(ctx, this.frameFor(geometry, data, theme), this.layers.play);
+    this.paint(ctx, this.frameFor(geometry, data, theme), undefined);
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (blob) {
@@ -185,12 +188,29 @@ export class CanvasSurface extends Disposable {
   }
 
   private render(): void {
-    const frame: EditorRenderFrame = {
-      ...this.frameFor(this.measure(), this.scene, createThemeReader(this.host)),
-      overlay: this.overlay,
-    };
-    renderLayers(this.ctx, frame, this.layers.play);
-    renderLayers(this.ctx, frame, this.layers.editor);
+    const frame = this.frameFor(this.measure(), this.scene, createThemeReader(this.host));
+    this.paint(this.ctx, frame, this.overlay);
+  }
+
+  /**
+   * 層を field、backdrop、play、editor の順に描く。overlay が無いときは編集中だけの層
+   * （backdrop と editor）を飛ばすので、view モードと PNG の書き出しは図の層だけになる。
+   */
+  private paint(
+    ctx: CanvasRenderingContext2D,
+    frame: RenderFrame,
+    overlay: EditorOverlay | undefined,
+  ): void {
+    const editorFrame: EditorRenderFrame | undefined =
+      overlay === undefined ? undefined : { ...frame, overlay };
+    renderLayers(ctx, frame, this.layers.field);
+    if (editorFrame !== undefined) {
+      renderLayers(ctx, editorFrame, this.layers.backdrop);
+    }
+    renderLayers(ctx, frame, this.layers.play);
+    if (editorFrame !== undefined) {
+      renderLayers(ctx, editorFrame, this.layers.editor);
+    }
   }
 
   private frameFor(geometry: FieldGeometry, scene: SceneData, theme: ThemeReader): RenderFrame {

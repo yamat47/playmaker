@@ -23,6 +23,7 @@ export const THEME_TOKENS = {
   fieldGoalLine: { property: "--playmaker-field-goal-line", fallback: "rgba(255, 255, 255, 0.92)" },
   fieldPylon: { property: "--playmaker-field-pylon", fallback: ORANGE },
   fieldGoalpost: { property: "--playmaker-field-goalpost", fallback: "#c2a64a" },
+  fieldGrid: { property: "--playmaker-field-grid", fallback: "rgba(236, 240, 234, 0.3)" },
   playerFill: { property: "--playmaker-player-fill", fallback: NAVY },
   playerStroke: { property: "--playmaker-player-stroke", fallback: CHALK },
   playerLabel: { property: "--playmaker-player-label", fallback: "#ffffff" },

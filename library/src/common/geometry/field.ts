@@ -112,8 +112,8 @@ export function yardLinesInWindow(zone: FieldZone, stepYards: number): number[] 
 }
 
 export interface CanvasPoint {
-  x: number;
-  y: number;
+  readonly x: number;
+  readonly y: number;
 }
 
 /**

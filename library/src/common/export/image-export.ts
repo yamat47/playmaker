@@ -20,8 +20,8 @@ export interface ImageExportOptions {
 }
 
 export interface ImageExportSize {
-  width: number;
-  height: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 /**

@@ -112,6 +112,8 @@ if (play) playmaker.setPlayData(play.data);
 どちらも `name` と `side`（`offense` / `defense`）を持つので、一覧の見出しや攻守の分け方に使える。
 プレーはさらに `category`、`personnel`、`summary` を持つ。
 商用ソフト側で管理するカスタムの隊形も `loadFormation` に渡せる。選手の位置は LOS からの相対で書く。
+位置は 0.5 ヤード（`GRID_STEP_YARDS`）の格子点に限り、読み込んだ値も最も近い格子点へ寄せる。
+横はサイドラインから `FIELD_WIDTH_YARDS`（53）まで、縦は LOS が 0 で攻撃方向が正。
 
 ### データ連携とバージョニング
 
@@ -150,7 +152,7 @@ Playmaker を置いた要素か、その祖先の要素に指定する。
 
 変数は `--playmaker-<部位>-<部品>` の形で、次のものがある。
 
-- フィールド: `field-grass`、`field-stripe`、`field-oob`、`field-endzone`、`field-line`、`field-number`、`field-goal-line`、`field-pylon`、`field-goalpost`
+- フィールド: `field-grass`、`field-stripe`、`field-oob`、`field-endzone`、`field-line`、`field-number`、`field-goal-line`、`field-pylon`、`field-goalpost`、edit モードで敷く格子の点の `field-grid`
 - 選手: `player-fill`、`player-stroke`、`player-label`
 - 線: `line-route`、`line-block`、`line-motion`、パネルで選べる 4 色の `line-swatch-1` から `line-swatch-4`
 - 選択: `selection`、ハンドルの縁取りの `selection-outline`

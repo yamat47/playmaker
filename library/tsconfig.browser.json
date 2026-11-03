@@ -5,7 +5,7 @@
     "types": ["vite/client"],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.browser.tsbuildinfo",
     "paths": {
-      "playmaker": ["./src/playmaker.ts"]
+      "@yamat47/playmaker": ["./src/playmaker.ts"]
     }
   },
   "include": ["src/browser", "src/playmaker.ts", "demo"],

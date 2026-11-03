@@ -85,3 +85,22 @@ jobs:
 
       - name: Browser test (Vitest Browser Mode)
         run: pnpm run test:browser
+
+  # workflow の書き方の検査。zizmor は permissions の抜け、script injection、
+  # SHA で固定していない action などを見つける。public リポジトリなので
+  # SARIF を security タブへ上げることもできるが、PR の中で読めるよう注釈にする
+  lint-workflows:
+    name: lint workflows (zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: yamat47/github-toolkit/actions/checkout@main
+        with:
+          persist-credentials: false
+
+      - name: zizmor
+        uses: yamat47/github-toolkit/actions/zizmor@main
+        with:
+          advanced-security: "false"
+          annotations: "true"

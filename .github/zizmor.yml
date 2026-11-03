@@ -1,0 +1,9 @@
+# zizmor の設定（CI の lint-workflows ジョブと手元の docker run の両方が読む）。
+# action は SHA で固定するのが原則だが、github-toolkit は自分で管理していて上流の SHA 固定と
+# 更新を toolkit 側で行うので、@main のまま参照する（ci.yml のコメントと README を参照）。
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "yamat47/github-toolkit/*": ref-pin
+        "*": hash-pin

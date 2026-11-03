@@ -1,10 +1,27 @@
 {
-  "name": "playmaker",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@yamat47/playmaker",
+  "version": "0.1.0",
   "description": "アメリカンフットボールのプレー図を作成・表示する JavaScript ライブラリ",
+  "keywords": [
+    "american-football",
+    "football",
+    "playbook",
+    "play-diagram",
+    "canvas",
+    "typescript"
+  ],
+  "homepage": "https://playmaker-demo.yamat47.me/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yamat47/playmaker.git",
+    "directory": "library"
+  },
+  "bugs": {
+    "url": "https://github.com/yamat47/playmaker/issues"
+  },
+  "license": "MIT",
+  "author": "Takuya Yamaguchi <yamat47.thirddown@gmail.com> (https://github.com/yamat47)",
   "type": "module",
-  "license": "UNLICENSED",
   "files": [
     "dist"
   ],
@@ -16,9 +33,15 @@
     "./styles.css": "./dist/playmaker.css",
     "./package.json": "./package.json"
   },
+  "jsdelivr": "./dist/playmaker.js",
+  "unpkg": "./dist/playmaker.js",
   "sideEffects": [
     "**/*.css"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "vite demo --config vite.config.ts",
     "build": "vite build",
@@ -29,8 +52,7 @@
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run test:browser && pnpm run build",
     "lint": "biome check --error-on-warnings .",
     "lint:fix": "biome check --write .",
-    "font": "node scripts/generate-field-font.mjs",
-    "prepare": "pnpm run build"
+    "font": "node scripts/generate-field-font.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
@@ -46,8 +68,5 @@
     "vite-plugin-dts": "^5.1.2",
     "vitest": "^5.0.5"
   },
-  "packageManager": "pnpm@11.8.0",
-  "engines": {
-    "node": ">=24"
-  }
+  "packageManager": "pnpm@11.8.0"
 }

@@ -35,14 +35,12 @@ jobs:
 
       - name: Setup Node.js with pnpm and install dependencies
         # pnpm のバージョンは library/package.json の packageManager から、Node は .node-version から読む。
-        # prepare の build を install で走らせると、後の Build と合わせて 2 回ビルドになるので飛ばす
         uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@main
         with:
           node-version-file: .node-version
           package-json-file: library/package.json
           cache-dependency-path: library/pnpm-lock.yaml
           working-directory: library
-          install-args: --frozen-lockfile --ignore-scripts
 
       - name: Typecheck
         run: pnpm run typecheck
@@ -74,7 +72,6 @@ jobs:
           package-json-file: library/package.json
           cache-dependency-path: library/pnpm-lock.yaml
           working-directory: library
-          install-args: --frozen-lockfile --ignore-scripts
 
       - name: Install Chromium
         # lockfile の playwright が想定する版の Chromium と、それを動かす OS のパッケージを入れる。

@@ -1,0 +1,87 @@
+# v で始まるタグを push すると、library/ を npm に @yamat47/playmaker として公開する。
+# 公開は取り消せないので、タグは CI が通った main のコミットに打ち、ここでも typecheck、lint、
+# node のテストを通してから公開する。provenance を付けるので、公開した版がこの workflow のこの
+# コミットから出たことを npm 上で辿れる。
+#
+# 認証は npm の trusted publishing（OIDC）で、トークンを持たない。npmjs.com のパッケージの設定で、
+# このリポジトリとこのファイル名と environment の release を登録してある。登録はパッケージが
+# レジストリに在ってからしかできないので、初回だけは environment の release に置いた NPM_TOKEN で
+# 公開し、登録が済んだらトークンを消す（docs/design.md の「配布」）。トークンが無ければ OIDC を使う。
+#
+# action は SHA で固定するのが原則だが、github-toolkit だけは例外として @main を直接追いかける
+# （ci.yml のコメントを参照）。
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# 公開の途中で止めない。2 つのタグが並んでも順に公開する
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # OIDC で npm に身元を示し、provenance に署名する
+    defaults:
+      run:
+        working-directory: library
+    steps:
+      - name: Checkout
+        uses: yamat47/github-toolkit/actions/checkout@main
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js with pnpm and install dependencies
+        uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@main
+        with:
+          node-version-file: .node-version
+          package-json-file: library/package.json
+          cache-dependency-path: library/pnpm-lock.yaml
+          working-directory: library
+
+      - name: Check that the tag matches package.json
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$version" ]; then
+            echo "::error::tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Lint (Biome)
+        run: pnpm run lint
+
+      - name: Test (Vitest)
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Use the token for the first publish, if there is one
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+            echo "::notice::publishing with NPM_TOKEN; delete the secret once the trusted publisher is registered"
+          fi
+
+      - name: Publish
+        # access と provenance は package.json の publishConfig にある。
+        # タグの checkout は detached HEAD なので、ブランチの検査は飛ばす
+        run: pnpm publish --no-git-checks

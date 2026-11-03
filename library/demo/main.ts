@@ -9,9 +9,9 @@ import {
   type Player,
   Playmaker,
   type PlayPreset,
-} from "playmaker";
+} from "@yamat47/playmaker";
 // 配布版の JS は CSS を読み込まないので、利用者と同じく別に読む。
-import "playmaker/styles.css";
+import "@yamat47/playmaker/styles.css";
 
 function need<T extends HTMLElement>(id: string, type: new () => T): T {
   const el = document.getElementById(id);

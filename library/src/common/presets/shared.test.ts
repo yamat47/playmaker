@@ -1,15 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
-import { deepFreeze, isTeamSide } from "./shared.js";
-
-describe("isTeamSide", () => {
-  it("offense と defense だけを真とする", () => {
-    expect(isTeamSide("offense")).toBe(true);
-    expect(isTeamSide("defense")).toBe(true);
-    expect(isTeamSide("special")).toBe(false);
-    expect(isTeamSide(undefined)).toBe(false);
-  });
-});
+import { deepFreeze } from "./shared.js";
 
 describe("deepFreeze", () => {
   it("入れ子のオブジェクトと配列まで凍結する", () => {

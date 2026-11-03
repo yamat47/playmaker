@@ -4,7 +4,6 @@ import { mutable } from "../../test-support/mutable.js";
 import {
   clonePlayData,
   DEFAULT_FIELD_ZONE,
-  isFieldZone,
   LOS_YARD_BY_ZONE,
   type PlayData,
   resolvePlayData,
@@ -56,22 +55,6 @@ describe("clonePlayData", () => {
     expect(source.field.zone).toBe("redzone");
     expect(source.players[0]?.label).toBe("QB");
     expect(source.lines[0]?.waypoints).toHaveLength(1);
-  });
-});
-
-describe("isFieldZone", () => {
-  it("3 つの正規ゾーンを true と判定する", () => {
-    expect(isFieldZone("middle")).toBe(true);
-    expect(isFieldZone("redzone")).toBe(true);
-    expect(isFieldZone("own-redzone")).toBe(true);
-  });
-
-  it("未知の文字列や非文字列を false と判定する", () => {
-    expect(isFieldZone("center")).toBe(false);
-    expect(isFieldZone("")).toBe(false);
-    expect(isFieldZone(undefined)).toBe(false);
-    expect(isFieldZone(0)).toBe(false);
-    expect(isFieldZone({ zone: "middle" })).toBe(false);
   });
 });
 

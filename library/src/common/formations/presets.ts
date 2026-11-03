@@ -32,7 +32,7 @@ export const FORMATION_PRESETS: readonly Formation[] = /* @__PURE__ */ deepFreez
   formation("empty", "Empty", "offense", empty()),
   formation("pistol", "Pistol", "offense", pistol()),
   formation("bunch", "Bunch", "offense", bunch()),
-  formation("defense-4-3", "4-3", "defense", defense43()),
+  formation("defense-4-3", "4-3 Over", "defense", defense43()),
   formation("defense-3-4", "3-4", "defense", defense34()),
   formation("defense-nickel", "Nickel", "defense", nickel(NICKEL_BASE)),
   formation("defense-dime", "Dime", "defense", dime()),

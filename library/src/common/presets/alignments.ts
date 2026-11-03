@@ -5,7 +5,8 @@
 // OL は LOS の 1 ヤード後ろ、守備ラインは 1.5 ヤード前に置き、マーカーが重ならない隙間を空ける。
 // LOS 上の選手（OL、TE、外側の WR）は -1、LOS から下がる選手（スロット、フランカー）は -2、
 // センター直下の QB は -3。守備ラインは OL の肩に付ける（シェード）ので、どのギャップを誰が
-// 守るかが読める。守備の選手には全員ラベルを付ける。
+// 守るかが読める。TE が付く隊形にはオーバーで構え、強い側の E を TE の外側の肩（9 テク）に置く。
+// 守備の選手には全員ラベルを付ける。
 //
 // 選手は id を持つ。プレーの線が起点の選手を id で指すためで、隊形にするときは id を外す。
 
@@ -46,13 +47,16 @@ export const OL = {
 } as const;
 
 // 4 ダウンのオーバーフロント。右を強い側として、E は LT の外側の肩、N は C の弱い側の肩、
-// T は RG の外側の肩、E は RT の外側の肩に付ける。
+// T は RG の外側の肩に付ける。強い側の E は、TE が無ければ RT の外側の肩に付ける。
 export const FRONT_4 = {
   eL: pt(20.5, 1.5),
   n: pt(25.5, 1.5),
   t: pt(30, 1.5),
   eR: pt(32.5, 1.5),
 } as const;
+
+/** TE が右に付くときの強い側の E。TE の外側の肩（9 テク）。 */
+export const END_OVER_TE = pt(35.5, 1.5);
 
 // 3 ダウンのオッドフロント。N は C の真上、E は両タックルの内側の肩。
 export const FRONT_3 = {
@@ -61,8 +65,8 @@ export const FRONT_3 = {
   eR: pt(30.5, 1.5),
 } as const;
 
-// 4-3 の LB。S は TE の外側に付ける。
-export const LB_43 = { w: pt(22.5, 5), m: pt(27, 5), s: pt(36, 5) } as const;
+// 4-3 オーバーの LB。S は TE の真上に付く。
+export const LB_43 = { w: pt(22.5, 5), m: pt(27, 5), s: pt(34.5, 5) } as const;
 
 // ニッケルの ILB 2 人と、スロットに付くニッケルバック。
 export const LB_NICKEL = { m: pt(24, 5), w: pt(30, 5), nb: pt(14, 5) } as const;
@@ -81,12 +85,12 @@ export function offensiveLine(): Player[] {
   ];
 }
 
-export function front4(): Player[] {
+export function front4(strongEnd: FieldPosition = FRONT_4.eR): Player[] {
   return [
     player("de-l", "E", FRONT_4.eL),
     player("dt-l", "N", FRONT_4.n),
     player("dt-r", "T", FRONT_4.t),
-    player("de-r", "E", FRONT_4.eR),
+    player("de-r", "E", strongEnd),
   ];
 }
 
@@ -108,7 +112,7 @@ export function corners(depth: number): Player[] {
 export function iFormation(): Player[] {
   return [
     ...offensiveLine(),
-    player("y", "Y", pt(34, -1), "square"),
+    player("y", "Y", pt(34.5, -1), "square"),
     player("qb", "QB", pt(26.5, -3)),
     player("fb", "FB", pt(26.5, -6)),
     player("rb", "RB", pt(26.5, -8.5)),
@@ -120,7 +124,7 @@ export function iFormation(): Player[] {
 export function singlebackAce(): Player[] {
   return [
     ...offensiveLine(),
-    player("y", "Y", pt(34, -1), "square"),
+    player("y", "Y", pt(34.5, -1), "square"),
     player("qb", "QB", pt(26.5, -3)),
     player("rb", "RB", pt(26.5, -7.5)),
     player("x", "X", pt(6, -1)),
@@ -168,7 +172,7 @@ export function empty(): Player[] {
 export function pistol(): Player[] {
   return [
     ...offensiveLine(),
-    player("y", "Y", pt(34, -1), "square"),
+    player("y", "Y", pt(34.5, -1), "square"),
     player("qb", "QB", pt(26.5, -4.5)),
     player("rb", "RB", pt(26.5, -7.5)),
     player("x", "X", pt(6, -1)),
@@ -191,9 +195,10 @@ export function bunch(): Player[] {
 
 // ---- 守備の隊形 ----
 
+/** 4-3 オーバー。TE が右に付く隊形に構える。 */
 export function defense43(): Player[] {
   return [
-    ...front4(),
+    ...front4(END_OVER_TE),
     player("wlb", "W", LB_43.w),
     player("mlb", "M", LB_43.m),
     player("slb", "S", LB_43.s),
@@ -217,8 +222,8 @@ export function defense34(): Player[] {
 }
 
 /** ニッケルの前の 6 人（4 ダウンと ILB 2 人）。 */
-export function nickelFront(): Player[] {
-  return [...front4(), player("mlb", "M", LB_NICKEL.m), player("wlb", "W", LB_NICKEL.w)];
+export function nickelFront(strongEnd: FieldPosition = FRONT_4.eR): Player[] {
+  return [...front4(strongEnd), player("mlb", "M", LB_NICKEL.m), player("wlb", "W", LB_NICKEL.w)];
 }
 
 /** ニッケルの後ろの 5 人の置き方。カバレッジやプレッシャーごとに変わる。 */
@@ -231,9 +236,9 @@ export interface NickelShell {
 /** CB 6 ヤード、セイフティ 11 ヤードの 2 ハイ。 */
 export const NICKEL_BASE: NickelShell = { cornerDepth: 6, fs: pt(22, 11), ss: pt(31, 11) };
 
-export function nickel(shell: NickelShell): Player[] {
+export function nickel(shell: NickelShell, strongEnd: FieldPosition = FRONT_4.eR): Player[] {
   return [
-    ...nickelFront(),
+    ...nickelFront(strongEnd),
     player("nb", "NB", LB_NICKEL.nb),
     ...corners(shell.cornerDepth),
     player("fs", "FS", shell.fs),

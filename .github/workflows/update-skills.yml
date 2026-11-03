@@ -1,0 +1,26 @@
+# .claude/skills/ の skill は gh skill install で github-toolkit から入れている。
+# Dependabot が package.json を上げるのと同じように、toolkit の新しいリリースが出たら
+# gh skill update --all を走らせ、変わった分を 1 本の PR にする。
+# 中身は github-toolkit の再利用 workflow（toolkit の README「Reusable workflows」）。
+# PR の見方は review-skill-update skill にある。
+#
+# github.token で開いた PR では CI が動かない（GitHub の仕様）。skill はコードを変えないので
+# このままにし、CI が要るときは GitHub App のトークンを secrets.token で渡す。
+name: Update skills
+
+on:
+  schedule:
+    # 月曜の朝（JST 9 時）。toolkit のリリースは週末に出ることが多い
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    uses: yamat47/github-toolkit/.github/workflows/update-skills.yml@main
+    with:
+      commit-message: "chore(claude): github-toolkit の skill を更新する"
+      pr-title: "chore(claude): github-toolkit の skill を更新する"

@@ -1,6 +1,7 @@
 # Dependabot による依存自動更新設定
 # 方針: 常に最新（メジャー含む）を追随する。
 # GitHub Actions は github-toolkit を @main で参照するため対象外。
+# .claude/skills/ の skill も Dependabot の対象外で、update-skills workflow が同じ役を担う。
 #  - minor / patch はエコシステムごとにまとめて 1 PR（ノイズ削減）
 #  - major は個別 PR（破壊的変更を 1 件ずつレビューするため、あえてグループ化しない）
 #  - vitest と @vitest/* だけは major も含めて 1 PR（同じ版でしか動かないため）
@@ -15,10 +16,11 @@ updates:
     open-pull-requests-limit: 10
     # package.json の指定レンジ自体も最新へ引き上げる（lockfile 追従だけにしない）
     versioning-strategy: increase
-    # pnpm 11 は公開から 1 日たたない版を入れない（minimumReleaseAge）。それより先に PR が来ると
-    # install が失敗するので、公開から少し待ってから上げる
+    # 公開から 7 日待ってから上げる。pnpm 11 は公開から 1 日たたない版を入れない（minimumReleaseAge）
+    # ので、それより先に PR が来ると install が失敗する。7 日は、取り下げや差し替えが出やすい
+    # 公開直後を避けるために zizmor が求める長さ（dependabot-cooldown）
     cooldown:
-      default-days: 3
+      default-days: 7
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
@@ -51,5 +53,7 @@ updates:
     directory: /docker
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: chore(deps-dev)

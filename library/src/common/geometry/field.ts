@@ -37,7 +37,7 @@ export const DEFAULT_FIELD_LEAGUE: FieldLeague = "ncaa";
  */
 export const RED_ZONE_DEPTH_YARDS = 25;
 
-/** ヤードラインと芝の帯の間隔。描くのは browser だが、格子の点をラインの上に置かないために共有する。 */
+/** ヤードラインの間隔。描くのは browser だが、格子の点をラインの上に置かないために共有する。 */
 export const YARD_LINE_INTERVAL_YARDS = 5;
 
 /** エンドゾーンの奥行き。絶対ヤードは自陣のエンドラインの -10 から相手のエンドラインの 110 まで取る。 */

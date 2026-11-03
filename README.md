@@ -140,19 +140,23 @@ Playmaker を置いた要素か、その祖先の要素に指定する。
 ヤード数字と選手ラベルのフォントは同梱のものに固定していて、上書きできない。
 構築したあとに変数を変えたときは、`refresh()` を呼ぶと図とパネルに反映される。
 
+既定の配色は Material Design のパレットで、フィールドは白い芝にグレーの線、選手と線は黒を基本にしている。
+UI のフォントは Roboto を先頭に置き、無ければ system-ui で描く。
+フィールドの変数は白い芝を前提に濃淡を決めてあるので、芝の色を変えるときは、線、数字、ゴールライン、
+エンドゾーン、サイドラインの外、格子の変数も合わせて変える。
+
 ```css
 .my-app {
-  --playmaker-field-grass: #1b5e20;
-  --playmaker-line-route: #ffd54f;
-  --playmaker-selection: #ff9800;
-  --playmaker-ui-accent: #1565c0;
+  --playmaker-line-route: #6a1b9a;
+  --playmaker-selection: #00acc1;
+  --playmaker-ui-accent: #6a1b9a;
   --playmaker-ui-font: "Inter", system-ui, sans-serif;
 }
 ```
 
 変数は `--playmaker-<部位>-<部品>` の形で、次のものがある。
 
-- フィールド: `field-grass`、`field-stripe`、`field-oob`、`field-endzone`、`field-line`、`field-number`、`field-goal-line`、`field-pylon`、`field-goalpost`、edit モードで敷く格子の点の `field-grid`
+- フィールド: `field-grass`、`field-oob`、`field-endzone`、`field-line`、`field-number`、`field-goal-line`、`field-pylon`、`field-goalpost`、edit モードで敷く格子の点の `field-grid`
 - 選手: `player-fill`、`player-stroke`、`player-label`
 - 線: `line-route`、`line-block`、`line-motion`、パネルで選べる 4 色の `line-swatch-1` から `line-swatch-4`
 - 選択: `selection`、ハンドルの縁取りの `selection-outline`

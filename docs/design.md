@@ -174,6 +174,7 @@ session は今の controller の `onDidChangeScene` と `onDidChangeViewState` �
 
 配色と UI のフォントは CSS 変数 `--playmaker-<部位>-<部品>` で上書きできる。
 
+- 既定の配色は Material Design のパレットから選ぶ。フィールドは白い芝にグレーの濃淡だけで描き、選手と線の色が図の主役になるようにする。選択の色はパレットに無い橙にし、線の色と紛れないようにする
 - Canvas に描く色の既定値は `browser/theme/tokens.ts` の `THEME_TOKENS` の 1 か所にだけ書く。描く前に `getComputedStyle` で変数を読み、空か色として読めない値なら既定値にする。読んだ値は `normalizeCssColor` で書き方をそろえ、パネルのスウォッチと比べられるようにする
 - ツールバーとパネルの色は CSS だけで決まるので、既定値は `styles.css` の内部用の変数（`--_playmaker-ui-*`）に 1 回だけ書く
 - 公開の変数は `.playmaker-root` で宣言しない。宣言すると、利用者が祖先の要素で指定した値を打ち消してしまう

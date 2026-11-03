@@ -25,6 +25,19 @@ interface FieldTheme {
   readonly goalpostColor: string;
 }
 
+/** 窓に映るフィールドの外枠（px）。サイドラインが left と right、窓の上下の端が top と bottom。 */
+interface FieldBounds {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+/** ゴールポストの柱を伸ばす向き。自陣のエンドゾーンは画面の下にあるので上へ、相手のは下へ伸ばす。 */
+type UprightDirection = "toward-top" | "toward-bottom";
+
+// ヤードラインと芝の帯の間隔（ヤード）。
+const YARD_LINE_INTERVAL_YARDS = 5;
 // 数字の横に置く、近いほうのゴールを指す三角の寸法（ヤード）。数字より目立たないよう小さくする。
 const ARROW_LENGTH_YARDS = 0.8;
 const ARROW_HALF_WIDTH_YARDS = 0.3;
@@ -55,40 +68,42 @@ export class FieldRenderer implements ILayerRenderer {
     const theme = fieldTheme(frame.theme);
     const { viewportWidth, viewportHeight, yardWindow } = geometry;
 
-    const left = geometry.xForLateralYard(0);
-    const right = geometry.xForLateralYard(FIELD_WIDTH_YARDS);
-    const top = geometry.yForAbsoluteYard(yardWindow.endYard);
-    const bottom = geometry.yForAbsoluteYard(yardWindow.startYard);
+    const bounds: FieldBounds = {
+      left: geometry.xForLateralYard(0),
+      right: geometry.xForLateralYard(FIELD_WIDTH_YARDS),
+      top: geometry.yForAbsoluteYard(yardWindow.endYard),
+      bottom: geometry.yForAbsoluteYard(yardWindow.startYard),
+    };
 
     ctx.fillStyle = theme.oobColor;
     ctx.fillRect(0, 0, viewportWidth, viewportHeight);
     ctx.fillStyle = theme.fieldColor;
-    ctx.fillRect(left, top, right - left, bottom - top);
+    ctx.fillRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
 
-    this.drawStripes(ctx, geometry, left, right, theme);
-    this.drawEndZones(ctx, geometry, left, right, theme);
-    this.drawHashes(ctx, geometry, left, right, metrics, theme);
-    this.drawYardLines(ctx, geometry, left, right, top, bottom, metrics, theme);
+    this.drawStripes(ctx, geometry, bounds, theme);
+    this.drawEndZones(ctx, geometry, bounds, theme);
+    this.drawHashes(ctx, geometry, bounds, metrics, theme);
+    this.drawYardLines(ctx, geometry, bounds, metrics, theme);
     this.drawNumbers(ctx, geometry, metrics, theme);
-    this.drawEndZoneMarkers(ctx, geometry, left, right, metrics, theme);
+    this.drawEndZoneMarkers(ctx, geometry, bounds, metrics, theme);
   }
 
   /** エンドゾーンには敷かない。 */
   private drawStripes(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
-    left: number,
-    right: number,
+    { left, right }: FieldBounds,
     theme: FieldTheme,
   ): void {
     const { startYard, endYard } = geometry.yardWindow;
-    const from = Math.max(0, Math.floor(startYard / 5) * 5);
+    const step = YARD_LINE_INTERVAL_YARDS;
+    const from = Math.max(0, Math.floor(startYard / step) * step);
     const to = Math.min(100, endYard);
     ctx.fillStyle = theme.stripeColor;
-    for (let band = from; band < to; band += 5) {
+    for (let band = from; band < to; band += step) {
       // 帯の偶奇を絶対ヤードで決め、ゾーンを切り替えても同じヤードに同じ濃さの帯が来るようにする。
-      if ((band / 5) % 2 !== 0) {
-        const yTop = geometry.yForAbsoluteYard(Math.min(band + 5, 100));
+      if ((band / step) % 2 !== 0) {
+        const yTop = geometry.yForAbsoluteYard(Math.min(band + step, 100));
         const yBottom = geometry.yForAbsoluteYard(band);
         ctx.fillRect(left, yTop, right - left, yBottom - yTop);
       }
@@ -99,8 +114,7 @@ export class FieldRenderer implements ILayerRenderer {
   private drawEndZones(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
-    left: number,
-    right: number,
+    { left, right }: FieldBounds,
     theme: FieldTheme,
   ): void {
     const { startYard, endYard } = geometry.yardWindow;
@@ -124,8 +138,7 @@ export class FieldRenderer implements ILayerRenderer {
   private drawHashes(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
-    left: number,
-    right: number,
+    { left, right }: FieldBounds,
     metrics: FieldMetrics,
     theme: FieldTheme,
   ): void {
@@ -140,7 +153,7 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.lineWidth = metrics.yardLineWidth;
     ctx.beginPath();
     for (const yard of yardLinesInWindow(geometry.zone, 1)) {
-      if (yard < 0 || yard > 100 || yard % 5 === 0) {
+      if (yard < 0 || yard > 100 || yard % YARD_LINE_INTERVAL_YARDS === 0) {
         continue;
       }
       const y = geometry.yForAbsoluteYard(yard);
@@ -160,17 +173,14 @@ export class FieldRenderer implements ILayerRenderer {
   private drawYardLines(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
-    left: number,
-    right: number,
-    top: number,
-    bottom: number,
+    { left, right, top, bottom }: FieldBounds,
     metrics: FieldMetrics,
     theme: FieldTheme,
   ): void {
     const goalPath = new Path2D();
     const midPath = new Path2D();
     const minorPath = new Path2D();
-    for (const yard of yardLinesInWindow(geometry.zone, 5)) {
+    for (const yard of yardLinesInWindow(geometry.zone, YARD_LINE_INTERVAL_YARDS)) {
       if (yard < 0 || yard > 100) {
         continue;
       }
@@ -183,7 +193,7 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.strokeStyle = theme.lineColor;
     ctx.lineWidth = metrics.yardLineWidth;
     ctx.stroke(minorPath);
-    ctx.lineWidth = 1.5 * metrics.yardLineWidth;
+    ctx.lineWidth = metrics.midfieldLineWidth;
     ctx.stroke(midPath);
 
     // サイドラインと、窓の上下の端。
@@ -276,13 +286,12 @@ export class FieldRenderer implements ILayerRenderer {
   private drawEndZoneMarkers(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
-    left: number,
-    right: number,
+    { left, right }: FieldBounds,
     metrics: FieldMetrics,
     theme: FieldTheme,
   ): void {
     const { startYard, endYard } = geometry.yardWindow;
-    const pylon = Math.max(3, 0.45 * geometry.scale);
+    const pylon = metrics.pylonSize;
     const drawPylon = (x: number, y: number): void => {
       ctx.fillStyle = theme.pylonColor;
       ctx.fillRect(x - pylon / 2, y - pylon / 2, pylon, pylon);
@@ -295,8 +304,7 @@ export class FieldRenderer implements ILayerRenderer {
       drawPylon(right, goalY);
       drawPylon(left, endY);
       drawPylon(right, endY);
-      // 自陣のエンドゾーンは画面の下にあるので、ゴールポストの柱は上へ伸ばす。
-      this.drawGoalpost(ctx, geometry, endY, -1, metrics, theme);
+      this.drawGoalpost(ctx, geometry, endY, "toward-top", metrics, theme);
     }
     if (endYard > 100) {
       const goalY = geometry.yForAbsoluteYard(100);
@@ -305,28 +313,27 @@ export class FieldRenderer implements ILayerRenderer {
       drawPylon(right, goalY);
       drawPylon(left, endY);
       drawPylon(right, endY);
-      // 相手のエンドゾーンは画面の上にあるので、ゴールポストの柱は下へ伸ばす。
-      this.drawGoalpost(ctx, geometry, endY, 1, metrics, theme);
+      this.drawGoalpost(ctx, geometry, endY, "toward-bottom", metrics, theme);
     }
   }
 
-  /** エンドラインの中央に、横木と 2 本の柱を描く。dir はフィールドへ向かう y の符号。 */
+  /** エンドラインの中央に、横木と 2 本の柱を描く。柱はフィールドの側へ伸ばす。 */
   private drawGoalpost(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
     lineY: number,
-    dir: 1 | -1,
+    uprights: UprightDirection,
     metrics: FieldMetrics,
     theme: FieldTheme,
   ): void {
     const cx = geometry.xForLateralYard(FIELD_WIDTH_YARDS / 2);
-    const u = geometry.scale;
-    const crossHalf = 1.85 * u;
-    const uprightLen = 1.2 * u;
+    const crossHalf = metrics.goalpostCrossbarHalfLength;
+    const uprightLen = metrics.goalpostUprightLength;
+    const dir = uprights === "toward-top" ? -1 : 1;
 
     ctx.save();
     ctx.strokeStyle = theme.goalpostColor;
-    ctx.lineWidth = Math.max(2, 0.2 * metrics.tokenDiameter);
+    ctx.lineWidth = metrics.goalpostStroke;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(cx - crossHalf, lineY);

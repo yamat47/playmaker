@@ -13,6 +13,16 @@ const HASH_TICK_LENGTH_PER_U = 0.375;
 // 本物の数字の高さは 6 フィート（2 ヤード）だが、小さく描いたときにも読めるよう少し大きくする。
 const NUMBER_HEIGHT_PER_U = 2.4;
 const NUMBER_MIN_PX = 10;
+// センターのヤードラインは、ほかのヤードラインより少し太くして目印にする。
+const MIDFIELD_LINE_WIDTH_PER_YARD_LINE = 1.5;
+// エンドゾーンの隅のパイロン。本物は 4 インチ角だが、小さく描いても見えるよう少し大きくする。
+const PYLON_SIZE_PER_U = 0.45;
+const PYLON_MIN_PX = 3;
+// ゴールポストは真上から見た形で、横木とフィールドへ伸びる 2 本の柱だけを描く。横木の半分は本物の 18.5 フィートの半分。
+const GOALPOST_CROSSBAR_HALF_PER_U = 1.85;
+const GOALPOST_UPRIGHT_LENGTH_PER_U = 1.2;
+const GOALPOST_STROKE_PER_D = 0.2;
+const GOALPOST_STROKE_MIN_PX = 2;
 
 const MARKER_STROKE_PER_D = 1 / 14;
 const MARKER_STROKE_MIN_PX = 1;
@@ -33,8 +43,15 @@ export interface FieldMetrics {
   readonly yardLineWidth: number;
   /** ゴールラインと、サイドラインを含む窓の外枠の太さ。 */
   readonly goalLineWidth: number;
+  /** センター（50 ヤード）のヤードラインの太さ。 */
+  readonly midfieldLineWidth: number;
   readonly hashTickLength: number;
   readonly numberHeight: number;
+  /** エンドゾーンの隅に置くパイロンの一辺。 */
+  readonly pylonSize: number;
+  readonly goalpostCrossbarHalfLength: number;
+  readonly goalpostUprightLength: number;
+  readonly goalpostStroke: number;
   /** 選手マーカーの直径 D。選手とプレーの線の寸法はこの値からの比で決める。 */
   readonly tokenDiameter: number;
   readonly markerStroke: number;
@@ -58,8 +75,13 @@ export function computeFieldMetrics(fieldPixelWidth: number, unitPx: number): Fi
   return {
     yardLineWidth,
     goalLineWidth: 2 * yardLineWidth,
+    midfieldLineWidth: MIDFIELD_LINE_WIDTH_PER_YARD_LINE * yardLineWidth,
     hashTickLength: HASH_TICK_LENGTH_PER_U * u,
     numberHeight: Math.max(NUMBER_MIN_PX, NUMBER_HEIGHT_PER_U * u),
+    pylonSize: Math.max(PYLON_MIN_PX, PYLON_SIZE_PER_U * u),
+    goalpostCrossbarHalfLength: GOALPOST_CROSSBAR_HALF_PER_U * u,
+    goalpostUprightLength: GOALPOST_UPRIGHT_LENGTH_PER_U * u,
+    goalpostStroke: Math.max(GOALPOST_STROKE_MIN_PX, GOALPOST_STROKE_PER_D * d),
     tokenDiameter: d,
     markerStroke: Math.max(MARKER_STROKE_MIN_PX, MARKER_STROKE_PER_D * d),
     markerLabelFont: Math.max(MARKER_LABEL_MIN_PX, MARKER_LABEL_PER_D * d),

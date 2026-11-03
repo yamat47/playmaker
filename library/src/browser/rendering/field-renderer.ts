@@ -12,17 +12,17 @@ import type { ThemeReader } from "../theme/tokens.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 interface FieldTheme {
-  fieldColor: string;
+  readonly fieldColor: string;
   /** 5 ヤードおきに交互に敷く、芝の刈り込みの濃い帯。 */
-  stripeColor: string;
+  readonly stripeColor: string;
   /** サイドラインの外と、縦横比が合わない分の余白。 */
-  oobColor: string;
-  endzoneColor: string;
-  lineColor: string;
-  goalLineColor: string;
-  numberColor: string;
-  pylonColor: string;
-  goalpostColor: string;
+  readonly oobColor: string;
+  readonly endzoneColor: string;
+  readonly lineColor: string;
+  readonly goalLineColor: string;
+  readonly numberColor: string;
+  readonly pylonColor: string;
+  readonly goalpostColor: string;
 }
 
 // 数字の横に置く、近いほうのゴールを指す三角の寸法（ヤード）。数字より目立たないよう小さくする。

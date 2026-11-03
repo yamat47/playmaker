@@ -59,11 +59,11 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
  * そうするとドラッグ中のハンドルもドラッグ先に描ける。
  */
 export function computeOverlay(scene: SceneData, selection: EditorSelection): EditorOverlay {
-  if (selection?.kind === "player") {
+  if (selection.kind === "player") {
     return { kind: "player", playerId: selection.id };
   }
   const line =
-    selection?.kind === "line" ? scene.lines.find((l) => l.id === selection.id) : undefined;
+    selection.kind === "line" ? scene.lines.find((l) => l.id === selection.id) : undefined;
   if (line === undefined) {
     return { kind: "none" };
   }

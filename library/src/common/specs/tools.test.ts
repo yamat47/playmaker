@@ -6,7 +6,10 @@ describe("ツールの切替", () => {
   it("開いた直後は、選択ツールで何も選んでいない", () => {
     const play = openPlay(twoPlayersWithRoute());
 
-    expect(play.editor.getViewState()).toMatchObject({ tool: "select", selection: null });
+    expect(play.editor.getViewState()).toMatchObject({
+      tool: "select",
+      selection: { kind: "none" },
+    });
   });
 
   it("切り替えると、表示状態のツールが変わる", () => {

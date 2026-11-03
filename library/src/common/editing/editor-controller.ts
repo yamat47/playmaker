@@ -38,6 +38,7 @@ import {
   type IEditorController,
   isSameSelection,
   isToolAvailable,
+  NO_SELECTION,
 } from "./editor.js";
 import { EditorNotifier } from "./editor-notifier.js";
 import {
@@ -74,7 +75,7 @@ export class EditorController extends Disposable implements IEditorController {
   readonly onDidChangeViewState: Event<void>;
 
   private tool: EditorTool = "select";
-  private selection: EditorSelection = null;
+  private selection: EditorSelection = NO_SELECTION;
   private interaction: Interaction | undefined;
 
   constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
@@ -100,7 +101,7 @@ export class EditorController extends Disposable implements IEditorController {
       tool: this.tool,
       selection:
         this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
-          ? null
+          ? NO_SELECTION
           : this.selection,
       canUndo: this.commands.canUndo,
       canRedo: this.commands.canRedo,
@@ -113,12 +114,12 @@ export class EditorController extends Disposable implements IEditorController {
 
   getSelectedPlayer(): Player | undefined {
     const s = this.selection;
-    return s?.kind === "player" ? this.model.findPlayer(s.id) : undefined;
+    return s.kind === "player" ? this.model.findPlayer(s.id) : undefined;
   }
 
   getSelectedLine(): Line | undefined {
     const s = this.selection;
-    return s?.kind === "line" ? this.model.findLine(s.id) : undefined;
+    return s.kind === "line" ? this.model.findLine(s.id) : undefined;
   }
 
   getFrame(): EditorFrame {
@@ -219,7 +220,7 @@ export class EditorController extends Disposable implements IEditorController {
       } else {
         return;
       }
-      this.setSelection(null);
+      this.setSelection(NO_SELECTION);
     });
   }
 
@@ -263,7 +264,7 @@ export class EditorController extends Disposable implements IEditorController {
       if (loaded) {
         // 読み込んだあとは、途中の操作と元の選択に意味が無いので外す。
         this.setInteraction(undefined);
-        this.setSelection(null);
+        this.setSelection(NO_SELECTION);
       }
       return loaded;
     });
@@ -350,7 +351,7 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     const line = hitTestLine(data.lines, data.players, pos);
-    this.setSelection(line === undefined ? null : { kind: "line", id: line.id });
+    this.setSelection(line === undefined ? NO_SELECTION : { kind: "line", id: line.id });
   }
 
   private hitSelectedLineHandle(pos: FieldPosition): DragInteraction | undefined {

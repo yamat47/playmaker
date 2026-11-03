@@ -77,8 +77,11 @@ jobs:
           install-args: --frozen-lockfile --ignore-scripts
 
       - name: Install Chromium
-        # lockfile の playwright が想定する版の Chromium と、それを動かす OS のパッケージを入れる
-        run: pnpm exec playwright install --with-deps chromium
+        # lockfile の playwright が想定する版の Chromium と、それを動かす OS のパッケージを入れる。
+        # ブラウザ本体は playwright の版ごとにキャッシュされ、当たれば OS のパッケージだけ入れ直す
+        uses: yamat47/github-toolkit/actions/setup-playwright-chromium@main
+        with:
+          working-directory: library
 
       - name: Browser test (Vitest Browser Mode)
         run: pnpm run test:browser

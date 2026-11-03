@@ -36,8 +36,6 @@ const infoSummary = need("playinfo-summary", HTMLElement);
 const demoLifetime = new AbortController();
 const { signal } = demoLifetime;
 
-const DEFENSE_COLOR = "#8f4034";
-
 const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
   "run-zone": { label: "RUN", color: "var(--cat-run)" },
   "run-gap": { label: "RUN", color: "var(--cat-run)" },
@@ -69,77 +67,66 @@ const STRESS_PLAYERS: Player[] = [
     position: { lateralYard: 21.5, downfieldYard: 1 },
     shape: "circle",
     label: "",
-    color: DEFENSE_COLOR,
   },
   {
     id: "dt-l",
     position: { lateralYard: 24, downfieldYard: 1 },
     shape: "circle",
     label: "",
-    color: DEFENSE_COLOR,
   },
   {
     id: "dt-r",
     position: { lateralYard: 29, downfieldYard: 1 },
     shape: "circle",
     label: "",
-    color: DEFENSE_COLOR,
   },
   {
     id: "de-r",
     position: { lateralYard: 31.5, downfieldYard: 1 },
     shape: "circle",
     label: "",
-    color: DEFENSE_COLOR,
   },
   {
     id: "lb-w",
     position: { lateralYard: 22, downfieldYard: 4 },
     shape: "circle",
     label: "W",
-    color: DEFENSE_COLOR,
   },
   {
     id: "lb-m",
     position: { lateralYard: 26.5, downfieldYard: 4 },
     shape: "circle",
     label: "M",
-    color: DEFENSE_COLOR,
   },
   {
     id: "lb-s",
     position: { lateralYard: 31.5, downfieldYard: 4 },
     shape: "circle",
     label: "S",
-    color: DEFENSE_COLOR,
   },
   {
     id: "cb-l",
     position: { lateralYard: 7, downfieldYard: 3 },
     shape: "circle",
     label: "",
-    color: DEFENSE_COLOR,
   },
   {
     id: "cb-r",
     position: { lateralYard: 46, downfieldYard: 3 },
     shape: "circle",
     label: "",
-    color: DEFENSE_COLOR,
   },
   {
     id: "fs",
     position: { lateralYard: 24, downfieldYard: 8 },
     shape: "circle",
     label: "FS",
-    color: DEFENSE_COLOR,
   },
   {
     id: "ss",
     position: { lateralYard: 30, downfieldYard: 7 },
     shape: "circle",
     label: "SS",
-    color: DEFENSE_COLOR,
   },
 ];
 
@@ -218,7 +205,7 @@ const STRESS_LINES: Line[] = [
     waypoints: [{ lateralYard: 33, downfieldYard: 3 }],
     end: { lateralYard: 38, downfieldYard: 6 },
     interpolation: "straight",
-    color: "#90caf9",
+    color: "#1976d2",
   },
   {
     id: "rt-rb",
@@ -243,7 +230,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [],
     end: { lateralYard: 22, downfieldYard: -1 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
   {
     id: "pr-dt-l",
@@ -252,7 +238,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [],
     end: { lateralYard: 24, downfieldYard: -1 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
   {
     id: "pr-dt-r",
@@ -261,7 +246,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [],
     end: { lateralYard: 29.5, downfieldYard: -1 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
   {
     id: "pr-de-r",
@@ -270,7 +254,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [],
     end: { lateralYard: 32, downfieldYard: -1 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
   {
     id: "cv-lb-w",
@@ -279,7 +262,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [{ lateralYard: 22, downfieldYard: 2 }],
     end: { lateralYard: 20, downfieldYard: -0.5 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
   {
     id: "cv-lb-m",
@@ -288,7 +270,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [{ lateralYard: 28, downfieldYard: 4 }],
     end: { lateralYard: 33, downfieldYard: 3 },
     interpolation: "bezier",
-    color: DEFENSE_COLOR,
   },
   {
     id: "cv-lb-s",
@@ -297,7 +278,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [{ lateralYard: 32, downfieldYard: 3 }],
     end: { lateralYard: 35, downfieldYard: 2 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
   {
     id: "cv-cb-l",
@@ -306,7 +286,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [{ lateralYard: 7, downfieldYard: 5 }],
     end: { lateralYard: 7, downfieldYard: 10 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
   {
     id: "cv-cb-r",
@@ -315,7 +294,6 @@ const STRESS_LINES: Line[] = [
     waypoints: [{ lateralYard: 46, downfieldYard: 5 }],
     end: { lateralYard: 46, downfieldYard: 10 },
     interpolation: "straight",
-    color: DEFENSE_COLOR,
   },
 ];
 

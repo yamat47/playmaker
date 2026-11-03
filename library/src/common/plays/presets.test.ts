@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { resolvePlayData } from "../model/play-data.js";
-import { DEFENSE_COLOR } from "../presets/shared.js";
 import { getPlayPreset, PLAY_PRESETS } from "./presets.js";
 
 describe("PLAY_PRESETS", () => {
@@ -32,10 +31,10 @@ describe("PLAY_PRESETS", () => {
     expect(resolvePlayData(preset.data)).toEqual(preset.data);
   });
 
-  it.each(PLAY_PRESETS)("$id は選手と線に DEFENSE_COLOR 以外の色を付けない", (preset) => {
+  it.each(PLAY_PRESETS)("$id は選手と線に色を付けず、テーマの既定の色で描かせる", (preset) => {
     const colors = [...preset.data.players, ...preset.data.lines].map((item) => item.color);
 
-    expect(colors.filter((color) => color !== DEFENSE_COLOR && color !== undefined)).toEqual([]);
+    expect(colors.filter((color) => color !== undefined)).toEqual([]);
   });
 
   it.each(PLAY_PRESETS)("$id の選手と線の点は、どれも窓に収まる", (preset) => {

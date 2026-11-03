@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { must } from "../../test-support/must.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { FIELD_ZONE_VALUES, fieldStateForZone } from "../model/play-data.js";
-import { DEFENSE_COLOR } from "../presets/shared.js";
 import { normalizeFormation } from "./formation.js";
 import { FORMATION_PRESETS, getFormationPreset } from "./presets.js";
 
@@ -30,12 +29,8 @@ describe("FORMATION_PRESETS", () => {
     expect(normalizeFormation(formation)).toEqual(formation);
   });
 
-  it.each(OFFENSE_PRESETS)("オフェンスの $id は選手に色を付けない", (formation) => {
+  it.each(FORMATION_PRESETS)("$id は選手に色を付けず、テーマの既定の色で描かせる", (formation) => {
     expect(formation.players.filter((p) => p.color !== undefined)).toEqual([]);
-  });
-
-  it.each(DEFENSE_PRESETS)("ディフェンスの $id は選手を DEFENSE_COLOR で塗る", (formation) => {
-    expect(formation.players.filter((p) => p.color !== DEFENSE_COLOR)).toEqual([]);
   });
 
   it.each(FIELD_ZONE_VALUES)(

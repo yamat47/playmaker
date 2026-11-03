@@ -6,7 +6,7 @@
 import type { Line, LineInterpolation, LineKind } from "../model/line.js";
 import { CURRENT_PLAY_DATA_VERSION, fieldStateForZone } from "../model/play-data.js";
 import type { FieldPosition, Player, PlayerShape } from "../model/player.js";
-import { DEFENSE_COLOR, deepFreeze, type TeamSide } from "../presets/shared.js";
+import { deepFreeze, type TeamSide } from "../presets/shared.js";
 import type { PlayCategory, PlayPreset } from "./play-preset.js";
 
 function pt(lateralYard: number, downfieldYard: number): FieldPosition {
@@ -23,11 +23,10 @@ function dP(id: string, label: string, lat: number, down: number): Player {
     position: { lateralYard: lat, downfieldYard: down },
     shape: "circle",
     label,
-    color: DEFENSE_COLOR,
   };
 }
 
-/** オフェンスの線は color を省いてテーマの色で描き、ディフェンスの線には DEFENSE_COLOR を渡す。 */
+/** 色は持たせず、テーマの既定の色で描く。攻守の見分けは選手の形とラベルで付ける。 */
 function ln(
   id: string,
   kind: LineKind,
@@ -35,17 +34,8 @@ function ln(
   waypoints: FieldPosition[],
   end: FieldPosition,
   interpolation: LineInterpolation,
-  color?: string,
 ): Line {
-  return {
-    id,
-    kind,
-    startPlayerId,
-    waypoints,
-    end,
-    interpolation,
-    ...(color === undefined ? {} : { color }),
-  };
+  return { id, kind, startPlayerId, waypoints, end, interpolation };
 }
 
 function play(
@@ -454,12 +444,12 @@ const COVER_1 = play(
     ...offLook(),
   ],
   [
-    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 0.5), "straight", DEFENSE_COLOR),
-    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 0.5), "straight", DEFENSE_COLOR),
-    ln("man-nb", "motion", "nb", [], pt(13, 0), "straight", DEFENSE_COLOR),
-    ln("man-ss", "motion", "ss", [pt(36, 2)], pt(40, 0), "straight", DEFENSE_COLOR),
-    ln("man-mlb", "motion", "mlb", [], pt(26.5, -3), "straight", DEFENSE_COLOR),
-    ln("free-fs", "motion", "fs", [], pt(26.5, 13), "straight", DEFENSE_COLOR),
+    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 0.5), "straight"),
+    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 0.5), "straight"),
+    ln("man-nb", "motion", "nb", [], pt(13, 0), "straight"),
+    ln("man-ss", "motion", "ss", [pt(36, 2)], pt(40, 0), "straight"),
+    ln("man-mlb", "motion", "mlb", [], pt(26.5, -3), "straight"),
+    ln("free-fs", "motion", "fs", [], pt(26.5, 13), "straight"),
   ],
 );
 
@@ -480,13 +470,13 @@ const COVER_2 = play(
     ...offLook(),
   ],
   [
-    ln("half-fs", "motion", "fs", [], pt(13, 12), "straight", DEFENSE_COLOR),
-    ln("half-ss", "motion", "ss", [], pt(40, 12), "straight", DEFENSE_COLOR),
-    ln("flat-cbl", "motion", "cb-l", [], pt(10, 2), "straight", DEFENSE_COLOR),
-    ln("flat-cbr", "motion", "cb-r", [], pt(43, 2), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight", DEFENSE_COLOR),
-    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(16, 3), "straight", DEFENSE_COLOR),
+    ln("half-fs", "motion", "fs", [], pt(13, 12), "straight"),
+    ln("half-ss", "motion", "ss", [], pt(40, 12), "straight"),
+    ln("flat-cbl", "motion", "cb-l", [], pt(10, 2), "straight"),
+    ln("flat-cbr", "motion", "cb-r", [], pt(43, 2), "straight"),
+    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight"),
+    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight"),
+    ln("curl-nb", "motion", "nb", [], pt(16, 3), "straight"),
   ],
 );
 
@@ -507,13 +497,13 @@ const COVER_3 = play(
     ...offLook(),
   ],
   [
-    ln("deep-cbl", "motion", "cb-l", [pt(7, 7)], pt(7, 12), "straight", DEFENSE_COLOR),
-    ln("deep-cbr", "motion", "cb-r", [], pt(46, 12), "straight", DEFENSE_COLOR),
-    ln("deep-fs", "motion", "fs", [], pt(26.5, 13), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(15, 3), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight", DEFENSE_COLOR),
-    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight", DEFENSE_COLOR),
-    ln("flat-ss", "motion", "ss", [], pt(38, 3), "straight", DEFENSE_COLOR),
+    ln("deep-cbl", "motion", "cb-l", [pt(7, 7)], pt(7, 12), "straight"),
+    ln("deep-cbr", "motion", "cb-r", [], pt(46, 12), "straight"),
+    ln("deep-fs", "motion", "fs", [], pt(26.5, 13), "straight"),
+    ln("curl-nb", "motion", "nb", [], pt(15, 3), "straight"),
+    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight"),
+    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight"),
+    ln("flat-ss", "motion", "ss", [], pt(38, 3), "straight"),
   ],
 );
 
@@ -534,13 +524,13 @@ const COVER_4 = play(
     ...offLook(),
   ],
   [
-    ln("qtr-cbl", "motion", "cb-l", [], pt(6, 12), "straight", DEFENSE_COLOR),
-    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 12), "straight", DEFENSE_COLOR),
-    ln("qtr-fs", "motion", "fs", [], pt(18, 12), "straight", DEFENSE_COLOR),
-    ln("qtr-ss", "motion", "ss", [], pt(35, 12), "straight", DEFENSE_COLOR),
-    ln("under-nb", "motion", "nb", [], pt(15, 2), "straight", DEFENSE_COLOR),
-    ln("under-mlb", "motion", "mlb", [], pt(24, 2), "straight", DEFENSE_COLOR),
-    ln("under-wlb", "motion", "wlb", [], pt(31, 2), "straight", DEFENSE_COLOR),
+    ln("qtr-cbl", "motion", "cb-l", [], pt(6, 12), "straight"),
+    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 12), "straight"),
+    ln("qtr-fs", "motion", "fs", [], pt(18, 12), "straight"),
+    ln("qtr-ss", "motion", "ss", [], pt(35, 12), "straight"),
+    ln("under-nb", "motion", "nb", [], pt(15, 2), "straight"),
+    ln("under-mlb", "motion", "mlb", [], pt(24, 2), "straight"),
+    ln("under-wlb", "motion", "wlb", [], pt(31, 2), "straight"),
   ],
 );
 
@@ -561,17 +551,17 @@ const FIRE_ZONE = play(
     ...offLook(),
   ],
   [
-    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight", DEFENSE_COLOR),
-    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight", DEFENSE_COLOR),
-    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight", DEFENSE_COLOR),
-    ln("blz-wlb", "route", "wlb", [pt(30, 2)], pt(29, -0.5), "bezier", DEFENSE_COLOR),
-    ln("blz-nb", "route", "nb", [pt(16, 2)], pt(20, -0.5), "bezier", DEFENSE_COLOR),
-    ln("drop-del", "motion", "de-l", [pt(20, 3)], pt(18, 5), "straight", DEFENSE_COLOR),
-    ln("deep-cbl", "motion", "cb-l", [], pt(7, 11), "straight", DEFENSE_COLOR),
-    ln("deep-cbr", "motion", "cb-r", [], pt(46, 11), "straight", DEFENSE_COLOR),
-    ln("deep-fs", "motion", "fs", [], pt(26.5, 13), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(24, 2), "straight", DEFENSE_COLOR),
-    ln("flat-ss", "motion", "ss", [], pt(37, 3), "straight", DEFENSE_COLOR),
+    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight"),
+    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight"),
+    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight"),
+    ln("blz-wlb", "route", "wlb", [pt(30, 2)], pt(29, -0.5), "bezier"),
+    ln("blz-nb", "route", "nb", [pt(16, 2)], pt(20, -0.5), "bezier"),
+    ln("drop-del", "motion", "de-l", [pt(20, 3)], pt(18, 5), "straight"),
+    ln("deep-cbl", "motion", "cb-l", [], pt(7, 11), "straight"),
+    ln("deep-cbr", "motion", "cb-r", [], pt(46, 11), "straight"),
+    ln("deep-fs", "motion", "fs", [], pt(26.5, 13), "straight"),
+    ln("hook-mlb", "motion", "mlb", [], pt(24, 2), "straight"),
+    ln("flat-ss", "motion", "ss", [], pt(37, 3), "straight"),
   ],
 );
 
@@ -592,17 +582,17 @@ const COVER_0 = play(
     ...offLook(),
   ],
   [
-    ln("rush-del", "route", "de-l", [], pt(21, -1), "straight", DEFENSE_COLOR),
-    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight", DEFENSE_COLOR),
-    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight", DEFENSE_COLOR),
-    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight", DEFENSE_COLOR),
-    ln("blz-mlb", "route", "mlb", [pt(25, 1)], pt(26.5, -1), "bezier", DEFENSE_COLOR),
-    ln("blz-wlb", "route", "wlb", [pt(28, 2)], pt(28.5, -0.5), "bezier", DEFENSE_COLOR),
-    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 0.5), "straight", DEFENSE_COLOR),
-    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 0.5), "straight", DEFENSE_COLOR),
-    ln("man-nb", "motion", "nb", [], pt(13, 0), "straight", DEFENSE_COLOR),
-    ln("man-fs", "motion", "fs", [pt(26, 4)], pt(29, -2), "straight", DEFENSE_COLOR),
-    ln("man-ss", "motion", "ss", [], pt(40, 0), "straight", DEFENSE_COLOR),
+    ln("rush-del", "route", "de-l", [], pt(21, -1), "straight"),
+    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight"),
+    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight"),
+    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight"),
+    ln("blz-mlb", "route", "mlb", [pt(25, 1)], pt(26.5, -1), "bezier"),
+    ln("blz-wlb", "route", "wlb", [pt(28, 2)], pt(28.5, -0.5), "bezier"),
+    ln("man-cbl", "motion", "cb-l", [], pt(5.5, 0.5), "straight"),
+    ln("man-cbr", "motion", "cb-r", [], pt(47.5, 0.5), "straight"),
+    ln("man-nb", "motion", "nb", [], pt(13, 0), "straight"),
+    ln("man-fs", "motion", "fs", [pt(26, 4)], pt(29, -2), "straight"),
+    ln("man-ss", "motion", "ss", [], pt(40, 0), "straight"),
   ],
 );
 
@@ -623,17 +613,17 @@ const DOUBLE_A = play(
     ...offLook(),
   ],
   [
-    ln("aim-mlb", "route", "mlb", [pt(25, 2)], pt(26, -0.5), "bezier", DEFENSE_COLOR),
-    ln("aim-wlb", "route", "wlb", [pt(28, 2)], pt(27.5, -0.5), "bezier", DEFENSE_COLOR),
-    ln("rush-del", "route", "de-l", [], pt(21, -1), "straight", DEFENSE_COLOR),
-    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight", DEFENSE_COLOR),
-    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight", DEFENSE_COLOR),
-    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight", DEFENSE_COLOR),
-    ln("bail-cbl", "motion", "cb-l", [], pt(7, 10), "straight", DEFENSE_COLOR),
-    ln("bail-cbr", "motion", "cb-r", [], pt(46, 10), "straight", DEFENSE_COLOR),
-    ln("deep-fs", "motion", "fs", [], pt(26.5, 12), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(16, 3), "straight", DEFENSE_COLOR),
-    ln("flat-ss", "motion", "ss", [], pt(37, 3), "straight", DEFENSE_COLOR),
+    ln("aim-mlb", "route", "mlb", [pt(25, 2)], pt(26, -0.5), "bezier"),
+    ln("aim-wlb", "route", "wlb", [pt(28, 2)], pt(27.5, -0.5), "bezier"),
+    ln("rush-del", "route", "de-l", [], pt(21, -1), "straight"),
+    ln("rush-dtl", "route", "dt-l", [], pt(24, -1), "straight"),
+    ln("rush-dtr", "route", "dt-r", [], pt(29.5, -1), "straight"),
+    ln("rush-der", "route", "de-r", [], pt(32.5, -1), "straight"),
+    ln("bail-cbl", "motion", "cb-l", [], pt(7, 10), "straight"),
+    ln("bail-cbr", "motion", "cb-r", [], pt(46, 10), "straight"),
+    ln("deep-fs", "motion", "fs", [], pt(26.5, 12), "straight"),
+    ln("curl-nb", "motion", "nb", [], pt(16, 3), "straight"),
+    ln("flat-ss", "motion", "ss", [], pt(37, 3), "straight"),
   ],
 );
 
@@ -654,13 +644,13 @@ const COVER_6 = play(
     ...offLook(),
   ],
   [
-    ln("flat-cbl", "motion", "cb-l", [], pt(11, 2), "straight", DEFENSE_COLOR),
-    ln("half-fs", "motion", "fs", [], pt(12, 12), "straight", DEFENSE_COLOR),
-    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 12), "straight", DEFENSE_COLOR),
-    ln("qtr-ss", "motion", "ss", [], pt(38, 12), "straight", DEFENSE_COLOR),
-    ln("curl-nb", "motion", "nb", [], pt(42, 3), "straight", DEFENSE_COLOR),
-    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight", DEFENSE_COLOR),
-    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight", DEFENSE_COLOR),
+    ln("flat-cbl", "motion", "cb-l", [], pt(11, 2), "straight"),
+    ln("half-fs", "motion", "fs", [], pt(12, 12), "straight"),
+    ln("qtr-cbr", "motion", "cb-r", [], pt(47, 12), "straight"),
+    ln("qtr-ss", "motion", "ss", [], pt(38, 12), "straight"),
+    ln("curl-nb", "motion", "nb", [], pt(42, 3), "straight"),
+    ln("hook-mlb", "motion", "mlb", [], pt(22, 2), "straight"),
+    ln("hook-wlb", "motion", "wlb", [], pt(33, 2), "straight"),
   ],
 );
 

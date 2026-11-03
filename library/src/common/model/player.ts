@@ -1,3 +1,4 @@
+import { snapToGrid } from "../geometry/grid.js";
 import {
   isFiniteNumber,
   isNonEmptyString,
@@ -34,6 +35,8 @@ export const PLAYER_RADIUS_YARDS = 0.93;
  * ゾーンを切り替えて LOS が動いても、図は形を保ったまま一緒に動く。
  * - lateralYard: 0 = 左サイドライン … FIELD_WIDTH_YARDS = 右サイドライン
  * - downfieldYard: 0 = LOS。正が攻撃方向（画面の上）、負がバックフィールド
+ *
+ * どちらも GRID_STEP_YARDS の倍数で、モデルの中に格子の外の位置は無い。
  */
 export interface FieldPosition {
   readonly lateralYard: number;
@@ -53,7 +56,10 @@ function isPlayerShape(value: unknown): value is PlayerShape {
   return isOneOf(value, PLAYER_SHAPE_VALUES);
 }
 
-/** 座標が有限な数でなければ復元できないので null を返す。返す位置は入力と共有しない。 */
+/**
+ * 座標が有限な数でなければ復元できないので null を返す。返す位置は入力と共有しない。
+ * 値は格子点へ寄せる。外から来た位置もドラッグで決めた位置と同じ格子に乗せ、図の中に格子の外の位置を作らない。
+ */
 export function parseFieldPosition(raw: unknown): FieldPosition | null {
   if (!isRecord(raw)) {
     return null;
@@ -62,7 +68,7 @@ export function parseFieldPosition(raw: unknown): FieldPosition | null {
   if (!isFiniteNumber(lateralYard) || !isFiniteNumber(downfieldYard)) {
     return null;
   }
-  return { lateralYard, downfieldYard };
+  return snapToGrid({ lateralYard, downfieldYard });
 }
 
 /**

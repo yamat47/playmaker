@@ -1,8 +1,12 @@
 import type { FieldState, FieldZone } from "../model/play-data.js";
 import type { FieldPosition } from "../model/player.js";
 
-/** サイドラインの間の幅。規定の 160 フィート。 */
-export const FIELD_WIDTH_YARDS = 160 / 3;
+/**
+ * サイドラインの間の幅。規定は 160 フィート（53⅓ ヤード）だが、中央（26.5）が
+ * 0.5 ヤードの格子点に乗るように 53 ヤードへ丸める。本物の寸法との差は 1 フィートで、
+ * 図の見た目には出ない。
+ */
+export const FIELD_WIDTH_YARDS = 53;
 
 /**
  * middle ゾーンで映す縦の長さ。レッドゾーンの窓は、ヤード数字が端で見切れないよう
@@ -12,13 +16,14 @@ export const ZONE_WINDOW_LENGTH_YARDS = 30;
 
 /**
  * リーグごとの、フィールドの中央からハッシュマークまでの距離（ヤード）。
- * 左右のハッシュの間隔は NCAA が 40 フィート、NFL が約 18.5 フィート、NFHS が 53⅓ フィート。
+ * 左右のハッシュの間隔は NCAA が 40 フィート、NFL が 18.5 フィート、NFHS が 53⅓ フィート。
+ * 選手をハッシュの上に置けるように、格子点（0.5 ヤード刻み）に丸めてある。
  * 利用者がリーグを選ぶ API は無く、DEFAULT_FIELD_LEAGUE で描く。
  */
 export const HASH_CENTER_OFFSET_YARDS_BY_LEAGUE = {
-  ncaa: FIELD_WIDTH_YARDS * 0.125,
-  nfl: FIELD_WIDTH_YARDS * 0.0578,
-  nfhs: FIELD_WIDTH_YARDS * 0.1667,
+  ncaa: 6.5,
+  nfl: 3,
+  nfhs: 9,
 } as const;
 
 export type FieldLeague = keyof typeof HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
@@ -31,6 +36,9 @@ export const DEFAULT_FIELD_LEAGUE: FieldLeague = "ncaa";
  * 広いのは、20 ヤードラインが窓の端に乗って数字が見切れるのを避けるため。
  */
 export const RED_ZONE_DEPTH_YARDS = 25;
+
+/** ヤードラインと芝の帯の間隔。描くのは browser だが、格子の点をラインの上に置かないために共有する。 */
+export const YARD_LINE_INTERVAL_YARDS = 5;
 
 /** エンドゾーンの奥行き。絶対ヤードは自陣のエンドラインの -10 から相手のエンドラインの 110 まで取る。 */
 export const END_ZONE_DEPTH_YARDS = 10;

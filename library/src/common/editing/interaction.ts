@@ -1,7 +1,5 @@
 import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerPatch } from "../commands/player-commands.js";
-import { pointDistance } from "../geometry/hit-test.js";
-import { segments } from "../geometry/polyline.js";
 import {
   DEFAULT_LINE_INTERPOLATION,
   DEFAULT_LINE_KIND,
@@ -31,7 +29,7 @@ export interface DragInteraction {
 export interface DrawInteraction {
   readonly type: "draw-line";
   readonly startPlayerId: string;
-  /** 作図を始めた時点の起点選手の位置。最初の打点の近接判定に使う。 */
+  /** 作図を始めた時点の起点選手の位置。最初の打点が同じ位置かの判定に使う。 */
   readonly start: FieldPosition;
   /** 打った点。最後の点が終点になり、残りが waypoint になる。 */
   readonly points: readonly FieldPosition[];
@@ -41,10 +39,10 @@ export interface DrawInteraction {
 /** ドラッグや作図の途中の状態。Model には載せず、描画のときに重ねる。 */
 export type Interaction = DragInteraction | DrawInteraction;
 
-// 作図中、直前の点（まだ点が無ければ起点の選手）からこの距離（ヤード）以内のクリックでは点を打たない。
-// ダブルクリックで確定すると pointerdown が 2 回届き、直前の点の真上にもう 1 点打ってしまうため。
-// 図を描くときにこれほど近い点を打ち分けることは無い。全長がこれ以下の線も確定しない。
-const LINE_POINT_MERGE_RADIUS_YARDS = 0.5;
+/** 座標が完全に一致するか。格子点どうしの比較では、これが「同じ点」の判定になる。 */
+export function isSamePosition(a: FieldPosition, b: FieldPosition): boolean {
+  return a.lateralYard === b.lateralYard && a.downfieldYard === b.downfieldYard;
+}
 
 /** 作図で打てる点の数。最後の点は終点になるので、waypoint の上限より 1 つ多い。 */
 export const MAX_DRAFT_POINTS = MAX_WAYPOINTS_PER_LINE + 1;
@@ -127,21 +125,20 @@ export function startDrawing(player: Player): DrawInteraction {
 }
 
 /**
- * point に点を打つ。直前の点とほぼ同じ位置のときと、打てる点の上限に達したときは、
- * 打たずにカーソルだけ進める。
+ * point に点を打つ。直前の点（まだ点が無ければ起点の選手）と同じ位置のときと、
+ * 打てる点の上限に達したときは、打たずにカーソルだけ進める。
+ * 同じ位置を弾くのは、ダブルクリックで確定すると pointerdown が 2 回届き、
+ * 直前の点の真上にもう 1 点打ってしまうため。
  */
 export function addDraftPoint(draw: DrawInteraction, point: FieldPosition): DrawInteraction {
   const last = draw.points.at(-1) ?? draw.start;
-  const accepts =
-    pointDistance(last, point) > LINE_POINT_MERGE_RADIUS_YARDS &&
-    draw.points.length < MAX_DRAFT_POINTS;
+  const accepts = !isSamePosition(last, point) && draw.points.length < MAX_DRAFT_POINTS;
   return { ...draw, points: accepts ? [...draw.points, point] : draw.points, cursor: point };
 }
 
 /**
  * 確定する線の waypoint と終点。anchor はいまの起点選手の位置。点が無いときと、
- * anchor から見た全長が 0 に近いときは undefined。
- * 長さが 0 に近い線は見えず、選択もしにくい。
+ * 打った点がすべて anchor と同じで長さが 0 のときは undefined。長さ 0 の線は見えず、選択もできない。
  */
 export function committableDraft(
   draw: DrawInteraction,
@@ -151,11 +148,7 @@ export function committableDraft(
   if (split === undefined) {
     return undefined;
   }
-  let length = 0;
-  for (const [a, b] of segments([anchor, ...draw.points])) {
-    length += pointDistance(a, b);
-  }
-  return length <= LINE_POINT_MERGE_RADIUS_YARDS ? undefined : split;
+  return draw.points.every((p) => isSamePosition(p, anchor)) ? undefined : split;
 }
 
 /** 作図から線を組み立てる。プレビューと確定で同じ既定値を使う。 */

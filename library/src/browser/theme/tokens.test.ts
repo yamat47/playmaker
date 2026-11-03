@@ -19,13 +19,13 @@ describe("themeReaderFrom", () => {
   it("宣言された値は、前後の空白を除いて返す", () => {
     const theme = themeReaderFrom(() => "  #123456 ");
 
-    expect(theme("playerFill")).toBe("#123456");
+    expect(theme("playerColor")).toBe("#123456");
   });
 
   it("宣言されていない変数は、トークンの既定値で描く", () => {
     const theme = themeReaderFrom(() => "");
 
-    expect(theme("playerFill")).toBe(THEME_TOKENS.playerFill.fallback);
+    expect(theme("playerColor")).toBe(THEME_TOKENS.playerColor.fallback);
   });
 
   it("空白だけの値は、宣言されていないものとして既定値で描く", () => {

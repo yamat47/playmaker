@@ -30,16 +30,18 @@ export const THEME_TOKENS = {
   fieldPylon: { property: "--playmaker-field-pylon", fallback: GREY_500 },
   fieldGoalpost: { property: "--playmaker-field-goalpost", fallback: GREY_500 },
   fieldGrid: { property: "--playmaker-field-grid", fallback: "rgba(0, 0, 0, 0.1)" },
-  playerFill: { property: "--playmaker-player-fill", fallback: BLACK },
-  playerStroke: { property: "--playmaker-player-stroke", fallback: WHITE },
+  /** 色を省いた選手の色。枠線だけの選手では枠とラベル、塗りつぶした選手では塗りになる。 */
+  playerColor: { property: "--playmaker-player-color", fallback: BLACK },
+  /** 塗りつぶした選手のラベルの色。枠線だけの選手のラベルは選手の色で書く。 */
   playerLabel: { property: "--playmaker-player-label", fallback: WHITE },
   lineRoute: { property: "--playmaker-line-route", fallback: BLACK },
   lineBlock: { property: "--playmaker-line-block", fallback: BLACK },
   lineMotion: { property: "--playmaker-line-motion", fallback: BLACK },
-  lineSwatch1: { property: "--playmaker-line-swatch-1", fallback: BLACK },
-  lineSwatch2: { property: "--playmaker-line-swatch-2", fallback: RED },
-  lineSwatch3: { property: "--playmaker-line-swatch-3", fallback: BLUE },
-  lineSwatch4: { property: "--playmaker-line-swatch-4", fallback: GREEN },
+  /** パネルで選手と線に選べる 4 色。 */
+  swatch1: { property: "--playmaker-swatch-1", fallback: BLACK },
+  swatch2: { property: "--playmaker-swatch-2", fallback: RED },
+  swatch3: { property: "--playmaker-swatch-3", fallback: BLUE },
+  swatch4: { property: "--playmaker-swatch-4", fallback: GREEN },
   selection: { property: "--playmaker-selection", fallback: ORANGE },
   selectionOutline: { property: "--playmaker-selection-outline", fallback: WHITE },
 } as const satisfies Record<string, ThemeToken>;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { must } from "../../test-support/must.js";
 import {
   clonePlayer,
   DEFAULT_PLAYER_SHAPE,
@@ -42,6 +43,16 @@ describe("normalizePlayers", () => {
 
     expect(withColor?.color).toBe("#ff0000");
     expect(blankColor && "color" in blankColor).toBe(false);
+  });
+
+  it("fill は outline か solid のときだけ保持する", () => {
+    const result = normalizePlayers([
+      { id: "a", position: { lateralYard: 1, downfieldYard: 2 }, fill: "solid" },
+      { id: "b", position: { lateralYard: 1, downfieldYard: 2 }, fill: "hatched" },
+    ]);
+
+    expect(result[0]?.fill).toBe("solid");
+    expect("fill" in must(result[1])).toBe(false);
   });
 
   it("配列でない入力は空配列を返す", () => {

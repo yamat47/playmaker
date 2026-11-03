@@ -69,7 +69,7 @@ describe("computeFieldMetrics", () => {
     expect(m.hashTickLength).toBe(0);
     expect(m.numberHeight).toBe(10);
     expect(m.tokenDiameter).toBe(0);
-    expect(m.markerStroke).toBe(1);
+    expect(m.markerStroke).toBe(1.5);
     expect(m.markerLabelFont).toBe(8);
     expect(m.routeWidth).toBe(1.5);
     expect(m.arrowLength).toBe(0);

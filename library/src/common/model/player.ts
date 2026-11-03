@@ -19,6 +19,17 @@ export type PlayerShape = (typeof PLAYER_SHAPE_VALUES)[number];
 export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
 
 /**
+ * 選手マーカーの塗り。枠線だけ（`outline`）か、色で塗りつぶす（`solid`）か。
+ * 形状とは独立に持ち、攻守や役割の見分けに使う。パネルはこの順にスウォッチを並べる。
+ */
+export const PLAYER_FILL_VALUES = ["outline", "solid"] as const;
+
+export type PlayerFill = (typeof PLAYER_FILL_VALUES)[number];
+
+/** 塗りを指定しないときの既定。黒板に描く図と同じく、枠線だけにする。 */
+export const DEFAULT_PLAYER_FILL: PlayerFill = "outline";
+
+/**
  * 外から受け取る選手の上限。実際のプレー図は 22 人ほどなので、この上限に届くことは無い。
  * 壊れたデータや悪意のあるデータで描画が止まらないように、超えた分は正規化で捨てる。
  */
@@ -43,17 +54,25 @@ export interface FieldPosition {
   readonly downfieldYard: number;
 }
 
-/** 1 人の選手。`color` は CSS の色の文字列で、省くとテーマの色で描く。 */
+/**
+ * 1 人の選手。`color` は CSS の色の文字列で、省くとテーマの色で描く。
+ * `fill` を省くと DEFAULT_PLAYER_FILL で描く。
+ */
 export interface Player {
   readonly id: string;
   readonly position: FieldPosition;
   readonly shape: PlayerShape;
   readonly label: string;
   readonly color?: string;
+  readonly fill?: PlayerFill;
 }
 
 function isPlayerShape(value: unknown): value is PlayerShape {
   return isOneOf(value, PLAYER_SHAPE_VALUES);
+}
+
+function isPlayerFill(value: unknown): value is PlayerFill {
+  return isOneOf(value, PLAYER_FILL_VALUES);
 }
 
 /**
@@ -73,7 +92,7 @@ export function parseFieldPosition(raw: unknown): FieldPosition | null {
 
 /**
  * 外から受け取った 1 要素を Player に正規化する。位置が座標でないものは null を返して捨てる。
- * 形状、ラベル、色が欠けていても捨てずに既定で補う。古い版で保存したデータを読めなくしないため。
+ * 形状、ラベル、色、塗りが欠けていても捨てずに既定で補う。古い版で保存したデータを読めなくしないため。
  */
 function normalizePlayer(raw: unknown, index: number): Player | null {
   if (!isRecord(raw)) {
@@ -91,8 +110,9 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
     position,
     shape: isPlayerShape(raw.shape) ? raw.shape : DEFAULT_PLAYER_SHAPE,
     label: typeof raw.label === "string" ? raw.label : "",
-    // exactOptionalPropertyTypes では undefined を入れられないので、色があるときだけキーを置く。
+    // exactOptionalPropertyTypes では undefined を入れられないので、色と塗りがあるときだけキーを置く。
     ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
+    ...(isPlayerFill(raw.fill) ? { fill: raw.fill } : {}),
   };
 }
 
@@ -112,5 +132,6 @@ export function clonePlayer(player: Player): Player {
     shape: player.shape,
     label: player.label,
     ...(player.color === undefined ? {} : { color: player.color }),
+    ...(player.fill === undefined ? {} : { fill: player.fill }),
   };
 }

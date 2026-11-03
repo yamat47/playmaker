@@ -82,7 +82,8 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 再エクスポート:
 
 - 型: `PlaymakerOptions` `PlaymakerMode` `PlayData` `PlayDataInput` `FieldState` `FieldZone`
-  `FieldPosition` `Player` `PlayerShape`(`circle`/`square`) `Line` `LineKind`(`route`/`block`/`motion`)
+  `FieldPosition` `Player` `PlayerShape`(`circle`/`square`) `PlayerFill`(`outline`/`solid`)
+  `Line` `LineKind`(`route`/`block`/`motion`)
   `LineInterpolation`(`straight`/`bezier`) `Formation` `FormationPlayer` `PlayPreset` `PlayCategory`
   `TeamSide` `ImageExportOptions` `Event` `IDisposable`
 - 値: `FORMATION_PRESETS` `getFormationPreset(id)` `PLAY_PRESETS` `getPlayPreset(id)`
@@ -157,8 +158,9 @@ UI のフォントは Roboto を先頭に置き、無ければ system-ui で描�
 変数は `--playmaker-<部位>-<部品>` の形で、次のものがある。
 
 - フィールド: `field-grass`、`field-oob`、`field-endzone`、`field-line`、`field-number`、`field-goal-line`、`field-pylon`、`field-goalpost`、edit モードで敷く格子の点の `field-grid`
-- 選手: `player-fill`、`player-stroke`、`player-label`
-- 線: `line-route`、`line-block`、`line-motion`、パネルで選べる 4 色の `line-swatch-1` から `line-swatch-4`
+- 選手: 色を省いた選手の `player-color`、塗りつぶした選手のラベルの `player-label`。枠線だけの選手の内側は `field-grass` で塗る
+- 線: `line-route`、`line-block`、`line-motion`
+- パネルで選手と線に選べる 4 色: `swatch-1` から `swatch-4`
 - 選択: `selection`、ハンドルの縁取りの `selection-outline`
 - ツールバーとパネル: `ui-font`、`ui-surface`、`ui-border`、`ui-text`、`ui-accent`、押されたボタンの文字色の `ui-accent-text`
 

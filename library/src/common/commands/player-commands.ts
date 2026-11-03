@@ -50,7 +50,7 @@ export class RemovePlayerCommand implements ICommand {
   }
 }
 
-/** 位置、ラベル、形状、色をまとめて編集する。 */
+/** 位置、ラベル、形状、色、塗りをまとめて編集する。 */
 export class UpdatePlayerCommand implements ICommand {
   readonly label = "選手の編集";
   private readonly playerId: string;

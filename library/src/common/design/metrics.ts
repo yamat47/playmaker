@@ -24,8 +24,6 @@ const GOALPOST_UPRIGHT_LENGTH_PER_U = 1.2;
 const GOALPOST_STROKE_PER_D = 0.2;
 const GOALPOST_STROKE_MIN_PX = 2;
 
-const MARKER_STROKE_PER_D = 1 / 14;
-const MARKER_STROKE_MIN_PX = 1;
 // 2 文字のラベルがマーカーの内側に収まる大きさ。
 const MARKER_LABEL_PER_D = 0.5;
 const MARKER_LABEL_MIN_PX = 8;
@@ -88,7 +86,8 @@ export function computeFieldMetrics(fieldPixelWidth: number, unitPx: number): Fi
     goalpostUprightLength: GOALPOST_UPRIGHT_LENGTH_PER_U * u,
     goalpostStroke: Math.max(GOALPOST_STROKE_MIN_PX, GOALPOST_STROKE_PER_D * d),
     tokenDiameter: d,
-    markerStroke: Math.max(MARKER_STROKE_MIN_PX, MARKER_STROKE_PER_D * d),
+    // 枠線だけの選手は縁取りが見た目のすべてなので、プレーの線と同じ太さで描く。
+    markerStroke: routeWidth,
     markerLabelFont: Math.max(MARKER_LABEL_MIN_PX, MARKER_LABEL_PER_D * d),
     routeWidth,
     blockWidth: routeWidth,

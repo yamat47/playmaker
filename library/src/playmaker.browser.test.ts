@@ -209,14 +209,30 @@ describe("プロパティパネル", () => {
     expect(document.activeElement).toBe(page.getByRole("combobox", { name: "形状" }).element());
   });
 
-  it("祖先の要素でテーマ変数を変えて refresh すると、選手の色の入力に新しい既定色を出す", async () => {
+  it("色のスウォッチを押すと、選んでいる選手にテーマの色と塗りを入れる", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
-    container.style.setProperty("--playmaker-player-fill", "#123456");
+    await page.getByRole("button", { name: "赤の塗りつぶし" }).click();
+
+    expect(playmaker.getPlayData().players[0]).toMatchObject({ color: "#d32f2f", fill: "solid" });
+  });
+
+  it("祖先の要素で選手の既定色を変えて refresh すると、その色の枠線のスウォッチが押された状態になる", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+
+    container.style.setProperty("--playmaker-player-color", "#d32f2f");
     playmaker.refresh();
 
-    expect(page.getByLabelText("色", { exact: true }).element()).toHaveProperty("value", "#123456");
+    expect(page.getByRole("button", { name: "赤の枠線" }).element()).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(page.getByRole("button", { name: "黒の枠線" }).element()).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 });
 

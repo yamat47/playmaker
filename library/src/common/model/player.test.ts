@@ -2,27 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   clonePlayer,
   DEFAULT_PLAYER_SHAPE,
-  isPlayerShape,
   MAX_PLAYERS,
   normalizePlayers,
   type Player,
   parseFieldPosition,
 } from "./player.js";
-
-describe("isPlayerShape", () => {
-  it("circle と square を true と判定する", () => {
-    expect(isPlayerShape("circle")).toBe(true);
-    expect(isPlayerShape("square")).toBe(true);
-  });
-
-  it("未知の文字列や非文字列を false と判定する", () => {
-    expect(isPlayerShape("star")).toBe(false);
-    expect(isPlayerShape("")).toBe(false);
-    expect(isPlayerShape(undefined)).toBe(false);
-    expect(isPlayerShape(0)).toBe(false);
-    expect(isPlayerShape({ shape: "circle" })).toBe(false);
-  });
-});
 
 describe("normalizePlayers", () => {
   it("正当な選手はそのまま保持しつつ欠落を既定で補完する", () => {
@@ -115,6 +99,14 @@ describe("normalizePlayers の件数上限", () => {
     const raw = [null, ...Array.from({ length: MAX_PLAYERS }, (_, i) => at(i))];
 
     expect(normalizePlayers(raw)).toHaveLength(MAX_PLAYERS - 1);
+  });
+
+  it("穴のある長い配列でも、先頭の MAX_PLAYERS 個より後ろは読まない", () => {
+    const sparse: unknown[] = [];
+    sparse.length = 2 ** 32 - 1;
+    sparse[MAX_PLAYERS] = at(0);
+
+    expect(normalizePlayers(sparse)).toEqual([]);
   });
 });
 

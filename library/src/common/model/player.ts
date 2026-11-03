@@ -49,7 +49,7 @@ export interface Player {
   readonly color?: string;
 }
 
-export function isPlayerShape(value: unknown): value is PlayerShape {
+function isPlayerShape(value: unknown): value is PlayerShape {
   return isOneOf(value, PLAYER_SHAPE_VALUES);
 }
 

@@ -5,8 +5,6 @@ import {
   DEFAULT_LINE_INTERPOLATION,
   DEFAULT_LINE_KIND,
   indexPlayersById,
-  isLineInterpolation,
-  isLineKind,
   isLineThickness,
   type Line,
   lineAnchorPoints,
@@ -16,30 +14,6 @@ import {
 } from "./line.js";
 
 const PLAYER_IDS = new Set(["qb", "wr"]);
-
-describe("isLineKind", () => {
-  it("3 種の正規種別を true と判定する", () => {
-    expect(isLineKind("route")).toBe(true);
-    expect(isLineKind("block")).toBe(true);
-    expect(isLineKind("motion")).toBe(true);
-  });
-
-  it("未知の文字列や非文字列を false と判定する", () => {
-    expect(isLineKind("curve")).toBe(false);
-    expect(isLineKind("")).toBe(false);
-    expect(isLineKind(undefined)).toBe(false);
-    expect(isLineKind(0)).toBe(false);
-  });
-});
-
-describe("isLineInterpolation", () => {
-  it("straight / bezier を true、それ以外を false と判定する", () => {
-    expect(isLineInterpolation("straight")).toBe(true);
-    expect(isLineInterpolation("bezier")).toBe(true);
-    expect(isLineInterpolation("spline")).toBe(false);
-    expect(isLineInterpolation(undefined)).toBe(false);
-  });
-});
 
 describe("isLineThickness", () => {
   it("正の有限な数を true と判定する", () => {

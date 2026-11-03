@@ -63,11 +63,11 @@ export interface Line {
   readonly thickness?: number;
 }
 
-export function isLineKind(value: unknown): value is LineKind {
+function isLineKind(value: unknown): value is LineKind {
   return isOneOf(value, LINE_KIND_VALUES);
 }
 
-export function isLineInterpolation(value: unknown): value is LineInterpolation {
+function isLineInterpolation(value: unknown): value is LineInterpolation {
   return isOneOf(value, LINE_INTERPOLATION_VALUES);
 }
 

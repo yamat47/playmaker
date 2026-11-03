@@ -4,9 +4,8 @@
 # コミットから出たことを npm 上で辿れる。
 #
 # 認証は npm の trusted publishing（OIDC）で、トークンを持たない。npmjs.com のパッケージの設定で、
-# このリポジトリとこのファイル名と environment の release を登録してある。登録はパッケージが
-# レジストリに在ってからしかできないので、初回だけは environment の release に置いた NPM_TOKEN で
-# 公開し、登録が済んだらトークンを消す（docs/design.md の「配布」）。トークンが無ければ OIDC を使う。
+# このリポジトリとこのファイル名と environment の release を trusted publisher として登録してある
+# （docs/design.md の「配布」）。
 #
 # action は SHA で固定するのが原則だが、github-toolkit だけは例外として @main を直接追いかける
 # （ci.yml のコメントを参照）。
@@ -71,15 +70,6 @@ jobs:
 
       - name: Build
         run: pnpm run build
-
-      - name: Use the token for the first publish, if there is one
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -n "$NPM_TOKEN" ]; then
-            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-            echo "::notice::publishing with NPM_TOKEN; delete the secret once the trusted publisher is registered"
-          fi
 
       - name: Publish
         # access と provenance は package.json の publishConfig にある。

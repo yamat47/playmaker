@@ -212,7 +212,7 @@ session は今の controller の `onDidChangeScene` と `onDidChangeViewState` �
 
 - npm に `@yamat47/playmaker` として公開する（MIT）。パッケージの根は `library/` で、`files` は `dist/` だけなので、ビルド成果物はコミットしない。LICENSE と npm 用の README はパッケージの根に置き、GitHub が読む LICENSE はリポジトリの根にも同じものを置く
 - 版は `library/package.json` の `version` と git のタグ `vX.Y.Z` で、タグを push すると `release.yml` が typecheck、lint、node のテスト、build を通してから公開する。公開は取り消せないので、タグは CI が通った main のコミットにだけ打つ。認証は npm の trusted publishing（OIDC）で、トークンを持たない。Actions の environment `release` に縛り、environment は infra-github が宣言する
-- trusted publisher はレジストリに在るパッケージにしか登録できないので、初回の公開だけは手順が違う。npm で publish できる granular access token を作り、environment `release` の secret `NPM_TOKEN` に置いてタグを push する。公開できたら、npmjs.com のパッケージの設定で trusted publisher（このリポジトリ、`release.yml`、environment `release`）を登録し、secret とトークンを消す。登録は 2 日以内に 1 回公開を通さないと失効するので、次の版の前に済ませる
+- trusted publisher はレジストリに在るパッケージにしか登録できないので、0.1.0 だけは granular access token で公開し、そのあと npmjs.com のパッケージの設定に trusted publisher（このリポジトリ、`release.yml`、environment `release`）を登録した。許すのは `npm publish` だけで、`npm dist-tag` は許さない（workflow が使わないため）。`npm stage publish` は常に許されるが使わない。タグを push する前の検証で足りていて、承認の手順をもう 1 つ挟む価値が無い
 - CDN（jsDelivr）から読む利用者のために、`jsdelivr` と `unpkg` でファイル名を付けない URL が ESM を返すようにしてある。依存が無く、フォントを JS に同梱しているので、CDN からは JS と CSS の 2 つの URL で済む
 - 出力は ESM だけにした。利用側はバンドラを通すので CJS は要らず、CJS も出すと require した利用者に ESM 用の型が渡って型と実体がずれる
 - CSS は `@yamat47/playmaker/styles.css` として別に読み込む。`sideEffects` は CSS だけを指定する

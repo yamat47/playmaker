@@ -1,6 +1,6 @@
 import { isNonEmptyString, isRecord } from "../model/guards.js";
 import type { IIdFactory } from "../model/id-factory.js";
-import { normalizePlayers, type Player } from "../model/player.js";
+import { clonePlayer, normalizePlayers, type Player } from "../model/player.js";
 import { isTeamSide, type TeamSide } from "../presets/shared.js";
 
 /**
@@ -19,13 +19,10 @@ export interface Formation {
   readonly players: readonly FormationPlayer[];
 }
 
+/** 省略できるキーの扱いを clonePlayer と揃え、選手に値が増えてもここを直さずに済ませる。 */
 function toFormationPlayer(player: Player): FormationPlayer {
-  return {
-    position: player.position,
-    shape: player.shape,
-    label: player.label,
-    ...(player.color === undefined ? {} : { color: player.color }),
-  };
+  const { id: _id, ...template } = clonePlayer(player);
+  return template;
 }
 
 /**

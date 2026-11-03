@@ -240,24 +240,30 @@ describe("選手の削除", () => {
 });
 
 describe("選手の値の編集", () => {
-  it("選んでいる選手のラベル、形、色を変える", () => {
+  it("選んでいる選手のラベル、形、色、塗りを変える", () => {
     const play = openWithASelected();
 
-    play.editor.updateSelectedPlayer({ label: "QB", shape: "square", color: "#ff0000" });
+    play.editor.updateSelectedPlayer({
+      label: "QB",
+      shape: "square",
+      color: "#ff0000",
+      fill: "solid",
+    });
 
     expect(play.session.getPlayData().players[0]).toEqual({
       ...player("a", 10, 0),
       label: "QB",
       shape: "square",
       color: "#ff0000",
+      fill: "solid",
     });
   });
 
-  it("色に null を渡すと、色を持たない既定の選手に戻る", () => {
+  it("色と塗りに null を渡すと、色も塗りも持たない既定の選手に戻る", () => {
     const play = openWithASelected();
-    play.editor.updateSelectedPlayer({ color: "#ff0000" });
+    play.editor.updateSelectedPlayer({ color: "#ff0000", fill: "solid" });
 
-    play.editor.updateSelectedPlayer({ color: null });
+    play.editor.updateSelectedPlayer({ color: null, fill: null });
 
     expect(play.session.getPlayData().players[0]).toEqual(player("a", 10, 0));
   });

@@ -38,14 +38,19 @@ describe("normalizeFormation: 既定補完", () => {
     expect("id" in must(result.players[0])).toBe(false);
   });
 
-  it("id/name/side 指定時はその値を使い、色はある時だけ持たせる", () => {
+  it("id/name/side 指定時はその値を使い、色と塗りはある時だけ持たせる", () => {
     const result = must(
       normalizeFormation({
         id: "nickel",
         name: "ニッケル",
         side: "defense",
         players: [
-          { position: { lateralYard: 7, downfieldYard: 53 }, shape: "square", color: "#c62828" },
+          {
+            position: { lateralYard: 7, downfieldYard: 53 },
+            shape: "square",
+            color: "#c62828",
+            fill: "solid",
+          },
           { position: { lateralYard: 46, downfieldYard: 53 }, shape: "square" },
         ],
       }),
@@ -54,8 +59,9 @@ describe("normalizeFormation: 既定補完", () => {
     expect(result.id).toBe("nickel");
     expect(result.name).toBe("ニッケル");
     expect(result.side).toBe("defense");
-    expect(must(result.players[0]).color).toBe("#c62828");
+    expect(must(result.players[0])).toMatchObject({ color: "#c62828", fill: "solid" });
     expect("color" in must(result.players[1])).toBe(false);
+    expect("fill" in must(result.players[1])).toBe(false);
   });
 
   it("返り値は入力と切り離されている（位置を書き換えても波及しない）", () => {

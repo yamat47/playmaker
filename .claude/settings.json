@@ -35,6 +35,9 @@
       "Skill(writing-conventions)",
       "Skill(typescript-idioms)",
       "Skill(github-actions-workflows)",
+      "Skill(test-audit)",
+      "Skill(review-dependency-bump)",
+      "Skill(review-skill-update)",
       "WebFetch(domain:github.com)",
       "Edit(.tmp/**)"
     ],

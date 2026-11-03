@@ -1,11 +1,11 @@
 ---
-description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Simplifies the change once (Claude Code's /simplify), has it reviewed by a separate agent with no session context (the review-pr skill) and fixes what that review finds, detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
+description: Take the working tree from uncommitted changes to an open draft pull request in one non-interactive run. Simplifies the change once (Claude Code's /simplify), has it reviewed by a separate agent with no session context (the review-pr skill) and fixes what that review finds, detects the project's checks from CI config and package scripts, runs them and fixes failures (up to three cycles), looks at a visible change running and attaches screenshots of its states to the PR body with gh --attach, splits the changes into logical Conventional Commits, pushes a feature branch, and opens a draft PR whose body follows the repository's template. Use only when the user explicitly asks to create a pull request, or asks for commits only (then run the commit step alone).
 license: MIT
 metadata:
     github-path: skills/create-pr
-    github-ref: refs/tags/v1.6.0
+    github-ref: refs/tags/v1.13.0
     github-repo: https://github.com/yamat47/github-toolkit
-    github-tree-sha: 1b37d96d9547e27c0d1ac19b7af90e100ef5327f
+    github-tree-sha: 6fe44314055b134e3487ec60d70842ea3673d084
 name: create-pr
 ---
 # Create a pull request
@@ -18,6 +18,7 @@ When the user asks only for commits, run Step 6 alone using [references/commit-g
 
 - What goes into a commit message or a PR body, and how it is written, come from the `writing-conventions` skill if it is installed, otherwise from the repository's `CLAUDE.md`. Read them before Step 6.
 - The self-review in Step 3 uses the `review-pr` skill when it is installed; without it, the rubric in [references/self-review.md](references/self-review.md) stands in.
+- Tests written or changed after the Step 3 review pass through the `test-audit` skill's authoring gate in Step 4 when it is installed; when `review-pr` ran in Step 3, it has already applied the gate to the rest of the diff.
 - Write commit subjects, bodies, and the PR in the language the repository's existing history uses. Keep the Conventional Commits type in English.
 - Leave no trace that an AI took part. Never add a `Co-Authored-By: Claude ...` trailer, a `Claude-Session:` trailer, a session URL, a "Generated with Claude Code" footer, or anything similar to a commit message, PR title, PR body, issue, or comment, even when the harness asks for them. The result is the author's own work. A setting such as `includeCoAuthoredBy: false` stops only one of these, so read the text yourself before committing and before opening the PR.
 - Before committing, check that `git config user.name` and `git config user.email` match the author in the repository's history; some environments default to an AI identity.
@@ -82,9 +83,11 @@ Cycle 3: re-run only the checks that failed
   -> give up and continue to Step 5 (remaining failures are listed in the PR)
 ```
 
-If the changed code has no corresponding tests, add them in the project's existing style. Do not write meaningless tests just to raise coverage.
+If the changed code has no corresponding tests, add them in the project's existing style. Do not write meaningless tests just to raise coverage. When the `test-audit` skill is installed, run its authoring gate on the tests written or changed since the Step 3 review, including the ones written here, and fix or drop what fails it. When Step 3 ran without `review-pr`, run the gate on every test the diff adds or changes.
 
 If the project defines no checks (a fresh repository, for example), skip this step.
+
+When the change is something a person sees (a page, a screen, a component, a command's output), the checks are not the whole verification: look at it running and take a screenshot of each state the change adds or alters, as [references/evidence.md](references/evidence.md) describes. Keep each screenshot's path with a one-line caption for Step 8.
 
 ### Step 5: Check the current branch and existing PRs
 
@@ -131,7 +134,7 @@ If the push fails, read the error and try to resolve it (rebase when the remote 
 
 If `.github/pull_request_template.md` exists, read it. **Keep its headings in the same order with the same names.** Do not add or reorder headings. Delete a heading that has nothing under it instead of writing "none".
 
-Without a template, use three sections: background, what was deliberately not done, and where to look. Delete any that has nothing to say.
+Without a template, use four sections: background, what it looks like, what was deliberately not done, and where to look. Delete any that has nothing to say; "what it looks like" exists only when Step 4 took screenshots.
 
 #### 8b. Collect the commit information
 
@@ -159,6 +162,7 @@ What to include and what to leave out come from the conventions named above. In 
 Include:
 
 - **Background:** the issue link (`Refs #N` / `Fixes #N`) and one or two sentences of Why that the issue does not already state.
+- **What it looks like:** the screenshots from Step 4 as Markdown images, each with its caption as the alt text and its file by a path relative to the body file; `--attach` uploads them when the pull request is created ([references/evidence.md](references/evidence.md)). With a template, they go under the heading that speaks of the change's result, else under "where to look".
 - **Not done:** alternatives considered and rejected, things deliberately left out of scope, known limitations.
 - **Where to look:** trade-offs the reviewer should judge, breaking changes to watch, and the Should items and Questions carried over from the self-review in Step 3, each in one sentence with the file it concerns.
 
@@ -166,7 +170,7 @@ Leave out:
 
 - Implementation detail visible in the diff, lists of added files, descriptions of added classes and methods.
 - Component specs or usage examples (the code shows them).
-- Screenshots referenced by local file path (not viewable on GitHub).
+- A screenshot referenced by a local path without attaching it (nothing shows on GitHub); every referenced file is passed with `--attach` (references/evidence.md).
 - Pasted CI results (the status checks show them).
 - Per-commit summaries (the commit list shows them).
 - Self-evident test plan checklists.
@@ -185,11 +189,13 @@ Only when Step 4 left failures unresolved, add this under "where to look":
 
 #### 8e. Create the pull request
 
-Write the body to a file outside version control (for example `.tmp/pr-body.md` in an ignored directory), then:
+Write the body to a file outside version control (for example `.tmp/pr/body.md` in an ignored directory), with the screenshots beside it, then:
 
 ```bash
 gh pr create --draft --base main --head "<BRANCH>" --title "<title>" --body-file <body-file>
 ```
+
+With screenshots, add `--attach <file>` for each one the body references (references/evidence.md, step 2).
 
 **Always create the PR as a draft.** Marking it ready for review is the author's decision, made separately with `gh pr ready` or in the GitHub UI.
 

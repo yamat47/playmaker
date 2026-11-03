@@ -7,6 +7,8 @@
 ## 規約の置き場
 
 - コメント、コミット、PR の書き方は `writing-conventions` skill、TypeScript の書き方は `typescript-idioms` skill に従う
+- テストの価値は `test-audit` skill で測る。Dependabot の PR は `review-dependency-bump` skill、
+  skill 更新の PR は `review-skill-update` skill で確かめる
 - `.claude/skills/` のうち frontmatter の `metadata.github-repo` が github-toolkit のものは、取り込んだ版をそのまま使う。
   直接書き換えない。このリポジトリ固有の決まりはこのファイルと `.claude/rules/` に書き、skill と食い違うときはこちらを優先する
 - `library/src/` を変える前に `docs/design.md` の該当する節を読む。層の分け方、データの形、公開 API の契約、
@@ -46,7 +48,7 @@ Node / pnpm はホストに入っていない。ツールチェーンは Docker 
 | フィールド用フォントの作り直し | `make font`（`library/src/assets/`） |
 
 - skill や agent の手順が `pnpm run <script>` を指示していたら、上の表の make ターゲットに読み替える
-  （例: create-pr の検証ステップは `make check`）
+  （例: create-pr の検証ステップと test-audit の「changed gate」は `make check`、テスト 1 ファイルは `make test FILE=<file>`）
 - `node_modules` は Docker volume の中にある。ホストの `library/node_modules/` は空のマウントポイントなので、
   中身を読みたいときは `make pnpm ARGS="exec ls node_modules/<pkg>"` を使う
 - pnpm 本体と Node は Dependabot が上げない（Node はイメージだけ上がる）。pnpm は `library/package.json` の

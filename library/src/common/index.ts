@@ -1,6 +1,5 @@
 export type { Event } from "./base/event.js";
 export { Disposable, DisposableStore, type IDisposable, toDisposable } from "./base/lifecycle.js";
-export { isHexColor } from "./design/color.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   canLoadFormation,
@@ -63,11 +62,14 @@ export {
   type PlayDataInput,
 } from "./model/play-data.js";
 export {
+  DEFAULT_PLAYER_FILL,
   type FieldPosition,
   MAX_PLAYERS,
+  PLAYER_FILL_VALUES,
   PLAYER_RADIUS_YARDS,
   PLAYER_SHAPE_VALUES,
   type Player,
+  type PlayerFill,
   type PlayerShape,
 } from "./model/player.js";
 export type { PlayCategory, PlayPreset } from "./plays/play-preset.js";

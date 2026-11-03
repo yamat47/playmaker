@@ -36,6 +36,7 @@ export type {
   PlayData,
   PlayDataInput,
   Player,
+  PlayerFill,
   PlayerShape,
   PlayPreset,
   TeamSide,

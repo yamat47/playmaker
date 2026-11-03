@@ -1,4 +1,8 @@
-import { PLAYER_RADIUS_YARDS, playerMarkerOutline } from "../../common/index.js";
+import {
+  DEFAULT_PLAYER_FILL,
+  PLAYER_RADIUS_YARDS,
+  playerMarkerOutline,
+} from "../../common/index.js";
 import { fieldFont } from "../theme/field-font.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
@@ -6,19 +10,20 @@ export class PlayerRenderer implements ILayerRenderer {
   draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const { geometry, metrics } = frame;
     const { players } = frame.scene;
-    const fill = frame.theme("playerFill");
-    const stroke = frame.theme("playerStroke");
-    const labelColor = frame.theme("playerLabel");
-    // 当たり判定と同じ半径で描く。
+    const defaultColor = frame.theme("playerColor");
+    const grass = frame.theme("fieldGrass");
+    const label = frame.theme("playerLabel");
+    // 当たり判定と同じ半径の輪郭を描き、縁取りはその上に乗せる。
     const r = PLAYER_RADIUS_YARDS * geometry.scale;
     if (r <= 0) {
       return;
     }
     const fontPx = metrics.markerLabelFont;
-    const strokeWidth = metrics.markerStroke;
 
     for (const player of players) {
       const center = geometry.toCanvas(player.position);
+      const color = player.color ?? defaultColor;
+      const isSolid = (player.fill ?? DEFAULT_PLAYER_FILL) === "solid";
 
       ctx.beginPath();
       const outline = playerMarkerOutline(player.shape, r);
@@ -28,14 +33,16 @@ export class PlayerRenderer implements ILayerRenderer {
         const { halfSide } = outline;
         ctx.rect(center.x - halfSide, center.y - halfSide, halfSide * 2, halfSide * 2);
       }
-      ctx.fillStyle = player.color ?? fill;
+      // 枠線だけの選手も内側を芝の色で塗り、下を通る線を隠す。エンドゾーンに置いた選手も芝の色で塗る。
+      // 既定ではエンドゾーンと芝の差がわずかで気にならず、どこにいるかで塗りを変えるほどではない。
+      ctx.fillStyle = isSolid ? color : grass;
       ctx.fill();
-      ctx.lineWidth = strokeWidth;
-      ctx.strokeStyle = stroke;
+      ctx.lineWidth = metrics.markerStroke;
+      ctx.strokeStyle = color;
       ctx.stroke();
 
       if (player.label !== "") {
-        ctx.fillStyle = labelColor;
+        ctx.fillStyle = isSolid ? label : color;
         ctx.font = fieldFont(fontPx);
         ctx.textAlign = "center";
         // textBaseline を middle にすると、字の em ボックスの中央に揃うので、フォントによって上下にずれる。

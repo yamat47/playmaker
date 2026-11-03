@@ -1,8 +1,8 @@
 import {
   DEFAULT_LINE_THICKNESS,
+  DEFAULT_PLAYER_FILL,
   Disposable,
   type IEditorUi,
-  isHexColor,
   isLineThickness,
   isOneOf,
   LINE_INTERPOLATION_VALUES,
@@ -10,27 +10,27 @@ import {
   type Line,
   type LineInterpolation,
   type LineKind,
+  PLAYER_FILL_VALUES,
   PLAYER_SHAPE_VALUES,
   type Player,
+  type PlayerFill,
   type PlayerShape,
   toDisposable,
 } from "../../common/index.js";
 import { normalizeCssColor } from "../theme/css-color.js";
-import { LINE_COLOR_PALETTE } from "../theme/line-palette.js";
+import { COLOR_PALETTE } from "../theme/palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
-import { THEME_TOKENS, type ThemeReader } from "../theme/tokens.js";
 import { replaceKeepingFocus } from "./focus.js";
-
-/** 色の入力に渡せる hex にする。半透明の色と読めない値は hex にできないので undefined。 */
-function toHex(value: string | undefined): string | undefined {
-  const normalized = value === undefined ? undefined : normalizeCssColor(value);
-  return normalized !== undefined && isHexColor(normalized) ? normalized : undefined;
-}
 
 const SHAPE_LABELS = {
   circle: "丸",
   square: "四角",
 } satisfies Record<PlayerShape, string>;
+
+const FILL_LABELS = {
+  outline: "枠線",
+  solid: "塗りつぶし",
+} satisfies Record<PlayerFill, string>;
 
 const KIND_LABELS = {
   route: "ルート",
@@ -42,6 +42,28 @@ const INTERPOLATION_LABELS = {
   straight: "直線",
   bezier: "曲線",
 } satisfies Record<LineInterpolation, string>;
+
+/** 色を選ぶ丸いボタン 1 つ分。枠線のスウォッチは縁だけを色にし、塗りつぶしは中まで塗る。 */
+interface SwatchChoice {
+  readonly name: string;
+  readonly color: string;
+  readonly fill: PlayerFill;
+}
+
+function createSwatch({ name, color, fill }: SwatchChoice): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "playmaker-panel__swatch";
+  btn.title = name;
+  btn.setAttribute("aria-label", name);
+  if (fill === "outline") {
+    btn.classList.add("playmaker-panel__swatch--outline");
+    btn.style.borderColor = color;
+  } else {
+    btn.style.backgroundColor = color;
+  }
+  return btn;
+}
 
 /** 選択中の要素。選択は 1 つなので、選手と線が同時に来ることは型で起こらない。 */
 type SelectedItem =
@@ -149,25 +171,35 @@ export class PropertyPanel extends Disposable {
   private addPlayerFields(): (player: Player) => void {
     const controller = this.controller;
     this.addTitle("選手");
-    const setLabel = this.addInput("text", {
+    const setLabel = this.addText({
       label: "ラベル",
       onChange: (v) => controller.updateSelectedPlayer({ label: v }),
     });
     const setShape = this.addSelect("形状", PLAYER_SHAPE_VALUES, SHAPE_LABELS, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
-    const setColor = this.addInput("color", {
-      label: "色",
-      onChange: (v) => controller.updateSelectedPlayer({ color: v }),
-      onReset: () => controller.updateSelectedPlayer({ color: null }),
-    });
-    // 色の無い選手は塗りの既定色で描くので、入力にも同じ色を出す。
+    // 4 色それぞれの枠線と塗りつぶしを並べた 8 つのスウォッチ。上の段が枠線、下の段が塗りつぶし。
+    // 「塗りつぶしか枠線か」を別の選択肢にせず、色と一緒に 1 回で選べるようにする。
     const read = createThemeReader(this.element);
-    const fill = toHex(read("playerFill")) ?? THEME_TOKENS.playerFill.fallback;
+    const choices = PLAYER_FILL_VALUES.flatMap((fill) =>
+      COLOR_PALETTE.map((opt) => ({
+        name: `${opt.label}の${FILL_LABELS[fill]}`,
+        color: read(opt.token),
+        fill,
+      })),
+    );
+    const setPressed = this.addSwatches("色", choices, {
+      onChange: ({ color, fill }) => controller.updateSelectedPlayer({ color, fill }),
+      onReset: () => controller.updateSelectedPlayer({ color: null, fill: null }),
+    });
+    // 色を省いた選手は、テーマの既定色の枠線のスウォッチが押された状態になる。
+    const defaultColor = read("playerColor");
     return (player) => {
       setLabel(player.label);
       setShape(player.shape);
-      setColor(toHex(player.color) ?? fill);
+      const color = player.color === undefined ? defaultColor : normalizeCssColor(player.color);
+      const fill = player.fill ?? DEFAULT_PLAYER_FILL;
+      setPressed((choice) => choice.color === color && choice.fill === fill);
     };
   }
 
@@ -184,9 +216,13 @@ export class PropertyPanel extends Disposable {
       (v) => controller.updateSelectedLine({ interpolation: v }),
     );
     const read = createThemeReader(this.element);
-    const setColor = this.addLineColor(read, {
-      label: "色",
-      onChange: (v) => controller.updateSelectedLine({ color: v }),
+    const choices = COLOR_PALETTE.map((opt) => ({
+      name: opt.label,
+      color: read(opt.token),
+      fill: "solid" as const,
+    }));
+    const setPressed = this.addSwatches("色", choices, {
+      onChange: ({ color }) => controller.updateSelectedLine({ color }),
       onReset: () => controller.updateSelectedLine({ color: null }),
     });
     const setThickness = this.addNumber({
@@ -197,7 +233,9 @@ export class PropertyPanel extends Disposable {
     return (line) => {
       setKind(line.kind);
       setInterpolation(line.interpolation);
-      setColor(line.color);
+      // 保存済みの色は外から渡されたデータのこともあるので、テーマの色と同じ書き方にそろえて比べる。
+      const color = line.color === undefined ? undefined : normalizeCssColor(line.color);
+      setPressed((choice) => choice.color === color);
       setThickness(line.thickness ?? DEFAULT_LINE_THICKNESS);
     };
   }
@@ -261,12 +299,9 @@ export class PropertyPanel extends Disposable {
     this.element.appendChild(row);
   }
 
-  private addInput(
-    type: "text" | "color",
-    { label, onChange, onReset }: InputOptions<string>,
-  ): (value: string) => void {
+  private addText({ label, onChange, onReset }: InputOptions<string>): (value: string) => void {
     const input = document.createElement("input");
-    input.type = type;
+    input.type = "text";
     input.addEventListener("change", () => onChange(input.value));
     this.addRow(label, input, onReset);
     return (value) => {
@@ -291,30 +326,30 @@ export class PropertyPanel extends Disposable {
     };
   }
 
-  private addLineColor(
-    read: ThemeReader,
-    { label, onChange, onReset }: InputOptions<string>,
-  ): (value: string | undefined) => void {
+  /**
+   * 色のスウォッチを並べた行。選んだ choice を onChange に渡す。
+   * 返す関数に、押された状態にする choice の判定を渡して、表示を選択中の要素に合わせる。
+   */
+  private addSwatches<T extends SwatchChoice>(
+    label: string,
+    choices: readonly T[],
+    { onChange, onReset }: Omit<InputOptions<T>, "label">,
+  ): (isPressed: (choice: T) => boolean) => void {
     const group = document.createElement("div");
     group.className = "playmaker-panel__swatches";
-    const swatches = LINE_COLOR_PALETTE.map((opt) => {
-      const color = read(opt.token);
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "playmaker-panel__swatch";
-      btn.title = opt.label;
-      btn.setAttribute("aria-label", opt.label);
-      btn.style.backgroundColor = color;
-      btn.addEventListener("click", () => onChange(color));
+    if (choices.some((choice) => choice.fill === "outline")) {
+      group.classList.add("playmaker-panel__swatches--rows");
+    }
+    const swatches = choices.map((choice) => {
+      const btn = createSwatch(choice);
+      btn.addEventListener("click", () => onChange(choice));
       group.appendChild(btn);
-      return { btn, color };
+      return { btn, choice };
     });
     this.addGroupRow(label, group, onReset);
-    return (value) => {
-      // 保存済みの色は外から渡されたデータのこともあるので、テーマの色と同じ書き方にそろえて比べる。
-      const current = value === undefined ? undefined : normalizeCssColor(value);
-      for (const { btn, color } of swatches) {
-        btn.setAttribute("aria-pressed", String(current === color));
+    return (isPressed) => {
+      for (const { btn, choice } of swatches) {
+        btn.setAttribute("aria-pressed", String(isPressed(choice)));
       }
     };
   }

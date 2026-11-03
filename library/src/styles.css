@@ -214,16 +214,16 @@
   outline-offset: 1px;
 }
 
-.playmaker-panel__row input[type="color"] {
-  flex: 0 0 auto;
-  width: 40px;
-  padding: 2px;
-}
-
 .playmaker-panel__swatches {
   display: flex;
   flex: 0 0 auto;
   gap: 6px;
+}
+
+/* 選手の色。上の段に枠線、下の段に塗りつぶしを、同じ色が縦に並ぶように置く。列の数はパレットの色の数（palette.ts）。 */
+.playmaker-panel__swatches--rows {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
 }
 
 .playmaker-panel__swatch {
@@ -233,6 +233,11 @@
   border: 1px solid var(--_playmaker-ui-divider);
   border-radius: 50%;
   cursor: pointer;
+}
+
+.playmaker-panel__swatch--outline {
+  border-width: 3px;
+  background: var(--_playmaker-ui-surface);
 }
 
 .playmaker-panel__swatch[aria-pressed="true"] {

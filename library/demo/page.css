@@ -1,0 +1,136 @@
+/* demo の各ページで共有する配色、フォント、アプリバー。ページ固有の CSS は各 html に置く。 */
+/* Material Design の配色。ページは灰色の下地に白い紙を置き、アプリバーだけを primary で塗る。 */
+:root {
+  --primary: #1976d2;
+  --on-primary: #ffffff;
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --divider: rgba(0, 0, 0, 0.12);
+  --ink: rgba(0, 0, 0, 0.87);
+  --ink-dim: rgba(0, 0, 0, 0.6);
+  --selected: color-mix(in srgb, var(--primary) 8%, transparent);
+  --cat-run: #ef6c00;
+  --cat-pass: var(--primary);
+  --cat-rpo: #7b1fa2;
+  --cat-cov: #00796b;
+  --cat-pres: #d32f2f;
+  --off: var(--primary);
+  --def: #616161;
+  --shadow-4:
+    0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14),
+    0 1px 10px 0 rgba(0, 0, 0, 0.12);
+  --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --ui: Roboto, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 14px;
+}
+
+/* ---- アプリバー ---- */
+.topbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 56px;
+  padding: 0 20px;
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: var(--shadow-4);
+}
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.brand__name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+}
+.brand__tag {
+  font-size: 13px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.topbar__spacer {
+  flex: 1;
+}
+.topbar__actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* アプリバーの中は、primary の上に置く文字だけのボタン。 */
+.btn {
+  display: inline-block;
+  text-decoration: none;
+  font: inherit;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.btn[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.24);
+}
+.btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+}
+
+/* ---- プリセット一覧の見出しとチップ ---- */
+.group__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-dim);
+  padding: 16px 16px 4px;
+}
+.group__sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--def);
+  padding: 8px 16px 4px;
+}
+.group__sub--off {
+  color: var(--off);
+}
+/* 種類を示すチップ。一覧の行、表示中のプレーのカード、一覧ページのタイルで同じ形にする。 */
+.chip {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 12px;
+  color: var(--on-primary);
+  min-width: 44px;
+  text-align: center;
+}

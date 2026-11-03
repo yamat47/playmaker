@@ -4,22 +4,24 @@ import {
   type Formation,
   type Line,
   PLAY_PRESETS,
-  type PlayCategory,
   type PlayData,
   type Player,
   Playmaker,
   type PlayPreset,
+  type TeamSide,
 } from "playmaker";
 // 配布版の JS は CSS を読み込まないので、利用者と同じく別に読む。
 import "playmaker/styles.css";
-
-function need<T extends HTMLElement>(id: string, type: new () => T): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof type)) {
-    throw new Error(`#${id} の ${type.name} が見つかりません`);
-  }
-  return el;
-}
+import {
+  type Chip,
+  categoryChip,
+  chipElement,
+  forEachSide,
+  groupTitle,
+  need,
+  sideChip,
+  subTitle,
+} from "./presets-ui.js";
 
 const mountPoint = need("stage", HTMLElement);
 const libraryScroll = need("library-scroll", HTMLElement);
@@ -35,18 +37,6 @@ const infoSummary = need("playinfo-summary", HTMLElement);
 // 外し、コンテナは作り直す前に空にする（束ねないとホットリロードごとに多重登録される）。
 const demoLifetime = new AbortController();
 const { signal } = demoLifetime;
-
-const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
-  "run-zone": { label: "RUN", color: "var(--cat-run)" },
-  "run-gap": { label: "RUN", color: "var(--cat-run)" },
-  "pass-quick": { label: "PASS", color: "var(--cat-pass)" },
-  "pass-dropback": { label: "PASS", color: "var(--cat-pass)" },
-  "pass-deep": { label: "PASS", color: "var(--cat-pass)" },
-  pa: { label: "PA", color: "var(--cat-pass)" },
-  rpo: { label: "RPO", color: "var(--cat-rpo)" },
-  coverage: { label: "COV", color: "var(--cat-cov)" },
-  pressure: { label: "PRES", color: "var(--cat-pres)" },
-};
 
 // 要素が多い図でも描画と操作が重くならないかを目で確かめる図。丸と四角、3 種の線、
 // straight と bezier、waypoint を複数持つ線を、1 回の読み込みですべて出す。
@@ -331,12 +321,7 @@ function setActive(button: HTMLButtonElement | null): void {
   activeButton = button;
 }
 
-function setInfo(
-  name: string,
-  chip: { label: string; color: string } | null,
-  pers: string,
-  summary: string,
-): void {
+function setInfo(name: string, chip: Chip | null, pers: string, summary: string): void {
   infoName.textContent = name;
   if (chip === null) {
     infoChip.hidden = true;
@@ -349,33 +334,15 @@ function setInfo(
   infoSummary.textContent = summary;
 }
 
-function presetButton(name: string, tag: string, tagColor: string): HTMLButtonElement {
+function presetButton(name: string, chip: Chip): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "preset";
-  const tagEl = document.createElement("span");
-  tagEl.className = "preset__tag";
-  tagEl.textContent = tag;
-  tagEl.style.background = tagColor;
   const nameEl = document.createElement("span");
   nameEl.className = "preset__name";
   nameEl.textContent = name;
-  button.append(tagEl, nameEl);
+  button.append(chipElement(chip, "preset__chip"), nameEl);
   return button;
-}
-
-function groupTitle(text: string): HTMLElement {
-  const el = document.createElement("div");
-  el.className = "group__title";
-  el.textContent = text;
-  return el;
-}
-
-function subTitle(text: string, offense: boolean): HTMLElement {
-  const el = document.createElement("div");
-  el.className = offense ? "group__sub group__sub--off" : "group__sub";
-  el.textContent = text;
-  return el;
 }
 
 function replacePlayKeepingZone(players: readonly Player[], lines: readonly Line[]): void {
@@ -395,43 +362,38 @@ function loadPlay(preset: PlayPreset): void {
 
 interface PresetRow {
   name: string;
-  tag: string;
-  tagColor: string;
+  chip: Chip;
   /** 図を読み込めなかったときは false を返す。 */
   select: () => boolean;
 }
 
 // フォーメーションとプレー図で違うのは 1 行の見た目と押したときの処理だけなので、それを toRow で受け取る。
-function addSection<T extends { id: string; side: "offense" | "defense" }>(
+function addSection<T extends { id: string; side: TeamSide }>(
+  title: string,
   items: readonly T[],
-  side: "offense" | "defense",
-  label: string,
   toRow: (item: T) => PresetRow,
 ): void {
-  const matching = items.filter((it) => it.side === side);
-  if (matching.length === 0) {
-    return;
-  }
-  libraryScroll.append(subTitle(label, side === "offense"));
-  for (const item of matching) {
-    const row = toRow(item);
-    const button = presetButton(row.name, row.tag, row.tagColor);
-    button.dataset.presetId = item.id;
-    button.addEventListener("click", () => {
-      if (row.select()) {
-        setActive(button);
-      }
-    });
-    libraryScroll.append(button);
-  }
+  libraryScroll.append(groupTitle(title));
+  forEachSide(items, (side, matching) => {
+    libraryScroll.append(subTitle(side));
+    for (const item of matching) {
+      const row = toRow(item);
+      const button = presetButton(row.name, row.chip);
+      button.dataset.presetId = item.id;
+      button.addEventListener("click", () => {
+        if (row.select()) {
+          setActive(button);
+        }
+      });
+      libraryScroll.append(button);
+    }
+  });
 }
 
 function formationRow(formation: Formation): PresetRow {
-  const offense = formation.side === "offense";
   return {
     name: formation.name,
-    tag: offense ? "OFF" : "DEF",
-    tagColor: offense ? "var(--off)" : "var(--def)",
+    chip: sideChip(formation.side),
     select: () => {
       if (!playmaker.loadFormation(formation)) {
         infoSummary.textContent = `${formation.name} は、選手の上限を超えるので置きませんでした。`;
@@ -449,26 +411,21 @@ function formationRow(formation: Formation): PresetRow {
 }
 
 function playRow(preset: PlayPreset): PresetRow {
-  const meta = CATEGORY_META[preset.category];
+  const chip = categoryChip(preset.category);
   return {
     name: preset.name,
-    tag: meta.label,
-    tagColor: meta.color,
+    chip,
     select: () => {
       loadPlay(preset);
-      setInfo(preset.name, meta, preset.personnel, preset.summary);
+      setInfo(preset.name, chip, preset.personnel, preset.summary);
       return true;
     },
   };
 }
 
 libraryScroll.replaceChildren();
-libraryScroll.append(groupTitle("Formations"));
-addSection(FORMATION_PRESETS, "offense", "Offense", formationRow);
-addSection(FORMATION_PRESETS, "defense", "Defense", formationRow);
-libraryScroll.append(groupTitle("Plays"));
-addSection(PLAY_PRESETS, "offense", "Offense", playRow);
-addSection(PLAY_PRESETS, "defense", "Defense", playRow);
+addSection("Formations", FORMATION_PRESETS, formationRow);
+addSection("Plays", PLAY_PRESETS, playRow);
 
 // 初期表示は先頭プレー図に同期する（左レールのハイライトと Play info も合わせる）。
 const initialPreset = PLAY_PRESETS[0];
@@ -478,8 +435,12 @@ if (initialPreset !== undefined) {
   );
   if (initialButton !== null) {
     setActive(initialButton);
-    const meta = CATEGORY_META[initialPreset.category];
-    setInfo(initialPreset.name, meta, initialPreset.personnel, initialPreset.summary);
+    setInfo(
+      initialPreset.name,
+      categoryChip(initialPreset.category),
+      initialPreset.personnel,
+      initialPreset.summary,
+    );
   }
 }
 

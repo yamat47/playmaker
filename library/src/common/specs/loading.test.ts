@@ -11,14 +11,14 @@ function initialData(): PlayData {
 
 const formation: Formation = {
   id: "x",
-  name: "テスト隊形",
+  name: "Test formation",
   side: "offense",
   players: [{ position: { lateralYard: 30, downfieldYard: -5 }, shape: "circle", label: "B" }],
 };
 
 const pair: Formation = {
   id: "pair",
-  name: "2 人",
+  name: "Pair",
   side: "offense",
   players: [
     { position: { lateralYard: 30, downfieldYard: -5 }, shape: "circle", label: "C" },
@@ -33,13 +33,13 @@ const pair: Formation = {
 
 const empty: Formation = { ...formation, players: [] };
 
-/** 型を持たない外部の JSON から来た、位置の無い選手だけの隊形。 */
+/** A formation from untyped external JSON whose only player has no position. */
 function brokenFormation(): Formation {
   return JSON.parse('{ "players": [{ "shape": "circle" }] }');
 }
 
-describe("図の読み直し", () => {
-  it("読み直すと、それまでの編集を Undo できなくなる", () => {
+describe("Reloading a diagram", () => {
+  it("disables Undo of earlier edits after a reload", () => {
     const play = openPlay(initialData());
     play.session.setFieldZone("redzone");
 
@@ -48,7 +48,7 @@ describe("図の読み直し", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
-  it("読み直すと、読み込んだ図に置き換わる", () => {
+  it("replaces the diagram with the loaded one on reload", () => {
     const play = openPlay(initialData());
     play.session.setFieldZone("redzone");
 
@@ -57,7 +57,7 @@ describe("図の読み直し", () => {
     expect(play.session.getPlayData()).toEqual(initialData());
   });
 
-  it("読み直すと onDidReset を 1 回出す", () => {
+  it("fires onDidReset once on reload", () => {
     const play = openPlay(initialData());
     const reset = vi.fn();
     play.session.onDidReset(reset);
@@ -67,7 +67,7 @@ describe("図の読み直し", () => {
     expect(reset).toHaveBeenCalledOnce();
   });
 
-  it("読み直すと、onDidReset のあとに描き直しと表示状態の通知を 1 回ずつ出す", () => {
+  it("notifies the scene and the view state once each after onDidReset on reload", () => {
     const play = openPlay(initialData());
     const order: string[] = [];
     play.session.onDidReset(() => order.push("reset"));
@@ -78,7 +78,7 @@ describe("図の読み直し", () => {
     expect(order).toEqual(["reset", "scene", "view"]);
   });
 
-  it("読み直したあとの編集も、読み直す前からの購読に通知する", () => {
+  it("notifies subscriptions made before the reload about edits after the reload", () => {
     const play = openPlay(initialData());
     play.session.setPlayData(initialData());
     play.notified.mockClear();
@@ -88,7 +88,7 @@ describe("図の読み直し", () => {
     expect(play.notified.mock.calls).toEqual([["scene"], ["view"]]);
   });
 
-  it("読み直したあとも、選手をドラッグして動かせる", () => {
+  it("still moves a player by dragging after a reload", () => {
     const play = openPlay(initialData());
     play.session.setPlayData(initialData());
 
@@ -97,7 +97,7 @@ describe("図の読み直し", () => {
     expect(play.session.getPlayData().players[0]?.position).toEqual(yd(12, 3));
   });
 
-  it("読み直す前の controller で編集しても、onChange は呼ばれず今の図も変わらない", () => {
+  it("neither calls onChange nor changes the diagram when a stale controller edits", () => {
     const play = openPlay(initialData());
     const stale = play.editor;
     play.session.setPlayData(initialData());
@@ -108,15 +108,15 @@ describe("図の読み直し", () => {
     expect(play.session.fieldZone).toBe("middle");
   });
 
-  it("壊れたデータも既定の図として読み込む", () => {
+  it("loads broken data as the default diagram", () => {
     const play = openPlay("not a play");
 
     expect(play.session.getPlayData()).toEqual(playData());
   });
 });
 
-describe("隊形の読み込み", () => {
-  it("隊形の選手を今の図に追記する", () => {
+describe("Loading a formation", () => {
+  it("appends the formation's players to the current diagram", () => {
     const play = openPlay(initialData());
 
     play.session.loadFormation(formation);
@@ -124,7 +124,7 @@ describe("隊形の読み込み", () => {
     expect(play.session.getPlayData().players.map((p) => p.label)).toEqual(["a", "B"]);
   });
 
-  it("隊形の読み込みは編集として onChange を 1 回呼ぶ", () => {
+  it("calls onChange once because loading a formation is an edit", () => {
     const play = openPlay(initialData());
 
     play.session.loadFormation(formation);
@@ -132,7 +132,7 @@ describe("隊形の読み込み", () => {
     expect(play.onChange).toHaveBeenCalledOnce();
   });
 
-  it("隊形の選手を置いたら true を返す", () => {
+  it("returns true when the formation's players are placed", () => {
     const play = openPlay(initialData());
 
     const loaded = play.session.loadFormation(formation);
@@ -140,7 +140,7 @@ describe("隊形の読み込み", () => {
     expect(loaded).toBe(true);
   });
 
-  it("置ける選手が無い隊形は false を返す", () => {
+  it("returns false for a formation with no player that can be placed", () => {
     const play = openPlay(initialData());
 
     const loaded = play.session.loadFormation(brokenFormation());
@@ -148,7 +148,7 @@ describe("隊形の読み込み", () => {
     expect(loaded).toBe(false);
   });
 
-  it("置ける選手が無い隊形では、図も履歴も変えず onChange も呼ばない", () => {
+  it("keeps the diagram and history and skips onChange when no player can be placed", () => {
     const play = openPlay(initialData());
 
     play.session.loadFormation(brokenFormation());
@@ -158,7 +158,7 @@ describe("隊形の読み込み", () => {
     expect(play.onChange).not.toHaveBeenCalled();
   });
 
-  it("隊形の選手には、図にある選手と重ならない id を振る", () => {
+  it("assigns the formation's players ids that do not collide with existing players", () => {
     const play = openPlay(playData([player("player-1", 10, 0)]));
 
     play.session.loadFormation(pair);
@@ -167,7 +167,7 @@ describe("隊形の読み込み", () => {
     expect(new Set(ids).size).toBe(3);
   });
 
-  it("隊形の選手の位置、形、ラベル、色をそのまま置く", () => {
+  it("keeps the position, shape, label, and color of the formation's players", () => {
     const play = openPlay(playData());
 
     play.session.loadFormation(pair);
@@ -178,7 +178,7 @@ describe("隊形の読み込み", () => {
     ]);
   });
 
-  it("読み込むと、選択を外す", () => {
+  it("clears the selection on load", () => {
     const play = openPlay(initialData());
     play.click(yd(10, 0));
 
@@ -187,7 +187,7 @@ describe("隊形の読み込み", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
-  it("作図の途中で読み込むと、作図をやめる", () => {
+  it("stops the drawing in progress on load", () => {
     const play = openPlay(initialData());
     play.startLine(yd(10, 0));
 
@@ -196,7 +196,7 @@ describe("隊形の読み込み", () => {
     expect(play.editor.getViewState().isDrawing).toBe(false);
   });
 
-  it("読み込んだあとに Undo すると、隊形の選手だけが消える", () => {
+  it("removes only the formation's players when Undo follows the load", () => {
     const play = openPlay(initialData());
     play.session.loadFormation(pair);
 
@@ -205,7 +205,7 @@ describe("隊形の読み込み", () => {
     expect(play.session.getPlayData()).toEqual(initialData());
   });
 
-  it("読み込むと MAX_PLAYERS 人を超える隊形は、1 人も置かず履歴にも積まない", () => {
+  it("places no player and records no history when the load would exceed MAX_PLAYERS", () => {
     const play = openPlay(playData(manyPlayers(MAX_PLAYERS - 1)));
 
     play.session.loadFormation(pair);
@@ -214,7 +214,7 @@ describe("隊形の読み込み", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
-  it("読み込むと MAX_PLAYERS 人を超える隊形は false を返す", () => {
+  it("returns false when the load would exceed MAX_PLAYERS", () => {
     const play = openPlay(playData(manyPlayers(MAX_PLAYERS - 1)));
 
     const loaded = play.session.loadFormation(pair);
@@ -222,7 +222,7 @@ describe("隊形の読み込み", () => {
     expect(loaded).toBe(false);
   });
 
-  it("読み込んでちょうど MAX_PLAYERS 人になる隊形は置く", () => {
+  it("places a formation that brings the count to exactly MAX_PLAYERS", () => {
     const play = openPlay(playData(manyPlayers(MAX_PLAYERS - 2)));
 
     play.session.loadFormation(pair);
@@ -230,7 +230,7 @@ describe("隊形の読み込み", () => {
     expect(play.session.getPlayData().players).toHaveLength(MAX_PLAYERS);
   });
 
-  it("ツールバーから選手のいない隊形を読むと、false を返す", () => {
+  it("returns false when the toolbar loads a formation with no players", () => {
     const play = openPlay(initialData());
 
     const loaded = play.editor.loadFormation(empty);
@@ -238,7 +238,7 @@ describe("隊形の読み込み", () => {
     expect(loaded).toBe(false);
   });
 
-  it("ツールバーから選手のいない隊形を読んでも、選択は外さない", () => {
+  it("keeps the selection when the toolbar loads a formation with no players", () => {
     const play = openPlay(initialData());
     play.click(yd(10, 0));
 

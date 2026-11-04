@@ -7,7 +7,7 @@ import {
 } from "../common/model/play-data.js";
 import { type FieldPosition, PLAYER_RADIUS_YARDS, type Player } from "../common/model/player.js";
 
-/** マーカーが重なる（中心の距離が直径に満たない）選手の組。 */
+/** Pairs of players whose markers overlap (center distance below the diameter). */
 export function overlappingMarkers(
   players: readonly Pick<Player, "position">[],
 ): [FieldPosition, FieldPosition][] {
@@ -38,7 +38,7 @@ export function line(id: string, startPlayerId = "a"): Line {
   };
 }
 
-/** 中央のゾーンに置いた図。引数を省くと、壊れたデータを読んだときの既定の図と同じになる。 */
+/** A diagram in the middle zone. Without arguments it equals the default loaded for broken data. */
 export function playData(players: readonly Player[] = [], lines: readonly Line[] = []): PlayData {
   return {
     version: CURRENT_PLAY_DATA_VERSION,
@@ -48,7 +48,7 @@ export function playData(players: readonly Player[] = [], lines: readonly Line[]
   };
 }
 
-/** a (10, 0) と b (20, 0) の 2 人と、a から (15, 2) を通って (25, 5) で終わる線 l の図。 */
+/** Players a (10, 0) and b (20, 0), and a line l from a through (15, 2) ending at (25, 5). */
 export function twoPlayersWithRoute(): PlayData {
   return playData(
     [player("a", 10, 0), player("b", 20, 0)],
@@ -62,7 +62,7 @@ export function twoPlayersWithRoute(): PlayData {
   );
 }
 
-/** LOS の 10 ヤード後ろに横一列に並べた count 人。 */
+/** count players in one row 10 yards behind the LOS. */
 export function manyPlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => player(`m-${i}`, 1 + (i % 50), -10));
 }

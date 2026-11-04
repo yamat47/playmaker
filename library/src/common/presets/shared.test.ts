@@ -3,7 +3,7 @@ import { must } from "../../test-support/must.js";
 import { deepFreeze } from "./shared.js";
 
 describe("deepFreeze", () => {
-  it("入れ子のオブジェクトと配列まで凍結する", () => {
+  it("freezes nested objects and arrays", () => {
     const value = { players: [{ position: { lateralYard: 1 } }], label: null };
 
     deepFreeze(value);
@@ -13,7 +13,7 @@ describe("deepFreeze", () => {
     expect(Object.isFrozen(must(value.players[0]).position)).toBe(true);
   });
 
-  it("共有された子を 2 回たどっても、渡した値をそのまま返す", () => {
+  it("returns the given value even when a shared child is visited twice", () => {
     const shared = { lateralYard: 1 };
     const value = [shared, shared];
 
@@ -21,7 +21,7 @@ describe("deepFreeze", () => {
     expect(Object.isFrozen(shared)).toBe(true);
   });
 
-  it("プリミティブはそのまま返す", () => {
+  it("returns a primitive unchanged", () => {
     expect(deepFreeze(3)).toBe(3);
   });
 });

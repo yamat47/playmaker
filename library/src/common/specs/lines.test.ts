@@ -7,7 +7,7 @@ function lineOf(data: Pick<PlayData, "lines">, id: string) {
   return data.lines.find((l) => l.id === id);
 }
 
-/** 線 l を選んだ図。waypoint は (15, 2)、終点は (25, 5)。 */
+/** A diagram with line l selected. Its waypoint is (15, 2) and its end is (25, 5). */
 function openWithLineSelected() {
   const play = openPlay(twoPlayersWithRoute());
   play.click(yd(25, 5));
@@ -15,8 +15,8 @@ function openWithLineSelected() {
 }
 
 /**
- * a から (14, 2) と (18, 6) を通って (22, 10) で終わる線 l と、
- * a から (8, -2) を通って (5, -5) で終わる線 k の図。l を選んである。
+ * A diagram with line l from a through (14, 2) and (18, 6) to (22, 10), and
+ * line k from a through (8, -2) to (5, -5). Line l is selected.
  */
 function openWithTwoLines() {
   const play = openPlay(
@@ -32,7 +32,7 @@ function openWithTwoLines() {
   return play;
 }
 
-/** 作図で足して選んだ線を、Undo で消した図。選択はその線を指したまま残る。 */
+/** A diagram where Undo removed a drawn and selected line. The selection still points at it. */
 function openWithVanishedLine() {
   const play = openPlay(twoPlayersWithRoute());
   play.startLine(yd(20, 0));
@@ -42,8 +42,8 @@ function openWithVanishedLine() {
   return play;
 }
 
-describe("waypoint のドラッグ", () => {
-  it("選んだ線の waypoint をドラッグすると、その waypoint を動かす", () => {
+describe("Dragging a waypoint", () => {
+  it("moves the waypoint when a waypoint of the selected line is dragged", () => {
     const play = openWithLineSelected();
 
     play.drag(yd(15, 2), yd(16, 4));
@@ -51,7 +51,7 @@ describe("waypoint のドラッグ", () => {
     expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([yd(16, 4)]);
   });
 
-  it("ドラッグ中は、ハンドルと描く線の waypoint がポインタに付いていく", () => {
+  it("keeps the handle and the drawn line's waypoint on the pointer during the drag", () => {
     const play = openWithLineSelected();
 
     play.editor.pointerDown(yd(15, 2));
@@ -62,7 +62,7 @@ describe("waypoint のドラッグ", () => {
     expect(lineOf(scene, "l")?.waypoints).toEqual([yd(16, 4)]);
   });
 
-  it("ドラッグ中は、掴んだ waypoint のほかは描く図の中で動かない", () => {
+  it("moves nothing but the grabbed waypoint in the drawn diagram during the drag", () => {
     const play = openWithTwoLines();
 
     play.editor.pointerDown(yd(14, 2));
@@ -73,7 +73,7 @@ describe("waypoint のドラッグ", () => {
     expect(lineOf(scene, "k")?.waypoints).toEqual([yd(8, -2)]);
   });
 
-  it("離すと、掴んだ waypoint だけを差し替える", () => {
+  it("replaces only the grabbed waypoint on release", () => {
     const play = openWithTwoLines();
 
     play.drag(yd(14, 2), yd(15, 3));
@@ -81,7 +81,7 @@ describe("waypoint のドラッグ", () => {
     expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([yd(15, 3), yd(18, 6)]);
   });
 
-  it("中心から外れた点を掴んで動かすと、掴んだ点とポインタのずれを保って置く", () => {
+  it("keeps the offset between the grab point and the pointer when grabbed off center", () => {
     const play = openWithLineSelected();
 
     play.drag(yd(15.5, 2.25), yd(18.5, 4.25));
@@ -89,7 +89,7 @@ describe("waypoint のドラッグ", () => {
     expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([yd(18, 4)]);
   });
 
-  it("動かさずに離すと、履歴に積まない", () => {
+  it("does not record history when released without moving", () => {
     const play = openWithLineSelected();
 
     play.click(yd(15, 2));
@@ -97,7 +97,7 @@ describe("waypoint のドラッグ", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
-  it("ドラッグの途中で線を削除すると、離しても削除のほかに何も積まない", () => {
+  it("records only the deletion when the line is deleted mid-drag and then released", () => {
     const play = openWithLineSelected();
     play.editor.pointerDown(yd(15, 2));
     play.editor.deleteSelection();
@@ -109,7 +109,7 @@ describe("waypoint のドラッグ", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("選手の上にある waypoint を押すと、選手ではなく waypoint を掴む", () => {
+  it("grabs the waypoint, not the player, when a waypoint over a player is pressed", () => {
     const play = openPlay(
       playData(
         [player("a", 10, 0), player("b", 20, 0)],
@@ -125,7 +125,7 @@ describe("waypoint のドラッグ", () => {
     expect(data.players[1]?.position).toEqual(yd(20, 0));
   });
 
-  it("選んだ線のハンドルから外れた点を押すと、ハンドルを掴まずにその下の選手を選ぶ", () => {
+  it("selects the player underneath, not a handle, when pressed away from the handles", () => {
     const play = openWithLineSelected();
 
     play.click(yd(10, 0));
@@ -134,8 +134,8 @@ describe("waypoint のドラッグ", () => {
   });
 });
 
-describe("終点のドラッグ", () => {
-  it("選んだ線の終点をドラッグすると、終点だけを動かす", () => {
+describe("Dragging the end point", () => {
+  it("moves only the end when the end of the selected line is dragged", () => {
     const play = openWithLineSelected();
 
     play.drag(yd(25, 5), yd(28, 8));
@@ -146,7 +146,7 @@ describe("終点のドラッグ", () => {
     });
   });
 
-  it("ドラッグ中は、ハンドルと描く線の終点がポインタに付いていく", () => {
+  it("keeps the handle and the drawn line's end on the pointer during the drag", () => {
     const play = openWithLineSelected();
 
     play.editor.pointerDown(yd(25, 5));
@@ -157,7 +157,7 @@ describe("終点のドラッグ", () => {
     expect(lineOf(scene, "l")?.end).toEqual(yd(28, 8));
   });
 
-  it("ドラッグ中は、ほかの線の終点は描く図の中で動かない", () => {
+  it("does not move the ends of other lines in the drawn diagram during the drag", () => {
     const play = openWithTwoLines();
 
     play.editor.pointerDown(yd(22, 10));
@@ -166,7 +166,7 @@ describe("終点のドラッグ", () => {
     expect(lineOf(play.editor.getFrame().scene, "k")?.end).toEqual(yd(5, -5));
   });
 
-  it("中心から外れた点を掴んで動かすと、掴んだ点とポインタのずれを保って置く", () => {
+  it("keeps the offset between the grab point and the pointer when grabbed off center", () => {
     const play = openWithLineSelected();
 
     play.drag(yd(25.5, 5.25), yd(28.5, 8.25));
@@ -174,7 +174,7 @@ describe("終点のドラッグ", () => {
     expect(lineOf(play.session.getPlayData(), "l")?.end).toEqual(yd(28, 8));
   });
 
-  it("ゾーンの窓の外で離すと、窓の端に寄せて置く", () => {
+  it("snaps the end to the window edge when released outside the zone window", () => {
     const play = openWithLineSelected();
 
     play.drag(yd(25, 5), yd(25, 40));
@@ -182,7 +182,7 @@ describe("終点のドラッグ", () => {
     expect(lineOf(play.session.getPlayData(), "l")?.end).toEqual(yd(25, 15));
   });
 
-  it("終点を動かしたあとに Undo すると、元の位置に戻る", () => {
+  it("restores the original position when Undo follows moving the end", () => {
     const play = openWithLineSelected();
     play.drag(yd(25, 5), yd(28, 8));
 
@@ -191,7 +191,7 @@ describe("終点のドラッグ", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("動かさずに離すと、履歴に積まない", () => {
+  it("does not record history when released without moving", () => {
     const play = openWithLineSelected();
 
     play.click(yd(25, 5));
@@ -199,7 +199,7 @@ describe("終点のドラッグ", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
-  it("ドラッグの途中で線を削除すると、描く図にもその線は出ない", () => {
+  it("leaves the line out of the drawn diagram when it is deleted mid-drag", () => {
     const play = openWithLineSelected();
     play.editor.pointerDown(yd(25, 5));
     play.editor.deleteSelection();
@@ -209,7 +209,7 @@ describe("終点のドラッグ", () => {
     expect(play.editor.getFrame().scene.lines).toEqual([]);
   });
 
-  it("ドラッグの途中で線を削除すると、離しても削除のほかに何も積まない", () => {
+  it("records only the deletion when the line is deleted mid-drag and then released", () => {
     const play = openWithLineSelected();
     play.editor.pointerDown(yd(25, 5));
     play.editor.deleteSelection();
@@ -221,7 +221,7 @@ describe("終点のドラッグ", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("終点と waypoint が重なっていると、終点を掴む", () => {
+  it("grabs the end when the end and a waypoint overlap", () => {
     const play = openPlay(
       playData(
         [player("a", 10, 0)],
@@ -239,8 +239,8 @@ describe("終点のドラッグ", () => {
   });
 });
 
-describe("線の削除", () => {
-  it("選んだ線を削除すると、その線だけが消える", () => {
+describe("Deleting a line", () => {
+  it("removes only that line when the selected line is deleted", () => {
     const play = openWithLineSelected();
 
     play.editor.deleteSelection();
@@ -248,7 +248,7 @@ describe("線の削除", () => {
     expect(play.session.getPlayData()).toEqual({ ...twoPlayersWithRoute(), lines: [] });
   });
 
-  it("選んだ線を削除すると、選択を外す", () => {
+  it("clears the selection when the selected line is deleted", () => {
     const play = openWithLineSelected();
 
     play.editor.deleteSelection();
@@ -256,7 +256,7 @@ describe("線の削除", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
-  it("削除を Undo すると、線が元の並びに戻る", () => {
+  it("restores the line in its original order when the deletion is undone", () => {
     const data = playData(
       [player("a", 10, 0)],
       [line("x"), { ...line("l"), end: yd(25, 5) }, line("y")],
@@ -270,7 +270,7 @@ describe("線の削除", () => {
     expect(play.session.getPlayData()).toEqual(data);
   });
 
-  it("選んだ線が消えたあとに削除しても、履歴に積まない", () => {
+  it("does not record history when deleting after the selected line vanished", () => {
     const play = openWithVanishedLine();
 
     play.editor.deleteSelection();
@@ -279,8 +279,8 @@ describe("線の削除", () => {
   });
 });
 
-describe("線の値の編集", () => {
-  it("選んでいる線の種別、補間、太さ、色を変える", () => {
+describe("Editing line values", () => {
+  it("changes the kind, interpolation, thickness, and color of the selected line", () => {
     const play = openWithLineSelected();
 
     play.editor.updateSelectedLine({
@@ -299,7 +299,7 @@ describe("線の値の編集", () => {
     });
   });
 
-  it("色と太さに null を渡すと、どちらも持たない既定の線に戻る", () => {
+  it("returns to a default line without color or thickness when both receive null", () => {
     const play = openWithLineSelected();
     play.editor.updateSelectedLine({ color: "#ff0000", thickness: 2 });
 
@@ -308,7 +308,7 @@ describe("線の値の編集", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("変えたあとに Undo すると、変える前の値に戻る", () => {
+  it("restores the previous values when Undo follows the change", () => {
     const play = openWithLineSelected();
     play.editor.updateSelectedLine({ kind: "block" });
 
@@ -317,7 +317,7 @@ describe("線の値の編集", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("渡したパッチをあとで書き換えても、Redo で当てる値は変わらない", () => {
+  it("applies the original values on Redo even if the passed patch is mutated later", () => {
     const play = openWithLineSelected();
     const patch: { kind: "block" | "motion" } = { kind: "block" };
     play.editor.updateSelectedLine(patch);
@@ -329,7 +329,7 @@ describe("線の値の編集", () => {
     expect(lineOf(play.session.getPlayData(), "l")?.kind).toBe("block");
   });
 
-  it("選手を選んでいるときは、線の値を変えない", () => {
+  it("does not change line values while a player is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.click(yd(10, 0));
 
@@ -338,7 +338,7 @@ describe("線の値の編集", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("何も選んでいないときは、線の値を変えない", () => {
+  it("does not change line values while nothing is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.updateSelectedLine({ kind: "block" });
@@ -346,7 +346,7 @@ describe("線の値の編集", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("選んだ線が消えたあとに値を変えても、履歴に積まない", () => {
+  it("does not record history when changing values after the selected line vanished", () => {
     const play = openWithVanishedLine();
 
     play.editor.updateSelectedLine({ kind: "block" });
@@ -354,7 +354,7 @@ describe("線の値の編集", () => {
     expect(play.editor.getViewState().canRedo).toBe(true);
   });
 
-  it("今と同じ値だけを渡すと、履歴に積まず通知もしない", () => {
+  it("neither records history nor notifies when only the current values are passed", () => {
     const play = openWithLineSelected();
     play.notified.mockClear();
 
@@ -364,7 +364,7 @@ describe("線の値の編集", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("渡した値のうち 1 つでも今と違えば、その値を当てる", () => {
+  it("applies the values when at least one of them differs from the current one", () => {
     const play = openWithLineSelected();
 
     play.editor.updateSelectedLine({ kind: "route", interpolation: "bezier" });
@@ -372,7 +372,7 @@ describe("線の値の編集", () => {
     expect(lineOf(play.session.getPlayData(), "l")?.interpolation).toBe("bezier");
   });
 
-  it("表示状態が変わらなくても、選んでいる線の値が変われば表示状態を通知する", () => {
+  it("notifies the view state when line values change even if the state is unchanged", () => {
     const play = openWithLineSelected();
     play.editor.updateSelectedLine({ kind: "block" });
     play.notified.mockClear();
@@ -383,26 +383,26 @@ describe("線の値の編集", () => {
   });
 });
 
-describe("消えた線の選択", () => {
-  it("選んだ線が Undo で消えると、表示状態は無選択になる", () => {
+describe("Selection of a vanished line", () => {
+  it("shows no selection in the view state when Undo removes the selected line", () => {
     const play = openWithVanishedLine();
 
     expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
-  it("選んだ線が Undo で消えると、選択中の線を返さない", () => {
+  it("returns no selected line when Undo removes the selected line", () => {
     const play = openWithVanishedLine();
 
     expect(play.editor.getSelectedLine()).toBeUndefined();
   });
 
-  it("選んだ線が Undo で消えると、ハンドルを描かない", () => {
+  it("draws no handles when Undo removes the selected line", () => {
     const play = openWithVanishedLine();
 
     expect(play.editor.getFrame().overlay).toEqual({ kind: "none" });
   });
 
-  it("選んだ線が消えたあとに、その終点があった位置をドラッグしても、何も動かさない", () => {
+  it("moves nothing when dragging where the vanished line's end used to be", () => {
     const play = openWithVanishedLine();
 
     play.drag(yd(30, 8), yd(32, 10));

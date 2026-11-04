@@ -27,21 +27,21 @@ function formationOf(count: number): Formation {
 }
 
 describe("isToolAvailable", () => {
-  it("上限に達していなければ、どのツールも使える", () => {
+  it("every tool is available while no limit is reached", () => {
     expect(isToolAvailable("select", state)).toBe(true);
     expect(isToolAvailable("add-player", state)).toBe(true);
     expect(isToolAvailable("draw-line", state)).toBe(true);
   });
 
-  it("置ける選手が 0 人なら、選手の追加ツールは使えない", () => {
+  it("the add-player tool is unavailable when no player slot remains", () => {
     expect(isToolAvailable("add-player", { ...state, remainingPlayerSlots: 0 })).toBe(false);
   });
 
-  it("線を描き始められないなら、作図ツールは使えない", () => {
+  it("the draw-line tool is unavailable when a line cannot be started", () => {
     expect(isToolAvailable("draw-line", { ...state, canStartLine: false })).toBe(false);
   });
 
-  it("上限に達していても、選択ツールは使える", () => {
+  it("the select tool stays available when every limit is reached", () => {
     const full = { ...state, remainingPlayerSlots: 0, canStartLine: false };
 
     expect(isToolAvailable("select", full)).toBe(true);
@@ -49,11 +49,11 @@ describe("isToolAvailable", () => {
 });
 
 describe("canLoadFormation", () => {
-  it("人数がちょうど置ける人数までなら読み込める", () => {
+  it("loads a formation whose player count fits the remaining slots exactly", () => {
     expect(canLoadFormation(formationOf(2), state)).toBe(true);
   });
 
-  it("置ける人数より多いフォーメーションは読み込めない", () => {
+  it("does not load a formation with more players than the remaining slots", () => {
     expect(canLoadFormation(formationOf(3), state)).toBe(false);
   });
 });

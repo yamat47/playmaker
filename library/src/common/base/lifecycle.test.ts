@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Disposable, DisposableStore, toDisposable } from "./lifecycle.js";
 
 describe("DisposableStore", () => {
-  it("追加した全ての IDisposable を dispose する", () => {
+  it("disposes every IDisposable that was added", () => {
     const store = new DisposableStore();
     const a = vi.fn();
     const b = vi.fn();
@@ -15,7 +15,7 @@ describe("DisposableStore", () => {
     expect(b).toHaveBeenCalledOnce();
   });
 
-  it("二重 dispose しても二度解放しない", () => {
+  it("releases each item only once when disposed twice", () => {
     const store = new DisposableStore();
     const fn = vi.fn();
     store.add(toDisposable(fn));
@@ -26,7 +26,7 @@ describe("DisposableStore", () => {
     expect(fn).toHaveBeenCalledOnce();
   });
 
-  it("dispose 後に add したものは即座に解放される（リーク防止）", () => {
+  it("releases an item added after disposal immediately so it cannot leak", () => {
     const store = new DisposableStore();
     store.dispose();
     const late = vi.fn();
@@ -36,7 +36,7 @@ describe("DisposableStore", () => {
     expect(late).toHaveBeenCalledOnce();
   });
 
-  it("isDisposed は dispose の前後で false → true に変わる", () => {
+  it("reports isDisposed as false before dispose and true after", () => {
     const store = new DisposableStore();
     expect(store.isDisposed).toBe(false);
 
@@ -47,7 +47,7 @@ describe("DisposableStore", () => {
 });
 
 describe("Disposable", () => {
-  it("_register した従属リソースを dispose で一括解放する", () => {
+  it("releases every resource passed to _register when disposed", () => {
     const child = vi.fn();
     class Sample extends Disposable {
       constructor() {
@@ -62,7 +62,7 @@ describe("Disposable", () => {
     expect(child).toHaveBeenCalledOnce();
   });
 
-  it("isDisposed で破棄状態を子クラスから判定できる", () => {
+  it("exposes the disposed state to subclasses through isDisposed", () => {
     class Sample extends Disposable {
       get disposedNow(): boolean {
         return this.isDisposed;

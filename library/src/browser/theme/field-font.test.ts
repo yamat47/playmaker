@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FIELD_FONT_FAMILY, fieldFont } from "./field-font.js";
 
 describe("FIELD_FONT_FAMILY", () => {
-  it("同梱フォントを先頭に置き、収録していない字は総称の sans-serif で描く", () => {
+  it("puts the bundled font first and falls back to generic sans-serif for missing glyphs", () => {
     const families = FIELD_FONT_FAMILY.split(",").map((family) => family.trim());
 
     expect(families).toEqual(['"Playmaker Saira"', "sans-serif"]);
@@ -10,7 +10,7 @@ describe("FIELD_FONT_FAMILY", () => {
 });
 
 describe("fieldFont", () => {
-  it("同梱フォントの太さと指定した px の大きさで、ctx.font の値を組み立てる", () => {
+  it("builds the ctx.font value from the bundled font weight and the given px size", () => {
     expect(fieldFont(12)).toBe('700 12px "Playmaker Saira", sans-serif');
   });
 });

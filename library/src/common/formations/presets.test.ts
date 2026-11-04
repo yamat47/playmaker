@@ -10,40 +10,40 @@ const OFFENSE_PRESETS = FORMATION_PRESETS.filter((f) => f.side === "offense");
 const DEFENSE_PRESETS = FORMATION_PRESETS.filter((f) => f.side === "defense");
 
 describe("FORMATION_PRESETS", () => {
-  it("id はすべて異なる", () => {
+  it("has a distinct id for every preset", () => {
     const ids = FORMATION_PRESETS.map((f) => f.id);
 
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("攻守どちらのプリセットもある", () => {
+  it("has presets for both offense and defense", () => {
     expect(OFFENSE_PRESETS).not.toHaveLength(0);
     expect(DEFENSE_PRESETS).not.toHaveLength(0);
   });
 
-  it.each(FORMATION_PRESETS)("$id は名前を持ち、11 人を並べる", (formation) => {
+  it.each(FORMATION_PRESETS)("$id has a name and places 11 players", (formation) => {
     expect(formation.name.trim()).not.toBe("");
     expect(formation.players).toHaveLength(11);
   });
 
-  it.each(FORMATION_PRESETS)("$id は外部データとして正規化しても変わらない", (formation) => {
+  it.each(FORMATION_PRESETS)("$id is unchanged when normalized as external data", (formation) => {
     expect(normalizeFormation(formation)).toEqual(formation);
   });
 
-  it.each(FORMATION_PRESETS)("$id は選手に色を付けず、テーマの既定の色で描かせる", (formation) => {
+  it.each(FORMATION_PRESETS)("$id leaves player colors to the theme default", (formation) => {
     expect(formation.players.filter((p) => p.color !== undefined)).toEqual([]);
   });
 
-  it.each(FORMATION_PRESETS)("$id は選手全員にラベルを付ける", (formation) => {
+  it.each(FORMATION_PRESETS)("$id labels every player", (formation) => {
     expect(formation.players.filter((p) => p.label === "")).toEqual([]);
   });
 
-  it.each(FORMATION_PRESETS)("$id の選手のマーカーは重ならない", (formation) => {
+  it.each(FORMATION_PRESETS)("$id has no overlapping player markers", (formation) => {
     expect(overlappingMarkers(formation.players)).toEqual([]);
   });
 
   it.each(FIELD_ZONE_VALUES)(
-    "%s ゾーンで読み込んでも、どのプリセットの選手も窓に収まる",
+    "loads every preset's players inside the window in the %s zone",
     (zone) => {
       const field = fieldStateForZone(zone);
       const positions = FORMATION_PRESETS.flatMap((f) => f.players.map((p) => p.position));
@@ -52,7 +52,7 @@ describe("FORMATION_PRESETS", () => {
     },
   );
 
-  it("入れ子の値まで凍結されていて、利用者が書き換えられない", () => {
+  it("is frozen down to nested values so consumers cannot modify it", () => {
     const preset = must(FORMATION_PRESETS[0]);
 
     expect(Object.isFrozen(preset)).toBe(true);
@@ -62,11 +62,11 @@ describe("FORMATION_PRESETS", () => {
 });
 
 describe("getFormationPreset", () => {
-  it("既知の id を渡すと、そのプリセットを返す", () => {
+  it("returns the preset for a known id", () => {
     expect(getFormationPreset("i-formation")?.name).toBe("I-Formation");
   });
 
-  it("無い id を渡すと undefined を返す", () => {
+  it("returns undefined for an unknown id", () => {
     expect(getFormationPreset("does-not-exist")).toBeUndefined();
   });
 });

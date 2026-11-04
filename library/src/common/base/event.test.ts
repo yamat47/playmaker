@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Emitter } from "./event.js";
 
 describe("Emitter", () => {
-  it("登録したリスナに fire の値を通知する", () => {
+  it("notifies a registered listener with the value passed to fire", () => {
     const emitter = new Emitter<number>();
     const listener = vi.fn();
     emitter.event(listener);
@@ -12,7 +12,7 @@ describe("Emitter", () => {
     expect(listener).toHaveBeenCalledExactlyOnceWith(42);
   });
 
-  it("dispose で購読解除するとそれ以降通知されない", () => {
+  it("stops notifying a listener once its subscription is disposed", () => {
     const emitter = new Emitter<string>();
     const listener = vi.fn();
     const sub = emitter.event(listener);
@@ -23,7 +23,7 @@ describe("Emitter", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("1 つのリスナが例外を投げても他のリスナは通知され、エラーは onListenerError に渡る", () => {
+  it("passes a throwing listener's error to onListenerError and still notifies the rest", () => {
     const onListenerError = vi.fn();
     const emitter = new Emitter<void>(onListenerError);
     const error = new Error("boom");
@@ -40,7 +40,7 @@ describe("Emitter", () => {
     expect(onListenerError).toHaveBeenCalledExactlyOnceWith(error);
   });
 
-  it("通知中にリスナを解除しても今回の fire 列挙は安定する", () => {
+  it("still notifies a listener that an earlier listener disposes during the same fire", () => {
     const emitter = new Emitter<void>();
     let disposeSecond = (): void => {};
     const first = vi.fn(() => disposeSecond());
@@ -55,7 +55,7 @@ describe("Emitter", () => {
     expect(second).toHaveBeenCalledOnce();
   });
 
-  it("emitter 自体を dispose すると fire しても通知されない", () => {
+  it("notifies nobody once the emitter itself is disposed", () => {
     const emitter = new Emitter<number>();
     const listener = vi.fn();
     emitter.event(listener);
@@ -66,7 +66,7 @@ describe("Emitter", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("dispose 済みの emitter に event を登録しても IDisposable が返り、その dispose は例外を投げない", () => {
+  it("returns an IDisposable whose dispose does not throw when subscribing after disposal", () => {
     const emitter = new Emitter<number>();
     emitter.dispose();
 
@@ -75,7 +75,7 @@ describe("Emitter", () => {
     expect(() => sub.dispose()).not.toThrow();
   });
 
-  it("dispose 済みの emitter に登録したリスナは fire されても呼ばれない", () => {
+  it("never calls a listener registered after the emitter is disposed", () => {
     const emitter = new Emitter<number>();
     emitter.dispose();
     const listener = vi.fn();

@@ -4,7 +4,7 @@ import { migrateV1ToV2, V1_DEFAULT_THICKNESS_PX } from "./migration-v2.js";
 import { MAX_PLAYERS } from "./player.js";
 
 describe("migrateV1ToV2", () => {
-  it("選手、waypoint、終点の絶対ヤードから、そのゾーンの LOS を引く", () => {
+  it("subtracts the zone's LOS from the absolute yards of players, waypoints, and ends", () => {
     const v1 = {
       version: 1,
       field: { zone: "redzone" },
@@ -33,7 +33,7 @@ describe("migrateV1ToV2", () => {
     ]);
   });
 
-  it("線の太さの px を、v1 の既定の太さに対する倍率へ直す", () => {
+  it("converts a line thickness in px to a multiple of the v1 default thickness", () => {
     const v2 = migrateV1ToV2({
       field: { zone: "middle" },
       lines: [{ thickness: V1_DEFAULT_THICKNESS_PX * 2 }],
@@ -42,7 +42,7 @@ describe("migrateV1ToV2", () => {
     expect(v2.lines).toEqual([expect.objectContaining({ thickness: 2 })]);
   });
 
-  it("ゾーンが読めなければ既定のゾーンの LOS で直す", () => {
+  it("uses the default zone's LOS when the zone cannot be read", () => {
     const v2 = migrateV1ToV2({
       field: "middle",
       players: [{ position: { lateralYard: 1, absoluteYard: 52 } }],
@@ -54,7 +54,7 @@ describe("migrateV1ToV2", () => {
     expect(unknownZone.field).toEqual({ zone: "middle", losYard: 50 });
   });
 
-  it("形が崩れた値は直さずにそのまま残し、捨てるかどうかは正規化に任せる", () => {
+  it("leaves malformed values as they are and lets normalization decide to drop them", () => {
     const v2 = migrateV1ToV2({
       field: { zone: "middle" },
       players: [null, { position: { lateralYard: 1, absoluteYard: "x" } }],
@@ -65,14 +65,14 @@ describe("migrateV1ToV2", () => {
     expect(v2.lines).toEqual([7, { waypoints: "none", end: null, thickness: "thick" }]);
   });
 
-  it("配列でない players と lines はそのまま残す", () => {
+  it("leaves non-array players and lines as they are", () => {
     const v2 = migrateV1ToV2({ field: { zone: "middle" }, players: "p", lines: 3 });
 
     expect(v2.players).toBe("p");
     expect(v2.lines).toBe(3);
   });
 
-  it("選手、線、waypoint は正規化と同じ上限の個数までしか直さない", () => {
+  it("converts players, lines, and waypoints only up to the normalization limits", () => {
     const point = { lateralYard: 1, absoluteYard: 50 };
     const v2 = migrateV1ToV2({
       field: { zone: "middle" },

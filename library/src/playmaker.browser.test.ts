@@ -3,11 +3,11 @@ import { page, userEvent } from "vitest/browser";
 import { FORMATION_PRESETS, type PlayData, Playmaker, type PlaymakerOptions } from "./playmaker.js";
 import { must } from "./test-support/must.js";
 
-// 右に 200px のパネル、上にツールバーを置いても、canvas に選手を置ける広さが残る大きさ。
+// Big enough to leave room for players on the canvas beside the 200px panel and the toolbar.
 const CONTAINER_WIDTH = 800;
 const CONTAINER_HEIGHT = 600;
 
-// canvas の左上からの位置。どちらもゾーンの窓の中に収まる。
+// Positions from the top-left corner of the canvas. Both fall inside the zone's window.
 const SPOT = { x: 300, y: 250 };
 const OTHER_SPOT = { x: 300, y: 120 };
 
@@ -39,14 +39,14 @@ function button(name: string) {
   return page.getByRole("button", { name, exact: true });
 }
 
-/** 選手の追加ツールで canvas の SPOT をクリックし、選手を 1 人置く。 */
+/** Clicks SPOT on the canvas with the Add player tool, placing one player. */
 async function addPlayerAtSpot(container: HTMLElement): Promise<void> {
   await button("Add player").click();
   await userEvent.click(canvasIn(container), { position: SPOT });
 }
 
-describe("置く要素", () => {
-  it("edit モードでは、canvas とツールバーとパネルを container に置く", () => {
+describe("Placed elements", () => {
+  it("places the canvas, the toolbar, and the panel in the container in edit mode", () => {
     const { container } = mount();
 
     expect(container.querySelector("canvas")).not.toBeNull();
@@ -55,7 +55,7 @@ describe("置く要素", () => {
     expect(container.querySelector(".playmaker-root")).toHaveAttribute("lang", "en");
   });
 
-  it("view モードでは、canvas だけを置き、ツールバーとパネルは置かない", () => {
+  it("places only the canvas in view mode, without the toolbar or the panel", () => {
     const { container } = mount({ mode: "view" });
 
     expect(container.querySelector("canvas")).not.toBeNull();
@@ -63,7 +63,7 @@ describe("置く要素", () => {
     expect(container.querySelector(".playmaker-panel")).toBeNull();
   });
 
-  it("canvas の描画バッファを、表示される大きさと DPR に合わせて確保する", async () => {
+  it("sizes the canvas drawing buffer to the displayed size times the DPR", async () => {
     const { container } = mount();
     const canvas = canvasIn(container);
 
@@ -73,7 +73,7 @@ describe("置く要素", () => {
     expect(canvas.height).toBe(Math.round(canvas.clientHeight * window.devicePixelRatio));
   });
 
-  it("dispose すると、container に置いた要素をすべて取り除く", () => {
+  it("removes every element placed in the container on dispose", () => {
     const { container, playmaker } = mount();
 
     playmaker.dispose();
@@ -82,8 +82,8 @@ describe("置く要素", () => {
   });
 });
 
-describe("ポインタでの編集", () => {
-  it("選手の追加ツールで canvas をクリックすると、選手を 1 人足して onChange を 1 回呼ぶ", async () => {
+describe("Pointer editing", () => {
+  it("adds one player and calls onChange once when the canvas is clicked with Add player", async () => {
     const onChange = vi.fn<(data: PlayData) => void>();
     const { container } = mount({ onChange });
 
@@ -93,7 +93,7 @@ describe("ポインタでの編集", () => {
     expect(onChange.mock.lastCall?.[0].players).toHaveLength(1);
   });
 
-  it("選手を canvas の上の方へドラッグして離すと、選手をダウンフィールドへ動かす", async () => {
+  it("moves the player downfield when it is dragged up the canvas and released", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
     await button("Select").click();
@@ -108,7 +108,7 @@ describe("ポインタでの編集", () => {
     expect(must(playmaker.getPlayData().players[0]).position.downfieldYard).toBeGreaterThan(before);
   });
 
-  it("線を描くツールで選手から描き始め、ダブルクリックすると線を 1 本足す", async () => {
+  it("adds one line when Draw line starts at a player and ends with a double-click", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
     const canvas = canvasIn(container);
@@ -120,7 +120,7 @@ describe("ポインタでの編集", () => {
     expect(playmaker.getPlayData().lines).toHaveLength(1);
   });
 
-  it("view モードに切り替えると、canvas をクリックしても選手を足さない", async () => {
+  it("adds no player on a canvas click after switching to view mode", async () => {
     const { container, playmaker } = mount();
     await button("Add player").click();
 
@@ -131,8 +131,8 @@ describe("ポインタでの編集", () => {
   });
 });
 
-describe("キー操作", () => {
-  it("canvas を押したあとで Ctrl+Z を押すと、直前の編集を取り消す", async () => {
+describe("Keyboard", () => {
+  it("undoes the last edit when Ctrl+Z is pressed after a click on the canvas", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
@@ -141,7 +141,7 @@ describe("キー操作", () => {
     expect(playmaker.getPlayData().players).toEqual([]);
   });
 
-  it("ツールバーのボタンを押した直後でも、Ctrl+Z で直前の編集を取り消す", async () => {
+  it("undoes the last edit with Ctrl+Z right after a toolbar button is pressed", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
@@ -152,8 +152,8 @@ describe("キー操作", () => {
   });
 });
 
-describe("ツールバー", () => {
-  it("元に戻すボタンを押すと、直前の編集を取り消す", async () => {
+describe("Toolbar", () => {
+  it("undoes the last edit when the Undo button is pressed", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
@@ -162,7 +162,7 @@ describe("ツールバー", () => {
     expect(playmaker.getPlayData().players).toEqual([]);
   });
 
-  it("ゾーンのボタンを押すと、フィールドゾーンを切り替える", async () => {
+  it("switches the field zone when a zone button is pressed", async () => {
     const { playmaker } = mount();
 
     await button("Own red zone").click();
@@ -170,7 +170,7 @@ describe("ツールバー", () => {
     expect(playmaker.fieldZone).toBe("own-redzone");
   });
 
-  it("フォーメーションを選ぶと、その隊形の選手を置く", async () => {
+  it("places the players of the formation when a formation is selected", async () => {
     const { playmaker } = mount();
     const formation = must(FORMATION_PRESETS[0]);
 
@@ -180,8 +180,8 @@ describe("ツールバー", () => {
   });
 });
 
-describe("プロパティパネル", () => {
-  it("選手を選んでラベルを書き換えると、その選手のラベルを変える", async () => {
+describe("Property panel", () => {
+  it("changes the label of the selected player when the label is rewritten", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
@@ -191,7 +191,7 @@ describe("プロパティパネル", () => {
     expect(must(playmaker.getPlayData().players[0]).label).toBe("QB");
   });
 
-  it("ラベルを確定して Tab で次の入力へ移ると、フォーカスは移った先に残る", async () => {
+  it("keeps focus on the next input when the label is committed with Tab", async () => {
     const { container } = mount();
     await addPlayerAtSpot(container);
 
@@ -201,7 +201,7 @@ describe("プロパティパネル", () => {
     expect(document.activeElement).toBe(page.getByRole("combobox", { name: "Shape" }).element());
   });
 
-  it("色のスウォッチを押すと、選んでいる選手にテーマの色と塗りを入れる", async () => {
+  it("gives the selected player the theme color and fill when a swatch is pressed", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
@@ -210,7 +210,7 @@ describe("プロパティパネル", () => {
     expect(playmaker.getPlayData().players[0]).toMatchObject({ color: "#d32f2f", fill: "solid" });
   });
 
-  it("祖先の要素で選手の既定色を変えて refresh すると、その色の枠線のスウォッチが押された状態になる", async () => {
+  it("marks the outline swatch of the player color set on an ancestor as pressed after refresh", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
@@ -228,7 +228,7 @@ describe("プロパティパネル", () => {
   });
 });
 
-describe("locale", () => {
+describe("Locale", () => {
   it("shows the toolbar in Japanese and marks the root as Japanese when the locale is ja", () => {
     const { container } = mount({ locale: "ja" });
 
@@ -237,8 +237,8 @@ describe("locale", () => {
   });
 });
 
-describe("読み直し", () => {
-  it("setPlayData で読み直したあとも、ツールバーとポインタで編集できる", async () => {
+describe("Reload", () => {
+  it("still edits with the toolbar and pointer after a reload with setPlayData", async () => {
     const { container, playmaker } = mount();
 
     playmaker.setPlayData(playmaker.getPlayData());
@@ -247,7 +247,7 @@ describe("読み直し", () => {
     expect(playmaker.getPlayData().players).toHaveLength(1);
   });
 
-  it("ツールバーにフォーカスがあるときに読み直すと、フォーカスを canvas へ移す", async () => {
+  it("moves focus to the canvas when a reload happens while the toolbar has focus", async () => {
     const { container, playmaker } = mount();
     await button("Select").click();
 
@@ -257,8 +257,8 @@ describe("読み直し", () => {
   });
 });
 
-describe("PNG の書き出し", () => {
-  it("exportToPng を呼ぶと、PNG の Blob を返す", async () => {
+describe("PNG export", () => {
+  it("returns a PNG Blob from exportToPng", async () => {
     const { playmaker } = mount();
 
     const blob = await playmaker.exportToPng();

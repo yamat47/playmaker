@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { twoPlayersWithRoute } from "../../test-support/fixtures.js";
 import { openPlay, type PlayDriver, yd } from "../../test-support/play-driver.js";
 
-/** 選手を 1 人足してから、ゾーンを切り替えた図。 */
+/** A diagram that added one player and then switched the zone. */
 function openAfterTwoEdits(): PlayDriver {
   const play = openPlay(twoPlayersWithRoute());
   play.editor.setTool("add-player");
@@ -12,7 +12,7 @@ function openAfterTwoEdits(): PlayDriver {
   return play;
 }
 
-/** ゾーンを切り替えたあと、選手 a を掴んで動かしている途中の図。 */
+/** A diagram that switched the zone and is now in the middle of dragging player a. */
 function openDraggingAfterZoneSwitch(): PlayDriver {
   const play = openPlay(twoPlayersWithRoute());
   play.session.setFieldZone("redzone");
@@ -21,7 +21,7 @@ function openDraggingAfterZoneSwitch(): PlayDriver {
   return play;
 }
 
-/** ゾーンの切替を Undo したあと、選手 a から描き始めた図。 */
+/** A diagram that undid a zone switch and then started drawing from player a. */
 function openDrawingWithRedo(): PlayDriver {
   const play = openPlay(twoPlayersWithRoute());
   play.session.setFieldZone("redzone");
@@ -34,14 +34,14 @@ function playerIds(play: PlayDriver): string[] {
   return play.session.getPlayData().players.map((p) => p.id);
 }
 
-describe("Undo と Redo", () => {
-  it("開いた直後は、Undo も Redo もできない", () => {
+describe("Undo and Redo", () => {
+  it("allows neither Undo nor Redo right after opening", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     expect(play.editor.getViewState()).toMatchObject({ canUndo: false, canRedo: false });
   });
 
-  it("編集を確定すると、Undo できるようになる", () => {
+  it("allows Undo once an edit is committed", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.session.setFieldZone("redzone");
@@ -49,7 +49,7 @@ describe("Undo と Redo", () => {
     expect(play.editor.getViewState()).toMatchObject({ canUndo: true, canRedo: false });
   });
 
-  it("Undo は、最後に確定した編集から順に戻す", () => {
+  it("reverts the most recently committed edit first on Undo", () => {
     const play = openAfterTwoEdits();
 
     play.editor.undo();
@@ -58,7 +58,7 @@ describe("Undo と Redo", () => {
     expect(playerIds(play)).toEqual(["a", "b", "player-1"]);
   });
 
-  it("確定した編集をすべて Undo すると、開いたときの図に戻り、Undo できなくなる", () => {
+  it("returns to the opened diagram and disables Undo once every edit is undone", () => {
     const play = openAfterTwoEdits();
 
     play.editor.undo();
@@ -68,7 +68,7 @@ describe("Undo と Redo", () => {
     expect(play.editor.getViewState()).toMatchObject({ canUndo: false, canRedo: true });
   });
 
-  it("Undo したあとに Redo すると、戻した編集を戻した順と逆にやり直す", () => {
+  it("redoes the undone edits in reverse order of undoing when Redo follows Undo", () => {
     const play = openAfterTwoEdits();
     const edited = play.session.getPlayData();
     play.editor.undo();
@@ -80,7 +80,7 @@ describe("Undo と Redo", () => {
     expect(play.session.getPlayData()).toEqual(edited);
   });
 
-  it("Undo したあとに別の編集を確定すると、Redo できなくなる", () => {
+  it("disables Redo when another edit is committed after Undo", () => {
     const play = openAfterTwoEdits();
     play.editor.undo();
 
@@ -90,7 +90,7 @@ describe("Undo と Redo", () => {
     expect(play.editor.getViewState().canRedo).toBe(false);
   });
 
-  it("戻す編集が無いときの Undo と Redo は、通知を出さない", () => {
+  it("does not notify on Undo or Redo when there is nothing to revert or redo", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.undo();
@@ -100,8 +100,8 @@ describe("Undo と Redo", () => {
   });
 });
 
-describe("通知の時点の履歴", () => {
-  it("ドラッグを確定した通知の中で読む canUndo は、確定したあとの値になっている", () => {
+describe("History at notification time", () => {
+  it("exposes the post-commit canUndo inside the notification that commits a drag", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.pointerDown(yd(10, 0));
     play.editor.pointerMove(yd(12, 2));
@@ -113,7 +113,7 @@ describe("通知の時点の履歴", () => {
     expect(seen).toEqual([true, true]);
   });
 
-  it("Undo の通知の中で読む canRedo は、Undo したあとの値になっている", () => {
+  it("exposes the post-Undo canRedo inside the notification of the Undo", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.session.setFieldZone("redzone");
     const seen: boolean[] = [];
@@ -125,8 +125,8 @@ describe("通知の時点の履歴", () => {
   });
 });
 
-describe("途中の操作と履歴", () => {
-  it("ドラッグの途中で Undo すると、直前に確定した編集を戻す", () => {
+describe("History during an operation in progress", () => {
+  it("reverts the last committed edit when Undo runs during a drag", () => {
     const play = openDraggingAfterZoneSwitch();
 
     play.editor.undo();
@@ -134,7 +134,7 @@ describe("途中の操作と履歴", () => {
     expect(play.session.fieldZone).toBe("middle");
   });
 
-  it("ドラッグの途中で Undo すると、そのあと離しても選手は動かない", () => {
+  it("does not move the player on release when Undo ran during the drag", () => {
     const play = openDraggingAfterZoneSwitch();
 
     play.editor.undo();
@@ -143,7 +143,7 @@ describe("途中の操作と履歴", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("作図の途中で Redo すると、作図をやめる", () => {
+  it("stops drawing when Redo runs while drawing", () => {
     const play = openDrawingWithRedo();
 
     play.editor.redo();
@@ -151,7 +151,7 @@ describe("途中の操作と履歴", () => {
     expect(play.editor.getViewState().isDrawing).toBe(false);
   });
 
-  it("作図の途中で Redo すると、取り消した編集をやり直す", () => {
+  it("redoes the undone edit when Redo runs while drawing", () => {
     const play = openDrawingWithRedo();
 
     play.editor.redo();

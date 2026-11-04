@@ -14,7 +14,7 @@ import type { ILayerRenderer, RenderFrame } from "./layer.js";
 
 interface FieldTheme {
   readonly fieldColor: string;
-  /** サイドラインの外と、縦横比が合わない分の余白。 */
+  /** Outside the sidelines, and the margin left over when the aspect ratio does not match. */
   readonly oobColor: string;
   readonly endzoneColor: string;
   readonly lineColor: string;
@@ -24,7 +24,10 @@ interface FieldTheme {
   readonly goalpostColor: string;
 }
 
-/** 窓に映るフィールドの外枠（px）。サイドラインが left と right、窓の上下の端が top と bottom。 */
+/**
+ * The outer frame (px) of the field shown in the window. The sidelines are left and right, and the
+ * top and bottom edges of the window are top and bottom.
+ */
 interface FieldBounds {
   readonly left: number;
   readonly right: number;
@@ -32,16 +35,21 @@ interface FieldBounds {
   readonly bottom: number;
 }
 
-/** ゴールポストの柱を伸ばす向き。自陣のエンドゾーンは画面の下にあるので上へ、相手のは下へ伸ばす。 */
+/**
+ * The direction the goalpost uprights extend. The own end zone is at the bottom of the screen, so
+ * its uprights extend upward, and the opponent's extend downward.
+ */
 type UprightDirection = "toward-top" | "toward-bottom";
 
-// 数字の横に置く、近いほうのゴールを指す三角の寸法（ヤード）。数字より目立たないよう小さくする。
+// Size (yards) of the triangle beside each number that points to the nearer goal. It is kept small
+// so that it stands out less than the number.
 const ARROW_LENGTH_YARDS = 0.8;
 const ARROW_HALF_WIDTH_YARDS = 0.3;
 const ARROW_OFFSET_FROM_NUMBER_YARDS = 2.5;
-// 数字を置く、サイドラインからの距離。三角も同じ列に置いて縦に揃える。
+// Distance of the numbers from the sideline. The triangles share the column to line up vertically.
 const NUMBER_FROM_SIDELINE_YARDS = 6;
-// 2 桁の数字はヤードラインをまたいで置くので、本物のフィールドと同じく桁の間を空けてラインを通す。
+// Two-digit numbers straddle the yard line, so the digits are spaced apart to let the line pass
+// between them, as on a real field.
 const NUMBER_DIGIT_SPACING_PER_HEIGHT = 0.18;
 
 function fieldTheme(read: ThemeReader): FieldTheme {
@@ -58,7 +66,7 @@ function fieldTheme(read: ThemeReader): FieldTheme {
 }
 
 export class FieldRenderer implements ILayerRenderer {
-  /** geometry の窓に従って、1 フレーム分のフィールドを描く。 */
+  /** Draws one frame of the field according to the window of geometry. */
   draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const { geometry, metrics } = frame;
     const theme = fieldTheme(frame.theme);
@@ -83,7 +91,7 @@ export class FieldRenderer implements ILayerRenderer {
     this.drawEndZoneMarkers(ctx, geometry, bounds, metrics, theme);
   }
 
-  /** エンドゾーンのうち窓に映る範囲を塗る。中に線は引かない。 */
+  /** Fills the part of the end zones that falls in the window. No lines are drawn inside them. */
   private drawEndZones(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
@@ -105,8 +113,8 @@ export class FieldRenderer implements ILayerRenderer {
   }
 
   /**
-   * 1 ヤードごとのハッシュと、サイドラインの目盛を描く。5 ヤードの倍数はヤードラインが覆うので省き、
-   * エンドゾーンには引かない。
+   * Draws the hash marks at every yard and the ticks on the sidelines. Multiples of 5 yards are
+   * skipped because the yard lines cover them, and nothing is drawn in the end zones.
    */
   private drawHashes(
     ctx: CanvasRenderingContext2D,
@@ -142,7 +150,10 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.stroke();
   }
 
-  /** 5 ヤードごとのヤードラインと、窓の外枠を描く。ゴールラインは外枠と同じ太さで、色で見分ける。 */
+  /**
+   * Draws the yard lines every 5 yards and the outer frame of the window. The goal lines are as
+   * thick as the frame and are told apart by color.
+   */
   private drawYardLines(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
@@ -169,7 +180,7 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.lineWidth = metrics.midfieldLineWidth;
     ctx.stroke(midPath);
 
-    // サイドラインと、窓の上下の端。
+    // The sidelines and the top and bottom edges of the window.
     ctx.lineWidth = metrics.goalLineWidth;
     ctx.beginPath();
     ctx.moveTo(left, top);
@@ -188,9 +199,9 @@ export class FieldRenderer implements ILayerRenderer {
   }
 
   /**
-   * 10 ヤードごとのヤードラインに数字と方向の三角を描く。数字は両サイドラインから読めるよう
-   * 上下を反転させ、三角は近いほうのゴールを指す。センターの 50 には三角を描かず、
-   * displayYardNumber が null を返すゴールラインとエンドゾーンには何も描かない。
+   * Draws the number and the direction triangle at every 10-yard line. The numbers are flipped so
+   * they read from both sidelines, and the triangles point to the nearer goal. No triangle is drawn
+   * at the 50, and nothing at the goal lines and end zones, where displayYardNumber returns null.
    */
   private drawNumbers(
     ctx: CanvasRenderingContext2D,
@@ -207,8 +218,9 @@ export class FieldRenderer implements ILayerRenderer {
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
 
-    // 桁の間の隙間の中心をヤードラインに合わせ、各桁は測った幅で隙間の端から置く。
-    // ctx.letterSpacing で空けないのは、末尾の字の後ろにも間隔が付き、中央揃えが片側へずれるため。
+    // The center of the gap between the digits sits on the yard line, and each digit is placed from
+    // the edge of the gap by its measured width. ctx.letterSpacing is not used for the gap because
+    // it also adds space after the last glyph, which shifts the centering to one side.
     const gap = metrics.numberHeight * NUMBER_DIGIT_SPACING_PER_HEIGHT;
     const drawRotatedLabel = (label: string, x: number, y: number, rotation: number): void => {
       const [head, tail] = [...label];
@@ -255,7 +267,7 @@ export class FieldRenderer implements ILayerRenderer {
     }
   }
 
-  /** エンドゾーンの 4 隅にパイロン、エンドライン中央にゴールポストを描く。 */
+  /** Draws pylons at the end zone's four corners and a goalpost at the center of the end line. */
   private drawEndZoneMarkers(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,
@@ -290,7 +302,7 @@ export class FieldRenderer implements ILayerRenderer {
     }
   }
 
-  /** エンドラインの中央に、横木と 2 本の柱を描く。柱はフィールドの側へ伸ばす。 */
+  /** Draws the crossbar and two uprights centered on the end line, uprights toward the field. */
   private drawGoalpost(
     ctx: CanvasRenderingContext2D,
     geometry: FieldGeometry,

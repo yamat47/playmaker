@@ -20,7 +20,7 @@ import { SWATCH_TOKENS } from "../theme/palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
 import { replaceKeepingFocus } from "./focus.js";
 
-/** 色を選ぶ丸いボタン 1 つ分。枠線のスウォッチは縁だけを色にし、塗りつぶしは中まで塗る。 */
+/** One round color button. An outline swatch colors only its rim; a solid one fills the inside. */
 interface SwatchChoice {
   readonly name: string;
   readonly color: string;
@@ -42,20 +42,23 @@ function createSwatch({ name, color, fill }: SwatchChoice): HTMLButtonElement {
   return btn;
 }
 
-/** 選択中の要素。選択は 1 つなので、選手と線が同時に来ることは型で起こらない。 */
+/** The selected item. Selection is single, so the type never has a player and a line at once. */
 type SelectedItem =
   | { readonly kind: "player"; readonly player: Player }
   | { readonly kind: "line"; readonly line: Line }
   | { readonly kind: "none" };
 
-/** 入力に渡す値と、値が変わったときに呼ぶ関数。onReset を渡すと、既定に戻すボタンが付く。 */
+/**
+ * The values passed to an input and the function called when the value changes. Passing onReset
+ * adds a button that restores the default.
+ */
 interface InputOptions<T> {
   readonly label: string;
   readonly onChange: (value: T) => void;
   readonly onReset?: () => void;
 }
 
-/** 表示中の入力と、選択中の要素の値をその入力に書き込む関数。 */
+/** The inputs on display, and the function that writes the selected item's values into them. */
 type ShownFields =
   | { readonly kind: "player"; readonly id: string; readonly update: (player: Player) => void }
   | { readonly kind: "line"; readonly id: string; readonly update: (line: Line) => void }
@@ -66,12 +69,13 @@ export class PropertyPanel extends Disposable {
   private readonly controller: IEditorUi;
   private readonly focusFallback: HTMLElement;
   private readonly messages: Messages;
-  // 選択中の要素が同じあいだは入力を作り直さず、値だけを書き込む。作り直すと、
-  // 値を確定して Tab で次の入力へ移った直後に、移った先の入力ごと消えてフォーカスが外れる。
+  // While the selected item stays the same, the inputs are kept and only their values are written.
+  // Rebuilding them would remove the input Tab just moved to after a commit, and drop the focus.
   private shown: ShownFields | undefined;
 
   /**
-   * @param focusFallback 選択が変わって入力を作り直したときに、消えた入力にあったフォーカスを移す先。
+   * @param focusFallback Where the focus goes when a selection change rebuilds the inputs and
+   *   removes the input that had it.
    */
   constructor(
     parent: HTMLElement,
@@ -92,7 +96,10 @@ export class PropertyPanel extends Disposable {
     this.sync();
   }
 
-  /** 色の既定値とスウォッチはテーマ変数から読むので、ホストが変数を変えたあとに呼べば反映される。 */
+  /**
+   * The default colors and swatches are read from the theme variables, so a call after the host
+   * changes the variables picks up the change.
+   */
   refresh(): void {
     this.shown = undefined;
     this.sync();
@@ -162,8 +169,8 @@ export class PropertyPanel extends Disposable {
     const setShape = this.addSelect(messages.shape, PLAYER_SHAPE_VALUES, messages.shapes, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
-    // 4 色それぞれの枠線と塗りつぶしを並べた 8 つのスウォッチ。上の段が枠線、下の段が塗りつぶし。
-    // 「塗りつぶしか枠線か」を別の選択肢にせず、色と一緒に 1 回で選べるようにする。
+    // Eight swatches, outline and solid for each of the four colors. The top row is outline, the
+    // bottom row solid. Instead of a separate "solid or outline" choice, both are picked at once.
     const read = createThemeReader(this.element);
     const choices = PLAYER_FILL_VALUES.flatMap((fill) =>
       SWATCH_TOKENS.map((token) => ({
@@ -176,7 +183,7 @@ export class PropertyPanel extends Disposable {
       onChange: ({ color, fill }) => controller.updateSelectedPlayer({ color, fill }),
       onReset: () => controller.updateSelectedPlayer({ color: null, fill: null }),
     });
-    // 色を省いた選手は、テーマの既定色の枠線のスウォッチが押された状態になる。
+    // A player with no color shows the outline swatch of the theme's default color as pressed.
     const defaultColor = read("playerColor");
     return (player) => {
       setLabel(player.label);
@@ -217,7 +224,7 @@ export class PropertyPanel extends Disposable {
     return (line) => {
       setKind(line.kind);
       setInterpolation(line.interpolation);
-      // 保存済みの色は外から渡されたデータのこともあるので、テーマの色と同じ書き方にそろえて比べる。
+      // A saved color may come from outside, so it is normalized like the theme colors to compare.
       const color = line.color === undefined ? undefined : normalizeCssColor(line.color);
       setPressed((choice) => choice.color === color);
       setThickness(line.thickness ?? DEFAULT_LINE_THICKNESS);
@@ -239,8 +246,8 @@ export class PropertyPanel extends Disposable {
   }
 
   /**
-   * ボタンを並べた行。label で包むと、文字を押したときに先頭のボタンが押されるので、
-   * ボタンの組に名前を付ける。
+   * A row of buttons. Wrapping it in a label would press the first button when the text is clicked,
+   * so the group of buttons is named instead.
    */
   private addGroupRow(
     labelText: string,
@@ -260,8 +267,8 @@ export class PropertyPanel extends Disposable {
   }
 
   /**
-   * onReset を渡すと、値を消してテーマの既定に戻すボタンを行の末尾に置く。
-   * 既定のときもボタンは押せるままにする。押した直後に無効にすると、フォーカスが body へ落ちる。
+   * With onReset, a button that clears the value back to the theme default ends the row.
+   * It stays enabled even at the default; disabling it right after a press drops the focus to body.
    */
   private appendRow(
     labelText: string,
@@ -311,8 +318,8 @@ export class PropertyPanel extends Disposable {
   }
 
   /**
-   * 色のスウォッチを並べた行。選んだ choice を onChange に渡す。
-   * 返す関数に、押された状態にする choice の判定を渡して、表示を選択中の要素に合わせる。
+   * A row of color swatches. The chosen choice is passed to onChange.
+   * The returned function takes a predicate for the pressed choice, to match the selected item.
    */
   private addSwatches<T extends SwatchChoice>(
     label: string,

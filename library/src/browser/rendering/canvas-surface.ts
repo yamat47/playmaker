@@ -21,8 +21,8 @@ import {
 } from "./layer.js";
 
 /**
- * Canvas の大きさ、DPR、再描画の時機を受け持ち、渡された図を層ごとに描く。
- * 何を描くか（プレビューの合成、選択の強調）は、図を渡す側が決める。
+ * Owns the canvas size, the DPR, and when to redraw, and draws the given diagram layer by layer.
+ * What to draw (preview composition, selection highlight) is decided by whoever passes the diagram.
  */
 export class CanvasSurface extends Disposable {
   readonly canvas: HTMLCanvasElement;
@@ -32,7 +32,7 @@ export class CanvasSurface extends Disposable {
   private overlay: EditorOverlay | undefined;
   private frameRequest: number | undefined;
   private dpr = 0;
-  // 破棄するときに、DPR の見張りをまとめて外す。
+  // Removes the DPR watchers all at once on dispose.
   private readonly lifetime = new AbortController();
 
   constructor(
@@ -67,21 +67,22 @@ export class CanvasSurface extends Disposable {
       }),
     );
 
-    // 最初の描画は、observe した直後の ResizeObserver の通知で行う。構築した時点ではホストが
-    // ツールバーやパネルをまだ並べておらず、ここで描くとすぐに大きさが変わって描き直しになる。
+    // The first draw is left to the ResizeObserver notification after observe. When constructed,
+    // the host has not placed the toolbar or panel, so a draw here would be thrown away by the
+    // resize that follows.
     this.watchDevicePixelRatio();
     this.redrawWhenFontLoads();
   }
 
-  /** テーマ変数は描くたびに読み直すので、ホストが変数を変えたあとに呼べば反映される。 */
+  /** Theme variables are re-read per draw, so a call after the host changes them takes effect. */
   refresh(): void {
     this.invalidate();
   }
 
   /**
-   * 図とオーバーレイを差し替える。描くのは次のフレームなので、
-   * 同じフレームの中で何度差し替えても描くのは 1 回になる。
-   * overlay を省くと、格子と選択の強調のような編集中だけの層を描かない（view モード）。
+   * Replaces the diagram and the overlay. Drawing happens on the next frame, so
+   * replacing them any number of times within the same frame draws only once.
+   * Omitting overlay skips editing-only layers like the grid and selection highlight (view mode).
    */
   setScene(scene: SceneData, overlay: EditorOverlay | undefined): void {
     this.scene = scene;
@@ -89,21 +90,21 @@ export class CanvasSurface extends Disposable {
     this.invalidate();
   }
 
-  /** マウスイベントの clientX / clientY を、フィールドのヤードの位置に変える。 */
+  /** Converts clientX / clientY of a mouse event into a position in yards on the field. */
   clientToYard(clientX: number, clientY: number): FieldPosition {
     const rect = this.canvas.getBoundingClientRect();
     return this.measure().fromCanvas({ x: clientX - rect.left, y: clientY - rect.top });
   }
 
   /**
-   * 指定したプレー図を PNG（Blob）として書き出す。図の層だけで描くので、格子、選択の強調、
-   * ハンドルは入らない。配色は画面と同じテーマ変数から読む。
-   * 同梱フォントを読み込み終えてから描くので、構築の直後でも数字とラベルは同梱フォントになる。
+   * Exports the given play diagram as a PNG (Blob). Only the diagram layers are drawn, so the grid,
+   * selection highlight, and handles stay out. The colors come from the screen's theme variables.
+   * Drawing waits for the bundled font, so numbers and labels use it even right after construction.
    */
   async exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
     const { width, height } = resolveImageExportSize(data.field.zone, options);
-    // 配色は呼んだ時点の変数で決める。フォントを待つ間にホストが変数を戻したり、破棄して canvas が
-    // host から外れたりしても、書き出す色は変わらない。
+    // Colors are fixed at call time. If the host reverts the variables while the font loads, or if
+    // it disposes and the canvas leaves the host, the exported colors do not change.
     const theme = createThemeReader(this.host);
     await loadFieldFont();
     const canvas = document.createElement("canvas");
@@ -126,7 +127,10 @@ export class CanvasSurface extends Disposable {
     });
   }
 
-  /** 初回は代わりのフォントで描いて白い画面を避け、同梱フォントを読み込めたら描き直す。 */
+  /**
+   * Draws with the fallback font first to avoid a blank screen, then redraws once the bundled font
+   * has loaded.
+   */
   private redrawWhenFontLoads(): void {
     void loadFieldFont().then(() => {
       if (!this.isDisposed) {
@@ -135,28 +139,28 @@ export class CanvasSurface extends Disposable {
     });
   }
 
-  /** コンテナの大きさと DPR に合わせて、描画用のバッファを作り直す。 */
+  /** Rebuilds the drawing buffer to match the container size and the DPR. */
   private resize(): void {
     const dpr = window.devicePixelRatio || 1;
     const { clientWidth, clientHeight } = this.host;
     const width = Math.max(1, Math.round(clientWidth * dpr));
     const height = Math.max(1, Math.round(clientHeight * dpr));
-    // 要素の大きさが変わっても、バッファの大きさと DPR が同じなら描いた図がそのまま使える。
+    // Even if the element resized, the drawn diagram is reusable if the buffer size and DPR match.
     if (width === this.canvas.width && height === this.canvas.height && dpr === this.dpr) {
       return;
     }
     this.dpr = dpr;
     this.canvas.width = width;
     this.canvas.height = height;
-    // 以降は CSS px の座標で描く。geometry も CSS px で求める。
+    // From here on, drawing uses CSS px coordinates. The geometry is computed in CSS px as well.
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // バッファを作り直すと中身が消えるので、次のフレームを待たずに描く。
+    // Rebuilding the buffer clears its contents, so draw now instead of waiting for the next frame.
     this.cancelFrame();
     this.render();
   }
 
-  // resolution の media query は、今の DPR と合わなくなったときに 1 回だけ change を出す。
-  // ブラウザの拡大率やモニタが変わるたびに、新しい DPR で張り直す。
+  // A resolution media query fires change only once, when it no longer matches the current DPR.
+  // Each time the browser zoom or the monitor changes, it is re-attached with the new DPR.
   private watchDevicePixelRatio(): void {
     const query = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
     query.addEventListener(
@@ -170,7 +174,7 @@ export class CanvasSurface extends Disposable {
   }
 
   private invalidate(): void {
-    // 最初の大きさが決まる前は描かない。決まったときに resize が描く。
+    // No drawing before the initial size is known. resize draws once it is.
     if (this.frameRequest !== undefined || this.dpr === 0) {
       return;
     }
@@ -193,8 +197,8 @@ export class CanvasSurface extends Disposable {
   }
 
   /**
-   * 層を field、backdrop、play、editor の順に描く。overlay が無いときは編集中だけの層
-   * （backdrop と editor）を飛ばすので、view モードと PNG の書き出しは図の層だけになる。
+   * Draws the layers in the order field, backdrop, play, editor. Without an overlay, editing-only
+   * layers (backdrop and editor) are skipped, so view mode and PNG export use only diagram layers.
    */
   private paint(
     ctx: CanvasRenderingContext2D,
@@ -227,7 +231,7 @@ export class CanvasSurface extends Disposable {
     return new FieldGeometry(clientWidth, clientHeight, this.scene.field);
   }
 
-  // 大きさとテーマ変数は、canvas を置いた要素から読む。
+  // The size and the theme variables are read from the element the canvas was placed in.
   private get host(): HTMLElement {
     return this.canvas.parentElement ?? this.canvas;
   }

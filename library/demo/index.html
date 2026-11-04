@@ -11,7 +11,7 @@
       rel="stylesheet"
     />
     <style>
-      /* Material Design の配色。ページは灰色の下地に白い紙を置き、アプリバーだけを primary で塗る。 */
+      /* Material Design colors: white paper on a gray page; only the app bar is primary. */
       :root {
         --primary: #1976d2;
         --on-primary: #ffffff;
@@ -49,7 +49,7 @@
         font-size: 14px;
       }
 
-      /* このページがライブラリのホスト。公開の変数で、ライブラリの UI をページと同じ配色とフォントにする。 */
+      /* This page is the library's host. Public variables give its UI the page colors and font. */
       #app {
         --playmaker-ui-font: var(--ui);
         --playmaker-ui-accent: var(--primary);
@@ -59,7 +59,7 @@
         height: 100vh;
       }
 
-      /* ---- アプリバー ---- */
+      /* ---- App bar ---- */
       .topbar {
         position: relative;
         z-index: 1;
@@ -97,7 +97,7 @@
         gap: 4px;
       }
 
-      /* アプリバーの中は、primary の上に置く文字だけのボタン。 */
+      /* Inside the app bar, text-only buttons placed on primary. */
       .btn {
         font: inherit;
         font-weight: 500;
@@ -121,7 +121,7 @@
         outline-offset: 1px;
       }
 
-      /* 紙の上に置くボタンは、輪郭だけの primary。 */
+      /* Buttons placed on paper are primary, outline only. */
       .drawer .btn {
         border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
         color: var(--primary);
@@ -131,7 +131,7 @@
         background: var(--selected);
       }
 
-      /* ---- 本体（左のリスト＋ステージ） ---- */
+      /* ---- Body (the left list plus the stage) ---- */
       .body {
         display: flex;
         flex: 1;
@@ -192,7 +192,7 @@
         outline: 2px solid var(--primary);
         outline-offset: -2px;
       }
-      /* 種類を示すチップ。一覧の行と、表示中のプレーのカードで同じ形にする。 */
+      /* The kind chip. The list rows and the card for the current play share one shape. */
       .preset__tag,
       .playinfo__chip {
         font-family: var(--display);
@@ -219,7 +219,7 @@
         white-space: nowrap;
       }
 
-      /* ---- 表示中のプレーのカード ---- */
+      /* ---- Card for the play now showing ---- */
       .playinfo {
         border-top: 1px solid var(--divider);
         background: var(--surface);
@@ -252,7 +252,7 @@
         margin: 0;
       }
 
-      /* ---- ステージ（フィールド） ---- */
+      /* ---- Stage (the field) ---- */
       .stage-wrap {
         position: relative;
         flex: 1;
@@ -263,7 +263,7 @@
         inset: 12px;
       }
 
-      /* ---- 開発者ドロワー ---- */
+      /* ---- Developer drawer ---- */
       .drawer {
         background: var(--surface);
         border-top: 1px solid var(--divider);

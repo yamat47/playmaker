@@ -13,7 +13,7 @@ export class PlayerRenderer implements ILayerRenderer {
     const defaultColor = frame.theme("playerColor");
     const grass = frame.theme("fieldGrass");
     const label = frame.theme("playerLabel");
-    // 当たり判定と同じ半径の輪郭を描き、縁取りはその上に乗せる。
+    // The outline has the same radius as the hit area, and the stroke sits on top of it.
     const r = PLAYER_RADIUS_YARDS * geometry.scale;
     if (r <= 0) {
       return;
@@ -33,8 +33,9 @@ export class PlayerRenderer implements ILayerRenderer {
         const { halfSide } = outline;
         ctx.rect(center.x - halfSide, center.y - halfSide, halfSide * 2, halfSide * 2);
       }
-      // 枠線だけの選手も内側を芝の色で塗り、下を通る線を隠す。エンドゾーンに置いた選手も芝の色で塗る。
-      // 既定ではエンドゾーンと芝の差がわずかで気にならず、どこにいるかで塗りを変えるほどではない。
+      // Outline-only players get the grass color inside too, to hide lines that pass underneath.
+      // Players in the end zone get the grass color as well. By default the end zone and the grass
+      // differ too little to justify a fill that depends on position.
       ctx.fillStyle = isSolid ? color : grass;
       ctx.fill();
       ctx.lineWidth = metrics.markerStroke;
@@ -45,8 +46,8 @@ export class PlayerRenderer implements ILayerRenderer {
         ctx.fillStyle = isSolid ? label : color;
         ctx.font = fieldFont(fontPx);
         ctx.textAlign = "center";
-        // textBaseline を middle にすると、字の em ボックスの中央に揃うので、フォントによって上下にずれる。
-        // 測った字面の中央をマーカーの中心に合わせる。
+        // textBaseline middle aligns to the center of the em box, so it drifts up or down by font.
+        // The center of the measured glyph bounds is aligned to the marker center instead.
         ctx.textBaseline = "alphabetic";
         const tm = ctx.measureText(player.label);
         const labelY = center.y + (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent) / 2;

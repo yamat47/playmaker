@@ -10,7 +10,7 @@ import {
   Playmaker,
   type PlayPreset,
 } from "@yamat47/playmaker";
-// 配布版の JS は CSS を読み込まないので、利用者と同じく別に読む。
+// The distributed JS does not load the CSS, so load it separately, as the consumer does.
 import "@yamat47/playmaker/styles.css";
 
 function need<T extends HTMLElement>(id: string, type: new () => T): T {
@@ -31,8 +31,9 @@ const infoChip = need("playinfo-chip", HTMLElement);
 const infoPers = need("playinfo-pers", HTMLElement);
 const infoSummary = need("playinfo-summary", HTMLElement);
 
-// 静的 HTML のボタン/コンテナは HMR を跨いで生き残る。signal でリスナを束ねて再読込時に
-// 外し、コンテナは作り直す前に空にする（束ねないとホットリロードごとに多重登録される）。
+// Buttons and containers in the static HTML survive HMR. A signal bundles the listeners so a
+// reload removes them, and containers are emptied before being rebuilt (without the signal,
+// every hot reload registers the listeners again).
 const demoLifetime = new AbortController();
 const { signal } = demoLifetime;
 
@@ -48,8 +49,8 @@ const CATEGORY_META: Record<PlayCategory, { label: string; color: string }> = {
   pressure: { label: "PRES", color: "var(--cat-pres)" },
 };
 
-// 要素が多い図でも描画と操作が重くならないかを目で確かめる図。丸と四角、3 種の線、
-// straight と bezier、waypoint を複数持つ線を、1 回の読み込みですべて出す。
+// A diagram for a visual check that drawing and interaction stay fast with many elements. One load
+// shows circles and squares, 3 line kinds, straight and bezier, and lines with several waypoints.
 const STRESS_PLAYERS: Player[] = [
   { id: "ol-c", position: { lateralYard: 26.5, downfieldYard: -1 }, shape: "square", label: "C" },
   { id: "ol-lg", position: { lateralYard: 24, downfieldYard: -1 }, shape: "square", label: "LG" },
@@ -403,11 +404,11 @@ interface PresetRow {
   name: string;
   tag: string;
   tagColor: string;
-  /** 図を読み込めなかったときは false を返す。 */
+  /** Returns false when the diagram could not be loaded. */
   select: () => boolean;
 }
 
-// フォーメーションとプレー図で違うのは 1 行の見た目と押したときの処理だけなので、それを toRow で受け取る。
+// Formations and play diagrams differ only in a row's look and click action; toRow supplies both.
 function addSection<T extends { id: string; side: "offense" | "defense" }>(
   items: readonly T[],
   side: "offense" | "defense",
@@ -476,7 +477,7 @@ libraryScroll.append(groupTitle("Plays"));
 addSection(PLAY_PRESETS, "offense", "Offense", playRow);
 addSection(PLAY_PRESETS, "defense", "Defense", playRow);
 
-// 初期表示は先頭プレー図に同期する（左レールのハイライトと Play info も合わせる）。
+// The initial view syncs with the first play diagram (the left rail highlight and Play info too).
 const initialPreset = PLAY_PRESETS[0];
 if (initialPreset !== undefined) {
   const initialButton = libraryScroll.querySelector<HTMLButtonElement>(
@@ -523,7 +524,8 @@ async function downloadPng(): Promise<void> {
   a.href = url;
   a.download = `playmaker-${playmaker.mode}-${Date.now()}.png`;
   a.click();
-  // click() のダウンロードは環境により非同期。同期 revoke で取りこぼす環境があるため遅延する。
+  // click() downloads asynchronously in some environments, and a synchronous revoke drops the
+  // download there, so it is delayed.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   statusEl.textContent = `Exported PNG (${playmaker.mode} mode, ${Math.round(blob.size / 1024)} KB)`;
 }

@@ -8,13 +8,14 @@ import {
 import type { EditorRenderFrame, ILayerRenderer } from "./layer.js";
 
 /**
- * 位置を置ける格子点を薄い点で敷く。編集中だけの層なので、PNG と view モードには出ない。
- * 格子は横がサイドライン、縦が LOS を原点にしているが、LOS は整数ヤードにあるので、
- * 絶対ヤードで GRID_STEP_YARDS ごとに置いても同じ点になる。
+ * Lays faint dots on the grid points where a position can go. It is an editing-only layer, so it
+ * does not appear in the PNG or in view mode. The grid's origin is the sideline laterally and the
+ * LOS lengthwise, but the LOS is on a whole yard, so stepping absolute yards by GRID_STEP_YARDS
+ * gives the same points.
  */
 export class GridRenderer implements ILayerRenderer<EditorRenderFrame> {
-  // 点は数千個あり、ドラッグのたびに組み立て直すと描く時間の大半を占める。
-  // 窓と縮尺が同じ間は同じ path なので、前のフレームのものを使い回す。
+  // There are thousands of dots, and rebuilding them on every drag takes most of the drawing time.
+  // While the window and scale stay the same, so does the path, so the previous frame's is reused.
   private cached: { readonly key: string; readonly dots: Path2D } | undefined;
 
   draw(ctx: CanvasRenderingContext2D, frame: EditorRenderFrame): void {
@@ -34,13 +35,13 @@ export class GridRenderer implements ILayerRenderer<EditorRenderFrame> {
   }
 }
 
-// 点は 1〜2 px なので、円ではなく正方形で描いても見分けが付かず、塗る負荷が小さい。
+// The dots are 1 to 2 px, so squares are indistinguishable from circles and cheaper to fill.
 function gridDots(geometry: FieldGeometry, radius: number): Path2D {
   const dots = new Path2D();
   const size = 2 * radius;
   for (const yard of yardLinesInWindow(geometry.zone, GRID_STEP_YARDS)) {
-    // ヤードラインと窓の端の上には置かない。窓の端はどれも 5 ヤードの倍数だが、
-    // エンドゾーンの中（0 より手前と 100 より奥）にはヤードラインが無いので、そこには置く。
+    // No dots on the yard lines or the window edges. Every window edge is a multiple of 5 yards,
+    // but the end zones (before 0 and beyond 100) have no yard lines, so dots do go there.
     const { startYard, endYard } = geometry.yardWindow;
     const onYardLine = yard >= 0 && yard <= 100 && yard % YARD_LINE_INTERVAL_YARDS === 0;
     if (onYardLine || yard === startYard || yard === endYard) {

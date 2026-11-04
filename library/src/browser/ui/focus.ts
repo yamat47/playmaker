@@ -1,7 +1,7 @@
 /**
- * update で container の中身を作り直す。作り直す前に container の中にあったフォーカスが
- * 取り除かれた要素と一緒に消えたら、fallback へ移す。消えたフォーカスは body へ落ち、
- * ショートカットを受けている要素にキーが届かなくなるため。
+ * Rebuilds the contents of container with update. If the focus that was in container before the
+ * rebuild vanished along with a removed element, it is moved to fallback. Lost focus falls to body,
+ * and keys would no longer reach the element that receives the shortcuts.
  */
 export function replaceKeepingFocus(
   container: HTMLElement,

@@ -20,7 +20,7 @@ const LINE_COLOR_TOKENS = {
 } as const satisfies Record<LineKind, ThemeTokenName>;
 
 export class LineRenderer implements ILayerRenderer {
-  /** 起点の選手が見つからない線は描かない。 */
+  /** A line whose origin player cannot be found is not drawn. */
   draw(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
     const { geometry, metrics } = frame;
     const { lines, players } = frame.scene;
@@ -40,7 +40,7 @@ export class LineRenderer implements ILayerRenderer {
       }
 
       const color = line.color ?? frame.theme(LINE_COLOR_TOKENS[line.kind]);
-      // thickness は既定の太さに対する倍率なので、画面と PNG のどちらの縮尺でも見え方が揃う。
+      // thickness is a factor on the default width, so the look matches on screen and in the PNG.
       const width = this.widthFor(line.kind, metrics) * (line.thickness ?? DEFAULT_LINE_THICKNESS);
       const isBlock = line.kind === "block";
 
@@ -53,12 +53,13 @@ export class LineRenderer implements ILayerRenderer {
         ctx.setLineDash([...metrics.motionDash]);
       }
 
-      // 矢印を付ける線は、矢じりの根元で止める。先端まで引くと、線の丸いキャップが細くなる三角の先から
-      // はみ出して、先端に点が付いたように見える。block は T 字のバーを当てるので終点まで引く。
-      // 矢じりの向きと位置は、止める前の path から求める。
+      // A line with an arrow stops at the arrowhead's base. If drawn to the tip, its round cap
+      // would poke out past the narrowing tip of the triangle and look like a dot at the end.
+      // A block line gets a T bar, so it runs to the endpoint. The arrowhead's direction and
+      // position come from the path before trimming.
       const strokePath = isBlock ? path : trimForArrowHead(path, metrics.arrowLength);
       ctx.beginPath();
-      // 空のパスへの最初の lineTo は moveTo として働く。
+      // The first lineTo on an empty path acts as a moveTo.
       for (const pt of strokePath) {
         ctx.lineTo(pt.x, pt.y);
       }
@@ -78,7 +79,7 @@ export class LineRenderer implements ILayerRenderer {
     return kind === "block" ? metrics.blockWidth : metrics.routeWidth;
   }
 
-  /** 終点に、進む向きへ向けた三角の矢じりを描く。 */
+  /** Draws a triangular arrowhead at the endpoint, pointing in the direction of travel. */
   private drawArrowHead(
     ctx: CanvasRenderingContext2D,
     path: readonly CanvasPoint[],
@@ -99,7 +100,7 @@ export class LineRenderer implements ILayerRenderer {
     ctx.fill();
   }
 
-  /** 終点に、進む向きと直交する T 字のバーを描く。 */
+  /** Draws a T bar at the endpoint, perpendicular to the direction of travel. */
   private drawBlockCap(
     ctx: CanvasRenderingContext2D,
     path: readonly CanvasPoint[],

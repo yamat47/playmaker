@@ -6,10 +6,11 @@ import {
 import type { EditorRenderFrame, ILayerRenderer } from "./layer.js";
 
 /**
- * 選択の強調と、線の waypoint と終点のハンドルを描く。
+ * Draws the selection highlight and the handles for a line's waypoints and endpoint.
  *
- * 選択色は対象の外側に置き、対象には重ねない（選手はマーカーの外周のリング、線はハンドル）。
- * 線の色はパレットで選ばれるので、上から塗ると線の色と混ざって何色の線か読めなくなる。
+ * The selection color sits outside the target rather than over it (a ring around the player marker,
+ * handles on a line). Line colors come from the palette, so painting over would blend with the line
+ * color and hide which color the line is.
  */
 export class OverlayRenderer implements ILayerRenderer<EditorRenderFrame> {
   draw(ctx: CanvasRenderingContext2D, frame: EditorRenderFrame): void {
@@ -53,10 +54,10 @@ function drawLineHandles(
   const { geometry } = frame;
   const fill = frame.theme("selection");
   const outline = frame.theme("selectionOutline");
-  // アイコンは当たり判定の範囲（WAYPOINT_HANDLE_RADIUS_YARDS）の一部だけを描く。範囲いっぱいに
-  // 描くとマーカー並みに大きくなるので小さく出し、掴みやすさは当たり判定の広さに任せる。
+  // The icon covers only part of the hit area (WAYPOINT_HANDLE_RADIUS_YARDS). Drawn to the full
+  // area it would be as big as a marker, so it stays small and grabbing is left to the hit area.
   const handleHalf = Math.max(3, 0.45 * WAYPOINT_HANDLE_RADIUS_YARDS * geometry.scale);
-  // 現在の path（beginPath 済み）を、ハンドル共通の塗りと縁取りで仕上げる。
+  // Finishes the current path (after beginPath) with the fill and outline shared by all handles.
   const paintHandle = (): void => {
     ctx.fillStyle = fill;
     ctx.fill();
@@ -70,7 +71,7 @@ function drawLineHandles(
     ctx.rect(x - handleHalf, y - handleHalf, handleHalf * 2, handleHalf * 2);
     paintHandle();
   }
-  // 終点のハンドルは、waypoint の四角と見分けられるよう円で描く。
+  // The endpoint handle is a circle so it can be told apart from the waypoint squares.
   const { x, y } = geometry.toCanvas(handles.endpointHandle);
   ctx.beginPath();
   ctx.arc(x, y, handleHalf + 1, 0, Math.PI * 2);

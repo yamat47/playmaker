@@ -1,4 +1,4 @@
-/** 色を読むためだけの 2D コンテキスト。確保できなかったことも覚えておき、毎回作り直さない。 */
+/** A 2D context just to read colors. Failing to get one is remembered too, so it is not retried. */
 type ColorContext =
   | { readonly status: "unresolved" }
   | { readonly status: "unavailable" }
@@ -15,9 +15,9 @@ function resolveContext(): ColorContext {
 }
 
 /**
- * CSS の色を、canvas の fillStyle が返す書式にそろえる。
- * 書き方が違っても同じ色なら同じ文字列になり、不透明な色は `#rrggbb` の小文字になる。
- * 色として読めない値は undefined を返す。2D コンテキストを確保できないときは、値をそのまま返す。
+ * Normalizes a CSS color to the format that canvas fillStyle returns.
+ * The same color in any notation gives the same string. Opaque colors become lowercase `#rrggbb`.
+ * A value that is not a color gives undefined. Without a 2D context, the value is returned as is.
  */
 export function normalizeCssColor(value: string): string | undefined {
   const resolved = resolveContext();
@@ -25,8 +25,8 @@ export function normalizeCssColor(value: string): string | undefined {
     return value;
   }
   const { ctx } = resolved;
-  // 読めない値を代入しても、fillStyle は前の値のまま残る。
-  // 違う色から 2 回代入し、結果が揃えば読めた色とみなす。
+  // Assigning an unreadable value leaves fillStyle at its previous value.
+  // Assign twice from different colors; if the results agree, the value was read as a color.
   ctx.fillStyle = "#000000";
   ctx.fillStyle = value;
   const fromBlack = ctx.fillStyle;

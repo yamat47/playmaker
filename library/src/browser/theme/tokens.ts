@@ -1,4 +1,4 @@
-// Material Design のパレット。配色の考え方は docs/design.md の「テーマ」にある。
+// The Material Design palette. The reasoning behind the colors is in "Theme" in docs/design.md.
 const WHITE = "#ffffff";
 const BLACK = "#212121";
 const RED = "#d32f2f";
@@ -17,8 +17,8 @@ interface ThemeToken {
 }
 
 /**
- * Canvas に描く色のテーマ変数と、ホストが宣言していないときの既定値。
- * ツールバーとパネルの色は CSS だけで決まるので、ここには置かない。
+ * The theme variables for the colors drawn on the canvas, with defaults for when the host does not
+ * declare them. The toolbar and panel colors are decided by CSS alone, so they are not listed here.
  */
 export const THEME_TOKENS = {
   fieldGrass: { property: "--playmaker-field-grass", fallback: WHITE },
@@ -30,14 +30,17 @@ export const THEME_TOKENS = {
   fieldPylon: { property: "--playmaker-field-pylon", fallback: GREY_500 },
   fieldGoalpost: { property: "--playmaker-field-goalpost", fallback: GREY_500 },
   fieldGrid: { property: "--playmaker-field-grid", fallback: "rgba(0, 0, 0, 0.1)" },
-  /** 色を省いた選手の色。枠線だけの選手では枠とラベル、塗りつぶした選手では塗りになる。 */
+  /**
+   * The color of a player that omits its color. It is the outline and label of an outline player,
+   * and the fill of a solid player.
+   */
   playerColor: { property: "--playmaker-player-color", fallback: BLACK },
-  /** 塗りつぶした選手のラベルの色。枠線だけの選手のラベルは選手の色で書く。 */
+  /** The label color of a solid player. The label of an outline player uses the player's color. */
   playerLabel: { property: "--playmaker-player-label", fallback: WHITE },
   lineRoute: { property: "--playmaker-line-route", fallback: BLACK },
   lineBlock: { property: "--playmaker-line-block", fallback: BLACK },
   lineMotion: { property: "--playmaker-line-motion", fallback: BLACK },
-  /** パネルで選手と線に選べる 4 色。 */
+  /** The four colors the panel offers for players and lines. */
   swatch1: { property: "--playmaker-swatch-1", fallback: BLACK },
   swatch2: { property: "--playmaker-swatch-2", fallback: RED },
   swatch3: { property: "--playmaker-swatch-3", fallback: BLUE },
@@ -50,7 +53,10 @@ export type ThemeTokenName = keyof typeof THEME_TOKENS;
 
 export type ThemeReader = (token: ThemeTokenName) => string;
 
-/** 変数の値を読む関数から ThemeReader を作る。値が空か空白だけのトークンは、既定値で描く。 */
+/**
+ * Builds a ThemeReader from a function that reads a variable's value. A token whose value is empty
+ * or whitespace only draws with the default.
+ */
 export function themeReaderFrom(readProperty: (property: string) => string): ThemeReader {
   return (token) => {
     const { property, fallback } = THEME_TOKENS[token];

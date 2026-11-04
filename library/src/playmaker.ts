@@ -62,8 +62,8 @@ export type PlaymakerMode = "view" | "edit";
 
 export { PLAYMAKER_LOCALE_VALUES, type PlaymakerLocale };
 
-// バンドラは process.env.NODE_ENV を文字列に置き換える。置き換えずにブラウザで読み込むと
-// process が無く ReferenceError になるので、そのときは本番とみなす。
+// The bundler replaces process.env.NODE_ENV with a string literal. Loaded in a browser without
+// that replacement, `process` does not exist and throws a ReferenceError; treat that as production.
 declare const process: { readonly env: { readonly NODE_ENV?: string } };
 
 function isDevelopment(): boolean {
@@ -76,13 +76,16 @@ function isDevelopment(): boolean {
 
 export interface PlaymakerOptions {
   /**
-   * 最初のモード。既定は "edit"。"view" は編集 UI を置かず、ポインタとキーの操作も受けない。
-   * あとから `setMode` で切り替えられる。
+   * The initial mode. The default is "edit". "view" places no editing UI and accepts no pointer
+   * or keyboard input. `setMode` switches the mode later.
    */
   mode?: PlaymakerMode | undefined;
-  /** 最初に表示する図。`restorePlayData` と同じく、形を確かめずに受け取って今のスキーマへ寄せる。 */
+  /**
+   * The first diagram to show. Like `restorePlayData`, it is accepted without checking its shape
+   * and coerced to the current schema.
+   */
   initialData?: unknown;
-  /** 構築時に `onDidChange` へ登録するリスナ。解除するには Playmaker を dispose する。 */
+  /** A listener added to `onDidChange` at construction. Dispose the Playmaker to remove it. */
   onChange?: ((data: PlayData) => void) | undefined;
   /**
    * Language of the built-in UI (the toolbar and the property panel). The default is "en".
@@ -93,19 +96,19 @@ export interface PlaymakerOptions {
 }
 
 /**
- * container の中にプレー図を描き、edit モードでは編集 UI も置く。
- * dispose すると、置いた要素をすべて取り除く。
- * dispose したあとの変更は例外を投げずに何もせず、開発時だけ console.warn で知らせる。
- * getPlayData と fieldZone は、dispose した時点の図を返す。
+ * Draws the play diagram inside container and, in edit mode, also places the editing UI.
+ * dispose removes every element it placed.
+ * Changes after dispose do nothing instead of throwing; in development, console.warn reports it.
+ * getPlayData and fieldZone return the diagram as it was at dispose.
  */
 export class Playmaker implements IDisposable {
   /**
-   * 編集コマンドと Undo / Redo の確定ごとに 1 回、最新の図の深いコピーを渡す。
-   * `version` は常に現行なので、受け取った値をそのまま永続化できる。
-   * 構築時、`setPlayData` と `restorePlayData` での読み込み、PNG の書き出しでは発火しない
-   * （読み込みは編集ではないため）。
-   * コピーはリスナごとに作るので、受け手が書き換えても、この図とほかのリスナには波及しない。
-   * 返り値を dispose すると購読をやめる。
+   * Fires once per committed edit command or Undo / Redo, with a deep copy of the latest diagram.
+   * `version` is always the current one, so the received value can be persisted as is.
+   * Does not fire at construction, on loads through `setPlayData` and `restorePlayData`, or on PNG
+   * export (a load is not an edit).
+   * The copy is made per listener, so mutating it affects neither this diagram nor other listeners.
+   * Disposing the return value ends the subscription.
    */
   readonly onDidChange: Event<PlayData>;
   private readonly store = new DisposableStore();
@@ -115,7 +118,7 @@ export class Playmaker implements IDisposable {
   private currentMode: PlaymakerMode;
   private readonly messages: Messages;
   private panel: PropertyPanel | undefined;
-  // 今の controller に付けた UI と入力。controller かモードが変わると付け直す。
+  // UI and input attached to the current controller. Reattached when it or the mode changes.
   private ui: DisposableStore;
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
@@ -141,10 +144,10 @@ export class Playmaker implements IDisposable {
     this.root.appendChild(stage);
     const { scene, overlay } = this.session.controller.getFrame();
     this.surface = this.store.add(new CanvasSurface(stage, scene, this.surfaceOverlay(overlay)));
-    // CanvasSurface は最初の大きさが決まったときに今の図を描くので、ここでは描かない。
+    // CanvasSurface draws the current diagram once its first size is known, so no draw here.
     this.ui = this.createUi();
     this.store.add(this.session.onDidChangeScene(() => this.draw()));
-    // 読み直したあとは session が描き直しを通知するので、ここでは UI だけを付け直す。
+    // After a reload the session notifies a redraw itself, so only the UI is reattached here.
     this.store.add(this.session.onDidReset(() => this.replaceUi()));
   }
 
@@ -153,8 +156,9 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * モードを切り替える。図と Undo の履歴は残し、編集 UI とポインタ、キーの入力だけを付け外しする。
-   * view にすると、ドラッグや作図の途中の操作は取り消し、選択の強調も描かない。
+   * Switches the mode. The diagram and Undo history stay; only the editing UI and the pointer and
+   * key input are attached or detached. View cancels a drag or drawing in progress and draws no
+   * selection highlight.
    */
   setMode(mode: PlaymakerMode): void {
     if (this.store.isDisposed) {
@@ -178,8 +182,8 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * LOS をそのゾーンの既定の位置へ移し、選手と線も一緒に動かす。
-   * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
+   * Moves the LOS to the default position of that zone, and moves the players and lines with it.
+   * This is an edit, so Undo and onDidChange cover it. Callable in view mode as well.
    */
   setFieldZone(zone: FieldZone): void {
     if (this.store.isDisposed) {
@@ -190,11 +194,12 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * 隊形の選手を今の図に追記し、置いたら true を返す。攻守の隊形を順に重ねられる。
-   * 選手の位置は LOS からの相対（`lateralYard` と `downfieldYard`）で書く。
-   * 外から渡した隊形は正規化してから読むので、位置の読めない選手は捨てる。
-   * 置ける選手が 1 人もいないときと、置くと選手が 64 人を超えるときは、1 人も置かずに false を返す。
-   * 編集なので Undo と onDidChange の対象になる。view モードでも呼べる。
+   * Appends the formation's players to the current diagram and returns true once placed. Offense
+   * and defense formations can be layered in turn. Player positions are relative to the LOS
+   * (`lateralYard` and `downfieldYard`). A formation passed from outside is normalized before it is
+   * read, so players whose position cannot be read are dropped. When no player can be placed, or
+   * placing them would exceed 64 players, places none and returns false.
+   * This is an edit, so Undo and onDidChange cover it. Callable in view mode as well.
    */
   loadFormation(formation: Formation): boolean {
     if (this.store.isDisposed) {
@@ -205,10 +210,11 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * 型付きで組み立てた図を読み込み、今の図と置き換える。`getPlayData` の戻り値や、
-   * プリセットの `data` もそのまま渡せる。
-   * 型に合っていても、重複した id と件数の上限を超えた分は `restorePlayData` と同じく正規化する。
-   * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
+   * Loads a diagram built with the types and replaces the current one. The return value of
+   * `getPlayData` and a preset's `data` can be passed as is.
+   * Even when the input matches the types, duplicate ids and entries past the count limits are
+   * normalized as in `restorePlayData`.
+   * A load is not an edit, so the Undo history is cleared and onDidChange does not fire.
    */
   setPlayData(data: PlayDataInput): void {
     if (this.store.isDisposed) {
@@ -219,10 +225,12 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * 永続化しておいた値を、形を確かめずに受け取って読み込み、今の図と置き換える。
-   * 旧版、版の無いもの、未来版、壊れたデータも、例外を投げずに今のスキーマへ寄せ、読めない要素だけを捨てる。
-   * 選手 64 人、線 128 本、線 1 本あたり waypoint 32 個を超える分は、先頭から上限までを残して捨てる。
-   * 読み込みは編集ではないので、Undo の履歴は消え、onDidChange は発火しない。
+   * Accepts a persisted value unchecked, loads it, and replaces the current diagram.
+   * Old versions, unversioned values, future versions, and broken data are coerced to the current
+   * schema without throwing; only the elements that cannot be read are dropped.
+   * Anything past 64 players, 128 lines, or 32 waypoints per line is dropped, keeping the first
+   * entries up to the limit.
+   * A load is not an edit, so the Undo history is cleared and onDidChange does not fire.
    */
   restorePlayData(raw: unknown): void {
     if (this.store.isDisposed) {
@@ -233,21 +241,23 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * 今の図の深いコピー。`version` は常に現行で、そのまま JSON にして永続化できる。
-   * `restorePlayData` か `initialData` に戻すと、同じ図になる。
-   * 編集でも件数の上限は超えられず、上限に達すると選手の追加、フォーメーションの読み込み、作図は何もしない。
+   * A deep copy of the current diagram. `version` is always the current one, so it can be turned
+   * into JSON and persisted as is. Passing it back through `restorePlayData` or `initialData`
+   * yields the same diagram. Edits cannot exceed the count limits either: at a limit, adding a
+   * player, loading a formation, and drawing a line do nothing.
    */
   getPlayData(): PlayData {
     return this.session.getPlayData();
   }
 
   /**
-   * 呼んだ時点で確定しているプレー図を PNG 画像（Blob）として書き出す。
-   * 選択の強調、waypoint のハンドル、ドラッグや作図の途中の形、ツールバーとパネルは入らない。
-   * view と edit のどちらのモードでも使える。
-   * 同梱フォントを読み込み終えてから描くので、構築の直後に呼んでもヤードの数字と選手のラベルは同梱フォントになる。
-   * フォントを読み込めなかったときは代わりのフォントで描く。
-   * canvas を確保できないとき、PNG に変換できないとき、dispose したあとは、例外を投げずに reject する。
+   * Exports the play diagram as committed at the time of the call as a PNG image (Blob).
+   * The selection highlight, waypoint handles, the shape of a drag or drawing in progress, and the
+   * toolbar and panel are not included. Usable in both view and edit mode.
+   * Draws after the bundled font has finished loading, so even a call right after construction
+   * renders the yard numbers and player labels in the bundled font. If the font fails to load,
+   * draws with a fallback font. Rejects without throwing when a canvas cannot be obtained, the
+   * PNG conversion fails, or the Playmaker is disposed.
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {
     if (this.store.isDisposed) {
@@ -257,8 +267,8 @@ export class Playmaker implements IDisposable {
   }
 
   /**
-   * 図とパネルの色を、テーマの CSS 変数から読み直す。CSS 変数を変えてもブラウザは知らせてこないので、
-   * ホストが祖先の要素で変数を変えたあとに呼ぶ。
+   * Re-reads the colors of the diagram and the panel from the theme CSS variables. The browser does
+   * not report CSS variable changes, so the host calls this after changing them on an ancestor.
    */
   refresh(): void {
     if (this.store.isDisposed) {
@@ -274,7 +284,7 @@ export class Playmaker implements IDisposable {
     this.store.dispose();
   }
 
-  /** dispose したあとの呼び出しは何もしないので、開発時だけそのことを知らせる。 */
+  /** Calls after dispose do nothing, so report that in development only. */
   private warnIgnoredAfterDispose(method: string): void {
     if (isDevelopment()) {
       console.warn(`Playmaker: ${method} was called after dispose, so it did nothing.`);
@@ -282,7 +292,7 @@ export class Playmaker implements IDisposable {
   }
 
   private replaceUi(): void {
-    // view では canvas がフォーカスを受けないので、消えたフォーカスは body に落ちたままになる。
+    // In view the canvas does not take focus, so focus that was lost stays on the body.
     replaceKeepingFocus(this.root, this.surface.canvas, () => {
       this.ui.dispose();
       this.ui = this.createUi();
@@ -308,7 +318,7 @@ export class Playmaker implements IDisposable {
     this.surface.setScene(scene, this.surfaceOverlay(overlay));
   }
 
-  /** view モードでは undefined を返し、格子や選択の強調のような編集中だけの層を描かせない。 */
+  /** Undefined in view mode, so edit-only layers (the grid, selection highlight) are not drawn. */
   private surfaceOverlay(overlay: EditorOverlay): EditorOverlay | undefined {
     return this.currentMode === "edit" ? overlay : undefined;
   }

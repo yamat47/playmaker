@@ -4,14 +4,18 @@ import type { Line } from "../model/line.js";
 import type { Player } from "../model/player.js";
 import { type EditorViewState, isSameSelection } from "./editor.js";
 
-/** 表示状態の通知は、この値の組が前回の通知（まだ通知していなければ構築時）と違うときだけ出す。 */
+/**
+ * A view state notification is sent only when this set of values differs from the one at the
+ * last notification (or at construction, if nothing has been notified yet).
+ */
 interface ViewSnapshot {
   readonly state: EditorViewState;
   readonly player: Player | undefined;
   readonly line: Line | undefined;
 }
 
-// 表示状態の項目ごとの比べ方。項目を足すと、比べ方を書くまでここが型エラーになる。
+// How each entry of the view state is compared. Adding an entry makes this a type error until
+// its comparison is written.
 const VIEW_STATE_EQUALS: {
   readonly [K in keyof EditorViewState]: (a: EditorViewState[K], b: EditorViewState[K]) => boolean;
 } = {
@@ -35,7 +39,7 @@ function isSameEntry<K extends keyof EditorViewState>(
   return VIEW_STATE_EQUALS[key](a[key], b[key]);
 }
 
-// 選手と線は変更のたびに差し替わるので、参照で比べれば値の変化が分かる。
+// Players and lines are replaced on every change, so a reference comparison detects value changes.
 function isSameView(a: ViewSnapshot, b: ViewSnapshot): boolean {
   return (
     VIEW_STATE_KEYS.every((key) => isSameEntry(key, a.state, b.state)) &&
@@ -45,9 +49,10 @@ function isSameView(a: ViewSnapshot, b: ViewSnapshot): boolean {
 }
 
 /**
- * 描く図と表示状態の通知を出し分ける。batch の中で何度変わっても、通知は
- * batch の終わりに 1 回ずつにまとめる。Model はコマンドの apply の中で通知するので、
- * そのまま転送すると購読側が更新前の canUndo / canRedo を読んでしまう。
+ * Sends separate notifications for the drawn diagram and the view state. No matter how many
+ * changes happen inside a batch, the notifications are coalesced into one of each at the end of
+ * the batch. The Model notifies inside a command's apply, so forwarding that as is would let
+ * subscribers read canUndo / canRedo before they are updated.
  */
 export class EditorNotifier extends Disposable {
   private readonly _onDidChangeScene = this._register(new Emitter<void>());

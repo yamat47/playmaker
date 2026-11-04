@@ -1,26 +1,28 @@
 import type { CanvasPoint } from "./field.js";
 import { trimPolylineEnd } from "./polyline.js";
 
-// 線が矢じりより短くても消えないよう、切り詰めは全長のこの割合までに留める（残りは矢じりが覆う）。
+// Trimming stops at this fraction of the total length so a line shorter than the arrowhead does not
+// vanish (the arrowhead covers the rest).
 const ARROW_TRIM_MAX_FRACTION = 0.9;
 
 interface LineEnd {
   readonly tip: CanvasPoint;
-  /** 終点へ向かう単位ベクトル。 */
+  /** Unit vector pointing toward the end point. */
   readonly ux: number;
   readonly uy: number;
 }
 
 /**
- * 終点と、終点へ向かう向き。曲線の末尾には終点と同じ座標の点が並ぶことがあるので、
- * 終点と座標の違う直近の点から向きを求める。すべての点が同じ座標なら undefined。
+ * The end point and the direction toward it. The tail of a curve can hold several points at the
+ * end coordinates, so the direction comes from the nearest point whose coordinates differ from
+ * the end. undefined when all points share the same coordinates.
  */
 function lineEnd(path: readonly CanvasPoint[]): LineEnd | undefined {
   const tip = path.at(-1);
   if (tip === undefined) {
     return undefined;
   }
-  // 毎フレーム線ごとに呼ぶので、配列を複製せずに終点側から探す。
+  // Called per line every frame, so search from the end side without copying the array.
   for (let i = path.length - 2; i >= 0; i--) {
     const from = path[i];
     if (from !== undefined && (from.x !== tip.x || from.y !== tip.y)) {
@@ -33,14 +35,14 @@ function lineEnd(path: readonly CanvasPoint[]): LineEnd | undefined {
   return undefined;
 }
 
-/** 矢じりの根元で止めた線。矢じりより短い線も、全長の 1 割は残す。 */
+/** The line cut at the arrowhead base. One shorter than the arrowhead keeps 10% of its length. */
 export function trimForArrowHead(path: readonly CanvasPoint[], arrowLength: number): CanvasPoint[] {
   return trimPolylineEnd(path, arrowLength, ARROW_TRIM_MAX_FRACTION);
 }
 
 /**
- * 終点を先端にして進行方向へ向けた、矢じりの三角形の頂点（先端、根元の両端）。
- * 向きが決まらない線では undefined。
+ * Vertices of the arrowhead triangle (tip, both base corners) with the end point as the tip,
+ * pointed along the travel direction. undefined for a line whose direction cannot be determined.
  */
 export function arrowHeadVertices(
   path: readonly CanvasPoint[],
@@ -61,7 +63,10 @@ export function arrowHeadVertices(
   ];
 }
 
-/** 終点を中点にして進行方向と直交する、T 字の横棒の両端。向きが決まらない線では undefined。 */
+/**
+ * Both ends of the T bar centered on the end point and perpendicular to the travel direction.
+ * undefined for a line whose direction cannot be determined.
+ */
 export function blockCapEndpoints(
   path: readonly CanvasPoint[],
   capLength: number,

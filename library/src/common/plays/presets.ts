@@ -1,12 +1,14 @@
-// 配置は presets/alignments.ts にあり、隊形のプリセットと共有する。middle ゾーンの窓（LOS の前後
-// 15 ヤード）に収まる。ルート、ブロック、モーションを持つのは主役の側だけで、相手の側は選手の
-// 配置だけを持つ。
+// The alignments live in presets/alignments.ts and are shared with the formation presets. Every
+// play fits in the window of the middle zone (15 yards on either side of the LOS). Only the
+// featured side has routes, blocks, and motions; the opposing side has player alignments only.
 //
-// 線の決まり。ブロックの終点は相手の 1 ヤード手前（shortOf）に置き、T 字のバーが相手のマーカーの
-// 縁に付く。コンボブロックは一方が相手の手前で止まり、もう一方が相手の肩（beside）を経由して LB の
-// 手前へ上がる。穴をリードするプルは相手ではなく穴を狙うので座標で書く。走路とプルは、他の選手の
-// マーカーの中心から 1 ヤード以上離す（OL の間隔が 2.5 ヤードなので、ギャップを通る線は縁に
-// 触れる）。守備のラッシュは LOS（0）で止め、ゾーンのドロップは LOS から離れる向き（+）へ描く。
+// Rules for lines. A block ends 1 yard short of the opponent (shortOf), so the T bar touches the
+// edge of the opponent's marker. In a combo block, one blocker stops short of the opponent and the
+// other goes through the opponent's shoulder (beside) and climbs to just short of the LB. A pull
+// that leads through a hole aims at the hole rather than an opponent, so it is written as
+// coordinates. Paths and pulls stay at least 1 yard from the center of any other player's marker
+// (the OL are 2.5 yards apart, so a line through a gap touches the edges). A defensive rush stops
+// at the LOS (0), and a zone drop is drawn away from the LOS (in the + direction).
 
 import type { Line, LineInterpolation, LineKind } from "../model/line.js";
 import { CURRENT_PLAY_DATA_VERSION, fieldStateForZone } from "../model/play-data.js";
@@ -35,7 +37,10 @@ import {
 import { deepFreeze, type TeamSide } from "../presets/shared.js";
 import type { PlayCategory, PlayPreset } from "./play-preset.js";
 
-/** 色は持たせず、テーマの既定の色で描く。攻守の見分けは選手の形とラベルで付ける。 */
+/**
+ * No color is set, so lines use the theme's default color. Offense and defense are told apart by
+ * the players' shapes and labels.
+ */
 function ln(
   id: string,
   kind: LineKind,
@@ -73,7 +78,7 @@ function play(
   };
 }
 
-// オフェンスのプレーに添える守備のうち、CB の深さとセイフティの置き方がカバレッジで変わるもの。
+// Defenses paired with offensive plays, in which CB depth and safety placement vary by coverage.
 const COVER_2_SHELL = { cornerDepth: 5, fs: pt(18, 12), ss: pt(35, 12) } satisfies NickelShell;
 const COVER_3_SHELL = { cornerDepth: 7, fs: pt(26.5, 12), ss: pt(34, 6) } satisfies NickelShell;
 
@@ -424,7 +429,7 @@ const COVER_0 = play(
   ],
 );
 
-// 両 A ギャップに LB を立てるので、DT は 2 人とも 3 テクに広がる。
+// With LBs standing in both A gaps, both DTs widen out to 3-technique.
 const DOUBLE_A = play(
   "play-double-a",
   "Double-A Gap",
@@ -461,8 +466,8 @@ const DOUBLE_A = play(
   ],
 );
 
-// フィールド側（右）はクォーターズ、バウンダリ側（左）はカバー 2 なので、CB の深さが左右で違い、
-// ニッケルバックはフィールド側のスロットに付く。
+// The field side (right) plays quarters and the boundary side (left) plays Cover 2, so the CB
+// depth differs between the two sides, and the nickel back aligns on the field-side slot.
 const COVER_6 = play(
   "play-cover-6",
   "Cover 6",

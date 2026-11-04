@@ -1,59 +1,62 @@
-// 寸法は px で決めず、フィールドの幅 W と 1 ヤードの px U からの比で出す。
-// フィールドの白線、ハッシュ、数字は本物の寸法の比に合わせる。
-// 選手とプレーの線は見やすさを優先して本物より大きく描き、選手マーカーの直径 D からの比で揃える。
+// Sizes are not fixed in px; they are ratios of the field width W and the px per yard U.
+// The field's white lines, hashes, and numbers follow the ratios of the real dimensions.
+// Players and play lines are drawn larger than real for legibility, as ratios of marker diameter D.
 
 import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 
-// 小さく描いたときにラインが消えないよう、1 px は残す。
+// Keep at least 1 px so lines do not vanish when drawn small.
 const MIN_LINE_PX = 1;
-// 本物のラインの幅 4 インチを、フィールドの幅 160 フィートで割った値。
+// The real line width of 4 inches divided by the field width of 160 feet.
 const YARD_LINE_WIDTH_PER_W = 0.0021;
-// 本物のハッシュの長さ 24 インチ。
+// The real hash length of 24 inches.
 const HASH_TICK_LENGTH_PER_U = 0.375;
-// 本物の数字の高さは 6 フィート（2 ヤード）だが、小さく描いたときにも読めるよう少し大きくする。
+// Real numbers are 6 feet (2 yards) tall, but slightly larger keeps them readable when drawn small.
 const NUMBER_HEIGHT_PER_U = 2.4;
 const NUMBER_MIN_PX = 10;
-// センターのヤードラインは、ほかのヤードラインより少し太くして目印にする。
+// The midfield yard line is slightly thicker than the other yard lines to serve as a landmark.
 const MIDFIELD_LINE_WIDTH_PER_YARD_LINE = 1.5;
-// エンドゾーンの隅のパイロン。本物は 4 インチ角だが、小さく描いても見えるよう少し大きくする。
+// End zone corner pylons: 4 inches square for real, drawn a bit larger to stay visible when small.
 const PYLON_SIZE_PER_U = 0.45;
 const PYLON_MIN_PX = 3;
-// ゴールポストは真上から見た形で、横木とフィールドへ伸びる 2 本の柱だけを描く。横木の半分は本物の 18.5 フィートの半分。
+// Goalposts are drawn as seen from directly above: only the crossbar and the two uprights extending
+// into the field. The crossbar half is half of the real 18.5 feet.
 const GOALPOST_CROSSBAR_HALF_PER_U = 1.85;
 const GOALPOST_UPRIGHT_LENGTH_PER_U = 1.2;
 const GOALPOST_STROKE_PER_D = 0.2;
 const GOALPOST_STROKE_MIN_PX = 2;
 
-// 2 文字のラベルがマーカーの内側に収まる大きさ。
+// Large enough for a two-character label to fit inside the marker.
 const MARKER_LABEL_PER_D = 0.5;
 const MARKER_LABEL_MIN_PX = 8;
 const ROUTE_WIDTH_PER_D = 0.11;
 const ROUTE_WIDTH_MIN_PX = 1.5;
 const BLOCK_CAP_LENGTH_PER_D = 0.4;
-// 矢じりの底辺を線の幅の 4 倍ほどにし、線の先の棘ではなく矢印に見せる。先端の角はおよそ 37 度。
+// The arrowhead base is about 4 times the line width, so it reads as an arrow rather than a barb
+// at the end of the line. The tip angle is about 37 degrees.
 const ARROW_LENGTH_PER_D = 0.72;
 const ARROW_HALF_WIDTH_PER_D = 0.24;
 const MOTION_DASH_ON_PER_U = 1.1;
 const MOTION_DASH_OFF_PER_U = 0.7;
-// 編集中に敷く格子の点。目印になればよいので、ハッシュより細く、消えない最小の大きさは残す。
+// The grid dots laid out while editing. They only need to be a guide, so they are thinner than the
+// hashes, with a minimum size that keeps them from vanishing.
 const GRID_DOT_RADIUS_PER_U = 0.08;
 const GRID_DOT_RADIUS_MIN_PX = 0.75;
 
-/** 描くときの寸法（px）。 */
+/** Dimensions used for drawing (px). */
 export interface FieldMetrics {
   readonly yardLineWidth: number;
-  /** ゴールラインと、サイドラインを含む窓の外枠の太さ。 */
+  /** Width of the goal lines and of the window's outer frame, including the sidelines. */
   readonly goalLineWidth: number;
-  /** センター（50 ヤード）のヤードラインの太さ。 */
+  /** Width of the midfield (50 yard) yard line. */
   readonly midfieldLineWidth: number;
   readonly hashTickLength: number;
   readonly numberHeight: number;
-  /** エンドゾーンの隅に置くパイロンの一辺。 */
+  /** Side length of the pylons placed at the end zone corners. */
   readonly pylonSize: number;
   readonly goalpostCrossbarHalfLength: number;
   readonly goalpostUprightLength: number;
   readonly goalpostStroke: number;
-  /** 選手マーカーの直径 D。選手とプレーの線の寸法はこの値からの比で決める。 */
+  /** Player marker diameter D. Player and play line dimensions are ratios of this value. */
   readonly tokenDiameter: number;
   readonly markerStroke: number;
   readonly markerLabelFont: number;
@@ -62,13 +65,13 @@ export interface FieldMetrics {
   readonly blockCapLength: number;
   readonly arrowLength: number;
   readonly arrowHalfWidth: number;
-  /** motion の破線の [描く長さ, 空ける長さ]。 */
+  /** The motion dash pattern as [drawn length, gap length]. */
   readonly motionDash: readonly [number, number];
-  /** 編集中に敷く格子の点の半径。 */
+  /** Radius of the grid dots laid out while editing. */
   readonly gridDotRadius: number;
 }
 
-/** 大きさ 0 のビューポートでも NaN を返さない。 */
+/** Does not return NaN even for a viewport of size 0. */
 export function computeFieldMetrics(fieldPixelWidth: number, unitPx: number): FieldMetrics {
   const w = Math.max(0, fieldPixelWidth);
   const u = Math.max(0, unitPx);
@@ -86,7 +89,7 @@ export function computeFieldMetrics(fieldPixelWidth: number, unitPx: number): Fi
     goalpostUprightLength: GOALPOST_UPRIGHT_LENGTH_PER_U * u,
     goalpostStroke: Math.max(GOALPOST_STROKE_MIN_PX, GOALPOST_STROKE_PER_D * d),
     tokenDiameter: d,
-    // 枠線だけの選手は縁取りが見た目のすべてなので、プレーの線と同じ太さで描く。
+    // For an outline-only player the outline is the whole look, so it uses the play line width.
     markerStroke: routeWidth,
     markerLabelFont: Math.max(MARKER_LABEL_MIN_PX, MARKER_LABEL_PER_D * d),
     routeWidth,

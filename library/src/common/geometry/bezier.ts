@@ -2,10 +2,10 @@ import type { LineInterpolation } from "../model/line.js";
 import type { FieldPosition } from "../model/player.js";
 import { segments } from "./polyline.js";
 
-/** ベジェの 1 区間を何分割するか。プレー図の大きさでは、これで角が見えない。 */
+/** Number of subdivisions per bezier segment. At play diagram sizes, no corners show with this. */
 export const DEFAULT_BEZIER_SAMPLES_PER_SEGMENT = 16;
 
-/** p0 から p1 へ、制御点 c1 と c2 で曲げた 3 次ベジェの、t（0 以上 1 以下）での位置。 */
+/** Point at t (0 to 1) on the cubic bezier from p0 to p1, bent by the control points c1 and c2. */
 export function cubicBezierPoint(
   p0: FieldPosition,
   c1: FieldPosition,
@@ -26,9 +26,10 @@ export function cubicBezierPoint(
 }
 
 /**
- * p1 から p2 への区間を、前後の点 p0 と p3 から決まる向きで通す 3 次ベジェの制御点 [c1, c2]。
- * 一様な Catmull-Rom 曲線と同じ形になる。端の区間では、無い側の点に端の点そのものを渡す。
- * waypoint をそのままベジェの制御点にしないのは、曲線が waypoint を通らなくなるため。
+ * Control points [c1, c2] of the cubic bezier through the segment p1 to p2, with directions set
+ * by the neighbors p0 and p3. The shape matches a uniform Catmull-Rom curve. At an end segment,
+ * pass the end point itself for the missing neighbor. Waypoints are not used directly as bezier
+ * control points because the curve would then no longer pass through them.
  */
 export function catmullRomBezierControls(
   p0: FieldPosition,
@@ -48,7 +49,7 @@ export function catmullRomBezierControls(
   ];
 }
 
-/** 同じ座標が続くと向きが 0 になり曲線が崩れるので、1 つに畳む。 */
+/** Consecutive equal points give a zero direction and break the curve, so they fold into one. */
 function dedupeConsecutive(points: readonly FieldPosition[]): FieldPosition[] {
   const out: FieldPosition[] = [];
   for (const p of points) {
@@ -65,8 +66,9 @@ function dedupeConsecutive(points: readonly FieldPosition[]): FieldPosition[] {
 }
 
 /**
- * 制御点の列を、描くときと当たり判定に使う折れ線にする。`straight` と、同じ座標を畳んで
- * 2 点以下になる列は、制御点をそのまま結ぶ。返り値は新しい配列。samplesPerSegment は 1 以上に丸める。
+ * Turns a sequence of control points into the polyline used for drawing and hit testing. With
+ * `straight`, or when folding equal points leaves 2 or fewer, the control points are joined as
+ * they are. Returns a new array. samplesPerSegment is rounded to at least 1.
  */
 export function sampleLinePath(
   points: readonly FieldPosition[],
@@ -84,7 +86,7 @@ export function sampleLinePath(
     const p0 = pts[i - 1] ?? p1;
     const p3 = pts[i + 2] ?? p2;
     const [c1, c2] = catmullRomBezierControls(p0, p1, p2, p3);
-    // t=0 の点は前の区間の終点と同じなので、t は 0 を除いて 1 まで刻む。
+    // The point at t=0 equals the previous segment's end point, so t is stepped to 1 excluding 0.
     for (let s = 1; s <= steps; s++) {
       result.push(cubicBezierPoint(p1, c1, c2, p2, s / steps));
     }

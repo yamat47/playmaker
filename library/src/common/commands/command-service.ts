@@ -3,20 +3,20 @@ import type { ICommand } from "./command.js";
 import type { IUndoRedoService } from "./undo-redo-service.js";
 
 /**
- * 編集はすべてここを通す。コマンドの適用、取り消し、やり直しを 1 か所で行い、
- * 履歴と Model を食い違わせない。
+ * Every edit goes through here. Applying, undoing, and redoing commands happen in one place
+ * so the history and the Model never disagree.
  */
 export interface ICommandService {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   /**
-   * コマンドを適用し、Model を変えたら履歴に積んで true を返す。何も変えなかったときは
-   * 積まずに false を返す。適用が throw したときも積まない。
+   * Applies the command. When it changes the Model, pushes it onto the history and returns true.
+   * When nothing changed, returns false without pushing. Also does not push when apply throws.
    */
   execute(command: ICommand): boolean;
-  /** 取り消しが throw したら、履歴は動かさない。戻す対象が無ければ何もしない。 */
+  /** If undo throws, the history stays as is. Does nothing when there is nothing to undo. */
   undo(): void;
-  /** やり直しが throw したら、履歴は動かさない。やり直す対象が無ければ何もしない。 */
+  /** If redo throws, the history stays as is. Does nothing when there is nothing to redo. */
   redo(): void;
 }
 

@@ -8,58 +8,59 @@ import {
 import { type FieldPosition, type Player, parseFieldPosition } from "./player.js";
 
 /**
- * 線の種別。色ではなく終点の記法と線種で見分ける。
- * - `route`: レシーバーやランナーの走路。終点に矢印を描く
- * - `block`: ブロックの割り当て。route と同じ太さで、終点に T 字のバーを描く
- * - `motion`: スナップ前の選手の移動。破線で、終点に矢印を描く
+ * Kind of a line. Kinds are told apart by the end marker and the stroke style, not by color.
+ * - `route`: the path of a receiver or runner. Drawn with an arrow at the end
+ * - `block`: a blocking assignment. Same width as route, with a T bar at the end
+ * - `motion`: a player's movement before the snap. Dashed, with an arrow at the end
  */
 export const LINE_KIND_VALUES = ["route", "block", "motion"] as const;
 
 export type LineKind = (typeof LINE_KIND_VALUES)[number];
 
 /**
- * 線の補間方法。どの種別の線にも効く。
- * - `straight`: 制御点を直線で結ぶ
- * - `bezier`: 制御点をすべて通る滑らかな曲線で結ぶ
+ * Interpolation of a line. Applies to every kind of line.
+ * - `straight`: joins the control points with straight segments
+ * - `bezier`: joins the control points with a smooth curve that passes through all of them
  */
 export const LINE_INTERPOLATION_VALUES = ["straight", "bezier"] as const;
 
 export type LineInterpolation = (typeof LINE_INTERPOLATION_VALUES)[number];
 
-/** 種別を指定しないときの既定。 */
+/** Default when no kind is given. */
 export const DEFAULT_LINE_KIND: LineKind = "route";
 
-/** 補間を指定しないときの既定。 */
+/** Default when no interpolation is given. */
 export const DEFAULT_LINE_INTERPOLATION: LineInterpolation = "straight";
 
-/** 太さを指定しないときの倍率。種別ごとの既定の太さでそのまま描く。 */
+/** Multiplier when no thickness is given. Draws at the default width of each kind as is. */
 export const DEFAULT_LINE_THICKNESS = 1;
 
 /**
- * 外から受け取る線と、1 本あたりの waypoint の上限。実際のプレー図は線 20 本ほどで、
- * waypoint も数個なので、この上限に届くことは無い。壊れたデータや悪意のあるデータで
- * 描画が止まらないように、超えた分は正規化で捨てる。
+ * Limits on the lines received from outside and on the waypoints per line. A real play diagram
+ * has about 20 lines with a few waypoints each, so these limits are never reached. Normalization
+ * drops the excess so that broken or malicious data cannot stall rendering.
  */
 export const MAX_LINES = 128;
 export const MAX_WAYPOINTS_PER_LINE = 32;
 
 /**
- * 1 本の線。起点は座標ではなく選手の id で持つので、選手を動かすと線の起点も付いてくる。
- * `color` と `thickness` を省くと、テーマの色と種別ごとの既定の太さで描く。
+ * A single line. The start is held as a player id rather than coordinates, so moving the player
+ * carries the line's start along. Omitting `color` and `thickness` draws with the theme color
+ * and the default width of the kind.
  */
 export interface Line {
   readonly id: string;
   readonly kind: LineKind;
-  /** 起点となる選手の id。実在しない参照は復元時に除外される。 */
+  /** Id of the player at the start. A reference to a missing player is dropped on restore. */
   readonly startPlayerId: string;
-  /** 起点と終点の間の中継点（0 個可）。 */
+  /** Intermediate points between the start and the end (may be empty). */
   readonly waypoints: readonly FieldPosition[];
-  /** 終点（ヤード空間）。 */
+  /** End point (in yard space). */
   readonly end: FieldPosition;
   readonly interpolation: LineInterpolation;
-  /** CSS の色の文字列。 */
+  /** A CSS color string. */
   readonly color?: string;
-  /** 種別ごとの既定の太さに対する倍率。省くと DEFAULT_LINE_THICKNESS。 */
+  /** Multiplier on the default width of the kind. DEFAULT_LINE_THICKNESS when omitted. */
   readonly thickness?: number;
 }
 
@@ -71,15 +72,16 @@ function isLineInterpolation(value: unknown): value is LineInterpolation {
   return isOneOf(value, LINE_INTERPOLATION_VALUES);
 }
 
-/** 太さの倍率として受け付ける値か。0 以下では線が見えなくなるので受け付けない。 */
+/** Whether a value is accepted as a width multiplier. 0 or less hides the line and is rejected. */
 export function isLineThickness(value: unknown): value is number {
   return isFiniteNumber(value) && value > 0;
 }
 
 /**
- * 外から受け取った 1 要素を Line に正規化する。オブジェクトでないもの、起点の選手が実在しないもの、
- * 終点が座標でないものは null を返して捨てる。
- * 種別、補間、id が欠けていても捨てずに既定で補う。古い版で保存したデータを読めなくしないため。
+ * Normalizes one entry received from outside into a Line. A non-object, an entry whose start
+ * player does not exist, or one whose end is not a position returns null and is dropped.
+ * A missing kind, interpolation, or id is filled with the default instead of dropping the
+ * entry, so that data saved by an older version stays readable.
  */
 function normalizeLine(
   raw: unknown,
@@ -90,7 +92,7 @@ function normalizeLine(
     return null;
   }
 
-  // 起点の選手が無い線は、描くことも掴むこともできないので捨てる。
+  // A line without its start player can be neither drawn nor grabbed, so drop it.
   if (!isNonEmptyString(raw.startPlayerId) || !validPlayerIds.has(raw.startPlayerId)) {
     return null;
   }
@@ -103,22 +105,22 @@ function normalizeLine(
     id: isNonEmptyString(raw.id) ? raw.id : `l${index}`,
     kind: isLineKind(raw.kind) ? raw.kind : DEFAULT_LINE_KIND,
     startPlayerId: raw.startPlayerId,
-    // 数でない waypoint は個別に捨て、線自体は保持する。
+    // A non-numeric waypoint is dropped individually; the line itself is kept.
     waypoints: parseBoundedArray(raw.waypoints, MAX_WAYPOINTS_PER_LINE, parseFieldPosition),
     end,
     interpolation: isLineInterpolation(raw.interpolation)
       ? raw.interpolation
       : DEFAULT_LINE_INTERPOLATION,
-    // exactOptionalPropertyTypes では undefined を入れられないので、値があるときだけキーを置く。
+    // exactOptionalPropertyTypes rejects undefined, so the key is set only when a value exists.
     ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
     ...(isLineThickness(raw.thickness) ? { thickness: raw.thickness } : {}),
   };
 }
 
 /**
- * 外から受け取った lines を Line[] に正規化する。配列でなければ空配列を返す。
- * `validPlayerIds` には正規化を済ませた選手の id を渡す。そこに無い選手を起点にする線は捨てる。
- * 先頭の MAX_LINES 個より後ろの要素は読まずに捨てる。
+ * Normalizes lines received from outside into Line[]. Returns an empty array for a non-array.
+ * Pass the ids of the already normalized players as `validPlayerIds`; a line starting at a
+ * player not in that set is dropped. Entries after the first MAX_LINES are dropped unread.
  */
 export function normalizeLines(raw: unknown, validPlayerIds: ReadonlySet<string>): Line[] {
   return parseBoundedArray(raw, MAX_LINES, (entry, index) =>
@@ -126,7 +128,7 @@ export function normalizeLines(raw: unknown, validPlayerIds: ReadonlySet<string>
   );
 }
 
-/** waypoints と各座標まで複製し、元の線と参照を共有しない。 */
+/** Copies down to the waypoints and each position, sharing no references with the original line. */
 export function cloneLine(line: Line): Line {
   return {
     id: line.id,
@@ -141,8 +143,8 @@ export function cloneLine(line: Line): Line {
 }
 
 /**
- * 線の制御点の列 [起点の選手の位置, ...waypoints, 終点] を組み立てる。
- * 起点の選手が見つからなければ undefined を返す。
+ * Builds the line's control point sequence [start player position, ...waypoints, end].
+ * Returns undefined when the start player is not found.
  */
 export function lineAnchorPoints(
   line: Line,

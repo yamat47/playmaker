@@ -4,12 +4,12 @@ import { DEFAULT_FIELD_ZONE, fieldStateForZone, isFieldZone } from "./play-data.
 import { MAX_PLAYERS } from "./player.js";
 
 /**
- * v1 の線の太さは CSS px だった。プロパティパネルは未指定の線を 2 px と表示していたので、
- * v2 ではその値を倍率 1 とみなして割り戻す。
+ * In v1 the line thickness was in CSS px. The property panel showed an unspecified line as 2 px,
+ * so v2 treats that value as multiplier 1 and divides by it.
  */
 export const V1_DEFAULT_THICKNESS_PX = 2;
 
-/** 形が崩れた値はそのまま返し、捨てるかどうかは後の正規化に任せる。 */
+/** A malformed value is returned as is; whether to drop it is left to the later normalization. */
 function toV2Position(raw: unknown, losYard: number): unknown {
   if (!isRecord(raw)) {
     return raw;
@@ -45,9 +45,10 @@ function toV2Line(raw: unknown, losYard: number): unknown {
 }
 
 /**
- * v1 は縦の位置を絶対ヤード（`absoluteYard`）で持っていた。v2 はゾーンの LOS からの距離
- * （`downfieldYard`）で持つので、v1 のゾーンの LOS を引いて、画面上の位置を変えずに移す。
- * 配列は正規化と同じく上限の個数までしか読まない。
+ * v1 held the vertical position as an absolute yard (`absoluteYard`). v2 holds it as the distance
+ * from the zone's LOS (`downfieldYard`), so the LOS of the v1 zone is subtracted to carry the
+ * position over without moving it on screen. Arrays are read only up to the limits, as in
+ * normalization.
  */
 export function migrateV1ToV2(data: Readonly<Record<string, unknown>>): Record<string, unknown> {
   const zone =

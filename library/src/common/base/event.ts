@@ -1,21 +1,22 @@
 import { type IDisposable, toDisposable } from "./lifecycle.js";
 
-// common は ECMAScript の lib だけで型検査するので、ホストが持つ console には型がない。
-// どのホスト（ブラウザ、Node）にもある console.error だけを、このモジュールの中で宣言して使う。
+// common is type-checked against the ECMAScript lib only, so the host's console has no type.
+// Declare and use only console.error, which every host (browser, Node) has, inside this module.
 declare const console: { error(...data: unknown[]): void };
 
-/** リスナを登録し、購読をやめるための IDisposable を返す。 */
+/** Registers a listener and returns an IDisposable that ends the subscription. */
 export type Event<T> = (listener: (e: T) => void) => IDisposable;
 
-/** リスナが throw しても、残りのリスナには通知する。 */
+/** Keeps notifying the remaining listeners even when a listener throws. */
 export class Emitter<T> implements IDisposable {
   private listeners = new Set<(e: T) => void>();
   private disposed = false;
   private readonly onListenerError: (err: unknown) => void;
 
   /**
-   * リスナが投げた例外を受け取る。既定は console.error に出す。
-   * 投げ直さないのは、1 つのリスナの失敗で、残りのリスナと fire を呼んだ側まで止めないため。
+   * Receives the exceptions thrown by listeners. The default writes them to console.error.
+   * They are not rethrown so that one failing listener does not stop the remaining listeners
+   * and the caller of fire.
    */
   constructor(onListenerError: (err: unknown) => void = console.error) {
     this.onListenerError = onListenerError;
@@ -35,7 +36,7 @@ export class Emitter<T> implements IDisposable {
     if (this.disposed) {
       return;
     }
-    // 通知の途中でリスナが登録や解除をしても、この回に通知する相手は変えない。
+    // Listeners added or removed during a notification do not change who is notified this round.
     for (const listener of [...this.listeners]) {
       try {
         listener(e);

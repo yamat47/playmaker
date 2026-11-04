@@ -3,7 +3,7 @@ import type { IPlayModel, LineRemoval } from "../model/play-model.js";
 import { type ICommand, requireApplied } from "./command.js";
 import { applyPatch, type Patch, patchChangesAnything } from "./patch.js";
 
-/** id と起点の選手は線を見分ける鍵なので、パッチでは変えない。 */
+/** The id and the starting player identify a line, so a patch never changes them. */
 export type LinePatch = Patch<Omit<Line, "id" | "startPlayerId">>;
 
 export function applyLinePatch(current: Line, patch: LinePatch): Line {
@@ -28,7 +28,7 @@ export class AddLineCommand implements ICommand {
   }
 }
 
-/** undo は線を元の並びの位置へ戻す。 */
+/** Undo puts the line back at its original position in the order. */
 export class RemoveLineCommand implements ICommand {
   readonly label = "Delete line";
   private readonly lineId: string;
@@ -49,7 +49,7 @@ export class RemoveLineCommand implements ICommand {
   }
 }
 
-/** 種別、補間、waypoint、終点、色、太さをまとめて編集する。 */
+/** Edits the kind, interpolation, waypoints, end point, color, and thickness together. */
 export class UpdateLineCommand implements ICommand {
   readonly label = "Update line";
   private readonly lineId: string;

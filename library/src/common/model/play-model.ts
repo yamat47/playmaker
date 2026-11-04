@@ -6,8 +6,8 @@ import { clonePlayData, type FieldZone, fieldStateForZone, type PlayData } from 
 import { MAX_PLAYERS, type Player } from "./player.js";
 
 /**
- * 選手 1 人の削除を戻すのに要る値。選手と一緒に消えた線を元の添字付きで持ち、
- * 戻すときに同じ並びへ差し込む。
+ * What is needed to undo the removal of one player. Holds the lines removed with the player,
+ * each with its original index, so they are inserted back into the same order.
  */
 export interface PlayerRemoval {
   readonly player: Player;
@@ -15,74 +15,82 @@ export interface PlayerRemoval {
   readonly removedLines: readonly LineRemoval[];
 }
 
-/** 線 1 本の削除を戻すのに要る値。 */
+/** What is needed to undo the removal of one line. */
 export interface LineRemoval {
   readonly line: Line;
   readonly index: number;
 }
 
 /**
- * プレー図の状態。実装は、起点の選手が消えた線を残さない。
- * 削除と差し替えは、戻すのに要る変更前の値を返す。
+ * State of the play diagram. An implementation never keeps a line whose start player is gone.
+ * Removals and replacements return the previous values needed to undo them.
  */
 export interface IPlayModel {
-  /** いずれかの変更後に、getSnapshot と同じ値で 1 回発火する。 */
+  /** Fires once after any change, with the same value as getSnapshot. */
   readonly onDidChange: Event<PlayData>;
-  /** 現在状態の深いコピー。呼ぶたびに図全体を複製する。 */
+  /** Deep copy of the current state. Each call copies the whole diagram. */
   getData(): PlayData;
   /**
-   * 現在状態をコピーせずに返す。状態は変更のたびに新しいオブジェクトへ差し替えるので、
-   * 受け取った値は後の変更で書き換わらない。
+   * Returns the current state without copying. The state is replaced with a new object on every
+   * change, so the value received is not rewritten by later changes.
    */
   getSnapshot(): PlayData;
   getFieldZone(): FieldZone;
-  /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
+  /** undefined when absent. Returns the internal value as is, like getSnapshot. */
   findPlayer(id: string): Player | undefined;
-  /** 無ければ undefined。getSnapshot と同じく内部の値をそのまま返す。 */
+  /** undefined when absent. Returns the internal value as is, like getSnapshot. */
   findLine(id: string): Line | undefined;
-  /** findPlayer と同じだが、無い id なら throw する。 */
+  /** Same as findPlayer, but throws for an unknown id. */
   getPlayer(id: string): Player;
-  /** findLine と同じだが、無い id なら throw する。 */
+  /** Same as findLine, but throws for an unknown id. */
   getLine(id: string): Line;
-  /** LOS もゾーンの既定の位置へ移す。選手と線は LOS からの位置なので、図ごと一緒に動く。 */
+  /**
+   * Also moves the LOS to the zone's default position. Players and lines are positioned
+   * relative to the LOS, so the whole diagram moves along with it.
+   */
   setFieldZone(zone: FieldZone): void;
   /**
-   * 既にある id の選手を渡すと throw する。
-   * 選手が MAX_PLAYERS 人を超える追加も throw する。
+   * Throws when given a player whose id already exists.
+   * Also throws when the addition would exceed MAX_PLAYERS players.
    */
   addPlayer(player: Player): void;
   /**
-   * 何人足しても onDidChange は最後に 1 回だけ発火する。
-   * 既存と重複する id があるか、MAX_PLAYERS 人を超えるときは、1 人も足さずに throw する。
+   * However many players are added, onDidChange fires only once at the end.
+   * Throws without adding anyone if an id duplicates an existing one or MAX_PLAYERS is exceeded.
    */
   addPlayers(players: readonly Player[]): void;
-  /** 起点がその選手の線も一緒に消す。 */
+  /** Also removes the lines that start at that player. */
   removePlayer(id: string): PlayerRemoval;
   /**
-   * 起点が消える選手の線も一緒に消し、onDidChange は最後に 1 回だけ発火する。
-   * 無い id か重複した id があれば、1 人も消さずに throw する。
+   * Also removes the lines that start at the removed players; onDidChange fires only once at
+   * the end. Throws without removing anyone when an id is unknown or repeated.
    */
   removePlayers(ids: readonly string[]): PlayerRemoval[];
   /**
-   * removePlayer で消した選手と線を、元の並びへ戻す。
-   * 同じ id の選手が既にあるか、戻すと上限を超えるか、添字が今の並びの外を指すときは throw する。
+   * Puts a player and lines removed by removePlayer back into their original order.
+   * Throws when a player with the same id already exists, restoring would exceed a limit, or an
+   * index points outside the current order.
    */
   restorePlayer(removal: PlayerRemoval): void;
-  /** 同じ id の選手を差し替え、差し替える前の選手を返す。 */
+  /** Replaces the player with the same id and returns the player it replaced. */
   updatePlayer(player: Player): Player;
   /**
-   * 既にある id の線を渡すと throw する。線が MAX_LINES 本を超えるときと、
-   * waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線も throw する。
+   * Throws when given a line whose id already exists. Also throws when the lines would exceed
+   * MAX_LINES, and for a line whose waypoints exceed MAX_WAYPOINTS_PER_LINE.
    */
   addLine(line: Line): void;
-  /** index は 0 から線の本数までで渡し、外れると throw する。ほかは addLine と同じ条件で throw する。 */
+  /** index ranges from 0 to the line count; throws outside it, and otherwise as addLine does. */
   insertLine(line: Line, index: number): void;
   removeLine(id: string): LineRemoval;
-  /** 同じ id の線を差し替え、差し替える前の線を返す。waypoint が MAX_WAYPOINTS_PER_LINE 個を超えると throw する。 */
+  /**
+   * Replaces the line with the same id and returns the line it replaced. Throws when the
+   * waypoints exceed MAX_WAYPOINTS_PER_LINE.
+   */
   updateLine(line: Line): Line;
 }
 
-// 削除の記録に無い添字で差し込むと、slice が黙って端へ寄せ、Undo で並びが崩れたことに気づけない。
+// Inserting at an index not from a removal record lets slice silently clamp to the end, hiding an
+// order broken by Undo.
 function insertAt<T>(items: readonly T[], index: number, item: T, what: string): T[] {
   if (!Number.isInteger(index) || index < 0 || index > items.length) {
     throw new Error(`PlayModel: ${what} index out of range: ${index} (0..${items.length})`);
@@ -90,15 +98,15 @@ function insertAt<T>(items: readonly T[], index: number, item: T, what: string):
   return [...items.slice(0, index), item, ...items.slice(index)];
 }
 
-// 選択と編集は id で対象を決めるので、同じ id の要素を 2 つ持たせない。
+// Selection and editing pick their target by id, so two elements never share an id.
 function assertNewId(items: readonly { id: string }[], id: string, message: string): void {
   if (items.some((item) => item.id === id)) {
     throw new Error(`${message} "${id}"`);
   }
 }
 
-// 件数の上限は外部データの正規化と同じ値にする。編集で超えられると、
-// getData で書き出した図を読み戻したときに黙って切り詰められる。
+// The count limits match those of external data normalization. If editing could exceed them,
+// a diagram written out with getData would be silently truncated when read back.
 function assertWithinLimit(count: number, limit: number, what: string): void {
   if (count > limit) {
     throw new Error(`PlayModel: too many ${what}: ${count} > ${limit}`);
@@ -114,9 +122,10 @@ function assertWithinLimits(data: PlayData): void {
 }
 
 /**
- * 変更系メソッドは、状態を新しいオブジェクトへ差し替えてから onDidChange を 1 回だけ発火する。
- * 入力は複製せずに取り込む。型が読み取り専用なので、入力も状態もあとから書き換えられない。
- * 無い id を指す操作は、編集の組み立て違いなのでその場で throw する。
+ * Mutating methods replace the state with a new object and then fire onDidChange exactly once.
+ * Inputs are taken in without copying. The types are read-only, so neither the input nor the
+ * state can be rewritten afterward. An operation on an unknown id is a mistake in how the edit
+ * was assembled, so it throws on the spot.
  */
 export class PlayModel extends Disposable implements IPlayModel {
   private readonly _onDidChange = this._register(new Emitter<PlayData>());
@@ -165,7 +174,7 @@ export class PlayModel extends Disposable implements IPlayModel {
   }
 
   setFieldZone(zone: FieldZone): void {
-    // 同じゾーンでも発火する。変わらない操作を履歴に積まないのは編集の側で決める。
+    // Fires even for the same zone. The editing side decides not to push a no-op onto the history.
     this.commit({ ...this.state, field: fieldStateForZone(zone) });
   }
 
@@ -174,8 +183,8 @@ export class PlayModel extends Disposable implements IPlayModel {
   }
 
   addPlayers(players: readonly Player[]): void {
-    // 1 人でも重複があれば何も足さずに throw する。途中まで足してから投げると、
-    // 通知も履歴も伴わない変更が残る。
+    // Throw without adding anyone if even one id is a duplicate. Throwing after adding some would
+    // leave a change with neither a notification nor a history entry.
     const taken = new Set(this.state.players.map((p) => p.id));
     for (const player of players) {
       if (taken.has(player.id)) {
@@ -196,13 +205,13 @@ export class PlayModel extends Disposable implements IPlayModel {
     const lines: Line[] = [];
     this.state.lines.forEach((line, i) => {
       if (line.startPlayerId === id) {
-        // 起点を失う線は描けないので一緒に消し、戻すときのために添字を控える。
+        // A line losing its start cannot be drawn; remove it too, noting its index for restore.
         removedLines.push({ line, index: i });
       } else {
         lines.push(line);
       }
     });
-    // 削除では上限を超えないので commit を通さない。通知は呼び出し側がまとめて 1 回出す。
+    // Removal cannot exceed a limit, so commit is skipped. The caller emits a single notification.
     this.state = {
       ...this.state,
       players: this.state.players.filter((p) => p !== target),
@@ -218,8 +227,8 @@ export class PlayModel extends Disposable implements IPlayModel {
   }
 
   removePlayers(ids: readonly string[]): PlayerRemoval[] {
-    // 1 人でも消せない id があれば何も消さずに throw する。途中まで消してから投げると、
-    // 通知も履歴も伴わない変更が残る。
+    // Throw without removing anyone if even one id cannot be removed. Throwing after removing
+    // some would leave a change with neither a notification nor a history entry.
     const remaining = new Set(this.state.players.map((p) => p.id));
     for (const id of ids) {
       if (!remaining.delete(id)) {
@@ -238,7 +247,7 @@ export class PlayModel extends Disposable implements IPlayModel {
       "PlayModel.restorePlayer: duplicate player id",
     );
     const players = insertAt(this.state.players, removal.index, removal.player, "player");
-    // 元の添字の小さい順に差し込むと、消す前の並びに戻る。
+    // Inserting in ascending order of the original index restores the order before removal.
     let lines = this.state.lines;
     for (const { line, index } of [...removal.removedLines].sort((a, b) => a.index - b.index)) {
       lines = insertAt(lines, index, line, "line");
@@ -283,7 +292,7 @@ export class PlayModel extends Disposable implements IPlayModel {
     return prev;
   }
 
-  // 件数が増えうる変更はすべてここを通し、上限を超える状態を持たない。
+  // Every change that can grow a count goes through here, so no state ever exceeds a limit.
   private commit(next: PlayData): void {
     assertWithinLimits(next);
     this.state = next;

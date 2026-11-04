@@ -12,10 +12,10 @@ import {
   splitDraftPoints,
 } from "./interaction.js";
 
-/** 作図中の線の id。Model には入らず、プレビューの中だけで使う。 */
+/** The id of the line being drawn. Never enters the Model; used only inside the preview. */
 const DRAFT_LINE_ID = "__playmaker_draft_line__";
 
-// 起点が選手の線は、選手を差し替えるだけで追従する。
+// A line starts at a player, so replacing the player is enough for the line to follow.
 function applyDragPatch(data: SceneData, drop: DragPatch): SceneData {
   switch (drop.kind) {
     case "player":
@@ -34,12 +34,13 @@ function applyDragPatch(data: SceneData, drop: DragPatch): SceneData {
 }
 
 function draftLine(draw: DrawInteraction): Line {
-  // 打点が上限に達したら、確定される線と同じく最後の打点を終点として描く。
+  // Once the point limit is reached, draw the last placed point as the end point, just as the
+  // committed line will have it.
   const full = draw.points.length >= MAX_DRAFT_POINTS ? splitDraftPoints(draw.points) : undefined;
   return draftToLine(draw, DRAFT_LINE_ID, full ?? { waypoints: draw.points, end: draw.cursor });
 }
 
-/** 確定済みの図に、ドラッグや作図の途中の状態を重ねる。data は書き換えない。 */
+/** Overlays the in-progress drag or drawing on the committed diagram. Does not modify data. */
 export function composePreview(data: SceneData, interaction: Interaction | undefined): SceneData {
   if (interaction === undefined) {
     return data;
@@ -55,8 +56,8 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
 }
 
 /**
- * 選択の強調とハンドルの位置。scene には composePreview で途中の状態を重ねたものを渡す。
- * そうするとドラッグ中のハンドルもドラッグ先に描ける。
+ * The selection highlight and handle positions. Pass as scene the result of composePreview, with
+ * the in-progress state overlaid. That way a handle being dragged is drawn at the drag destination.
  */
 export function computeOverlay(scene: SceneData, selection: EditorSelection): EditorOverlay {
   if (selection.kind === "player") {

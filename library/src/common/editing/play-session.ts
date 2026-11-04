@@ -24,34 +24,35 @@ function openDocument(data: unknown): PlayDocument {
 }
 
 /**
- * 1 つのプレー図の編集を受け持つ。
- * setPlayData は履歴ごと作り直すので、controller も別のオブジェクトになる。
+ * Handles the editing of a single play diagram.
+ * setPlayData rebuilds everything, history included, so the controller becomes a new object too.
  */
 export class PlaySession extends Disposable {
   private readonly _onDidReset = this._register(new Emitter<void>());
-  /** setPlayData で controller が作り直されたあとに発火する。 */
+  /** Fires after setPlayData has rebuilt the controller. */
   readonly onDidReset = this._onDidReset.event;
 
   private readonly _onDidEdit = this._register(new Emitter<void>());
   /**
-   * 編集の確定ごとに 1 回、最新の図の深いコピーを渡す。構築時と setPlayData では発火しない
-   * （読み込みは編集ではないため）。
-   * コピーはリスナごとに作るので、受け手が書き換えても、ほかのリスナとこの図には波及しない。
+   * Passes a deep copy of the latest diagram once per committed edit. Does not fire at
+   * construction or on setPlayData (loading is not an edit).
+   * A copy is made per listener, so a receiver that modifies it affects neither other listeners
+   * nor this diagram.
    */
   readonly onDidChange: Event<PlayData> = (listener) =>
     this._onDidEdit.event(() => listener(this.getPlayData()));
 
   private readonly _onDidChangeScene = this._register(new Emitter<void>());
   /**
-   * 今の controller の onDidChangeScene を転送する。setPlayData で読み直したときも、
-   * onDidReset のあとに 1 回出す。controller が作り直されても購読し直さなくてよい。
+   * Forwards onDidChangeScene of the current controller. Also fires once after onDidReset when
+   * setPlayData reloads the diagram. No need to resubscribe when the controller is rebuilt.
    */
   readonly onDidChangeScene = this._onDidChangeScene.event;
 
   private readonly _onDidChangeViewState = this._register(new Emitter<void>());
   /**
-   * 今の controller の onDidChangeViewState を転送する。setPlayData で読み直したときも、
-   * 表示状態が変わったかどうかにかかわらず onDidReset のあとに 1 回出す。
+   * Forwards onDidChangeViewState of the current controller. Also fires once after onDidReset
+   * when setPlayData reloads the diagram, whether or not the view state changed.
    */
   readonly onDidChangeViewState = this._onDidChangeViewState.event;
 
@@ -70,12 +71,12 @@ export class PlaySession extends Disposable {
     return this.document.model.getFieldZone();
   }
 
-  /** 現在の図の深いコピー。受け取った値を書き換えても、この図には波及しない。 */
+  /** A deep copy of the current diagram. Modifying the returned value does not affect this one. */
   getPlayData(): PlayData {
     return this.document.model.getData();
   }
 
-  /** 現在の図をコピーせずに返す。 */
+  /** Returns the current diagram without copying. */
   getSnapshot(): PlayData {
     return this.document.model.getSnapshot();
   }
@@ -84,7 +85,10 @@ export class PlaySession extends Disposable {
     this.document.controller.setFieldZone(zone);
   }
 
-  /** 外から来た隊形を正規化してから読む。置ける選手が 1 人もいなければ何もせず false を返す。 */
+  /**
+   * Normalizes an external formation before loading it. Does nothing and returns false if not a
+   * single player can be placed.
+   */
   loadFormation(formation: Formation): boolean {
     const normalized = normalizeFormation(formation);
     return normalized !== null && this.document.controller.loadFormation(normalized);

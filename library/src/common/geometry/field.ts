@@ -2,23 +2,24 @@ import type { FieldState, FieldZone } from "../model/play-data.js";
 import type { FieldPosition } from "../model/player.js";
 
 /**
- * サイドラインの間の幅。規定は 160 フィート（53⅓ ヤード）だが、中央（26.5）が
- * 0.5 ヤードの格子点に乗るように 53 ヤードへ丸める。本物の寸法との差は 1 フィートで、
- * 図の見た目には出ない。
+ * Width between the sidelines. The rule says 160 feet (53⅓ yards), but it is rounded to 53 yards
+ * so that the center (26.5) lands on a 0.5 yard grid point. The difference from the real
+ * dimension is 1 foot, which does not show in the diagram.
  */
 export const FIELD_WIDTH_YARDS = 53;
 
 /**
- * middle ゾーンで映す縦の長さ。レッドゾーンの窓は、ヤード数字が端で見切れないよう
- * これより深い。窓ごとの長さは zoneWindowLength で得る。
+ * Vertical length shown in the middle zone. The red zone windows are deeper than this so that
+ * the yard numbers are not cut off at the edge. zoneWindowLength gives the length per window.
  */
 export const ZONE_WINDOW_LENGTH_YARDS = 30;
 
 /**
- * リーグごとの、フィールドの中央からハッシュマークまでの距離（ヤード）。
- * 左右のハッシュの間隔は NCAA が 40 フィート、NFL が 18.5 フィート、NFHS が 53⅓ フィート。
- * 選手をハッシュの上に置けるように、格子点（0.5 ヤード刻み）に丸めてある。
- * 利用者がリーグを選ぶ API は無く、DEFAULT_FIELD_LEAGUE で描く。
+ * Distance (in yards) from the center of the field to the hash marks, per league.
+ * The gap between the left and right hashes is 40 feet in the NCAA, 18.5 feet in the NFL, and
+ * 53⅓ feet in the NFHS. The values are rounded to grid points (0.5 yard steps) so that players
+ * can be placed on the hashes. There is no API for the consumer to pick a league; the diagram
+ * is drawn with DEFAULT_FIELD_LEAGUE.
  */
 export const HASH_CENTER_OFFSET_YARDS_BY_LEAGUE = {
   ncaa: 6.5,
@@ -28,31 +29,32 @@ export const HASH_CENTER_OFFSET_YARDS_BY_LEAGUE = {
 
 export type FieldLeague = keyof typeof HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
 
-/** 日本のフィールドは NCAA のハッシュの間隔で引かれていることが多い。 */
+/** Fields in Japan are usually lined with the NCAA hash spacing. */
 export const DEFAULT_FIELD_LEAGUE: FieldLeague = "ncaa";
 
 /**
- * レッドゾーンの窓に映す、ゴールラインから手前への奥行き。本来のレッドゾーン（20 ヤード）より
- * 広いのは、20 ヤードラインが窓の端に乗って数字が見切れるのを避けるため。
+ * Depth shown in the red zone windows, from the goal line back. It is wider than the actual red
+ * zone (20 yards) so the 20 yard line does not sit on the window edge with its numbers cut off.
  */
 export const RED_ZONE_DEPTH_YARDS = 25;
 
-/** ヤードラインの間隔。描くのは browser だが、格子の点をラインの上に置かないために共有する。 */
+/** Yard line interval. browser draws the lines; shared so grid dots are not placed on them. */
 export const YARD_LINE_INTERVAL_YARDS = 5;
 
-/** エンドゾーンの奥行き。絶対ヤードは自陣のエンドラインの -10 から相手のエンドラインの 110 まで取る。 */
+/** End zone depth. Absolute yards run from -10 at the own end line to 110 at the opponent's. */
 export const END_ZONE_DEPTH_YARDS = 10;
 
 export interface YardWindow {
-  /** 窓の手前側（画面下、攻撃方向の後方）の絶対ヤード。 */
+  /** Absolute yard of the near side of the window (screen bottom, behind the offense). */
   readonly startYard: number;
-  /** 窓の奥側（画面上、攻撃方向の前方）の絶対ヤード。 */
+  /** Absolute yard of the far side of the window (screen top, ahead of the offense). */
   readonly endYard: number;
 }
 
 /**
- * ゾーンで映す絶対ヤードの範囲。絶対ヤードは自陣のゴールラインを 0、相手のゴールラインを 100 とし、
- * 大きいほど攻撃方向（画面の上）になる。レッドゾーンの窓はエンドゾーンまで映す。
+ * Range of absolute yards shown for a zone. Absolute yards put the own goal line at 0 and the
+ * opponent's goal line at 100, growing toward the offense direction (screen top). The red zone
+ * windows show the end zone as well.
  */
 export function fieldZoneWindow(zone: FieldZone): YardWindow {
   switch (zone) {
@@ -72,14 +74,15 @@ export function zoneWindowLength(zone: FieldZone): number {
   return endYard - startYard;
 }
 
-/** ゾーンの窓の幅と縦の長さの比。レッドゾーンの窓は middle より縦に長い。 */
+/** Width to vertical length ratio of the zone window. Red zone windows are taller than middle. */
 export function fieldWindowAspect(zone: FieldZone): number {
   return FIELD_WIDTH_YARDS / zoneWindowLength(zone);
 }
 
 /**
- * 位置をゾーン窓の中（左右はサイドライン間、縦は窓の端から端）へ寄せる。
- * 画面の外で離したドラッグや余白へのクリックで、見えない位置に選手や点を置かないためのもの。
+ * Clamps a position into the zone window (between the sidelines laterally, edge to edge
+ * vertically). Keeps a drag released off screen or a click in the margin from placing a
+ * player or point at an invisible position.
  */
 export function clampToZoneWindow(position: FieldPosition, field: FieldState): FieldPosition {
   const { startYard, endYard } = fieldZoneWindow(field.zone);
@@ -93,8 +96,8 @@ export function clampToZoneWindow(position: FieldPosition, field: FieldState): F
 }
 
 /**
- * 絶対ヤードに対応する、フィールドに書く番号（1..50）。両ゴールから数える（…40、50、40…）。
- * ゴールラインとエンドゾーンには番号を書かないので null を返す。
+ * Number painted on the field (1..50) for an absolute yard. Counted from both goals (...40, 50,
+ * 40...). Returns null for the goal lines and the end zones, where no number is painted.
  */
 export function displayYardNumber(absoluteYard: number): number | null {
   if (absoluteYard <= 0 || absoluteYard >= 100) {
@@ -103,15 +106,15 @@ export function displayYardNumber(absoluteYard: number): number | null {
   return 50 - Math.abs(50 - absoluteYard);
 }
 
-/** ゾーンの窓の中にある、stepYards の倍数の絶対ヤードを小さい順に返す。 */
+/** Returns the absolute yards inside the zone window that are multiples of stepYards, ascending. */
 export function yardLinesInWindow(zone: FieldZone, stepYards: number): number[] {
   if (stepYards <= 0) {
     throw new Error("Playmaker: stepYards must be a positive number.");
   }
   const { startYard, endYard } = fieldZoneWindow(zone);
   const lines: number[] = [];
-  // stepYards が整数でないと足し算を重ねた誤差が出るので、
-  // 窓の奥の端にあるラインを落とさないよう少し余裕を持たせる。
+  // A non-integer stepYards accumulates error over repeated additions, so a little slack
+  // keeps the line at the far edge of the window from being dropped.
   const first = Math.ceil(startYard / stepYards) * stepYards;
   for (let y = first; y <= endYard + 1e-9; y += stepYards) {
     lines.push(y);
@@ -125,21 +128,22 @@ export interface CanvasPoint {
 }
 
 /**
- * ゾーンの窓を縦横比を保ったままビューポートの中央に収め、ヤードと Canvas の px を変換する。
- * フィールドの線や番号は絶対ヤードで、選手と線は LOS からの位置（FieldPosition）で扱う。
+ * Fits the zone window into the center of the viewport, keeping its aspect ratio, and converts
+ * between yards and Canvas px. Field lines and numbers use absolute yards; players and lines
+ * use positions relative to the LOS (FieldPosition).
  */
 export class FieldGeometry {
   readonly viewportWidth: number;
   readonly viewportHeight: number;
   readonly zone: FieldZone;
-  /** LOS の絶対ヤード。FieldPosition の downfieldYard はここからの距離。 */
+  /** Absolute yard of the LOS. The downfieldYard of a FieldPosition is the distance from here. */
   readonly losYard: number;
   readonly yardWindow: YardWindow;
-  /** 1 ヤードあたりの px。縦横で同じ値。 */
+  /** Pixels per yard. The same value vertically and horizontally. */
   readonly scale: number;
   readonly fieldPixelWidth: number;
   readonly fieldPixelHeight: number;
-  /** フィールドの左上の Canvas 座標。縦横比が合わない分の余白になる。 */
+  /** Canvas coordinates of the field's top left; the margin left by the aspect ratio mismatch. */
   readonly offsetX: number;
   readonly offsetY: number;
 
@@ -174,7 +178,7 @@ export class FieldGeometry {
     };
   }
 
-  // 大きさ 0 のビューポートでは scale が 0 で割れないので、フィールドの左上の位置を返して NaN を出さない。
+  // With a size 0 viewport, scale is 0 and cannot divide; return the field's top left, not NaN.
   lateralYardForX(x: number): number {
     return this.scale > 0 ? (x - this.offsetX) / this.scale : 0;
   }
@@ -192,7 +196,7 @@ export class FieldGeometry {
     };
   }
 
-  /** 端も含む。 */
+  /** Inclusive of both edges. */
   containsYard(absoluteYard: number): boolean {
     return absoluteYard >= this.yardWindow.startYard && absoluteYard <= this.yardWindow.endYard;
   }

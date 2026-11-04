@@ -8,46 +8,48 @@ import {
 } from "./guards.js";
 
 /**
- * 選手マーカーの形状。種類が多いと図が散らかるので、丸と四角の 2 種だけにする。
- * どちらも外接円を当たり判定にできるので、hit-test は形状で分けない。
+ * Shape of a player marker. Many shapes would clutter the diagram, so only circle and square.
+ * Both can use the circumscribed circle as the hit area, so the hit test does not branch on shape.
  */
 export const PLAYER_SHAPE_VALUES = ["circle", "square"] as const;
 
 export type PlayerShape = (typeof PLAYER_SHAPE_VALUES)[number];
 
-/** 形状を指定しないときの既定。 */
+/** Default when no shape is given. */
 export const DEFAULT_PLAYER_SHAPE: PlayerShape = "circle";
 
 /**
- * 選手マーカーの塗り。枠線だけ（`outline`）か、色で塗りつぶす（`solid`）か。
- * 形状とは独立に持ち、攻守や役割の見分けに使う。パネルはこの順にスウォッチを並べる。
+ * Fill of a player marker: outline only (`outline`) or filled with the color (`solid`).
+ * Held independently of the shape, it tells offense and defense or roles apart. The panel lists
+ * its swatches in this order.
  */
 export const PLAYER_FILL_VALUES = ["outline", "solid"] as const;
 
 export type PlayerFill = (typeof PLAYER_FILL_VALUES)[number];
 
-/** 塗りを指定しないときの既定。黒板に描く図と同じく、枠線だけにする。 */
+/** Default when no fill is given. Outline only, like a diagram drawn on a chalkboard. */
 export const DEFAULT_PLAYER_FILL: PlayerFill = "outline";
 
 /**
- * 外から受け取る選手の上限。実際のプレー図は 22 人ほどなので、この上限に届くことは無い。
- * 壊れたデータや悪意のあるデータで描画が止まらないように、超えた分は正規化で捨てる。
+ * Limit on the players received from outside. A real play diagram has about 22, so it is never
+ * reached. Normalization drops the excess so that broken or malicious data cannot stall rendering.
  */
 export const MAX_PLAYERS = 64;
 
 /**
- * 選手マーカーの半径（ヤード）。描く大きさと当たり判定の半径に同じ値を使う。
- * フィールドは縦横を同じ縮尺で描くので、ヤードでの円がそのまま画面上の円になる。
+ * Radius of a player marker (in yards). The drawn size and the hit test radius share this value.
+ * The field uses one scale in both directions, so a circle in yards is a circle on screen too.
  */
 export const PLAYER_RADIUS_YARDS = 0.93;
 
 /**
- * フィールド上の位置（ヤード）。縦は LOS（`field.losYard`）からの距離で持つので、
- * ゾーンを切り替えて LOS が動いても、図は形を保ったまま一緒に動く。
- * - lateralYard: 0 = 左サイドライン … FIELD_WIDTH_YARDS = 右サイドライン
- * - downfieldYard: 0 = LOS。正が攻撃方向（画面の上）、負がバックフィールド
+ * Position on the field (in yards). The vertical value is the distance from the LOS
+ * (`field.losYard`), so when switching zones moves the LOS, the diagram keeps its shape and
+ * moves along with it.
+ * - lateralYard: 0 = left sideline ... FIELD_WIDTH_YARDS = right sideline
+ * - downfieldYard: 0 = LOS. Positive is the offense direction (screen top), negative the backfield
  *
- * どちらも GRID_STEP_YARDS の倍数で、モデルの中に格子の外の位置は無い。
+ * Both are multiples of GRID_STEP_YARDS; the model holds no position off the grid.
  */
 export interface FieldPosition {
   readonly lateralYard: number;
@@ -55,8 +57,8 @@ export interface FieldPosition {
 }
 
 /**
- * 1 人の選手。`color` は CSS の色の文字列で、省くとテーマの色で描く。
- * `fill` を省くと DEFAULT_PLAYER_FILL で描く。
+ * A single player. `color` is a CSS color string; when omitted, the theme color is used.
+ * When `fill` is omitted, DEFAULT_PLAYER_FILL is used.
  */
 export interface Player {
   readonly id: string;
@@ -76,8 +78,9 @@ function isPlayerFill(value: unknown): value is PlayerFill {
 }
 
 /**
- * 座標が有限な数でなければ復元できないので null を返す。返す位置は入力と共有しない。
- * 値は格子点へ寄せる。外から来た位置もドラッグで決めた位置と同じ格子に乗せ、図の中に格子の外の位置を作らない。
+ * Returns null when a coordinate is not a finite number, since it cannot be restored. The result
+ * is not shared with the input. Values snap to grid points, so a position from outside lands on
+ * the same grid as one set by dragging, and no position in the diagram is off the grid.
  */
 export function parseFieldPosition(raw: unknown): FieldPosition | null {
   if (!isRecord(raw)) {
@@ -91,8 +94,9 @@ export function parseFieldPosition(raw: unknown): FieldPosition | null {
 }
 
 /**
- * 外から受け取った 1 要素を Player に正規化する。位置が座標でないものは null を返して捨てる。
- * 形状、ラベル、色、塗りが欠けていても捨てずに既定で補う。古い版で保存したデータを読めなくしないため。
+ * Normalizes one entry received from outside into a Player. An entry whose position is not valid
+ * coordinates returns null and is dropped. A missing shape, label, color, or fill is filled with
+ * the default instead of dropping the entry, so data saved by an older version stays readable.
  */
 function normalizePlayer(raw: unknown, index: number): Player | null {
   if (!isRecord(raw)) {
@@ -103,28 +107,28 @@ function normalizePlayer(raw: unknown, index: number): Player | null {
     return null;
   }
 
-  // id が無ければ配列の中の位置から決まる id を振り、同じデータを何度読んでも同じ id になるようにする。
+  // Without an id, assign one from the array position so the same data always yields the same id.
   const id = isNonEmptyString(raw.id) ? raw.id : `p${index}`;
   return {
     id,
     position,
     shape: isPlayerShape(raw.shape) ? raw.shape : DEFAULT_PLAYER_SHAPE,
     label: typeof raw.label === "string" ? raw.label : "",
-    // exactOptionalPropertyTypes では undefined を入れられないので、色と塗りがあるときだけキーを置く。
+    // exactOptionalPropertyTypes rejects undefined, so color and fill keys are set only if present.
     ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
     ...(isPlayerFill(raw.fill) ? { fill: raw.fill } : {}),
   };
 }
 
 /**
- * 外から受け取った players を Player[] に正規化する。配列でなければ空配列を返す。
- * 先頭の MAX_PLAYERS 個より後ろの要素は読まずに捨てる。
+ * Normalizes players received from outside into Player[]. Returns an empty array for a non-array.
+ * Entries after the first MAX_PLAYERS are dropped unread.
  */
 export function normalizePlayers(raw: unknown): Player[] {
   return parseBoundedArray(raw, MAX_PLAYERS, normalizePlayer);
 }
 
-/** 位置まで複製し、元の選手と参照を共有しない。 */
+/** Copies down to the position, sharing no references with the original player. */
 export function clonePlayer(player: Player): Player {
   return {
     id: player.id,

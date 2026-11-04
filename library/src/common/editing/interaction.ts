@@ -9,7 +9,7 @@ import {
 import type { FieldPosition, Player } from "../model/player.js";
 import type { SceneData } from "./editor.js";
 
-/** ドラッグで動かす対象。 */
+/** The target moved by a drag. */
 export type DragTarget =
   | { readonly kind: "player"; readonly playerId: string }
   | { readonly kind: "waypoint"; readonly lineId: string; readonly index: number }
@@ -18,33 +18,39 @@ export type DragTarget =
 export interface DragInteraction {
   readonly type: "drag";
   readonly target: DragTarget;
-  /** 掴んだときの対象の位置。 */
+  /** The position of the target when it was grabbed. */
   readonly origin: FieldPosition;
-  /** 対象の位置からポインタを引いた差。離すまで保ち、掴んだ点がずれないようにする。 */
+  /** The target position minus the pointer. Kept until release so the grabbed point stays put. */
   readonly grabOffset: FieldPosition;
-  /** 窓の中へ寄せたあとの、いまの対象の位置。 */
+  /** The current position of the target, after being clamped into the window. */
   readonly current: FieldPosition;
 }
 
 export interface DrawInteraction {
   readonly type: "draw-line";
   readonly startPlayerId: string;
-  /** 作図を始めた時点の起点選手の位置。最初の打点が同じ位置かの判定に使う。 */
+  /**
+   * The starting player's position when drawing began. Used to check whether the first placed
+   * point is at the same position.
+   */
   readonly start: FieldPosition;
-  /** 打った点。最後の点が終点になり、残りが waypoint になる。 */
+  /** The placed points. The last one becomes the end point and the rest become waypoints. */
   readonly points: readonly FieldPosition[];
   readonly cursor: FieldPosition;
 }
 
-/** ドラッグや作図の途中の状態。Model には載せず、描画のときに重ねる。 */
+/** The in-progress state of a drag or drawing. Not put into the Model; overlaid when rendering. */
 export type Interaction = DragInteraction | DrawInteraction;
 
-/** 座標が完全に一致するか。格子点どうしの比較では、これが「同じ点」の判定になる。 */
+/** Whether the coordinates match exactly. For grid points, this is the "same point" test. */
 export function isSamePosition(a: FieldPosition, b: FieldPosition): boolean {
   return a.lateralYard === b.lateralYard && a.downfieldYard === b.downfieldYard;
 }
 
-/** 作図で打てる点の数。最後の点は終点になるので、waypoint の上限より 1 つ多い。 */
+/**
+ * How many points can be placed while drawing. One more than the waypoint limit, because the
+ * last point becomes the end point.
+ */
 export const MAX_DRAFT_POINTS = MAX_WAYPOINTS_PER_LINE + 1;
 
 export function startDrag(
@@ -64,7 +70,7 @@ export function startDrag(
   };
 }
 
-/** 掴んだ点とポインタのずれを保ったまま、対象を置く位置。 */
+/** Where to put the target while keeping the offset between the grabbed point and the pointer. */
 export function dragPosition(drag: DragInteraction, pointer: FieldPosition): FieldPosition {
   return {
     lateralYard: pointer.lateralYard + drag.grabOffset.lateralYard,
@@ -72,12 +78,15 @@ export function dragPosition(drag: DragInteraction, pointer: FieldPosition): Fie
   };
 }
 
-/** ドラッグ先に対象を置く変更。プレビューと確定の両方がこれを当てるので、見た目と結果がずれない。 */
+/**
+ * The change that puts the target at the drag destination. Both the preview and the commit apply
+ * it, so what is shown never differs from the result.
+ */
 export type DragPatch =
   | { readonly kind: "player"; readonly playerId: string; readonly patch: PlayerPatch }
   | { readonly kind: "line"; readonly lineId: string; readonly patch: LinePatch };
 
-/** 対象を to に置く変更。対象が scene に無ければ undefined。 */
+/** The change that puts the target at to. Undefined if the target is not in the scene. */
 export function dragPatch(
   scene: SceneData,
   target: DragTarget,
@@ -105,7 +114,10 @@ export function dragPatch(
   }
 }
 
-/** 打った点を、確定する線の waypoint と終点に分ける。点が無ければ undefined。 */
+/**
+ * Splits the placed points into the waypoints and end point of the line to commit. Undefined if
+ * there are no points.
+ */
 export function splitDraftPoints(
   points: readonly FieldPosition[],
 ): { readonly waypoints: readonly FieldPosition[]; readonly end: FieldPosition } | undefined {
@@ -113,7 +125,7 @@ export function splitDraftPoints(
   return end === undefined ? undefined : { waypoints: points.slice(0, -1), end };
 }
 
-/** 線の起点は必ず選手なので、選手から作図を始める。 */
+/** A line always starts at a player, so drawing begins from a player. */
 export function startDrawing(player: Player): DrawInteraction {
   return {
     type: "draw-line",
@@ -125,10 +137,10 @@ export function startDrawing(player: Player): DrawInteraction {
 }
 
 /**
- * point に点を打つ。直前の点（まだ点が無ければ起点の選手）と同じ位置のときと、
- * 打てる点の上限に達したときは、打たずにカーソルだけ進める。
- * 同じ位置を弾くのは、ダブルクリックで確定すると pointerdown が 2 回届き、
- * 直前の点の真上にもう 1 点打ってしまうため。
+ * Places a point at point. When it is at the same position as the previous point (or the starting
+ * player if there are no points yet), or the point limit has been reached, only the cursor advances
+ * and no point is placed. Same positions are rejected because committing with a double-click
+ * delivers pointerdown twice, which would place another point right on top of the previous one.
  */
 export function addDraftPoint(draw: DrawInteraction, point: FieldPosition): DrawInteraction {
   const last = draw.points.at(-1) ?? draw.start;
@@ -137,8 +149,9 @@ export function addDraftPoint(draw: DrawInteraction, point: FieldPosition): Draw
 }
 
 /**
- * 確定する線の waypoint と終点。anchor はいまの起点選手の位置。点が無いときと、
- * 打った点がすべて anchor と同じで長さが 0 のときは undefined。長さ 0 の線は見えず、選択もできない。
+ * The waypoints and end point of the line to commit. anchor is the current position of the starting
+ * player. Undefined when there are no points, or when every placed point equals anchor and the
+ * length is 0. A zero-length line is invisible and cannot be selected.
  */
 export function committableDraft(
   draw: DrawInteraction,
@@ -151,7 +164,7 @@ export function committableDraft(
   return draw.points.every((p) => isSamePosition(p, anchor)) ? undefined : split;
 }
 
-/** 作図から線を組み立てる。プレビューと確定で同じ既定値を使う。 */
+/** Builds a line from the drawing. The preview and the commit use the same defaults. */
 export function draftToLine(
   draw: DrawInteraction,
   id: string,

@@ -3,8 +3,9 @@ import type { Player } from "../model/player.js";
 import type { ICommand } from "./command.js";
 
 /**
- * 採番済みの選手をまとめて追加する。既にある選手と線は残すので、攻撃と守備の隊形を順に重ねられる。
- * Model への変更は 1 回にまとめ、通知も 1 回だけにする。
+ * Adds a batch of players that already have ids assigned. Existing players and lines are kept,
+ * so an offense formation and a defense formation can be layered one after the other.
+ * The change to the Model is made in one go, so only one notification is sent.
  */
 export class LoadFormationCommand implements ICommand {
   readonly label = "Load formation";
@@ -23,7 +24,7 @@ export class LoadFormationCommand implements ICommand {
   }
 
   undo(model: IPlayModel): void {
-    // 追加した選手を起点にした線は、それより後のコマンドなので先に取り消されている。
+    // Lines starting from the added players come from later commands, so they are already undone.
     model.removePlayers(this.players.map((p) => p.id));
   }
 }

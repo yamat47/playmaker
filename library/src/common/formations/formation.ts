@@ -4,31 +4,36 @@ import { clonePlayer, normalizePlayers, type Player } from "../model/player.js";
 import { isTeamSide, type TeamSide } from "../presets/shared.js";
 
 /**
- * 隊形の 1 人。`id` は持たず、読み込むたびに振る。同じ隊形を 2 回読んでも、
- * 図にいる選手とも Undo で戻る選手とも id がぶつからない。
+ * One player of a formation. It has no `id`; one is assigned on every load. Even when the same
+ * formation is loaded twice, ids collide neither with players in the diagram nor with players
+ * that Undo brings back.
  */
 export type FormationPlayer = Omit<Player, "id">;
 
-/** 読み込むと、players を今の図に足す。プリセットのほかに、利用者が作った隊形も渡せる。 */
+/**
+ * Loading adds players to the current diagram. Besides the presets, a formation built by the
+ * consumer can be passed as well.
+ */
 export interface Formation {
   readonly id: string;
   readonly name: string;
-  /** 読み込んだときの選手の配置には影響しない。 */
+  /** Does not affect where the players are placed when loaded. */
   readonly side: TeamSide;
-  /** 1 人以上。 */
+  /** At least one player. */
   readonly players: readonly FormationPlayer[];
 }
 
-/** 省略できるキーの扱いを clonePlayer と揃え、選手に値が増えてもここを直さずに済ませる。 */
+/** Treats optional keys like clonePlayer, so adding a value to Player needs no change here. */
 export function toFormationPlayer(player: Player): FormationPlayer {
   const { id: _id, ...template } = clonePlayer(player);
   return template;
 }
 
 /**
- * 外から受け取った隊形を Formation に正規化する。選手は図の選手と同じ規則で正規化し、
- * 置ける選手が 1 人もいなければ null を返す。id、name、side が欠けていても既定で補う。
- * 返り値は新しいオブジェクトで、入力と参照を共有しない。
+ * Normalizes an externally received formation into a Formation. Players are normalized by the
+ * same rules as players in the diagram; null is returned if not a single player can be placed.
+ * Missing id, name, and side are filled with defaults.
+ * The return value is a new object that shares no references with the input.
  */
 export function normalizeFormation(raw: unknown): Formation | null {
   if (!isRecord(raw)) {
@@ -47,7 +52,8 @@ export function normalizeFormation(raw: unknown): Formation | null {
 }
 
 /**
- * 隊形の選手に id を振って Player にする。id は takenIds とも、同じ隊形のほかの選手とも重ならない。
+ * Assigns ids to the formation's players to make them Players. An id collides neither with
+ * takenIds nor with the other players of the same formation.
  */
 export function instantiateFormation(
   formation: Formation,

@@ -1,14 +1,18 @@
-// 隊形とプレーのプリセットで共有する配置。縦は LOS からの位置（LOS が 0 で、攻撃方向が正）で、
-// 横はセンターを 26.5 ヤード（フィールドの中央）に置く。位置はすべて 0.5 ヤードの格子点で書く。
-// どのゾーンで読み込んでも窓に収まる。名称は英語で書く。フィールド上の表記を英語に揃えるため。
+// Alignments shared by the formation presets and the play presets. Vertical is the position from
+// the LOS (the LOS is 0 and the offense's direction is positive), and horizontal puts the center
+// at 26.5 yards (the middle of the field). Every position is written on a 0.5-yard grid point.
+// They fit in the window of whichever zone they are loaded into. Names are English only; they are
+// not localized through the ja dictionary.
 //
-// OL は LOS の 1 ヤード後ろ、守備ラインは 1.5 ヤード前に置き、マーカーが重ならない隙間を空ける。
-// LOS 上の選手（OL、TE、外側の WR）は -1、LOS から下がる選手（スロット、フランカー）は -2、
-// センター直下の QB は -3。守備ラインは OL の肩に付ける（シェード）ので、どのギャップを誰が
-// 守るかが読める。TE が付く隊形にはオーバーで構え、強い側の E を TE の外側の肩（9 テク）に置く。
-// 守備の選手には全員ラベルを付ける。
+// The OL sit 1 yard behind the LOS and the defensive line 1.5 yards in front of it, leaving a gap
+// so the markers do not overlap. Players on the LOS (OL, TE, outside WRs) are at -1, players off
+// the LOS (slot, flanker) at -2, and a QB under center at -3. The defensive line aligns on the
+// OL's shoulders (shades), so it is readable which gap each defender has. Against a formation
+// with a TE, the front aligns over, with the strong-side E on the TE's outside shoulder
+// (9-technique). Every defensive player gets a label.
 //
-// 選手は id を持つ。プレーの線が起点の選手を id で指すためで、隊形にするときは id を外す。
+// Players have ids, because play lines refer to their starting player by id. The ids are stripped
+// when they are turned into formations.
 
 import type { FieldPosition, Player, PlayerShape } from "../model/player.js";
 
@@ -26,14 +30,17 @@ export function player(
 }
 
 /**
- * 相手の 1 ヤード手前。ブロックの終点に使い、T 字のバーが相手のマーカーの縁に付く。
- * lateral で相手の肩の側へずらす（リーチやダウンブロック）。
+ * 1 yard short of the opponent. Used as a block's end point, so the T bar touches the edge of the
+ * opponent's marker. lateral shifts it toward the opponent's shoulder (reach or down block).
  */
 export function shortOf(target: FieldPosition, lateral = 0): FieldPosition {
   return pt(target.lateralYard + lateral, target.downfieldYard - 1);
 }
 
-/** 相手の肩の横。コンボブロックで LB へ上がる側が経由する。lateral は 1 ヤード以上離す。 */
+/**
+ * Beside the opponent's shoulder. In a combo block, the blocker climbing to the LB goes through
+ * here. lateral is kept at least 1 yard away.
+ */
 export function beside(target: FieldPosition, lateral: number): FieldPosition {
   return pt(target.lateralYard + lateral, target.downfieldYard);
 }
@@ -46,8 +53,9 @@ export const OL = {
   rt: pt(31.5, -1),
 } as const;
 
-// 4 ダウンのオーバーフロント。右を強い側として、E は LT の外側の肩、N は C の弱い側の肩、
-// T は RG の外側の肩に付ける。強い側の E は、TE が無ければ RT の外側の肩に付ける。
+// Four-down over front. With the right as the strong side, the E aligns on the LT's outside
+// shoulder, the N on the C's weak-side shoulder, and the T on the RG's outside shoulder. With no
+// TE, the strong-side E aligns on the RT's outside shoulder.
 export const FRONT_4 = {
   eL: pt(20.5, 1.5),
   n: pt(25.5, 1.5),
@@ -55,20 +63,20 @@ export const FRONT_4 = {
   eR: pt(32.5, 1.5),
 } as const;
 
-/** TE が右に付くときの強い側の E。TE の外側の肩（9 テク）。 */
+/** The strong-side E when the TE is on the right: the TE's outside shoulder (9-technique). */
 export const END_OVER_TE = pt(35.5, 1.5);
 
-// 3 ダウンのオッドフロント。N は C の真上、E は両タックルの内側の肩。
+// Three-down odd front. N head up on the C, Es on the inside shoulder of each tackle.
 export const FRONT_3 = {
   eL: pt(22.5, 1.5),
   n: pt(26.5, 1.5),
   eR: pt(30.5, 1.5),
 } as const;
 
-// 4-3 オーバーの LB。S は TE の真上に付く。
+// 4-3 over LBs. The S aligns head up on the TE.
 export const LB_43 = { w: pt(22.5, 5), m: pt(27, 5), s: pt(34.5, 5) } as const;
 
-// ニッケルの ILB 2 人と、スロットに付くニッケルバック。
+// The two nickel ILBs and the nickel back covering the slot.
 export const LB_NICKEL = { m: pt(24, 5), w: pt(30, 5), nb: pt(14, 5) } as const;
 
 export function cornerSpots(depth: number): { left: FieldPosition; right: FieldPosition } {
@@ -107,7 +115,7 @@ export function corners(depth: number): Player[] {
   return [player("cb-l", "CB", left), player("cb-r", "CB", right)];
 }
 
-// ---- 攻撃の隊形 ----
+// ---- Offensive formations ----
 
 export function iFormation(): Player[] {
   return [
@@ -193,9 +201,9 @@ export function bunch(): Player[] {
   ];
 }
 
-// ---- 守備の隊形 ----
+// ---- Defensive formations ----
 
-/** 4-3 オーバー。TE が右に付く隊形に構える。 */
+/** 4-3 over. Aligned against a formation with the TE on the right. */
 export function defense43(): Player[] {
   return [
     ...front4(END_OVER_TE),
@@ -221,19 +229,19 @@ export function defense34(): Player[] {
   ];
 }
 
-/** ニッケルの前の 6 人（4 ダウンと ILB 2 人）。 */
+/** The six front players of the nickel (four down linemen and two ILBs). */
 export function nickelFront(strongEnd: FieldPosition = FRONT_4.eR): Player[] {
   return [...front4(strongEnd), player("mlb", "M", LB_NICKEL.m), player("wlb", "W", LB_NICKEL.w)];
 }
 
-/** ニッケルの後ろの 5 人の置き方。カバレッジやプレッシャーごとに変わる。 */
+/** How the five back-end players of the nickel are placed. Varies by coverage and pressure. */
 export interface NickelShell {
   readonly cornerDepth: number;
   readonly fs: FieldPosition;
   readonly ss: FieldPosition;
 }
 
-/** CB 6 ヤード、セイフティ 11 ヤードの 2 ハイ。 */
+/** Two-high shell with the CBs at 6 yards and the safeties at 11. */
 export const NICKEL_BASE: NickelShell = { cornerDepth: 6, fs: pt(22, 11), ss: pt(31, 11) };
 
 export function nickel(shell: NickelShell, strongEnd: FieldPosition = FRONT_4.eR): Player[] {

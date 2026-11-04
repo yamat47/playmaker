@@ -11,8 +11,8 @@ export const EDITOR_TOOL_VALUES = ["select", "add-player", "draw-line"] as const
 export type EditorTool = (typeof EDITOR_TOOL_VALUES)[number];
 
 /**
- * 選択は id の希望であり、対象が消えても解除しない。読み取るときに実在を確かめる。
- * 何も選んでいないことは、EditorOverlay と同じく `kind: "none"` で表す。
+ * A selection is a desired id; it is not cleared when the target disappears. Existence is
+ * checked on read. Having nothing selected is expressed as `kind: "none"`, as in EditorOverlay.
  */
 export type EditorSelection =
   | { readonly kind: "player"; readonly id: string }
@@ -28,7 +28,7 @@ export function isSameSelection(a: EditorSelection, b: EditorSelection): boolean
   return a.kind === b.kind && a.id === b.id;
 }
 
-/** 件数の上限に達していて、そのツールで何も置けないときは false。 */
+/** False when the count limit has been reached and the tool can place nothing. */
 export function isToolAvailable(tool: EditorTool, state: EditorViewState): boolean {
   switch (tool) {
     case "add-player":
@@ -40,15 +40,17 @@ export function isToolAvailable(tool: EditorTool, state: EditorViewState): boole
   }
 }
 
-/** 読み込むと選手の上限を超えるフォーメーションは、1 人も置かれないので false。 */
+/**
+ * False for a formation that would exceed the player limit, since none of its players are placed.
+ */
 export function canLoadFormation(formation: Formation, state: EditorViewState): boolean {
   return formation.players.length <= state.remainingPlayerSlots;
 }
 
-/** 描画するプレー図。版は保存するときだけ要るので持たない。 */
+/** The play diagram to draw. The version is needed only when saving, so it is left out. */
 export type SceneData = Omit<PlayData, "version">;
 
-/** 選択の強調とハンドルを描く位置（ヤード空間）。 */
+/** Where to draw the selection highlight and the handles (in yard space). */
 export type EditorOverlay =
   | { readonly kind: "none" }
   | { readonly kind: "player"; readonly playerId: string }
@@ -64,46 +66,46 @@ export interface EditorViewState {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly fieldZone: FieldZone;
-  /** 線を作図中（確定か取り消し待ち）か。 */
+  /** Whether a line is being drawn (waiting for commit or cancel). */
   readonly isDrawing: boolean;
-  /** あと何人の選手を置けるか。これより多い人数を置く操作は何もしない。 */
+  /** How many more players can be placed. An operation placing more than this does nothing. */
   readonly remainingPlayerSlots: number;
-  /** 線の本数が上限に達しておらず、新しい線を描き始められるか。 */
+  /** Whether the line count is below the limit, so that a new line can be started. */
   readonly canStartLine: boolean;
 }
 
-/** オーバーレイは、scene と同じ途中の状態から求める。 */
+/** The overlay is computed from the same in-progress state as the scene. */
 export interface EditorFrame {
-  /** 確定済みのプレー図に、ドラッグや作図の途中の状態を重ねたもの。 */
+  /** The committed play diagram with the in-progress drag or drawing overlaid on it. */
   readonly scene: SceneData;
   readonly overlay: EditorOverlay;
 }
 
-/** 描画と UI の同期に使う読み取り面。 */
+/** The read-only surface used to keep rendering and the UI in sync. */
 export interface IEditorScene {
-  /** getFrame の結果が変わったかもしれないときに、1 つの操作につき 1 回発火する。 */
+  /** Fires once per operation whenever the result of getFrame may have changed. */
   readonly onDidChangeScene: Event<void>;
   /**
-   * getViewState か、選択中の選手や線の値が変わったときだけ発火する。
-   * ドラッグ中の移動のように、描く図だけが変わる操作では発火しない。
+   * Fires only when getViewState or the value of the selected player or line changes.
+   * Does not fire for operations that change only the diagram, such as moving during a drag.
    */
   readonly onDidChangeViewState: Event<void>;
   getViewState(): EditorViewState;
-  /** 選手を選択していないか、対象が消えていれば undefined。 */
+  /** Undefined when no player is selected or the target has disappeared. */
   getSelectedPlayer(): Player | undefined;
-  /** 線を選択していないか、対象が消えていれば undefined。 */
+  /** Undefined when no line is selected or the target has disappeared. */
   getSelectedLine(): Line | undefined;
   getFrame(): EditorFrame;
 }
 
-/** ポインタの操作（ヤード空間）。 */
+/** Pointer operations (in yard space). */
 export interface IEditorGestures {
   pointerDown(pos: FieldPosition): void;
   pointerMove(pos: FieldPosition): void;
   pointerUp(pos: FieldPosition): void;
 }
 
-/** ツールバー、パネル、キー操作から呼ぶ編集。 */
+/** Edits invoked from the toolbar, the panels, and keyboard input. */
 export interface IEditorActions {
   setTool(tool: EditorTool): void;
   commitLine(): void;
@@ -113,16 +115,16 @@ export interface IEditorActions {
   updateSelectedLine(patch: LinePatch): void;
   setFieldZone(zone: FieldZone): void;
   /**
-   * 選手を既存の図に追記し、置いたら true を返す。
-   * 置ける選手が無いときと、置くと上限を超えるときは何もせず false を返す。
+   * Appends the players to the existing diagram and returns true once they are placed.
+   * Does nothing and returns false when no player can be placed or the limit would be exceeded.
    */
   loadFormation(formation: Formation): boolean;
-  /** 作図中は最後の打点を取り消し、履歴には触れない。 */
+  /** While drawing, removes the last placed point and leaves the history untouched. */
   undo(): void;
   redo(): void;
 }
 
-/** ツールバーやパネルのように、表示を読んで編集を呼ぶ UI が使う面。 */
+/** The surface for UI such as a toolbar or a panel that reads the view and invokes edits. */
 export type IEditorUi = IEditorActions & IEditorScene;
 
 export interface IEditorController extends IEditorScene, IEditorGestures, IEditorActions {}

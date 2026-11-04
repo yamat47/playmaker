@@ -1,7 +1,7 @@
-/** キー操作で呼ぶ編集。 */
+/** Edits invoked by keyboard input. */
 export type KeyAction = "cancel-interaction" | "commit-line" | "undo" | "redo";
 
-/** KeyboardEvent のうち、割り当てを決めるのに読む値。 */
+/** The values of a KeyboardEvent that are read to resolve the binding. */
 export interface KeyStroke {
   readonly key: string;
   readonly metaKey: boolean;
@@ -10,9 +10,9 @@ export interface KeyStroke {
 }
 
 /**
- * キーに割り当てた編集を返す。割り当てのないキーは null。
- * Mac の Cmd と、ほかの OS の Ctrl を同じ修飾キーとして扱う。
- * Shift を押すと key が大文字で届くので、z と y は大文字も同じキーとみなす。
+ * Returns the edit bound to the key. Null for a key with no binding.
+ * Cmd on Mac and Ctrl on other operating systems are treated as the same modifier.
+ * With Shift held, key arrives in uppercase, so uppercase z and y count as the same keys.
  */
 export function resolveKeyAction(stroke: KeyStroke): KeyAction | null {
   const mod = stroke.metaKey || stroke.ctrlKey;

@@ -9,8 +9,8 @@ export function isTeamSide(value: unknown): value is TeamSide {
 }
 
 /**
- * 値とその中のオブジェクトをすべて凍結して返す。プリセットは全利用者が共有するので、
- * 1 人が書き換えると他の読み込み結果まで変わってしまう。
+ * Freezes the value and every object inside it, then returns it. The presets are shared by all
+ * consumers, so one of them modifying a preset would change what the others load as well.
  */
 export function deepFreeze<T>(value: T): T {
   if (typeof value === "object" && value !== null && !Object.isFrozen(value)) {

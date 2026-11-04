@@ -20,7 +20,7 @@ and the test conventions in `.claude/rules/testing.md` (loaded automatically whe
 
 | Path | Contents |
 |---|---|
-| `library/` | The library itself (npm package). `src/` `demo/` plus the package.json, tsconfig, vite, and biome configuration |
+| `library/` | The library itself (npm package). `src/`, the development playground `demo/` (the public demo is yamat47/playmaker-demo), plus the package.json, tsconfig, vite, and biome configuration |
 | `docker/` | Development image and compose |
 | `docs/` | Requirements, design, and plans |
 | `Makefile` | Entry point for development commands |

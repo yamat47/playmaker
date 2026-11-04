@@ -161,7 +161,7 @@ The editing UI is English by default and ships Japanese, chosen with the `locale
 ## Development
 
 ```
-library/     The library itself (src/, demo/, package.json, and the various configs)
+library/     The library itself (src/, the development playground in demo/, package.json, and the various configs)
 docker/      The development image and compose
 docs/        Requirements, design, and plans
 Makefile     The entry point for development commands
@@ -172,7 +172,7 @@ Node / pnpm are not installed on the host. They run inside a Docker container. T
 
 ```sh
 make setup          # Build the image and install the dependencies (first time and after changing the Dockerfile)
-make up             # Start the library/demo/ playground at http://localhost:5173 (make down stops it)
+make up             # Start the development playground (library/demo/) at http://localhost:5173 (make down stops it)
 make test           # Vitest (with a built-in 100% coverage gate for the common layer). FILE= runs one file only
 make test-browser   # Verify Playmaker's wiring in Chromium with Vitest Browser Mode
 make typecheck      # tsc -b (the 5 tsconfigs: common, browser, test, browser-test, and tooling)

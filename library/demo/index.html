@@ -4,373 +4,126 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Playmaker Playground</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Saira+Condensed:wght@500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <style>
-      /* Material Design colors: white paper on a gray page; only the app bar is primary. */
-      :root {
-        --primary: #1976d2;
-        --on-primary: #ffffff;
-        --bg: #fafafa;
-        --surface: #ffffff;
-        --divider: rgba(0, 0, 0, 0.12);
-        --ink: rgba(0, 0, 0, 0.87);
-        --ink-dim: rgba(0, 0, 0, 0.6);
-        --selected: color-mix(in srgb, var(--primary) 8%, transparent);
-        --cat-run: #ef6c00;
-        --cat-pass: var(--primary);
-        --cat-rpo: #7b1fa2;
-        --cat-cov: #00796b;
-        --cat-pres: #d32f2f;
-        --off: var(--primary);
-        --def: #616161;
-        --shadow-4: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14),
-          0 1px 10px 0 rgba(0, 0, 0, 0.12);
-        --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
-        --ui: Roboto, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui,
-          sans-serif;
-      }
-
+      /* A development playground, not the public demo (that is yamat47/playmaker-demo). The page
+         stays unstyled on purpose, so the library's own UI is what gets looked at. */
       * {
         box-sizing: border-box;
       }
-
       html,
       body {
         margin: 0;
         height: 100%;
-        background: var(--bg);
-        color: var(--ink);
-        font-family: var(--ui);
-        font-size: 14px;
+        font: 14px system-ui, sans-serif;
       }
-
-      /* This page is the library's host. Public variables give its UI the page colors and font. */
       #app {
-        --playmaker-ui-font: var(--ui);
-        --playmaker-ui-accent: var(--primary);
-
         display: flex;
-        flex-direction: column;
         height: 100vh;
       }
-
-      /* ---- App bar ---- */
-      .topbar {
-        position: relative;
-        z-index: 1;
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        min-height: 56px;
-        padding: 0 20px;
-        background: var(--primary);
-        color: var(--on-primary);
-        box-shadow: var(--shadow-4);
-      }
-      .brand {
-        display: flex;
-        align-items: baseline;
-        gap: 12px;
+      #stage {
+        flex: 1;
         min-width: 0;
+        margin: 12px;
       }
-      .brand__name {
-        font-family: var(--display);
-        font-weight: 700;
-        font-size: 24px;
-        letter-spacing: 0.08em;
-      }
-      .brand__tag {
-        font-size: 13px;
-        opacity: 0.85;
-        white-space: nowrap;
-      }
-      .topbar__spacer {
-        flex: 1;
-      }
-      .topbar__actions {
-        display: flex;
-        gap: 4px;
-      }
-
-      /* Inside the app bar, text-only buttons placed on primary. */
-      .btn {
-        font: inherit;
-        font-weight: 500;
-        letter-spacing: 0.02em;
-        padding: 7px 12px;
-        border: 0;
-        border-radius: 4px;
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        transition: background-color 0.15s;
-      }
-      .btn:hover {
-        background: rgba(255, 255, 255, 0.12);
-      }
-      .btn[aria-pressed="true"] {
-        background: rgba(255, 255, 255, 0.24);
-      }
-      .btn:focus-visible {
-        outline: 2px solid currentColor;
-        outline-offset: 1px;
-      }
-
-      /* Buttons placed on paper are primary, outline only. */
-      .drawer .btn {
-        border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
-        color: var(--primary);
-      }
-      .drawer .btn:hover {
-        border-color: var(--primary);
-        background: var(--selected);
-      }
-
-      /* ---- Body (the left list plus the stage) ---- */
-      .body {
-        display: flex;
-        flex: 1;
-        min-height: 0;
-      }
-
-      .library {
-        width: 300px;
+      .tools {
+        width: 320px;
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
-        background: var(--surface);
-        border-right: 1px solid var(--divider);
-      }
-      .library__scroll {
-        flex: 1;
+        gap: 10px;
+        padding: 12px;
         overflow-y: auto;
-        padding: 8px 0 16px;
+        border-left: 1px solid #ddd;
+        background: #f7f7f7;
       }
-      .group__title {
-        font-size: 14px;
-        font-weight: 500;
-        color: var(--ink-dim);
-        padding: 16px 16px 4px;
-      }
-      .group__sub {
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--def);
-        padding: 8px 16px 4px;
-      }
-      .group__sub--off {
-        color: var(--off);
-      }
-
-      .preset {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        width: 100%;
-        text-align: left;
-        font: inherit;
-        padding: 8px 16px;
-        border: 0;
-        background: transparent;
-        color: var(--ink);
-        cursor: pointer;
-        transition: background-color 0.15s;
-      }
-      .preset:hover {
-        background: rgba(0, 0, 0, 0.04);
-      }
-      .preset.is-active {
-        background: var(--selected);
-        color: var(--primary);
-      }
-      .preset:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: -2px;
-      }
-      /* The kind chip. The list rows and the card for the current play share one shape. */
-      .preset__tag,
-      .playinfo__chip {
-        font-family: var(--display);
-        font-weight: 600;
-        font-size: 11px;
-        letter-spacing: 0.04em;
-        padding: 3px 8px;
-        border-radius: 12px;
-        color: var(--on-primary);
-      }
-      .preset__tag {
-        flex-shrink: 0;
-        min-width: 44px;
-        text-align: center;
-      }
-      .preset__name {
-        font-family: var(--display);
-        font-weight: 500;
+      .tools h1 {
         font-size: 16px;
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      /* ---- Card for the play now showing ---- */
-      .playinfo {
-        border-top: 1px solid var(--divider);
-        background: var(--surface);
-        padding: 14px 16px 16px;
-      }
-      .playinfo__eyebrow {
-        font-size: 12px;
-        color: var(--ink-dim);
-      }
-      .playinfo__name {
-        font-family: var(--display);
-        font-weight: 700;
-        font-size: 22px;
-        margin: 2px 0 8px;
-      }
-      .playinfo__meta {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      .playinfo__pers {
-        font-size: 12px;
-        color: var(--ink-dim);
-      }
-      .playinfo__summary {
-        font-size: 13px;
-        line-height: 1.6;
-        color: var(--ink);
         margin: 0;
       }
-
-      /* ---- Stage (the field) ---- */
-      .stage-wrap {
-        position: relative;
-        flex: 1;
-        min-width: 0;
+      .tools h2 {
+        font-size: 12px;
+        margin: 8px 0 0;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
-      #stage {
-        position: absolute;
-        inset: 12px;
-      }
-
-      /* ---- Developer drawer ---- */
-      .drawer {
-        background: var(--surface);
-        border-top: 1px solid var(--divider);
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height 0.18s ease;
-      }
-      .drawer.is-open {
-        max-height: 46vh;
-        overflow-y: auto;
-      }
-      .drawer__inner {
-        padding: 12px 20px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .drawer__row {
+      .row {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
         align-items: center;
       }
-      .drawer__label {
-        font-weight: 500;
-        font-size: 13px;
-        color: var(--ink-dim);
-        margin-right: 4px;
-      }
-      .drawer__status {
+      .status {
         font-size: 12px;
-        color: var(--ink-dim);
+        color: #555;
+        min-height: 1.2em;
       }
-      .drawer textarea {
+      textarea {
         width: 100%;
-        height: 150px;
-        background: var(--bg);
-        color: var(--ink);
-        border: 1px solid rgba(0, 0, 0, 0.23);
-        border-radius: 4px;
-        padding: 8px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 12px;
+        height: 220px;
+        font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
         resize: vertical;
       }
-      @media (prefers-reduced-motion: reduce) {
-        .drawer,
-        .btn,
-        .preset {
-          transition: none;
-        }
+      select {
+        max-width: 100%;
+      }
+      /* The public variables, set on an ancestor as a host would, to check the override path. */
+      #app.themed {
+        --playmaker-ui-accent: #6a1b9a;
+        --playmaker-ui-font: Georgia, serif;
+        --playmaker-line-route: #6a1b9a;
+        --playmaker-player-color: #1565c0;
+        --playmaker-selection: #00acc1;
       }
     </style>
   </head>
   <body>
     <div id="app">
-      <header class="topbar">
-        <div class="brand">
-          <span class="brand__name">Playmaker</span>
-          <span class="brand__tag">Play diagram designer (demo)</span>
-        </div>
-        <div class="topbar__spacer"></div>
-        <div class="topbar__actions">
-          <button id="mode-toggle" class="btn" type="button">Switch to view</button>
-          <button id="clear" class="btn" type="button">Clear</button>
-          <button id="export-png" class="btn" type="button">Export PNG</button>
-          <button id="dev-toggle" class="btn" type="button" aria-pressed="false">Developer</button>
-        </div>
-      </header>
+      <div id="stage"></div>
+      <aside class="tools" aria-label="Developer tools">
+        <h1>Playmaker Playground</h1>
 
-      <div class="body">
-        <aside class="library">
-          <div id="library-scroll" class="library__scroll"></div>
-          <div class="playinfo">
-            <div class="playinfo__eyebrow">Now showing</div>
-            <div id="playinfo-name" class="playinfo__name">—</div>
-            <div class="playinfo__meta">
-              <span id="playinfo-chip" class="playinfo__chip" hidden></span>
-              <span id="playinfo-pers" class="playinfo__pers"></span>
-            </div>
-            <p id="playinfo-summary" class="playinfo__summary"></p>
-          </div>
-        </aside>
-
-        <main class="stage-wrap">
-          <div id="stage"></div>
-        </main>
-      </div>
-
-      <section id="drawer" class="drawer" aria-label="Developer tools">
-        <div class="drawer__inner">
-          <div class="drawer__row">
-            <span class="drawer__label">Fixtures</span>
-            <button id="load-stress" class="btn" type="button">Density stress</button>
-            <span id="status" class="drawer__status"></span>
-          </div>
-          <div class="drawer__row">
-            <span class="drawer__label">PlayData JSON</span>
-            <button id="json-export" class="btn" type="button">Export</button>
-            <button id="json-import" class="btn" type="button">Import (round trip)</button>
-            <button id="json-legacy" class="btn" type="button">Legacy blob without version</button>
-            <button id="json-future" class="btn" type="button">Future (v99) blob</button>
-            <span id="data-status" class="drawer__status"></span>
-          </div>
-          <textarea id="json" spellcheck="false" aria-label="PlayData JSON"></textarea>
+        <h2>Editor</h2>
+        <div class="row">
+          <button id="mode-toggle" type="button"></button>
+          <button id="export-png" type="button">Export PNG</button>
+          <button id="clear" type="button">Clear</button>
         </div>
-      </section>
+        <div class="row">
+          <label>
+            Locale
+            <select id="locale"></select>
+          </label>
+          <span class="status">Rebuilds the editor with the current diagram</span>
+        </div>
+        <div class="row">
+          <label><input id="theme-toggle" type="checkbox" /> Theme override</label>
+          <span class="status">Sets --playmaker-* variables on the host and calls refresh()</span>
+        </div>
+        <p id="status" class="status"></p>
+
+        <h2>Presets</h2>
+        <div class="row">
+          <label>
+            Play
+            <select id="play"></select>
+          </label>
+        </div>
+        <div class="row">
+          <button id="load-stress" type="button">Density stress</button>
+          <span class="status">Circles and squares, 3 line kinds, straight and bezier, many waypoints</span>
+        </div>
+
+        <h2>PlayData JSON</h2>
+        <div class="row">
+          <button id="json-export" type="button">Export</button>
+          <button id="json-import" type="button">Import (round trip)</button>
+          <button id="json-legacy" type="button">Legacy blob without version</button>
+          <button id="json-future" type="button">Future (v99) blob</button>
+        </div>
+        <p id="data-status" class="status"></p>
+        <textarea id="json" spellcheck="false" aria-label="PlayData JSON"></textarea>
+      </aside>
     </div>
     <script type="module" src="/main.ts"></script>
   </body>

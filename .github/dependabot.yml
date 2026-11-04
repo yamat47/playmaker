@@ -1,37 +1,37 @@
-# Dependabot による依存自動更新設定
-# 方針: 常に最新（メジャー含む）を追随する。
-# GitHub Actions は github-toolkit を @main で参照するため対象外。
-# .claude/skills/ の skill も Dependabot の対象外で、update-skills workflow が同じ役を担う。
-#  - minor / patch はエコシステムごとにまとめて 1 PR（ノイズ削減）
-#  - major は個別 PR（破壊的変更を 1 件ずつレビューするため、あえてグループ化しない）
-#  - vitest と @vitest/* だけは major も含めて 1 PR（同じ版でしか動かないため）
+# Dependabot configuration for automatic dependency updates
+# Policy: always follow the latest (including majors).
+# GitHub Actions are out of scope because github-toolkit is referenced at @main.
+# The skills in .claude/skills/ are also out of Dependabot's scope; the update-skills workflow plays the same role.
+#  - minor / patch: one PR per ecosystem (less noise)
+#  - major: individual PRs (deliberately not grouped, so breaking changes are reviewed one at a time)
+#  - vitest and @vitest/* alone: one PR including majors (they only work at the same version)
 version: 2
 
 updates:
-  # npm（pnpm） — library/package.json / library/pnpm-lock.yaml
+  # npm (pnpm): library/package.json / library/pnpm-lock.yaml
   - package-ecosystem: npm
     directory: /library
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
-    # package.json の指定レンジ自体も最新へ引き上げる（lockfile 追従だけにしない）
+    # Also raise the range specified in package.json itself to the latest (not just follow the lockfile)
     versioning-strategy: increase
-    # 公開から 7 日待ってから上げる。pnpm 11 は公開から 1 日たたない版を入れない（minimumReleaseAge）
-    # ので、それより先に PR が来ると install が失敗する。7 日は、取り下げや差し替えが出やすい
-    # 公開直後を避けるために zizmor が求める長さ（dependabot-cooldown）
+    # Wait 7 days after publication before bumping. pnpm 11 does not install versions published less than
+    # a day ago (minimumReleaseAge), so a PR arriving before that fails install. 7 days is the length zizmor
+    # requires (dependabot-cooldown) to avoid the period right after publication, when withdrawals and replacements are common
     cooldown:
       default-days: 7
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
     groups:
-      # 依存は最初に当てはまったグループに入るので、dev-dependencies より前に置く。
-      # vitest だけを上げると、版を揃えるよう求めるプラグインと食い違う。
+      # A dependency goes into the first matching group, so this comes before dev-dependencies.
+      # Bumping vitest alone conflicts with the plugins, which require the versions to match.
       vitest:
         patterns:
           - vitest
           - "@vitest/*"
-      # セキュリティ更新も既定では 1 パッケージずつ来るので、同じ組でまとめる。
+      # Security updates also arrive one package at a time by default, so group them with the same set.
       vitest-security:
         applies-to: security-updates
         patterns:
@@ -48,7 +48,7 @@ updates:
           - minor
           - patch
 
-  # 開発用イメージのベース（node:<major>-<debian>-slim）
+  # Base of the development image (node:<major>-<debian>-slim)
   - package-ecosystem: docker
     directory: /docker
     schedule:

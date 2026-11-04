@@ -1,4 +1,4 @@
-# pnpm 11 はビルドスクリプトを既定で無視し、未承認があると install を失敗させる。
-# vite / vitest が依存する esbuild のネイティブバイナリ用スクリプトを明示的に許可する。
+# pnpm 11 ignores build scripts by default and fails install when any are unapproved.
+# Explicitly allow the script for the native esbuild binary that vite / vitest depend on.
 allowBuilds:
   esbuild: true

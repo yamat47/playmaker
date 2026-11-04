@@ -1,4 +1,4 @@
-# ビルドコンテキストはリポジトリのルート。イメージに入れるのは pnpm の版を読むための
-# library/package.json だけで、ソースは実行時にマウントする
+# The build context is the repository root. The only file put into the image is library/package.json,
+# read for the pnpm version; the sources are mounted at run time
 *
 !library/package.json

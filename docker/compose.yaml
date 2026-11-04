@@ -1,6 +1,6 @@
-# Makefile から docker compose -f docker/compose.yaml で使う。
-# プロジェクト名を固定する。Dev Containers は既定で <フォルダ名>_devcontainer を使うため、
-# 固定しないと volume が別物になり、node_modules がホスト経由とエディタ経由で二重にできる
+# Used from the Makefile as docker compose -f docker/compose.yaml.
+# Pin the project name. Dev Containers uses <folder name>_devcontainer by default, so without
+# pinning, the volumes differ and node_modules gets created twice, once via the host and once via the editor
 name: playmaker
 
 x-base: &base
@@ -8,32 +8,32 @@ x-base: &base
     context: ..
     dockerfile: docker/Dockerfile
   image: playmaker-dev
-  # リポジトリ全体をマウントする（作業ディレクトリは Dockerfile の WORKDIR = library/）。
-  # 全体をマウントするのは Dev Containers の中から git と docs/ .claude/ を扱うため
+  # Mount the whole repository (the working directory is the Dockerfile's WORKDIR = library/).
+  # The whole repository is mounted so that git and docs/ .claude/ can be handled from inside Dev Containers
   volumes:
     - ..:/workspace
-    # node_modules はホストと共有しない。esbuild / Biome のネイティブバイナリが
-    # darwin と linux で別物なのと、バインドマウント越しの大量ファイル I/O が遅いため
+    # node_modules is not shared with the host. The native binaries of esbuild / Biome differ
+    # between darwin and linux, and heavy file I/O across a bind mount is slow
     - node_modules:/workspace/library/node_modules
     - pnpm-store:/home/node/.local/share/pnpm/store
 
 services:
-  # Makefile のタスク実行（docker compose run --rm）と Dev Containers の attach 先
+  # Runs Makefile tasks (docker compose run --rm) and is what Dev Containers attaches to
   workspace:
     <<: *base
     command: sleep infinity
 
-  # demo playground の dev サーバー（make up / make down）
+  # dev server for the demo playground (make up / make down)
   dev:
     <<: *base
     command: pnpm run dev --host 0.0.0.0 --strictPort
     ports:
       - "5173:5173"
     environment:
-      # ホストでの編集は inotify でコンテナに届かない環境がある（colima の既定など）ので
-      # ポーリングで拾う。Vite が同梱する chokidar がこの変数を読む
+      # In some environments (such as colima's default), edits on the host do not reach the container
+      # via inotify, so pick them up by polling. The chokidar bundled with Vite reads this variable
       CHOKIDAR_USEPOLLING: "true"
-    # make up は docker compose up --wait で、これが通るまで待つ
+    # make up is docker compose up --wait, which waits until this passes
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:5173/').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 2s

@@ -1,7 +1,7 @@
 #!/bin/bash
-# cloud 版の Claude Code のセッションでは Docker が使えない。コンテナそのものを開発環境とみなし、
-# .node-version の Node と packageManager の pnpm を入れて、make が pnpm を直接呼ぶようにする。
-# セッションが終わるとコンテナの状態はキャッシュされるので、2 回目からは入っているものを飛ばす。
+# Docker is not available in cloud Claude Code sessions. Treat the container itself as the development
+# environment: install the Node from .node-version and the pnpm from packageManager, and have make call pnpm directly.
+# The container state is cached when the session ends, so from the second time on, skip what is already installed.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -12,7 +12,7 @@ repo="$CLAUDE_PROJECT_DIR"
 node_major="$(tr -d '[:space:]' < "$repo/.node-version")"
 node_prefix="/opt/node-$node_major"
 
-# コンテナに最初から入っている Node は版が古いので、同じメジャーの最新を別の場所に入れて PATH の先頭に置く。
+# The Node preinstalled in the container is an old version, so install the latest of the same major elsewhere and put it first in PATH.
 if [ ! -x "$node_prefix/bin/node" ]; then
   dist="https://nodejs.org/dist/latest-v$node_major.x"
   work="$(mktemp -d)"
@@ -31,9 +31,9 @@ if [ "pnpm@$(pnpm --version 2>/dev/null || true)" != "$package_manager" ]; then
   npm install -g "$package_manager"
 fi
 
-# Makefile は IN_CONTAINER を見て、docker compose を経由せず pnpm を直接呼ぶ。
-# コンテナに入っている Chromium は playwright の版と合わず、playwright からは見つからない。
-# ブラウザテストは CHROMIUM_PATH で指した実行ファイルを使う。
+# The Makefile checks IN_CONTAINER and calls pnpm directly instead of going through docker compose.
+# The Chromium in the container does not match the playwright version, and playwright cannot find it.
+# The browser tests use the executable pointed to by CHROMIUM_PATH.
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   {
     echo "export PATH=\"$node_prefix/bin:\$PATH\""

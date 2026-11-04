@@ -3,25 +3,25 @@ import { must } from "../../test-support/must.js";
 import type { IIdFactory } from "../model/id-factory.js";
 import { type Formation, instantiateFormation, normalizeFormation } from "./formation.js";
 
-describe("normalizeFormation: 復元不能", () => {
-  it("オブジェクトでない / null は null", () => {
+describe("normalizeFormation: unrecoverable input", () => {
+  it("returns null for a non-object or null", () => {
     expect(normalizeFormation("formation")).toBeNull();
     expect(normalizeFormation(42)).toBeNull();
     expect(normalizeFormation(null)).toBeNull();
   });
 
-  it("配置可能な選手が 0 人なら null（players 非配列・全要素不正の両方）", () => {
+  it("returns null when no player can be placed (non-array players or every entry invalid)", () => {
     expect(normalizeFormation({ id: "x", name: "X", side: "offense" })).toBeNull();
     expect(normalizeFormation({ players: "nope" })).toBeNull();
-    expect(normalizeFormation({ players: [{ shape: "circle" }] })).toBeNull(); // position 欠落で除外
+    expect(normalizeFormation({ players: [{ shape: "circle" }] })).toBeNull(); // no position
   });
 });
 
-describe("normalizeFormation: 既定補完", () => {
-  it("id/name/side 欠落・空白は既定へ、選手は id を落として取り込む", () => {
+describe("normalizeFormation: defaults", () => {
+  it("defaults a missing or blank id, name, and side, and drops the id from players", () => {
     const result = must(
       normalizeFormation({
-        // id は空白、name は無し、side は無い値なので、どれも既定になる。
+        // id is blank, name is absent, and side is an unknown value, so all three get defaults.
         id: "   ",
         side: "kickoff",
         players: [{ id: "should-be-dropped", position: { lateralYard: 5, downfieldYard: 50 } }],
@@ -31,18 +31,18 @@ describe("normalizeFormation: 既定補完", () => {
     expect(result.id).toBe("formation");
     expect(result.name).toBe("Formation");
     expect(result.side).toBe("offense");
-    // FormationPlayer は id を持たない（shape/label は normalizePlayers が既定補完）。
+    // FormationPlayer has no id (normalizePlayers fills in the shape and label defaults).
     expect(result.players).toEqual([
       { position: { lateralYard: 5, downfieldYard: 50 }, shape: "circle", label: "" },
     ]);
     expect("id" in must(result.players[0])).toBe(false);
   });
 
-  it("id/name/side 指定時はその値を使い、色と塗りはある時だけ持たせる", () => {
+  it("keeps the given id, name, and side, and carries color and fill only when present", () => {
     const result = must(
       normalizeFormation({
         id: "nickel",
-        name: "ニッケル",
+        name: "Nickel",
         side: "defense",
         players: [
           {
@@ -57,14 +57,14 @@ describe("normalizeFormation: 既定補完", () => {
     );
 
     expect(result.id).toBe("nickel");
-    expect(result.name).toBe("ニッケル");
+    expect(result.name).toBe("Nickel");
     expect(result.side).toBe("defense");
     expect(must(result.players[0])).toMatchObject({ color: "#c62828", fill: "solid" });
     expect("color" in must(result.players[1])).toBe(false);
     expect("fill" in must(result.players[1])).toBe(false);
   });
 
-  it("返り値は入力と切り離されている（位置を書き換えても波及しない）", () => {
+  it("returns a copy detached from the input (changing a position does not propagate)", () => {
     const input = {
       players: [{ position: { lateralYard: 1, downfieldYard: 2 } }],
     };
@@ -79,7 +79,7 @@ describe("normalizeFormation: 既定補完", () => {
 describe("instantiateFormation", () => {
   const formation: Formation = {
     id: "pair",
-    name: "2 人",
+    name: "Two players",
     side: "offense",
     players: [
       { position: { lateralYard: 1, downfieldYard: 0 }, shape: "circle", label: "A" },
@@ -87,7 +87,7 @@ describe("instantiateFormation", () => {
     ],
   };
 
-  it("テンプレートの順に id を振った選手を返す", () => {
+  it("returns players with ids assigned in template order", () => {
     let n = 0;
     const ids: IIdFactory = { next: () => `id-${++n}` };
 
@@ -97,7 +97,7 @@ describe("instantiateFormation", () => {
     ]);
   });
 
-  it("既にある id と、先に振った id の両方を採番で避ける", () => {
+  it("avoids both the existing ids and the ids assigned earlier in the same call", () => {
     const seen: string[][] = [];
     const ids: IIdFactory = {
       next: (_, taken) => {

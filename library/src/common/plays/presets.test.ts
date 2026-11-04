@@ -6,47 +6,47 @@ import { resolvePlayData } from "../model/play-data.js";
 import { getPlayPreset, PLAY_PRESETS } from "./presets.js";
 
 describe("PLAY_PRESETS", () => {
-  it("id はすべて異なる", () => {
+  it("has a distinct id for every preset", () => {
     const ids = PLAY_PRESETS.map((p) => p.id);
 
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("攻守どちらのプリセットもある", () => {
+  it("has presets for both offense and defense", () => {
     expect(PLAY_PRESETS.some((p) => p.side === "offense")).toBe(true);
     expect(PLAY_PRESETS.some((p) => p.side === "defense")).toBe(true);
   });
 
-  it.each(PLAY_PRESETS)("$id は名前、パーソネル、説明を持つ", (preset) => {
+  it.each(PLAY_PRESETS)("$id has a name, personnel, and a summary", (preset) => {
     expect(preset.name.trim()).not.toBe("");
     expect(preset.personnel.trim()).not.toBe("");
     expect(preset.summary.trim()).not.toBe("");
   });
 
-  it.each(PLAY_PRESETS)("$id は middle ゾーンに攻守 22 人を並べる", (preset) => {
+  it.each(PLAY_PRESETS)("$id places 22 players of both sides in the middle zone", (preset) => {
     expect(preset.data.field.zone).toBe("middle");
     expect(preset.data.players).toHaveLength(22);
   });
 
-  it.each(PLAY_PRESETS)("$id は外部データとして正規化しても変わらない", (preset) => {
+  it.each(PLAY_PRESETS)("$id is unchanged when normalized as external data", (preset) => {
     expect(resolvePlayData(preset.data)).toEqual(preset.data);
   });
 
-  it.each(PLAY_PRESETS)("$id は選手と線に色を付けず、テーマの既定の色で描かせる", (preset) => {
+  it.each(PLAY_PRESETS)("$id leaves player and line colors to the theme default", (preset) => {
     const colors = [...preset.data.players, ...preset.data.lines].map((item) => item.color);
 
     expect(colors.filter((color) => color !== undefined)).toEqual([]);
   });
 
-  it.each(PLAY_PRESETS)("$id は選手全員にラベルを付ける", (preset) => {
+  it.each(PLAY_PRESETS)("$id labels every player", (preset) => {
     expect(preset.data.players.filter((p) => p.label === "")).toEqual([]);
   });
 
-  it.each(PLAY_PRESETS)("$id の選手のマーカーは重ならない", (preset) => {
+  it.each(PLAY_PRESETS)("$id has no overlapping player markers", (preset) => {
     expect(overlappingMarkers(preset.data.players)).toEqual([]);
   });
 
-  it.each(PLAY_PRESETS)("$id の選手と線の点は、どれも窓に収まる", (preset) => {
+  it.each(PLAY_PRESETS)("$id keeps every player and line point inside the window", (preset) => {
     const { field, players, lines } = preset.data;
     const points = [
       ...players.map((p) => p.position),
@@ -56,7 +56,7 @@ describe("PLAY_PRESETS", () => {
     expect(points.map((point) => clampToZoneWindow(point, field))).toEqual(points);
   });
 
-  it("入れ子の値まで凍結されていて、利用者が書き換えられない", () => {
+  it("is frozen down to nested values so consumers cannot modify it", () => {
     const preset = must(PLAY_PRESETS[0]);
 
     expect(Object.isFrozen(preset)).toBe(true);
@@ -66,11 +66,11 @@ describe("PLAY_PRESETS", () => {
 });
 
 describe("getPlayPreset", () => {
-  it("既知の id を渡すと、そのプリセットを返す", () => {
+  it("returns the preset for a known id", () => {
     expect(getPlayPreset("play-inside-zone")?.name).toBe("Inside Zone");
   });
 
-  it("無い id を渡すと undefined を返す", () => {
+  it("returns undefined for an unknown id", () => {
     expect(getPlayPreset("does-not-exist")).toBeUndefined();
   });
 });

@@ -10,8 +10,8 @@ function initialData(): PlayData {
   return playData([player("a", 10, 0)]);
 }
 
-describe("編集の購読", () => {
-  it("編集を確定するたびに、最新の図を渡して 1 回だけ呼ぶ", () => {
+describe("Change subscription", () => {
+  it("passes the latest diagram exactly once each time an edit is committed", () => {
     const play = openPlay(initialData());
 
     play.session.setFieldZone("redzone");
@@ -20,7 +20,7 @@ describe("編集の購読", () => {
     expect(must(play.onChange.mock.lastCall)[0].field.zone).toBe("redzone");
   });
 
-  it("選手をドラッグしている間は呼ばない", () => {
+  it("does not call the listener while a player is being dragged", () => {
     const play = openPlay(initialData());
 
     play.editor.pointerDown(yd(10, 0));
@@ -29,7 +29,7 @@ describe("編集の購読", () => {
     expect(play.onChange).not.toHaveBeenCalled();
   });
 
-  it("選手をドラッグしている間は、描く図だけが動き、確定した図は動かない", () => {
+  it("moves the drawn diagram but not the committed diagram while a player is dragged", () => {
     const play = openPlay(initialData());
 
     play.editor.pointerDown(yd(10, 0));
@@ -39,13 +39,13 @@ describe("編集の購読", () => {
     expect(play.session.getPlayData().players[0]?.position).toEqual(yd(10, 0));
   });
 
-  it("途中の操作が無ければ、描く図は確定した図をそのまま使う", () => {
+  it("uses the committed diagram as the drawn diagram when no operation is in progress", () => {
     const play = openPlay(initialData());
 
     expect(play.editor.getFrame().scene).toBe(play.session.getSnapshot());
   });
 
-  it("選手をドラッグして動かすたびに、描き直しの通知を出す", () => {
+  it("emits a redraw notification each time a dragged player moves", () => {
     const play = openPlay(initialData());
     play.editor.pointerDown(yd(10, 0));
     play.notified.mockClear();
@@ -55,7 +55,7 @@ describe("編集の購読", () => {
     expect(play.notified).toHaveBeenCalledExactlyOnceWith("scene");
   });
 
-  it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ", () => {
+  it("passes the moved diagram exactly once when a player is dragged and released", () => {
     const play = openPlay(initialData());
 
     play.drag(yd(10, 0), yd(12, 3));
@@ -64,7 +64,7 @@ describe("編集の購読", () => {
     expect(must(play.onChange.mock.lastCall)[0].players[0]?.position).toEqual(yd(12, 3));
   });
 
-  it("選手をクリックして選んだだけでは呼ばない", () => {
+  it("does not call the listener when a player is only clicked and selected", () => {
     const play = openPlay(initialData());
 
     play.click(yd(10, 0));
@@ -72,7 +72,7 @@ describe("編集の購読", () => {
     expect(play.onChange).not.toHaveBeenCalled();
   });
 
-  it("Undo と Redo もそれぞれ 1 回ずつ呼ぶ", () => {
+  it("calls the listener once for Undo and once for Redo", () => {
     const play = openPlay(initialData());
     play.session.setFieldZone("redzone");
     play.onChange.mockClear();
@@ -83,7 +83,7 @@ describe("編集の購読", () => {
     expect(play.onChange).toHaveBeenCalledTimes(2);
   });
 
-  it("構築したときと setPlayData で読み込んだときは呼ばない", () => {
+  it("does not call the listener on construction or when setPlayData loads a diagram", () => {
     const play = openPlay(initialData());
 
     play.session.setPlayData({ ...initialData(), field: { zone: "redzone", losYard: 85 } });
@@ -91,7 +91,7 @@ describe("編集の購読", () => {
     expect(play.onChange).not.toHaveBeenCalled();
   });
 
-  it("受け取った図を書き換えても、getPlayData の結果は変わらない", () => {
+  it("keeps the result of getPlayData unchanged when the received diagram is mutated", () => {
     const play = openPlay(initialData());
     play.session.setFieldZone("redzone");
     const received = mutable(must(play.onChange.mock.lastCall)[0]);
@@ -101,7 +101,7 @@ describe("編集の購読", () => {
     expect(play.session.getPlayData().players).toHaveLength(1);
   });
 
-  it("リスナごとに別のコピーを渡すので、先のリスナの書き換えは後のリスナに届かない", () => {
+  it("gives each listener its own copy, so a mutation in one does not reach the next", () => {
     const play = openPlay(initialData());
     play.session.onDidChange((data) => {
       mutable(data).players.length = 0;
@@ -114,7 +114,7 @@ describe("編集の購読", () => {
     expect(must(later.mock.lastCall)[0].players).toHaveLength(1);
   });
 
-  it("購読を解除したあとの編集では呼ばない", () => {
+  it("does not call a listener after it unsubscribes", () => {
     const play = openPlay(initialData());
     const listener = vi.fn<(data: PlayData) => void>();
     play.session.onDidChange(listener).dispose();
@@ -124,7 +124,7 @@ describe("編集の購読", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("読み直したあとの編集でも、読み直す前からのリスナを呼ぶ", () => {
+  it("still calls a listener subscribed before a reload when an edit follows the reload", () => {
     const play = openPlay(initialData());
     play.session.setPlayData(initialData());
 
@@ -133,7 +133,7 @@ describe("編集の購読", () => {
     expect(play.onChange).toHaveBeenCalledOnce();
   });
 
-  it("破棄したあとの編集では呼ばない", () => {
+  it("does not call the listener when an edit follows dispose", () => {
     const play = openPlay(initialData());
     const editor = play.editor;
 
@@ -143,7 +143,7 @@ describe("編集の購読", () => {
     expect(play.onChange).not.toHaveBeenCalled();
   });
 
-  it("破棄したあとの編集では、描き直しの通知も出さない", () => {
+  it("does not notify a redraw when an edit follows dispose", () => {
     const play = openPlay(initialData());
     const editor = play.editor;
 
@@ -153,7 +153,7 @@ describe("編集の購読", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("購読していなくても編集できる", () => {
+  it("accepts edits without a subscriber", () => {
     const session = new PlaySession(initialData());
 
     session.setFieldZone("redzone");

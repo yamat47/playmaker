@@ -16,8 +16,8 @@ function seed(): PlayData {
   };
 }
 
-describe("PlayModel 構築", () => {
-  it("図を渡さずに作ると、空の図を持つ", () => {
+describe("PlayModel construction", () => {
+  it("holds an empty diagram when created without one", () => {
     const model = new PlayModel();
 
     expect(model.getData()).toEqual({
@@ -28,7 +28,7 @@ describe("PlayModel 構築", () => {
     });
   });
 
-  it("作ったあとで渡した図を書き換えても、モデルの図は変わらない", () => {
+  it("keeps its diagram when the input is modified after construction", () => {
     const input = mutable(seed());
     const model = new PlayModel(input);
 
@@ -37,8 +37,8 @@ describe("PlayModel 構築", () => {
     expect(model.findPlayer("a")?.label).toBe("a");
   });
 
-  it("版の無い旧来の図も、今の版に移して取り込む", () => {
-    // version を書かずに、v1 の形で保存したデータ。
+  it("migrates an unversioned legacy diagram to the current version", () => {
+    // Data saved in the v1 shape without a version.
     const legacy = {
       field: { zone: "redzone" },
       players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 90 }, shape: "square" }],
@@ -55,46 +55,46 @@ describe("PlayModel 構築", () => {
   });
 });
 
-describe("PlayModel の未知の id", () => {
-  it("無い id の選手を差し替えようとすると throw する", () => {
+describe("PlayModel unknown ids", () => {
+  it("throws when updating a player with an unknown id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.updatePlayer(player("ghost"))).toThrow(/unknown player id "ghost"/);
   });
 
-  it("無い id の選手を引くと throw する", () => {
+  it("throws when getting a player with an unknown id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.getPlayer("ghost")).toThrow(/unknown player id "ghost"/);
   });
 
-  it("無い id の選手を消そうとすると throw する", () => {
+  it("throws when removing a player with an unknown id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.removePlayer("ghost")).toThrow(/unknown player id "ghost"/);
   });
 
-  it("無い id の線を消そうとすると throw する", () => {
+  it("throws when removing a line with an unknown id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.removeLine("ghost")).toThrow(/unknown line id "ghost"/);
   });
 
-  it("無い id の線を差し替えようとすると throw する", () => {
+  it("throws when updating a line with an unknown id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.updateLine(line("ghost", "a"))).toThrow(/unknown line id "ghost"/);
   });
 
-  it("無い id の線を引くと throw する", () => {
+  it("throws when getting a line with an unknown id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.getLine("ghost")).toThrow(/unknown line id "ghost"/);
   });
 });
 
-describe("PlayModel の id 重複の拒否", () => {
-  it("既にある id の選手を足すと throw し、図も通知も変えない", () => {
+describe("PlayModel duplicate id rejection", () => {
+  it("throws when adding a player with an existing id, without changing or notifying", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn();
     model.onDidChange(listener);
@@ -104,7 +104,7 @@ describe("PlayModel の id 重複の拒否", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("まとめて足す選手に既にある id が混じると、前に並んだ選手も足さずに throw する", () => {
+  it("throws without adding the earlier players when a batch contains an existing id", () => {
     const model = new PlayModel(seed());
     const listener = vi.fn();
     model.onDidChange(listener);
@@ -114,27 +114,27 @@ describe("PlayModel の id 重複の拒否", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("まとめて足す選手どうしで id が重なると throw する", () => {
+  it("throws when a batch of players repeats an id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.addPlayers([player("d"), player("d")])).toThrow('duplicate player id "d"');
     expect(model.getData().players.map((p) => p.id)).toEqual(["a", "b", "c"]);
   });
 
-  it("既にある id の線を足すと throw する", () => {
+  it("throws when adding a line with an existing id", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.addLine(line("la", "b"))).toThrow('duplicate line id "la"');
     expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc"]);
   });
 
-  it("既にある id の線を位置を指定して差し込むと throw する", () => {
+  it("throws when inserting a line with an existing id at an index", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.insertLine(line("lb", "a"), 0)).toThrow('PlayModel: duplicate line id "lb"');
   });
 
-  it("消した選手を戻すとき、同じ id の選手が既にあると throw する", () => {
+  it("throws when restoring a removed player whose id already exists", () => {
     const model = new PlayModel(seed());
     const removal = model.removePlayer("b");
     model.addPlayer(player("b"));
@@ -145,8 +145,8 @@ describe("PlayModel の id 重複の拒否", () => {
   });
 });
 
-describe("PlayModel の添字", () => {
-  it("線の本数より大きい添字や負の添字に線を差し込もうとすると throw する", () => {
+describe("PlayModel indexes", () => {
+  it("throws when inserting a line at a negative index or past the line count", () => {
     const model = new PlayModel(seed());
 
     expect(() => model.insertLine(line("ld", "a"), 4)).toThrow(
@@ -156,7 +156,7 @@ describe("PlayModel の添字", () => {
     expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc"]);
   });
 
-  it("線の本数ちょうどの添字には、末尾として差し込める", () => {
+  it("inserts a line at the end when the index equals the line count", () => {
     const model = new PlayModel(seed());
 
     model.insertLine(line("ld", "a"), 3);
@@ -164,7 +164,7 @@ describe("PlayModel の添字", () => {
     expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc", "ld"]);
   });
 
-  it("選手の添字が今の並びの外を指す削除の記録では、戻さずに throw する", () => {
+  it("throws without restoring when the removal's player index is out of range", () => {
     const model = new PlayModel(seed());
     const removal = model.removePlayer("b");
 
@@ -174,7 +174,7 @@ describe("PlayModel の添字", () => {
     expect(model.getData().players.map((p) => p.id)).toEqual(["a", "c"]);
   });
 
-  it("線の添字が今の並びの外を指す削除の記録では、戻さずに throw する", () => {
+  it("throws without restoring when the removal's line index is out of range", () => {
     const model = new PlayModel(seed());
     const removal = model.removePlayer("b");
     const removedLines = removal.removedLines.map((r) => ({ ...r, index: 5 }));
@@ -186,8 +186,8 @@ describe("PlayModel の添字", () => {
   });
 });
 
-describe("PlayModel の一括削除", () => {
-  it("無い id が混じっていると、先に並んだ選手も消さずに throw し、通知もしない", () => {
+describe("PlayModel batch removal", () => {
+  it("throws without removing or notifying when the ids include an unknown one", () => {
     const model = new PlayModel(seed());
     const before = model.getSnapshot();
     const listener = vi.fn();
@@ -201,7 +201,7 @@ describe("PlayModel の一括削除", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("同じ id が 2 度あると、1 人も消さずに throw する", () => {
+  it("throws without removing anyone when an id is repeated", () => {
     const model = new PlayModel(seed());
     const before = model.getSnapshot();
 
@@ -213,7 +213,7 @@ describe("PlayModel の一括削除", () => {
   });
 });
 
-describe("PlayModel の件数の上限", () => {
+describe("PlayModel limits", () => {
   function players(count: number, prefix = "p"): Player[] {
     return Array.from({ length: count }, (_, i) => player(`${prefix}${i}`));
   }
@@ -226,7 +226,7 @@ describe("PlayModel の件数の上限", () => {
     return Array.from({ length: count }, (_, i) => ({ lateralYard: i, downfieldYard: 5 }));
   }
 
-  it("選手はちょうど MAX_PLAYERS 人まで足せる", () => {
+  it("accepts exactly MAX_PLAYERS players", () => {
     const model = new PlayModel();
 
     model.addPlayers(players(MAX_PLAYERS));
@@ -234,7 +234,7 @@ describe("PlayModel の件数の上限", () => {
     expect(model.getSnapshot().players).toHaveLength(MAX_PLAYERS);
   });
 
-  it("MAX_PLAYERS 人を超える追加は、1 人も足さずに throw する", () => {
+  it("throws without adding anyone when the players would exceed MAX_PLAYERS", () => {
     const model = new PlayModel();
     model.addPlayers(players(MAX_PLAYERS - 1));
     const before = model.getSnapshot();
@@ -246,7 +246,7 @@ describe("PlayModel の件数の上限", () => {
     expect(model.getSnapshot()).toBe(before);
   });
 
-  it("上限に達しているときに選手を戻すと throw する", () => {
+  it("throws when restoring a player at the limit", () => {
     const model = new PlayModel({ ...seed(), players: [player("a")], lines: [] });
     const removal = model.removePlayer("a");
     model.addPlayers(players(MAX_PLAYERS));
@@ -254,7 +254,7 @@ describe("PlayModel の件数の上限", () => {
     expect(() => model.restorePlayer(removal)).toThrow("PlayModel: too many players");
   });
 
-  it("選手を戻すと従属線で MAX_LINES 本を超えるときは throw する", () => {
+  it("throws when restoring a player whose lines would exceed MAX_LINES", () => {
     const model = new PlayModel({
       ...seed(),
       players: [player("a"), player("p0")],
@@ -268,7 +268,7 @@ describe("PlayModel の件数の上限", () => {
     expect(() => model.restorePlayer(removal)).toThrow("PlayModel: too many lines");
   });
 
-  it("線はちょうど MAX_LINES 本まで足せる", () => {
+  it("accepts exactly MAX_LINES lines", () => {
     const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [] });
 
     for (const l of lines(MAX_LINES)) {
@@ -278,13 +278,13 @@ describe("PlayModel の件数の上限", () => {
     expect(model.getSnapshot().lines).toHaveLength(MAX_LINES);
   });
 
-  it("MAX_LINES 本を超える線の追加は throw する", () => {
+  it("throws when adding a line beyond MAX_LINES", () => {
     const model = new PlayModel({ ...seed(), players: [player("p0")], lines: lines(MAX_LINES) });
 
     expect(() => model.addLine(line("extra", "p0"))).toThrow("PlayModel: too many lines");
   });
 
-  it("waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線を足すと throw する", () => {
+  it("throws when adding a line with more than MAX_WAYPOINTS_PER_LINE waypoints", () => {
     const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [] });
 
     expect(() =>
@@ -292,7 +292,7 @@ describe("PlayModel の件数の上限", () => {
     ).toThrow("PlayModel: too many waypoints");
   });
 
-  it("waypoint が MAX_WAYPOINTS_PER_LINE 個を超える線に差し替えると throw する", () => {
+  it("throws when updating a line to more than MAX_WAYPOINTS_PER_LINE waypoints", () => {
     const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [line("l", "p0")] });
 
     expect(() =>
@@ -300,7 +300,7 @@ describe("PlayModel の件数の上限", () => {
     ).toThrow("PlayModel: too many waypoints");
   });
 
-  it("waypoint がちょうど MAX_WAYPOINTS_PER_LINE 個の線は差し替えられる", () => {
+  it("updates a line with exactly MAX_WAYPOINTS_PER_LINE waypoints", () => {
     const model = new PlayModel({ ...seed(), players: [player("p0")], lines: [line("l", "p0")] });
 
     model.updateLine({ ...line("l", "p0"), waypoints: waypoints(MAX_WAYPOINTS_PER_LINE) });

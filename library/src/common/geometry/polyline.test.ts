@@ -3,25 +3,25 @@ import type { CanvasPoint } from "./field.js";
 import { polylineLength, segments, trimPolylineEnd } from "./polyline.js";
 
 describe("segments", () => {
-  it("隣り合う 2 点の組を先頭から順に返す", () => {
+  it("yields each pair of adjacent points in order", () => {
     expect([...segments([1, 2, 3])]).toEqual([
       [1, 2],
       [2, 3],
     ]);
   });
 
-  it("点が 2 つ未満なら何も返さない", () => {
+  it("yields nothing for fewer than two points", () => {
     expect([...segments([1])]).toEqual([]);
     expect([...segments([])]).toEqual([]);
   });
 
-  it("undefined を含む点列でも組を落とさない", () => {
+  it("keeps pairs that contain undefined", () => {
     expect([...segments([undefined, 1])]).toEqual([[undefined, 1]]);
   });
 });
 
 describe("polylineLength", () => {
-  it("隣接点間の距離を足し上げる", () => {
+  it("sums the distances between adjacent points", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 3, y: 4 },
@@ -30,14 +30,14 @@ describe("polylineLength", () => {
     expect(polylineLength(path)).toBeCloseTo(15);
   });
 
-  it("2 点未満は 0", () => {
+  it("returns 0 for fewer than two points", () => {
     expect(polylineLength([])).toBe(0);
     expect(polylineLength([{ x: 5, y: 5 }])).toBe(0);
   });
 });
 
 describe("trimPolylineEnd", () => {
-  it("最終区間の内側で切るときは終点を内分点へ差し替える", () => {
+  it("replaces the end with a point inside the last segment when the cut lands there", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
@@ -48,8 +48,8 @@ describe("trimPolylineEnd", () => {
     ]);
   });
 
-  it("複数区間にまたがって遡る（細かく刻まれた曲線でも指定距離だけ戻る）", () => {
-    // 1px 刻みで 10 点。最終区間だけ見ると 1 しか戻れないが、累積長なら 5 戻れる。
+  it("walks back across several segments on a finely sampled curve", () => {
+    // 10 points 1px apart. The last segment alone allows 1, but the cumulative length allows 5.
     const path: CanvasPoint[] = Array.from({ length: 10 }, (_, i) => ({ x: i, y: 0 }));
     const trimmed = trimPolylineEnd(path, 5);
 
@@ -58,7 +58,7 @@ describe("trimPolylineEnd", () => {
     expect(polylineLength(trimmed)).toBeCloseTo(polylineLength(path) - 5);
   });
 
-  it("距離 0 以下なら元のまま返す", () => {
+  it("returns the path unchanged for a distance of 0 or less", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
@@ -67,12 +67,12 @@ describe("trimPolylineEnd", () => {
     expect(trimPolylineEnd(path, -3)).toEqual(path);
   });
 
-  it("2 点未満は元のまま返す", () => {
+  it("returns a path with fewer than two points unchanged", () => {
     expect(trimPolylineEnd([], 5)).toEqual([]);
     expect(trimPolylineEnd([{ x: 1, y: 2 }], 5)).toEqual([{ x: 1, y: 2 }]);
   });
 
-  it("全長以上を指定したら始点 1 点になる", () => {
+  it("leaves only the start point for a distance of the full length or more", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
@@ -81,7 +81,7 @@ describe("trimPolylineEnd", () => {
     expect(trimPolylineEnd(path, 999)).toEqual([{ x: 0, y: 0 }]);
   });
 
-  it("重複点（長さ 0 の区間）があっても NaN を出さず遡れる", () => {
+  it("walks back past duplicate points without producing NaN", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
@@ -95,7 +95,7 @@ describe("trimPolylineEnd", () => {
     expect(tip.y).toBeCloseTo(0);
   });
 
-  it("切り位置がサンプル点にちょうど乗っても、長さ 0 の区間を末尾に残さない", () => {
+  it("leaves no zero-length segment when the cut lands exactly on a sample point", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 5, y: 0 },
@@ -107,24 +107,24 @@ describe("trimPolylineEnd", () => {
     ]);
   });
 
-  it("maxFraction は削りすぎを抑え、線が消えないよう全長に対する割合で頭打ちにする", () => {
+  it("caps the trim at maxFraction of the full length so the line does not vanish", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
     ];
-    // 矢じり長 (8) が全長の 90% (9) より短いので distance がそのまま効く。
+    // The arrowhead length (8) is below 90% of the full length (9), so distance applies as is.
     expect(trimPolylineEnd(path, 8, 0.9)).toEqual([
       { x: 0, y: 0 },
       { x: 2, y: 0 },
     ]);
-    // 矢じり長 (30) が全長を超えるので 90% で頭打ちになり、線が消えない。
+    // The arrowhead length (30) exceeds the full length, so the 90% cap keeps the line visible.
     expect(trimPolylineEnd(path, 30, 0.9)).toEqual([
       { x: 0, y: 0 },
       { x: 1, y: 0 },
     ]);
   });
 
-  it("maxFraction が 0 以下なら 1 点も削らない", () => {
+  it("trims nothing when maxFraction is 0 or less", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
@@ -132,7 +132,7 @@ describe("trimPolylineEnd", () => {
     expect(trimPolylineEnd(path, 5, 0)).toEqual(path);
   });
 
-  it("元の配列を変更しない", () => {
+  it("leaves the original array unchanged", () => {
     const path: CanvasPoint[] = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },

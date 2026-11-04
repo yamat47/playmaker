@@ -8,20 +8,20 @@ import {
 } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
 
-describe("位置の格子", () => {
-  it("読み込んだ選手の位置は、0.5yd の格子点へ寄せる", () => {
+describe("Position grid", () => {
+  it("snaps a loaded player position to a 0.5yd grid point", () => {
     const play = openPlay(playData([player("a", 26.7, -2.3)]));
 
     expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(26.5, -2.5));
   });
 
-  it("0 に寄る負の値は -0 ではなく 0 にする", () => {
+  it("turns a negative value that snaps to 0 into 0, not -0", () => {
     const play = openPlay(playData([player("a", -0.2, -0.1)]));
 
     expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(0, 0));
   });
 
-  it("読み込んだ線の waypoint と終点も、格子点へ寄せる", () => {
+  it("snaps the waypoints and end of a loaded line to grid points", () => {
     const offGrid = {
       ...line("l"),
       waypoints: [yd(12.2, 3.1)],
@@ -35,7 +35,7 @@ describe("位置の格子", () => {
     });
   });
 
-  it("選手の追加ツールでクリックすると、最も近い格子点に置く", () => {
+  it("places a player on the nearest grid point when clicked with the add-player tool", () => {
     const play = openPlay(playData());
     play.editor.setTool("add-player");
 
@@ -44,7 +44,7 @@ describe("位置の格子", () => {
     expect(play.session.getPlayData().players[0]?.position).toEqual(yd(30.5, -4.5));
   });
 
-  it("選手をドラッグしている間も、格子点の上に描く", () => {
+  it("draws a player on grid points while it is being dragged", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.pointerDown(yd(10, 0));
@@ -53,7 +53,7 @@ describe("位置の格子", () => {
     expect(positionOf(play.editor.getFrame().scene, "a")).toEqual(yd(14.5, 3));
   });
 
-  it("同じ格子点に収まる距離だけ動かして離すと、履歴に積まず onChange も呼ばない", () => {
+  it("skips history and onChange when a drag ends on the same grid point", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.drag(yd(10, 0), yd(10.1, 0.1));
@@ -62,7 +62,7 @@ describe("位置の格子", () => {
     expect(play.onChange).not.toHaveBeenCalled();
   });
 
-  it("中心から外れた点を掴んで離しても、ずれを保ったうえで格子点に置く", () => {
+  it("places a player grabbed off center on a grid point while keeping the grab offset", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.drag(yd(10.4, 0.4), yd(14.3, 3.2));
@@ -70,7 +70,7 @@ describe("位置の格子", () => {
     expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(14, 3));
   });
 
-  it("作図中に押した点は、格子点に打つ", () => {
+  it("places a point pressed during drawing on a grid point", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.startLine(yd(10, 0));
     play.editor.pointerDown(yd(18.2, 9.8));
@@ -80,7 +80,7 @@ describe("位置の格子", () => {
     expect(play.session.getPlayData().lines.at(-1)?.end).toEqual(yd(18, 10));
   });
 
-  it("作図中のカーソルも、格子点の上に描く", () => {
+  it("draws the cursor end of the line on a grid point while drawing", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.startLine(yd(10, 0));
 

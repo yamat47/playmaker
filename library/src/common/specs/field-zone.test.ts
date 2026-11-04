@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { twoPlayersWithRoute } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
 
-describe("ゾーンの切替", () => {
-  it("切り替えると、図と表示状態のゾーンが変わる", () => {
+describe("Zone switching", () => {
+  it("changes the zone of the diagram and the view state when switched", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.session.setFieldZone("redzone");
@@ -12,7 +12,7 @@ describe("ゾーンの切替", () => {
     expect(play.editor.getViewState().fieldZone).toBe("redzone");
   });
 
-  it("切り替えても、選手と線の LOS からの位置は変えない", () => {
+  it("keeps the positions of players and lines relative to the LOS when switched", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.session.setFieldZone("redzone");
@@ -21,7 +21,7 @@ describe("ゾーンの切替", () => {
     expect(play.session.getPlayData()).toMatchObject({ players, lines });
   });
 
-  it("切り替えたあとに Undo すると、元のゾーンと LOS に戻る", () => {
+  it("restores the original zone and LOS when Undo follows a switch", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.session.setFieldZone("redzone");
 
@@ -30,7 +30,7 @@ describe("ゾーンの切替", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("Undo したあとに Redo すると、また切り替える", () => {
+  it("switches again when Redo follows Undo", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.session.setFieldZone("redzone");
     const switched = play.session.getPlayData();
@@ -41,7 +41,7 @@ describe("ゾーンの切替", () => {
     expect(play.session.getPlayData()).toEqual(switched);
   });
 
-  it("今と同じゾーンを選び直しても、履歴に積まず通知もしない", () => {
+  it("neither records history nor notifies when the current zone is selected again", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.session.setFieldZone("middle");
@@ -50,7 +50,7 @@ describe("ゾーンの切替", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("作図の途中で切り替えると、作図をやめる", () => {
+  it("stops the drawing in progress when switched", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.startLine(yd(10, 0));
 
@@ -59,7 +59,7 @@ describe("ゾーンの切替", () => {
     expect(play.editor.getViewState().isDrawing).toBe(false);
   });
 
-  it("作図の途中で今と同じゾーンを選び直しても、作図を続ける", () => {
+  it("keeps the drawing in progress when the current zone is selected again", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.startLine(yd(10, 0));
 

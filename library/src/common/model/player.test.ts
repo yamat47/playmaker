@@ -10,7 +10,7 @@ import {
 } from "./player.js";
 
 describe("normalizePlayers", () => {
-  it("正当な選手はそのまま保持しつつ欠落を既定で補完する", () => {
+  it("keeps a valid player as is and fills missing fields with defaults", () => {
     const result = normalizePlayers([
       { id: "qb", position: { lateralYard: 26, downfieldYard: 48 }, shape: "square", label: "QB" },
       { id: "wr", position: { lateralYard: 5, downfieldYard: 50 } },
@@ -27,7 +27,7 @@ describe("normalizePlayers", () => {
     ]);
   });
 
-  it("丸と四角以外の形状は、既定の形状に置き換える", () => {
+  it("replaces a shape other than circle or square with the default shape", () => {
     const [player] = normalizePlayers([
       { id: "de", position: { lateralYard: 1, downfieldYard: 2 }, shape: "triangle" },
     ]);
@@ -35,7 +35,7 @@ describe("normalizePlayers", () => {
     expect(player?.shape).toBe(DEFAULT_PLAYER_SHAPE);
   });
 
-  it("color は非空文字列のときだけ保持する", () => {
+  it("keeps color only as a non-empty string", () => {
     const [withColor, blankColor] = normalizePlayers([
       { id: "a", position: { lateralYard: 1, downfieldYard: 2 }, color: "#ff0000" },
       { id: "b", position: { lateralYard: 1, downfieldYard: 2 }, color: "   " },
@@ -45,7 +45,7 @@ describe("normalizePlayers", () => {
     expect(blankColor && "color" in blankColor).toBe(false);
   });
 
-  it("fill は outline か solid のときだけ保持する", () => {
+  it("keeps fill only as outline or solid", () => {
     const result = normalizePlayers([
       { id: "a", position: { lateralYard: 1, downfieldYard: 2 }, fill: "solid" },
       { id: "b", position: { lateralYard: 1, downfieldYard: 2 }, fill: "hatched" },
@@ -55,13 +55,13 @@ describe("normalizePlayers", () => {
     expect("fill" in must(result[1])).toBe(false);
   });
 
-  it("配列でない入力は空配列を返す", () => {
+  it("returns an empty array for a non-array input", () => {
     expect(normalizePlayers(undefined)).toEqual([]);
     expect(normalizePlayers(null)).toEqual([]);
     expect(normalizePlayers({ length: 1 })).toEqual([]);
   });
 
-  it("位置が無い/数値でない/非オブジェクトの要素は捨てる（復元不能）", () => {
+  it("drops an element whose position is missing, non-numeric, or not an object", () => {
     const result = normalizePlayers([
       null,
       "player",
@@ -75,7 +75,7 @@ describe("normalizePlayers", () => {
     expect(result.map((p) => p.id)).toEqual(["ok"]);
   });
 
-  it("id が無い/空なら index 由来の決定的 id を割り当てる", () => {
+  it("assigns a deterministic id from the index when the id is missing or blank", () => {
     const result = normalizePlayers([
       { position: { lateralYard: 0, downfieldYard: 0 } },
       { id: "  ", position: { lateralYard: 0, downfieldYard: 0 } },
@@ -84,7 +84,7 @@ describe("normalizePlayers", () => {
     expect(result.map((p) => p.id)).toEqual(["p0", "p1"]);
   });
 
-  it("入力配列・要素・位置を共有しない新規オブジェクトを返す（Model 専有）", () => {
+  it("returns new objects that share no array, element, or position with the input", () => {
     const input = [{ id: "a", position: { lateralYard: 1, downfieldYard: 2 } }];
 
     const [normalized] = normalizePlayers(input);
@@ -94,10 +94,10 @@ describe("normalizePlayers", () => {
   });
 });
 
-describe("normalizePlayers の件数上限", () => {
+describe("normalizePlayers limits", () => {
   const at = (i: number) => ({ id: `p${i}`, position: { lateralYard: 5, downfieldYard: i } });
 
-  it("MAX_PLAYERS 人を超える選手は先頭の MAX_PLAYERS 人だけ残す", () => {
+  it("keeps only the first MAX_PLAYERS players when more are given", () => {
     const raw = Array.from({ length: MAX_PLAYERS + 5 }, (_, i) => at(i));
 
     const players = normalizePlayers(raw);
@@ -106,13 +106,13 @@ describe("normalizePlayers の件数上限", () => {
     expect(players.at(-1)?.id).toBe(`p${MAX_PLAYERS - 1}`);
   });
 
-  it("先頭の MAX_PLAYERS 個に復元できない要素があれば、その分だけ少なくなる", () => {
+  it("returns fewer players when the first MAX_PLAYERS elements include unusable ones", () => {
     const raw = [null, ...Array.from({ length: MAX_PLAYERS }, (_, i) => at(i))];
 
     expect(normalizePlayers(raw)).toHaveLength(MAX_PLAYERS - 1);
   });
 
-  it("穴のある長い配列でも、先頭の MAX_PLAYERS 個より後ろは読まない", () => {
+  it("reads nothing past the first MAX_PLAYERS elements of a long sparse array", () => {
     const sparse: unknown[] = [];
     sparse.length = 2 ** 32 - 1;
     sparse[MAX_PLAYERS] = at(0);
@@ -122,7 +122,7 @@ describe("normalizePlayers の件数上限", () => {
 });
 
 describe("parseFieldPosition", () => {
-  it("有限な座標を持つオブジェクトを新しい位置として返す", () => {
+  it("returns a new position from an object with finite coordinates", () => {
     const raw = { lateralYard: 5, downfieldYard: 50, extra: true };
 
     const position = parseFieldPosition(raw);
@@ -131,20 +131,20 @@ describe("parseFieldPosition", () => {
     expect(position).not.toBe(raw);
   });
 
-  it("座標が欠けているか数でなければ null を返す", () => {
+  it("returns null when a coordinate is missing or not a number", () => {
     expect(parseFieldPosition({ lateralYard: 5 })).toBeNull();
     expect(parseFieldPosition({ lateralYard: "5", downfieldYard: 50 })).toBeNull();
     expect(parseFieldPosition({ lateralYard: 5, downfieldYard: Number.NaN })).toBeNull();
   });
 
-  it("オブジェクトでなければ null を返す", () => {
+  it("returns null for a non-object", () => {
     expect(parseFieldPosition(null)).toBeNull();
     expect(parseFieldPosition("5,50")).toBeNull();
   });
 });
 
 describe("clonePlayer", () => {
-  it("位置まで複製し元と共有しない", () => {
+  it("copies the position without sharing it with the original", () => {
     const original: Player = {
       id: "x",
       position: { lateralYard: 3, downfieldYard: 4 },
@@ -160,7 +160,7 @@ describe("clonePlayer", () => {
     expect(copy.position).not.toBe(original.position);
   });
 
-  it("color 未指定なら複製にも color を持たせない", () => {
+  it("leaves color out of the copy when the original has none", () => {
     const copy = clonePlayer({
       id: "x",
       position: { lateralYard: 0, downfieldYard: 0 },

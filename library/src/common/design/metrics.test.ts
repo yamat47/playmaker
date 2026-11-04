@@ -3,7 +3,7 @@ import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 import { computeFieldMetrics } from "./metrics.js";
 
 describe("computeFieldMetrics", () => {
-  it("フィールドの幅だけを 2 倍にすると、ヤードライン、センターのライン、ゴールラインだけが 2 倍の太さになる", () => {
+  it("doubles only the yard, midfield, and goal line widths when the field width doubles", () => {
     const base = computeFieldMetrics(580, 10.875);
 
     expect(computeFieldMetrics(1160, 10.875)).toEqual({
@@ -14,7 +14,7 @@ describe("computeFieldMetrics", () => {
     });
   });
 
-  it("1 ヤードの px だけを 2 倍にすると、ヤードライン系の太さ以外のどの寸法も 2 倍になる", () => {
+  it("doubles every size except the yard line widths when only the px per yard doubles", () => {
     const base = computeFieldMetrics(580, 10.875);
     const { yardLineWidth, midfieldLineWidth, goalLineWidth, ...byYard } = base;
     const scaled = Object.fromEntries(
@@ -32,25 +32,25 @@ describe("computeFieldMetrics", () => {
     });
   });
 
-  it("選手マーカーの直径は、当たり判定の半径を 1 ヤードの px で直径にしたもの", () => {
+  it("sets the player marker diameter to twice the hit test radius in px", () => {
     expect(computeFieldMetrics(580, 10.875).tokenDiameter).toBeCloseTo(
       2 * PLAYER_RADIUS_YARDS * 10.875,
     );
   });
 
-  it("ゴールラインは通常のヤードラインの 2 倍の太さで描く", () => {
+  it("draws the goal line twice as thick as a regular yard line", () => {
     const m = computeFieldMetrics(580, 10.875);
 
     expect(m.goalLineWidth).toBeCloseTo(2 * m.yardLineWidth);
   });
 
-  it("block の線は route と同じ太さで描く", () => {
+  it("draws a block line as thick as a route line", () => {
     const m = computeFieldMetrics(580, 10.875);
 
     expect(m.blockWidth).toBe(m.routeWidth);
   });
 
-  it("極小フィールドでは最小値（ライン 1px・数字 10px・線 1.5px・パイロン 3px・ゴールポスト 2px）に張り付く", () => {
+  it("clamps every size to its minimum on a tiny field", () => {
     const m = computeFieldMetrics(100, 1.875);
 
     expect(m.yardLineWidth).toBe(1);
@@ -61,7 +61,7 @@ describe("computeFieldMetrics", () => {
     expect(m.goalpostStroke).toBe(2);
   });
 
-  it("縮退ビューポート（0）でも NaN を返さず最小値へ丸める", () => {
+  it("clamps to the minimums without producing NaN for a zero-sized viewport", () => {
     const m = computeFieldMetrics(0, 0);
 
     expect(m.yardLineWidth).toBe(1);
@@ -80,7 +80,7 @@ describe("computeFieldMetrics", () => {
     expect(m.gridDotRadius).toBe(0.75);
   });
 
-  it("負の入力は 0 として扱う", () => {
+  it("treats negative inputs as 0", () => {
     const m = computeFieldMetrics(-10, -5);
 
     expect(m.yardLineWidth).toBe(1);

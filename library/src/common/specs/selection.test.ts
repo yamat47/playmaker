@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { twoPlayersWithRoute } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
 
-/** 選手を足して選んだあと、Undo でその選手を消した状態。選択はその選手を指したまま残る。 */
+/** A state where Undo removed the added and selected player. The selection still points at it. */
 function openWithVanishedSelection() {
   const play = openPlay(twoPlayersWithRoute());
   play.editor.setTool("add-player");
@@ -12,8 +12,8 @@ function openWithVanishedSelection() {
   return play;
 }
 
-describe("クリックでの選択", () => {
-  it("選手をクリックすると、その選手を選ぶ", () => {
+describe("Selection by click", () => {
+  it("selects the player when a player is clicked", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(10, 0));
@@ -21,7 +21,7 @@ describe("クリックでの選択", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "a" });
   });
 
-  it("選手を選ぶと、その選手を強調して描く", () => {
+  it("draws the player highlighted when it is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(10, 0));
@@ -29,7 +29,7 @@ describe("クリックでの選択", () => {
     expect(play.editor.getFrame().overlay).toEqual({ kind: "player", playerId: "a" });
   });
 
-  it("選手を選ぶと、選択中の選手としてその選手を返し、線は返さない", () => {
+  it("returns the selected player and no selected line when a player is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(10, 0));
@@ -38,7 +38,7 @@ describe("クリックでの選択", () => {
     expect(play.editor.getSelectedLine()).toBeUndefined();
   });
 
-  it("線をクリックすると、その線を選ぶ", () => {
+  it("selects the line when a line is clicked", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(25, 5));
@@ -46,7 +46,7 @@ describe("クリックでの選択", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
   });
 
-  it("線を選ぶと、waypoint と終点にハンドルを描く", () => {
+  it("draws handles at the waypoints and the end when a line is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(25, 5));
@@ -58,7 +58,7 @@ describe("クリックでの選択", () => {
     });
   });
 
-  it("空白をクリックすると、選択を外す", () => {
+  it("clears the selection when empty space is clicked", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.click(yd(10, 0));
 
@@ -67,7 +67,7 @@ describe("クリックでの選択", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
-  it("何も選んでいないときに空白をクリックしても、通知を出さない", () => {
+  it("does not notify when empty space is clicked while nothing is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(45, -10));
@@ -75,7 +75,7 @@ describe("クリックでの選択", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("選んでいる選手をもう一度クリックしても、表示状態の通知を出さない", () => {
+  it("does not notify the view state when the selected player is clicked again", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.click(yd(10, 0));
     play.notified.mockClear();
@@ -85,7 +85,7 @@ describe("クリックでの選択", () => {
     expect(play.notified).not.toHaveBeenCalledWith("view");
   });
 
-  it("別の選手を押すと、選択がその選手へ移る", () => {
+  it("moves the selection to another player when that player is pressed", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.click(yd(10, 0));
 
@@ -94,7 +94,7 @@ describe("クリックでの選択", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "b" });
   });
 
-  it("別の選手を押すと、描く図と表示状態の通知を 1 回ずつ出す", () => {
+  it("notifies the scene and the view state once each when another player is pressed", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.click(yd(10, 0));
     play.notified.mockClear();
@@ -105,20 +105,20 @@ describe("クリックでの選択", () => {
   });
 });
 
-describe("消えた対象の選択", () => {
-  it("選んだ選手が Undo で消えると、表示状態は無選択になる", () => {
+describe("Selection of a vanished target", () => {
+  it("shows no selection in the view state when Undo removes the selected player", () => {
     const play = openWithVanishedSelection();
 
     expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
-  it("選んだ選手が Undo で消えると、選択中の選手を返さない", () => {
+  it("returns no selected player when Undo removes the selected player", () => {
     const play = openWithVanishedSelection();
 
     expect(play.editor.getSelectedPlayer()).toBeUndefined();
   });
 
-  it("消えた選手が Redo で戻ると、また選択として読める", () => {
+  it("reads as the selection again when Redo restores the vanished player", () => {
     const play = openWithVanishedSelection();
 
     play.editor.redo();
@@ -127,8 +127,8 @@ describe("消えた対象の選択", () => {
   });
 });
 
-describe("選択の削除", () => {
-  it("選んでいる選手を削除すると、選択を外す", () => {
+describe("Deleting the selection", () => {
+  it("clears the selection when the selected player is deleted", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.click(yd(20, 0));
 
@@ -137,7 +137,7 @@ describe("選択の削除", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
   });
 
-  it("何も選んでいないときに削除しても、図も履歴も変えず通知もしない", () => {
+  it("keeps the diagram and history and does not notify on delete with nothing selected", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.deleteSelection();
@@ -147,7 +147,7 @@ describe("選択の削除", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("選んだ選手が消えたあとに削除しても、履歴に積まない", () => {
+  it("does not record history when deleting after the selected player vanished", () => {
     const play = openWithVanishedSelection();
 
     play.editor.deleteSelection();

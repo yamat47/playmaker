@@ -9,31 +9,31 @@ function startDrawingFromA(play: PlayDriver): PlayDriver {
   return play;
 }
 
-/** 作図ツールで選手 a から描き始めた図。 */
+/** A diagram where drawing started from player a with the draw-line tool. */
 function openDrawingFromA(): PlayDriver {
   return startDrawingFromA(openPlay(twoPlayersWithRoute()));
 }
 
-/** 選手 a を選んだまま作図ツールへ切り替え、a から描き始めた図。 */
+/** A diagram where player a was selected, then drawing started from a with the draw-line tool. */
 function openDrawingFromSelectedA(): PlayDriver {
   const play = openPlay(twoPlayersWithRoute());
   play.click(yd(10, 0));
   return startDrawingFromA(play);
 }
 
-/** 選手 a と、線を MAX_LINES 本持つ図。 */
+/** A diagram with player a and MAX_LINES lines. */
 function openWithMaxLines(): PlayDriver {
   const lines = Array.from({ length: MAX_LINES }, (_, i) => line(`m-${i}`));
   return openPlay(playData([player("a", 10, 0)], lines));
 }
 
-/** 図の線のうち、作図で足した線。 */
+/** The line that drawing added to the diagram. */
 function addedLine(play: PlayDriver): Line | undefined {
   return play.session.getPlayData().lines.find((l) => l.id !== "l");
 }
 
-describe("作図の開始", () => {
-  it("作図ツールで空白を押しても、作図を始めず通知もしない", () => {
+describe("Starting a drawing", () => {
+  it("neither starts drawing nor notifies when the draw-line tool presses empty space", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.setTool("draw-line");
     play.notified.mockClear();
@@ -44,13 +44,13 @@ describe("作図の開始", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("作図ツールで選手を押すと、作図を始める", () => {
+  it("starts drawing when a player is pressed with the draw-line tool", () => {
     const play = openDrawingFromA();
 
     expect(play.editor.getViewState().isDrawing).toBe(true);
   });
 
-  it("作図を始めると、起点の選手からカーソルまでの線を描く", () => {
+  it("draws a line from the start player to the cursor once drawing starts", () => {
     const play = openDrawingFromA();
 
     play.editor.pointerMove(yd(12, 8));
@@ -62,7 +62,7 @@ describe("作図の開始", () => {
     });
   });
 
-  it("線が MAX_LINES 本あると、選手を押しても作図を始めない", () => {
+  it("does not start drawing when a player is pressed with MAX_LINES lines present", () => {
     const play = openWithMaxLines();
     play.editor.setTool("draw-line");
 
@@ -71,15 +71,15 @@ describe("作図の開始", () => {
     expect(play.editor.getViewState().isDrawing).toBe(false);
   });
 
-  it("線が MAX_LINES 本あると、線を描き始められないと表示状態で知らせる", () => {
+  it("reports in the view state that no line can be started when MAX_LINES lines exist", () => {
     const play = openWithMaxLines();
 
     expect(play.editor.getViewState().canStartLine).toBe(false);
   });
 });
 
-describe("打点", () => {
-  it("作図中に押した点は、描く線の waypoint になる", () => {
+describe("Placing points", () => {
+  it("turns a point pressed while drawing into a waypoint of the drawn line", () => {
     const play = openDrawingFromA();
 
     play.editor.pointerDown(yd(12, 8));
@@ -87,7 +87,7 @@ describe("打点", () => {
     expect(play.editor.getFrame().scene.lines.at(-1)?.waypoints).toEqual([yd(12, 8)]);
   });
 
-  it("作図中に離しても、作図を続ける", () => {
+  it("keeps drawing when the pointer is released while drawing", () => {
     const play = openDrawingFromA();
 
     play.editor.pointerUp(yd(10, 0));
@@ -95,7 +95,7 @@ describe("打点", () => {
     expect(play.editor.getViewState().isDrawing).toBe(true);
   });
 
-  it("直前に打った点と同じ格子点を押しても、点を打たない", () => {
+  it("does not place a point when the same grid point as the last one is pressed", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
     play.editor.pointerDown(yd(18.1, 10));
@@ -105,7 +105,7 @@ describe("打点", () => {
     expect(addedLine(play)).toMatchObject({ waypoints: [], end: yd(18, 10) });
   });
 
-  it("直前に打った点の隣の格子点を押すと、点を打つ", () => {
+  it("places a point when the grid point next to the last one is pressed", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
     play.editor.pointerDown(yd(18.5, 10));
@@ -115,7 +115,7 @@ describe("打点", () => {
     expect(addedLine(play)).toMatchObject({ waypoints: [yd(18, 10)], end: yd(18.5, 10) });
   });
 
-  it("窓の外へ動かすと、描く線の終点は窓の端で止まる", () => {
+  it("stops the end of the drawn line at the window edge when moved outside the window", () => {
     const play = openDrawingFromA();
 
     play.editor.pointerMove(yd(99, 0));
@@ -123,7 +123,7 @@ describe("打点", () => {
     expect(play.editor.getFrame().scene.lines.at(-1)?.end).toEqual(yd(FIELD_WIDTH_YARDS, 0));
   });
 
-  it("窓の外を押すと、窓の端に点を打つ", () => {
+  it("places a point at the window edge when pressed outside the window", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(10, 49));
 
@@ -132,7 +132,7 @@ describe("打点", () => {
     expect(addedLine(play)?.end).toEqual(yd(10, 15));
   });
 
-  it("waypoint の上限を超えて打った点は、確定する線に入らない", () => {
+  it("leaves points placed beyond the waypoint limit out of the committed line", () => {
     const play = openDrawingFromA();
     for (let i = 1; i <= MAX_WAYPOINTS_PER_LINE + 2; i++) {
       play.editor.pointerDown(yd(10 + i, 3));
@@ -144,7 +144,7 @@ describe("打点", () => {
     expect(addedLine(play)?.end).toEqual(yd(11 + MAX_WAYPOINTS_PER_LINE, 3));
   });
 
-  it("打てる点が尽きると、描く線はカーソルではなく最後に打った点で終わる", () => {
+  it("ends the drawn line at the last point rather than the cursor when no points remain", () => {
     const play = openDrawingFromA();
     for (let i = 1; i <= MAX_WAYPOINTS_PER_LINE + 1; i++) {
       play.editor.pointerDown(yd(10 + i, 3));
@@ -158,8 +158,8 @@ describe("打点", () => {
   });
 });
 
-describe("線の確定", () => {
-  it("確定すると、最後に打った点を終点、手前の点を waypoint にした線を足す", () => {
+describe("Committing a line", () => {
+  it("adds a line ending at the last point with the earlier points as waypoints on commit", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(12, 5));
     play.editor.pointerDown(yd(18, 10));
@@ -176,7 +176,7 @@ describe("線の確定", () => {
     });
   });
 
-  it("確定すると、足した線を選ぶ", () => {
+  it("selects the added line on commit", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
 
@@ -185,7 +185,7 @@ describe("線の確定", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "line-1" });
   });
 
-  it("確定すると、選択ツールに戻る", () => {
+  it("returns to the select tool on commit", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
 
@@ -194,7 +194,7 @@ describe("線の確定", () => {
     expect(play.editor.getViewState().tool).toBe("select");
   });
 
-  it("確定すると、描く図と表示状態の通知を 1 回ずつ出す", () => {
+  it("notifies the scene and the view state once each on commit", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
     play.notified.mockClear();
@@ -204,7 +204,7 @@ describe("線の確定", () => {
     expect(play.notified.mock.calls).toEqual([["scene"], ["view"]]);
   });
 
-  it("確定したあとに Undo すると、足した線が消える", () => {
+  it("removes the added line when Undo follows the commit", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
     play.editor.commitLine();
@@ -214,7 +214,7 @@ describe("線の確定", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("点を打たずに確定すると、線を足さずに作図をやめる", () => {
+  it("stops drawing without adding a line when committed before any point is placed", () => {
     const play = openDrawingFromA();
 
     play.editor.commitLine();
@@ -223,7 +223,7 @@ describe("線の確定", () => {
     expect(play.editor.getViewState().isDrawing).toBe(false);
   });
 
-  it("起点の選手の上でダブルクリックして確定しても、線を足さない", () => {
+  it("does not add a line when committed after a double click on the start player", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(10, 0));
     play.editor.pointerDown(yd(10, 0));
@@ -233,7 +233,7 @@ describe("線の確定", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("起点の選手が打った点の上へ動いて全長が 0 に近くなると、確定しても線を足さない", () => {
+  it("does not add a near-zero line when the start player moved onto the placed point", () => {
     const play = openDrawingFromSelectedA();
     play.editor.pointerDown(yd(14, 0));
     play.editor.updateSelectedPlayer({ position: yd(14, 0) });
@@ -243,7 +243,7 @@ describe("線の確定", () => {
     expect(play.session.getPlayData().lines).toEqual(twoPlayersWithRoute().lines);
   });
 
-  it("作図中に起点の選手を消すと、確定しても線を足さない", () => {
+  it("does not add a line on commit when the start player was deleted while drawing", () => {
     const play = openDrawingFromSelectedA();
     play.editor.pointerDown(yd(14, 8));
     play.editor.deleteSelection();
@@ -253,7 +253,7 @@ describe("線の確定", () => {
     expect(play.session.getPlayData().lines).toEqual([]);
   });
 
-  it("作図していないときに確定しても、図を変えず通知もしない", () => {
+  it("neither changes the diagram nor notifies when committed while not drawing", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.commitLine();
@@ -263,8 +263,8 @@ describe("線の確定", () => {
   });
 });
 
-describe("作図の取り消し", () => {
-  it("作図中に Undo すると、最後に打った点だけを取り消す", () => {
+describe("Canceling a drawing", () => {
+  it("cancels only the last placed point when Undo runs while drawing", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(14, 0));
     play.editor.pointerDown(yd(18, 0));
@@ -275,7 +275,7 @@ describe("作図の取り消し", () => {
     expect(addedLine(play)).toMatchObject({ waypoints: [], end: yd(14, 0) });
   });
 
-  it("作図中に Undo しても、確定した編集は戻さない", () => {
+  it("does not revert committed edits when Undo runs while drawing", () => {
     const play = openDrawingFromSelectedA();
     play.editor.updateSelectedPlayer({ label: "QB" });
     play.editor.pointerDown(yd(14, 0));
@@ -285,7 +285,7 @@ describe("作図の取り消し", () => {
     expect(play.session.getPlayData().players[0]?.label).toBe("QB");
   });
 
-  it("点を打つ前に Undo すると、作図をやめる", () => {
+  it("stops drawing when Undo runs before any point is placed", () => {
     const play = openDrawingFromA();
 
     play.editor.undo();
@@ -293,7 +293,7 @@ describe("作図の取り消し", () => {
     expect(play.editor.getViewState().isDrawing).toBe(false);
   });
 
-  it("点を打つ前に Undo しても、確定した編集は戻さない", () => {
+  it("does not revert committed edits when Undo runs before any point is placed", () => {
     const play = openDrawingFromSelectedA();
     play.editor.updateSelectedPlayer({ label: "QB" });
 
@@ -302,7 +302,7 @@ describe("作図の取り消し", () => {
     expect(play.session.getPlayData().players[0]?.label).toBe("QB");
   });
 
-  it("作図を取り消すと、作図をやめて描く図と表示状態を通知する", () => {
+  it("stops drawing and notifies the scene and the view state on cancel", () => {
     const play = openDrawingFromA();
     play.notified.mockClear();
 
@@ -312,7 +312,7 @@ describe("作図の取り消し", () => {
     expect(play.notified.mock.calls).toEqual([["scene"], ["view"]]);
   });
 
-  it("作図していないときに取り消しても、通知しない", () => {
+  it("does not notify when canceled while not drawing", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.cancelInteraction();
@@ -320,7 +320,7 @@ describe("作図の取り消し", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("別のツールに切り替えると、作図をやめる", () => {
+  it("stops drawing when another tool is selected", () => {
     const play = openDrawingFromA();
 
     play.editor.setTool("select");

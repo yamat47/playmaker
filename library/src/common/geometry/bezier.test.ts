@@ -18,12 +18,12 @@ describe("cubicBezierPoint", () => {
   const c2 = at(10, 10);
   const p1 = at(10, 0);
 
-  it("t=0 で始点、t=1 で終点に一致する", () => {
+  it("returns the start point at t=0 and the end point at t=1", () => {
     expect(cubicBezierPoint(p0, c1, c2, p1, 0)).toEqual(p0);
     expect(cubicBezierPoint(p0, c1, c2, p1, 1)).toEqual(p1);
   });
 
-  it("制御点を線分の 1/3・2/3 に置くと直線（中点は線分中点）", () => {
+  it("stays a straight line when the control points sit at 1/3 and 2/3 of the segment", () => {
     const a = at(0, 0);
     const b = at(9, 3);
     const mid = cubicBezierPoint(a, at(3, 1), at(6, 2), b, 0.5);
@@ -32,10 +32,10 @@ describe("cubicBezierPoint", () => {
     expect(mid.downfieldYard).toBeCloseTo(1.5, 10);
   });
 
-  it("対称な制御点では t=0.5 が左右対称の頂点になる", () => {
+  it("puts t=0.5 at the apex of a symmetric curve", () => {
     const mid = cubicBezierPoint(p0, c1, c2, p1, 0.5);
 
-    // 左右対称配置なので中央の横位置はちょうど中点。
+    // The control points are mirrored, so the lateral position is exactly the midpoint.
     expect(mid.lateralYard).toBeCloseTo(5, 10);
     // 0.125*0 + 0.375*10 + 0.375*10 + 0.125*0 = 7.5
     expect(mid.downfieldYard).toBeCloseTo(7.5, 10);
@@ -43,7 +43,7 @@ describe("cubicBezierPoint", () => {
 });
 
 describe("catmullRomBezierControls", () => {
-  it("標準の 1/6 係数で制御点を返す", () => {
+  it("returns the control points with the standard 1/6 tension", () => {
     const [c1, c2] = catmullRomBezierControls(at(0, 0), at(6, 0), at(6, 6), at(0, 6));
 
     // c1 = p1 + (p2 - p0)/6, c2 = p2 - (p3 - p1)/6
@@ -51,7 +51,7 @@ describe("catmullRomBezierControls", () => {
     expect(c2).toEqual({ lateralYard: 6 - -6 / 6, downfieldYard: 6 - 6 / 6 });
   });
 
-  it("一直線上の点なら制御点も同一直線上（曲線が直線のまま）", () => {
+  it("keeps the control points on the line when the points are collinear", () => {
     const [c1, c2] = catmullRomBezierControls(at(0, 0), at(1, 1), at(2, 2), at(3, 3));
 
     expect(c1.lateralYard).toBeCloseTo(c1.downfieldYard, 10);
@@ -60,7 +60,7 @@ describe("catmullRomBezierControls", () => {
 });
 
 describe("sampleLinePath", () => {
-  it("straight は制御点をそのまま返す（新規配列・要素は複製）", () => {
+  it("returns a copy of the control points as they are for straight", () => {
     const input = [at(0, 0), at(5, 5), at(10, 0)];
 
     const out = sampleLinePath(input, "straight");
@@ -70,13 +70,13 @@ describe("sampleLinePath", () => {
     expect(out[0]).not.toBe(input[0]);
   });
 
-  it("bezier でも制御点が 2 点以下なら直線扱い（曲げようがない）", () => {
+  it("treats two or fewer control points as a straight line even for bezier", () => {
     const input = [at(0, 0), at(10, 10)];
 
     expect(sampleLinePath(input, "bezier")).toEqual(input);
   });
 
-  it("bezier は全制御点を必ず通る（waypoint を確実に経由）", () => {
+  it("passes through every control point for bezier", () => {
     const start = at(0, 0);
     const mid = at(5, 8);
     const end = at(10, 0);
@@ -88,33 +88,33 @@ describe("sampleLinePath", () => {
     expect(out.at(-1)).toEqual(end);
   });
 
-  it("bezier の点数は 1 + samples*(区間数)", () => {
+  it("returns 1 + samples * segments points for bezier", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 0), at(15, 5)], "bezier", 10);
 
-    // 4 点で 3 区間なので、1 + 10 * 3。
+    // 4 points make 3 segments, so 1 + 10 * 3.
     expect(out).toHaveLength(31);
   });
 
-  it("連続する同一点は畳んで接線破綻を防ぐ", () => {
+  it("collapses consecutive duplicate points so the tangents stay defined", () => {
     const out = sampleLinePath([at(0, 0), at(0, 0), at(5, 5), at(10, 0)], "straight");
 
     expect(out).toEqual([at(0, 0), at(5, 5), at(10, 0)]);
   });
 
-  it("畳んだ結果 2 点以下になれば bezier でも直線扱い", () => {
+  it("treats bezier as a straight line when collapsing leaves two or fewer points", () => {
     const out = sampleLinePath([at(1, 1), at(1, 1), at(9, 9)], "bezier");
 
     expect(out).toEqual([at(1, 1), at(9, 9)]);
   });
 
-  it("samplesPerSegment は 1 未満なら 1 に丸める", () => {
+  it("rounds samplesPerSegment up to 1 when it is below 1", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 0)], "bezier", 0);
 
-    // 始点と、2 区間を 1 分割ずつした点。
+    // The start point plus one sample for each of the 2 segments.
     expect(out).toHaveLength(3);
   });
 
-  it("一直線上の制御点は bezier でも直線上に乗る（オーバーシュートしない）", () => {
+  it("keeps collinear control points on the line for bezier without overshoot", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 10)], "bezier", 6);
 
     for (const p of out) {
@@ -122,7 +122,7 @@ describe("sampleLinePath", () => {
     }
   });
 
-  it("入力配列を変更しない", () => {
+  it("leaves the input array unchanged", () => {
     const input = [at(0, 0), at(5, 5), at(10, 0)];
     const snapshot = JSON.stringify(input);
 
@@ -131,7 +131,7 @@ describe("sampleLinePath", () => {
     expect(JSON.stringify(input)).toBe(snapshot);
   });
 
-  it("既定の分割数は公開定数と一致する", () => {
+  it("uses the exported constant as the default number of samples", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 0)], "bezier");
 
     expect(out).toHaveLength(1 + DEFAULT_BEZIER_SAMPLES_PER_SEGMENT * 2);

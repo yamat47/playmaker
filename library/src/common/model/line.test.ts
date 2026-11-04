@@ -16,17 +16,17 @@ import {
 const PLAYER_IDS = new Set(["qb", "wr"]);
 
 describe("isLineThickness", () => {
-  it("正の有限な数を true と判定する", () => {
+  it("accepts a positive finite number", () => {
     expect(isLineThickness(0.25)).toBe(true);
     expect(isLineThickness(3)).toBe(true);
   });
 
-  it("0 と負の数を false と判定する", () => {
+  it("rejects 0 and negative numbers", () => {
     expect(isLineThickness(0)).toBe(false);
     expect(isLineThickness(-1)).toBe(false);
   });
 
-  it("数でない値と、有限でない数を false と判定する", () => {
+  it("rejects non-numbers and non-finite numbers", () => {
     expect(isLineThickness("2")).toBe(false);
     expect(isLineThickness(Number.NaN)).toBe(false);
     expect(isLineThickness(Number.POSITIVE_INFINITY)).toBe(false);
@@ -34,7 +34,7 @@ describe("isLineThickness", () => {
 });
 
 describe("normalizeLines", () => {
-  it("正当な線はそのまま保持しつつ欠落を既定で補完する", () => {
+  it("keeps a valid line as is and fills missing fields with defaults", () => {
     const result = normalizeLines(
       [
         {
@@ -45,7 +45,7 @@ describe("normalizeLines", () => {
           end: { lateralYard: 12, downfieldYard: 62 },
           interpolation: "bezier",
         },
-        // kind、interpolation、id が無いので既定で補う。
+        // kind, interpolation, and id are missing, so the defaults fill them.
         { startPlayerId: "qb", end: { lateralYard: 26, downfieldYard: 40 } },
       ],
       PLAYER_IDS,
@@ -71,7 +71,7 @@ describe("normalizeLines", () => {
     ]);
   });
 
-  it("color は非空文字列、thickness は正の数のときだけ保持する", () => {
+  it("keeps color only as a non-empty string and thickness only as a positive number", () => {
     const [a, b] = normalizeLines(
       [
         {
@@ -96,7 +96,7 @@ describe("normalizeLines", () => {
     expect(b && "thickness" in b).toBe(false);
   });
 
-  it("起点選手が実在しない線は復元不能として捨てる（dangling 参照）", () => {
+  it("drops a line whose start player does not exist", () => {
     const result = normalizeLines(
       [
         { startPlayerId: "ghost", end: { lateralYard: 1, downfieldYard: 2 } },
@@ -110,7 +110,7 @@ describe("normalizeLines", () => {
     expect(result.map((l) => l.startPlayerId)).toEqual(["qb"]);
   });
 
-  it("終点が無い/数値でない/非オブジェクトの線は捨てる（復元不能）", () => {
+  it("drops a line whose end is missing, non-numeric, or not an object", () => {
     const result = normalizeLines(
       [
         null,
@@ -126,7 +126,7 @@ describe("normalizeLines", () => {
     expect(result.map((l) => l.id)).toEqual(["ok"]);
   });
 
-  it("waypoint は数値でない要素だけ捨て、線自体は保持する", () => {
+  it("drops only the non-numeric waypoints and keeps the line", () => {
     const [line] = normalizeLines(
       [
         {
@@ -149,7 +149,7 @@ describe("normalizeLines", () => {
     ]);
   });
 
-  it("waypoints が配列でなければ空配列にする", () => {
+  it("replaces non-array waypoints with an empty array", () => {
     const [line] = normalizeLines(
       [{ startPlayerId: "qb", waypoints: "nope", end: { lateralYard: 0, downfieldYard: 0 } }],
       PLAYER_IDS,
@@ -158,7 +158,7 @@ describe("normalizeLines", () => {
     expect(line?.waypoints).toEqual([]);
   });
 
-  it("id が無い/空なら index 由来の決定的 id を割り当てる", () => {
+  it("assigns a deterministic id from the index when the id is missing or blank", () => {
     const result = normalizeLines(
       [
         { startPlayerId: "qb", end: { lateralYard: 0, downfieldYard: 0 } },
@@ -170,13 +170,13 @@ describe("normalizeLines", () => {
     expect(result.map((l) => l.id)).toEqual(["l0", "l1"]);
   });
 
-  it("配列でない入力は空配列を返す", () => {
+  it("returns an empty array for a non-array input", () => {
     expect(normalizeLines(undefined, PLAYER_IDS)).toEqual([]);
     expect(normalizeLines(null, PLAYER_IDS)).toEqual([]);
     expect(normalizeLines({ length: 1 }, PLAYER_IDS)).toEqual([]);
   });
 
-  it("入力配列・要素・位置を共有しない新規オブジェクトを返す（Model 専有）", () => {
+  it("returns new objects that share no array, element, or position with the input", () => {
     const input = [
       {
         startPlayerId: "qb",
@@ -193,10 +193,10 @@ describe("normalizeLines", () => {
   });
 });
 
-describe("normalizeLines の件数上限", () => {
+describe("normalizeLines limits", () => {
   const end = { lateralYard: 5, downfieldYard: 60 };
 
-  it("MAX_LINES 本を超える線は先頭の MAX_LINES 本だけ残す", () => {
+  it("keeps only the first MAX_LINES lines when more are given", () => {
     const raw = Array.from({ length: MAX_LINES + 5 }, (_, i) => ({
       id: `l${i}`,
       startPlayerId: "qb",
@@ -209,7 +209,7 @@ describe("normalizeLines の件数上限", () => {
     expect(lines.at(-1)?.id).toBe(`l${MAX_LINES - 1}`);
   });
 
-  it("MAX_WAYPOINTS_PER_LINE 個を超える waypoint は先頭から上限の個数だけ残す", () => {
+  it("keeps only the first MAX_WAYPOINTS_PER_LINE waypoints when more are given", () => {
     const waypoints = Array.from({ length: MAX_WAYPOINTS_PER_LINE + 5 }, (_, i) => ({
       lateralYard: 5,
       downfieldYard: i,
@@ -223,7 +223,7 @@ describe("normalizeLines の件数上限", () => {
 });
 
 describe("cloneLine", () => {
-  it("waypoints・終点まで複製し元と共有しない", () => {
+  it("copies the waypoints and the end without sharing them with the original", () => {
     const original: Line = {
       id: "x",
       kind: "motion",
@@ -244,7 +244,7 @@ describe("cloneLine", () => {
     expect(copy.end).not.toBe(original.end);
   });
 
-  it("color/thickness 未指定なら複製にも持たせない", () => {
+  it("leaves color and thickness out of the copy when the original has none", () => {
     const copy = cloneLine({
       id: "x",
       kind: "route",
@@ -263,7 +263,7 @@ describe("lineAnchorPoints", () => {
   const players = [player("qb", 26, 48), player("wr", 5, 50)];
   const byId = indexPlayersById(players);
 
-  it("[起点選手位置, ...waypoints, 終点] を順に組み立てる", () => {
+  it("builds [start player position, ...waypoints, end] in order", () => {
     const line: Line = {
       id: "r",
       kind: "route",
@@ -280,7 +280,7 @@ describe("lineAnchorPoints", () => {
     ]);
   });
 
-  it("起点選手が見つからなければ undefined", () => {
+  it("returns undefined when the start player is not found", () => {
     const line: Line = {
       id: "r",
       kind: "route",
@@ -293,7 +293,7 @@ describe("lineAnchorPoints", () => {
     expect(lineAnchorPoints(line, byId)).toBeUndefined();
   });
 
-  it("選手位置・waypoint を共有しない（後段の変形が Model を汚さない）", () => {
+  it("shares no player position or waypoint so later transforms leave the model intact", () => {
     const line: Line = {
       id: "r",
       kind: "route",
@@ -312,7 +312,7 @@ describe("lineAnchorPoints", () => {
 });
 
 describe("indexPlayersById", () => {
-  it("id 引きの Map を作る", () => {
+  it("builds a Map keyed by id", () => {
     const a = player("a", 0, 0);
     const b = player("b", 1, 1);
 
@@ -323,7 +323,7 @@ describe("indexPlayersById", () => {
     expect(map.get("c")).toBeUndefined();
   });
 
-  it("同 id は後勝ち（描画順 = 配列順の整合）", () => {
+  it("lets the later player win for a duplicate id, matching the draw order", () => {
     const first = player("dup", 0, 0);
     const second = player("dup", 9, 9);
 

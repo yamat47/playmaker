@@ -12,21 +12,24 @@ export type EditorNotification = "scene" | "view";
 
 export interface PlayDriver {
   readonly session: PlaySession;
-  /** setPlayData で作り直したあとは、新しい controller を返す。 */
+  /** Returns the new controller after setPlayData rebuilds it. */
   readonly editor: IEditorController;
-  /** session の onDidChange に渡った図。 */
+  /** The diagrams passed to the session's onDidChange. */
   readonly onChange: Mock<(data: PlayData) => void>;
-  /** session が出した描き直しと表示状態の通知を、出た順に記録する。 */
+  /** Records the session's redraw and view state notifications in the order they fire. */
   readonly notified: Mock<(kind: EditorNotification) => void>;
-  /** 同じ位置で押して離す。 */
+  /** Presses and releases at the same position. */
   click(at: FieldPosition): void;
-  /** from で押し、to まで動かして離す。 */
+  /** Presses at `from`, moves to `to`, and releases. */
   drag(from: FieldPosition, to: FieldPosition): void;
-  /** 作図ツールに切り替え、from にいる選手を押して描き始める。 */
+  /** Switches to the draw-line tool and presses the player at `from` to start drawing. */
   startLine(from: FieldPosition): void;
 }
 
-/** 仕様テストの入口。利用者がする操作をヤード座標で行い、図、表示状態、通知を観測する。 */
+/**
+ * Entry point for specification tests. Performs the consumer's operations in yard coordinates
+ * and observes the diagram, the view state, and the notifications.
+ */
 export function openPlay(data: unknown): PlayDriver {
   const session = new PlaySession(data);
   const onChange = vi.fn<(data: PlayData) => void>();

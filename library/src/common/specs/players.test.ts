@@ -15,15 +15,15 @@ function withPlayers(count: number): PlayData {
   return playData(manyPlayers(count));
 }
 
-/** 選手 a を選んだ図。 */
+/** A diagram with player a selected. */
 function openWithASelected() {
   const play = openPlay(twoPlayersWithRoute());
   play.click(yd(10, 0));
   return play;
 }
 
-describe("選手の追加", () => {
-  it("選手の追加ツールで空白をクリックすると、そこにラベルの無い丸の選手を足す", () => {
+describe("Adding a player", () => {
+  it("adds an unlabeled circle player where the add-player tool clicks empty space", () => {
     const play = openPlay(playData());
     play.editor.setTool("add-player");
 
@@ -34,7 +34,7 @@ describe("選手の追加", () => {
     ]);
   });
 
-  it("足した選手を選ぶ", () => {
+  it("selects the added player", () => {
     const play = openPlay(playData());
     play.editor.setTool("add-player");
 
@@ -43,7 +43,7 @@ describe("選手の追加", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "player-1" });
   });
 
-  it("足す選手には、図にある選手と重ならない id を振る", () => {
+  it("assigns the added player an id that does not collide with existing players", () => {
     const play = openPlay(playData([player("player-1", 10, 0)]));
     play.editor.setTool("add-player");
 
@@ -53,7 +53,7 @@ describe("選手の追加", () => {
     expect(new Set(ids).size).toBe(2);
   });
 
-  it("ゾーンの窓の外をクリックすると、窓の端に置く", () => {
+  it("places the player at the window edge when clicked outside the zone window", () => {
     const play = openPlay(playData());
     play.editor.setTool("add-player");
 
@@ -62,7 +62,7 @@ describe("選手の追加", () => {
     expect(play.session.getPlayData().players[0]?.position).toEqual(yd(30, -15));
   });
 
-  it("足したあとに Undo すると、足した選手が消える", () => {
+  it("removes the added player when Undo follows the add", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.setTool("add-player");
     play.click(yd(30, -5));
@@ -72,7 +72,7 @@ describe("選手の追加", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("選手が MAX_PLAYERS 人いると、クリックしても足さず履歴にも積まない", () => {
+  it("neither adds a player nor records history on click when MAX_PLAYERS players exist", () => {
     const play = openPlay(withPlayers(MAX_PLAYERS));
     play.editor.setTool("add-player");
 
@@ -82,13 +82,13 @@ describe("選手の追加", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
-  it("選手が MAX_PLAYERS 人いると、置ける人数は 0 になる", () => {
+  it("reports 0 remaining player slots when MAX_PLAYERS players exist", () => {
     const play = openPlay(withPlayers(MAX_PLAYERS));
 
     expect(play.editor.getViewState().remainingPlayerSlots).toBe(0);
   });
 
-  it("最後の 1 人を足すと、置ける人数は 0 になる", () => {
+  it("reports 0 remaining player slots once the last player is added", () => {
     const play = openPlay(withPlayers(MAX_PLAYERS - 1));
     play.editor.setTool("add-player");
 
@@ -98,8 +98,8 @@ describe("選手の追加", () => {
   });
 });
 
-describe("選手のドラッグ", () => {
-  it("中心から外れた点を掴んで動かすと、掴んだ点とポインタのずれを保って描く", () => {
+describe("Dragging a player", () => {
+  it("draws a player grabbed off center with the grab offset kept while moving", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.pointerDown(yd(10.5, 0.25));
@@ -108,7 +108,7 @@ describe("選手のドラッグ", () => {
     expect(positionOf(play.editor.getFrame().scene, "a")).toEqual(yd(14, 3));
   });
 
-  it("中心から外れた点を掴んで離すと、掴んだ点とポインタのずれを保った位置に置く", () => {
+  it("places a player grabbed off center with the grab offset kept on release", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.drag(yd(10.5, 0.25), yd(14.5, 3.25));
@@ -116,7 +116,7 @@ describe("選手のドラッグ", () => {
     expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(14, 3));
   });
 
-  it("動かさずに離すと、履歴に積まない", () => {
+  it("does not record history when released without moving", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(10, 0));
@@ -124,7 +124,7 @@ describe("選手のドラッグ", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
-  it("ゾーンの窓の外へ動かすと、描く選手は窓の端で止まる", () => {
+  it("stops the drawn player at the window edge when moved outside the zone window", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.pointerDown(yd(10, 0));
@@ -133,7 +133,7 @@ describe("選手のドラッグ", () => {
     expect(positionOf(play.editor.getFrame().scene, "a")).toEqual(yd(10, -15));
   });
 
-  it("ゾーンの窓の外で離すと、窓の端に寄せて置く", () => {
+  it("snaps the player to the window edge when released outside the zone window", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.drag(yd(10, 0), yd(-5, 30));
@@ -141,7 +141,7 @@ describe("選手のドラッグ", () => {
     expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(0, 15));
   });
 
-  it("窓の外にいる選手をクリックしただけでは、窓の端へ動かさない", () => {
+  it("does not move a player outside the window to the edge when it is only clicked", () => {
     const play = openPlay(playData([player("far", 10, 16)]));
 
     play.click(yd(10, 16));
@@ -149,7 +149,7 @@ describe("選手のドラッグ", () => {
     expect(positionOf(play.session.getPlayData(), "far")).toEqual(yd(10, 16));
   });
 
-  it("押さずにポインタを動かして離しても、通知を出さない", () => {
+  it("does not notify when the pointer moves and releases without a press", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.pointerMove(yd(10, 0));
@@ -158,7 +158,7 @@ describe("選手のドラッグ", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("ドラッグの途中で選手を削除すると、離しても削除のほかに何も積まない", () => {
+  it("records only the deletion when the player is deleted mid-drag and then released", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.pointerDown(yd(10, 0));
     play.editor.deleteSelection();
@@ -170,11 +170,11 @@ describe("選手のドラッグ", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("同じ id の選手が重なっていても、上に描かれた選手だけを動かす", () => {
+  it("moves only the player drawn on top when players with the same id overlap", () => {
     const play = openPlay(
       playData([
-        { ...player("p", 10, 0), label: "下" },
-        { ...player("p", 10, 0), label: "上" },
+        { ...player("p", 10, 0), label: "bottom" },
+        { ...player("p", 10, 0), label: "top" },
       ]),
     );
 
@@ -182,14 +182,14 @@ describe("選手のドラッグ", () => {
 
     const moved = play.session.getPlayData().players.map((p) => [p.label, p.position]);
     expect(moved).toEqual([
-      ["下", yd(10, 0)],
-      ["上", yd(14, 0)],
+      ["bottom", yd(10, 0)],
+      ["top", yd(14, 0)],
     ]);
   });
 });
 
-describe("選手の削除", () => {
-  it("選手を削除すると、その選手から出る線も消える", () => {
+describe("Deleting a player", () => {
+  it("removes the lines starting from a player when the player is deleted", () => {
     const play = openWithASelected();
 
     play.editor.deleteSelection();
@@ -197,7 +197,7 @@ describe("選手の削除", () => {
     expect(play.session.getPlayData()).toEqual(playData([player("b", 20, 0)]));
   });
 
-  it("選手と線を一緒に消しても、onChange は 1 回だけ呼ぶ", () => {
+  it("calls onChange only once when a player and its lines are removed together", () => {
     const play = openWithASelected();
 
     play.editor.deleteSelection();
@@ -205,7 +205,7 @@ describe("選手の削除", () => {
     expect(play.onChange).toHaveBeenCalledOnce();
   });
 
-  it("削除を Undo すると、選手と線が元の並びに戻る", () => {
+  it("restores the player and lines in their original order when the deletion is undone", () => {
     const play = openWithASelected();
     play.editor.deleteSelection();
 
@@ -214,7 +214,7 @@ describe("選手の削除", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("ほかの選手の線を挟んで 2 本の線が出ている選手の削除を Undo すると、線が元の並びに戻る", () => {
+  it("restores the line order on Undo for a player whose two lines flank another's line", () => {
     const data = playData(
       [player("a", 10, 0), player("b", 20, 0)],
       [line("la", "a"), line("lb", "b"), line("lc", "a")],
@@ -228,7 +228,7 @@ describe("選手の削除", () => {
     expect(play.session.getPlayData()).toEqual(data);
   });
 
-  it("削除を Undo してから Redo すると、選手と線をまた消す", () => {
+  it("removes the player and lines again when Redo follows undoing the deletion", () => {
     const play = openWithASelected();
     play.editor.deleteSelection();
     play.editor.undo();
@@ -239,8 +239,8 @@ describe("選手の削除", () => {
   });
 });
 
-describe("選手の値の編集", () => {
-  it("選んでいる選手のラベル、形、色、塗りを変える", () => {
+describe("Editing player values", () => {
+  it("changes the label, shape, color, and fill of the selected player", () => {
     const play = openWithASelected();
 
     play.editor.updateSelectedPlayer({
@@ -259,7 +259,7 @@ describe("選手の値の編集", () => {
     });
   });
 
-  it("色と塗りに null を渡すと、色も塗りも持たない既定の選手に戻る", () => {
+  it("returns to a default player without color or fill when both receive null", () => {
     const play = openWithASelected();
     play.editor.updateSelectedPlayer({ color: "#ff0000", fill: "solid" });
 
@@ -268,7 +268,7 @@ describe("選手の値の編集", () => {
     expect(play.session.getPlayData().players[0]).toEqual(player("a", 10, 0));
   });
 
-  it("変えたあとに Undo すると、変える前の値に戻る", () => {
+  it("restores the previous values when Undo follows the change", () => {
     const play = openWithASelected();
     play.editor.updateSelectedPlayer({ label: "QB" });
 
@@ -277,7 +277,7 @@ describe("選手の値の編集", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("渡したパッチをあとで書き換えても、Redo で当てる値は変わらない", () => {
+  it("applies the original values on Redo even if the passed patch is mutated later", () => {
     const play = openWithASelected();
     const patch = { label: "QB" };
     play.editor.updateSelectedPlayer(patch);
@@ -289,7 +289,7 @@ describe("選手の値の編集", () => {
     expect(play.session.getPlayData().players[0]?.label).toBe("QB");
   });
 
-  it("線を選んでいるときは、選手の値を変えない", () => {
+  it("does not change player values while a line is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.click(yd(25, 5));
 
@@ -298,7 +298,7 @@ describe("選手の値の編集", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("何も選んでいないときは、選手の値を変えない", () => {
+  it("does not change player values while nothing is selected", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.updateSelectedPlayer({ label: "QB" });
@@ -306,7 +306,7 @@ describe("選手の値の編集", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("選んだ選手が消えたあとに値を変えても、履歴に積まない", () => {
+  it("does not record history when changing values after the selected player vanished", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.setTool("add-player");
     play.click(yd(30, -5));
@@ -317,7 +317,7 @@ describe("選手の値の編集", () => {
     expect(play.editor.getViewState().canRedo).toBe(true);
   });
 
-  it("今と同じ値だけを渡すと、履歴に積まず通知もしない", () => {
+  it("neither records history nor notifies when only the current values are passed", () => {
     const play = openWithASelected();
     play.notified.mockClear();
 
@@ -327,7 +327,7 @@ describe("選手の値の編集", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("色の無い選手に null の色を渡しても、履歴に積まない", () => {
+  it("does not record history when a player without color receives a null color", () => {
     const play = openWithASelected();
 
     play.editor.updateSelectedPlayer({ color: null });
@@ -335,7 +335,7 @@ describe("選手の値の編集", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
-  it("表示状態が変わらなくても、選んでいる選手の値が変われば表示状態を通知する", () => {
+  it("notifies the view state when player values change even if the state is unchanged", () => {
     const play = openWithASelected();
     play.editor.updateSelectedPlayer({ label: "QB" });
     play.notified.mockClear();

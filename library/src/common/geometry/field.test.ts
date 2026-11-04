@@ -14,28 +14,28 @@ import {
   zoneWindowLength,
 } from "./field.js";
 
-describe("ハッシュのリーグ別位置", () => {
-  it("既定は NCAA で、サイドラインから 20yd に来る", () => {
+describe("hash marks by league", () => {
+  it("defaults to NCAA, whose hash marks sit 20yd from the sideline", () => {
     expect(DEFAULT_FIELD_LEAGUE).toBe("ncaa");
     const offset = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE.ncaa;
     expect(FIELD_WIDTH_YARDS / 2 - offset).toBe(20);
   });
 
-  it("どのリーグのハッシュも、フィールドの中央から 0.5yd の格子点に乗る", () => {
+  it("puts every league's hash marks on a 0.5yd grid point from the field center", () => {
     for (const offset of Object.values(HASH_CENTER_OFFSET_YARDS_BY_LEAGUE)) {
       expect((FIELD_WIDTH_YARDS / 2 + offset) % 0.5).toBe(0);
     }
   });
 
-  it("NFHS > NCAA > NFL の順で中央オフセットが大きい（ハッシュが広い）", () => {
+  it("orders the center offsets NFHS > NCAA > NFL, the widest hash marks first", () => {
     const { ncaa, nfl, nfhs } = HASH_CENTER_OFFSET_YARDS_BY_LEAGUE;
     expect(nfhs).toBeGreaterThan(ncaa);
     expect(ncaa).toBeGreaterThan(nfl);
   });
 });
 
-describe("LOS の位置", () => {
-  it("どのゾーンの LOS も 0.5yd の格子点にあり、LOS 基準の格子が絶対ヤードの格子と一致する", () => {
+describe("LOS position", () => {
+  it("puts each zone's LOS on a 0.5yd grid point so the LOS grid matches the yard grid", () => {
     for (const losYard of Object.values(LOS_YARD_BY_ZONE)) {
       expect(losYard % 0.5).toBe(0);
     }
@@ -43,21 +43,21 @@ describe("LOS の位置", () => {
 });
 
 describe("fieldZoneWindow", () => {
-  it("own-redzone は自陣EZ(-10)〜自陣25yd(25)を映す", () => {
+  it("shows the own end zone (-10) to the own 25yd (25) for own-redzone", () => {
     expect(fieldZoneWindow("own-redzone")).toEqual({ startYard: -10, endYard: 25 });
   });
 
-  it("redzone は相手25yd(75)〜相手EZ(110)を映す", () => {
+  it("shows the opponent's 25yd (75) to the opponent's end zone (110) for redzone", () => {
     expect(fieldZoneWindow("redzone")).toEqual({ startYard: 75, endYard: 110 });
   });
 
-  it("middle はセンター 50 を中央に置く 35..65", () => {
+  it("shows 35..65 with midfield 50 at the center for middle", () => {
     expect(fieldZoneWindow("middle")).toEqual({ startYard: 35, endYard: 65 });
   });
 });
 
 describe("zoneWindowLength", () => {
-  it("middle は 30yd、レッドゾーン系は数字の見切れ回避で 35yd", () => {
+  it("is 30yd for middle and 35yd for both red zones so no number is cut off", () => {
     expect(zoneWindowLength("middle")).toBe(ZONE_WINDOW_LENGTH_YARDS);
     expect(zoneWindowLength("redzone")).toBe(35);
     expect(zoneWindowLength("own-redzone")).toBe(35);
@@ -65,17 +65,17 @@ describe("zoneWindowLength", () => {
 });
 
 describe("displayYardNumber", () => {
-  it("センターの 50 ヤードラインには 50 を書く", () => {
+  it("writes 50 on the midfield 50 yard line", () => {
     expect(displayYardNumber(50)).toBe(50);
   });
 
-  it("両ゴールから対称に数える（25→25, 75→25, 80→20）", () => {
+  it("counts symmetrically from both goal lines (25 to 25, 75 to 25, 80 to 20)", () => {
     expect(displayYardNumber(25)).toBe(25);
     expect(displayYardNumber(75)).toBe(25);
     expect(displayYardNumber(80)).toBe(20);
   });
 
-  it("ゴールラインとエンドゾーンは番号が無いので null", () => {
+  it("returns null for the goal lines and the end zones, which carry no number", () => {
     expect(displayYardNumber(0)).toBeNull();
     expect(displayYardNumber(100)).toBeNull();
     expect(displayYardNumber(-5)).toBeNull();
@@ -84,26 +84,26 @@ describe("displayYardNumber", () => {
 });
 
 describe("yardLinesInWindow", () => {
-  it("middle を 5 ヤード刻みで列挙する", () => {
+  it("lists middle in 5 yard steps", () => {
     expect(yardLinesInWindow("middle", 5)).toEqual([35, 40, 45, 50, 55, 60, 65]);
   });
 
-  it("own-redzone を 10 ヤード刻みで列挙する（EZ 側の負値も含む）", () => {
+  it("lists own-redzone in 10 yard steps including the negative end zone yards", () => {
     expect(yardLinesInWindow("own-redzone", 10)).toEqual([-10, 0, 10, 20]);
   });
 
-  it("redzone を 5 ヤード刻みで列挙する（相手 25yd の 75 から EZ の 110 まで）", () => {
+  it("lists redzone in 5 yard steps from the opponent's 25yd (75) to the end zone (110)", () => {
     expect(yardLinesInWindow("redzone", 5)).toEqual([75, 80, 85, 90, 95, 100, 105, 110]);
   });
 
-  it("刻み幅が 0 以下なら例外", () => {
+  it("throws when the step is 0 or less", () => {
     expect(() => yardLinesInWindow("middle", 0)).toThrow();
     expect(() => yardLinesInWindow("middle", -5)).toThrow();
   });
 });
 
 describe("FieldGeometry", () => {
-  it("横が制約になる場合は幅基準でフィットし上下に余白が出る", () => {
+  it("fits to the width and leaves vertical margins when the width constrains", () => {
     const g = new FieldGeometry(530, 400, fieldStateForZone("middle"));
 
     expect(g.scale).toBeCloseTo(10, 10);
@@ -113,7 +113,7 @@ describe("FieldGeometry", () => {
     expect(g.offsetY).toBeCloseTo(50, 10);
   });
 
-  it("縦が制約になる場合は高さ基準でフィットし左右に余白が出る", () => {
+  it("fits to the height and leaves horizontal margins when the height constrains", () => {
     const g = new FieldGeometry(2000, 300, fieldStateForZone("middle"));
 
     expect(g.scale).toBeCloseTo(10, 10);
@@ -122,14 +122,14 @@ describe("FieldGeometry", () => {
     expect(g.offsetX).toBeCloseTo((2000 - FIELD_WIDTH_YARDS * 10) / 2, 10);
   });
 
-  it("横方向: 0 が左サイドライン、FIELD_WIDTH が右サイドライン", () => {
+  it("maps lateral 0 to the left sideline and FIELD_WIDTH to the right sideline", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.xForLateralYard(0)).toBeCloseTo(g.offsetX, 10);
     expect(g.xForLateralYard(FIELD_WIDTH_YARDS)).toBeCloseTo(g.offsetX + g.fieldPixelWidth, 10);
   });
 
-  it("縦方向: 窓の奥(endYard)が上端、手前(startYard)が下端、中点が中央", () => {
+  it("maps endYard to the top, startYard to the bottom, and the middle to the center", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.yForAbsoluteYard(65)).toBeCloseTo(g.offsetY, 10);
@@ -137,11 +137,11 @@ describe("FieldGeometry", () => {
     expect(g.yForAbsoluteYard(50)).toBeCloseTo(g.offsetY + g.fieldPixelHeight / 2, 10);
   });
 
-  it("ゾーンが変われば同じ絶対ヤードでも縦位置が変わる", () => {
+  it("moves the same absolute yard vertically when the zone changes", () => {
     const middle = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
     const redzone = new FieldGeometry(1000, 600, fieldStateForZone("redzone"));
 
-    // 50 は middle 窓の中央だが redzone(75..110) では窓外で下端より下になる。
+    // 50 is the center of the middle window but falls below the redzone window (75..110).
     expect(middle.yForAbsoluteYard(50)).toBeCloseTo(
       middle.offsetY + middle.fieldPixelHeight / 2,
       10,
@@ -151,7 +151,7 @@ describe("FieldGeometry", () => {
     );
   });
 
-  it("LOS からの位置は、LOS の絶対ヤードに足してから画面の縦の位置に変える", () => {
+  it("adds a downfield position to the LOS absolute yard before mapping it to canvas y", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("redzone"));
 
     expect(g.toCanvas({ lateralYard: FIELD_WIDTH_YARDS / 2, downfieldYard: 5 })).toEqual({
@@ -160,7 +160,7 @@ describe("FieldGeometry", () => {
     });
   });
 
-  it("containsYard は窓の端を含み窓外を除外する", () => {
+  it("includes the window edges and excludes yards outside it in containsYard", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.containsYard(35)).toBe(true);
@@ -170,7 +170,7 @@ describe("FieldGeometry", () => {
     expect(g.containsYard(65.1)).toBe(false);
   });
 
-  it("ビューポートが 0 や負でも NaN を出さない（縮退耐性）", () => {
+  it("produces no NaN for a zero or negative viewport", () => {
     const g = new FieldGeometry(0, -10, fieldStateForZone("middle"));
 
     expect(g.scale).toBe(0);
@@ -179,21 +179,21 @@ describe("FieldGeometry", () => {
     expect(Number.isNaN(g.toCanvas({ lateralYard: 10, downfieldYard: 0 }).x)).toBe(false);
   });
 
-  it("逆変換は forward と往復で一致する（横）", () => {
+  it("round-trips a lateral yard through the forward and inverse transforms", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("middle"));
 
     expect(g.lateralYardForX(g.xForLateralYard(0))).toBeCloseTo(0, 10);
     expect(g.lateralYardForX(g.xForLateralYard(20))).toBeCloseTo(20, 10);
   });
 
-  it("逆変換は forward と往復で一致する（縦・ゾーン非依存の絶対ヤード）", () => {
+  it("round-trips an absolute yard through the forward and inverse transforms", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("redzone"));
 
     expect(g.absoluteYardForY(g.yForAbsoluteYard(95))).toBeCloseTo(95, 10);
     expect(g.absoluteYardForY(g.yForAbsoluteYard(110))).toBeCloseTo(110, 10);
   });
 
-  it("fromCanvas は toCanvas の逆（点の往復）", () => {
+  it("round-trips a point through toCanvas and fromCanvas", () => {
     const g = new FieldGeometry(1000, 600, fieldStateForZone("own-redzone"));
     const canvas = g.toCanvas({ lateralYard: 26.6, downfieldYard: 2 });
 
@@ -203,7 +203,7 @@ describe("FieldGeometry", () => {
     expect(back.downfieldYard).toBeCloseTo(2, 10);
   });
 
-  it("縮退ビューポートでも逆変換は NaN を出さない", () => {
+  it("produces no NaN from the inverse transform for a degenerate viewport", () => {
     const g = new FieldGeometry(0, 0, fieldStateForZone("middle"));
 
     const back = g.fromCanvas({ x: 100, y: 100 });
@@ -216,21 +216,21 @@ describe("FieldGeometry", () => {
 describe("clampToZoneWindow", () => {
   const middle = fieldStateForZone("middle");
 
-  it("窓の中の位置はそのまま返す", () => {
+  it("returns a position inside the window unchanged", () => {
     expect(clampToZoneWindow({ lateralYard: 10, downfieldYard: 5 }, middle)).toEqual({
       lateralYard: 10,
       downfieldYard: 5,
     });
   });
 
-  it("サイドラインの外はサイドライン上へ寄せる", () => {
+  it("snaps a position beyond a sideline onto the sideline", () => {
     expect(clampToZoneWindow({ lateralYard: -3, downfieldYard: 0 }, middle).lateralYard).toBe(0);
     expect(clampToZoneWindow({ lateralYard: 99, downfieldYard: 0 }, middle).lateralYard).toBe(
       FIELD_WIDTH_YARDS,
     );
   });
 
-  it("窓の手前と奥の外は、LOS から見た窓の端へ寄せる", () => {
+  it("snaps a position beyond the window ends onto the window edge relative to the LOS", () => {
     expect(clampToZoneWindow({ lateralYard: 10, downfieldYard: -50 }, middle).downfieldYard).toBe(
       -15,
     );
@@ -245,12 +245,12 @@ describe("clampToZoneWindow", () => {
 });
 
 describe("fieldWindowAspect", () => {
-  it("各ゾーンの窓の幅を縦の長さで割った値になる", () => {
+  it("divides the field width by the window length of each zone", () => {
     expect(fieldWindowAspect("middle")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("middle"));
     expect(fieldWindowAspect("redzone")).toBe(FIELD_WIDTH_YARDS / zoneWindowLength("redzone"));
   });
 
-  it("縦に長いレッドゾーンの窓は、middle より比が小さい", () => {
+  it("gives the taller red zone window a smaller ratio than middle", () => {
     expect(fieldWindowAspect("redzone")).toBeLessThan(fieldWindowAspect("middle"));
   });
 });

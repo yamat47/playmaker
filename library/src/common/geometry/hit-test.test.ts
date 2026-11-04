@@ -11,42 +11,42 @@ import {
 } from "./hit-test.js";
 
 describe("hitTestPlayer", () => {
-  it("当たり半径の内側を指せばその選手を返す", () => {
+  it("returns the player when the point is inside its hit radius", () => {
     const p = player("a", 10, 50);
 
     expect(hitTestPlayer([p], { lateralYard: 10.5, downfieldYard: 50.3 })).toBe(p);
   });
 
-  it("どの選手からも離れていれば undefined を返す", () => {
+  it("returns undefined when the point is far from every player", () => {
     const p = player("a", 10, 50);
 
     expect(hitTestPlayer([p], { lateralYard: 30, downfieldYard: 50 })).toBeUndefined();
   });
 
-  it("空配列なら undefined を返す", () => {
+  it("returns undefined for an empty array", () => {
     expect(hitTestPlayer([], { lateralYard: 0, downfieldYard: 0 })).toBeUndefined();
   });
 
-  it("ちょうど半径上の点は当たりに含む（境界は内側扱い）", () => {
+  it("counts a point exactly on the radius as a hit", () => {
     const p = player("a", 0, 0);
 
     expect(hitTestPlayer([p], { lateralYard: 1, downfieldYard: 0 }, 1)).toBe(p);
   });
 
-  it("半径のわずか外側は外れる（境界値）", () => {
+  it("misses a point just outside the radius", () => {
     const p = player("a", 0, 0);
 
     expect(hitTestPlayer([p], { lateralYard: 1.0001, downfieldYard: 0 }, 1)).toBeUndefined();
   });
 
-  it("重なり合う選手は、配列の後ろにあって上に描いた選手を返す", () => {
+  it("returns the later player in the array, drawn on top, when players overlap", () => {
     const back = player("back", 10, 50);
     const front = player("front", 10, 50);
 
     expect(hitTestPlayer([back, front], { lateralYard: 10, downfieldYard: 50 })).toBe(front);
   });
 
-  it("当たり半径は引数で上書きできる", () => {
+  it("accepts a hit radius override as an argument", () => {
     const p = player("a", 0, 0);
     const target = { lateralYard: 3, downfieldYard: 0 };
 
@@ -54,7 +54,7 @@ describe("hitTestPlayer", () => {
     expect(hitTestPlayer([p], target, 5)).toBe(p);
   });
 
-  it("半径が 0 以下なら例外", () => {
+  it("throws when the radius is 0 or less", () => {
     const p = player("a", 0, 0);
 
     expect(() => hitTestPlayer([p], { lateralYard: 0, downfieldYard: 0 }, 0)).toThrow();
@@ -66,20 +66,20 @@ describe("distanceToSegment", () => {
   const a = { lateralYard: 0, downfieldYard: 0 };
   const b = { lateralYard: 10, downfieldYard: 0 };
 
-  it("線分上の点は距離 0", () => {
+  it("returns 0 for a point on the segment", () => {
     expect(distanceToSegment({ lateralYard: 5, downfieldYard: 0 }, a, b)).toBeCloseTo(0, 10);
   });
 
-  it("線分の途中への垂線距離", () => {
+  it("returns the perpendicular distance to the middle of the segment", () => {
     expect(distanceToSegment({ lateralYard: 5, downfieldYard: 3 }, a, b)).toBeCloseTo(3, 10);
   });
 
-  it("端の外側は端点までの距離（射影を [0,1] に丸める）", () => {
+  it("returns the distance to the nearest endpoint for a point beyond the ends", () => {
     expect(distanceToSegment({ lateralYard: -4, downfieldYard: 3 }, a, b)).toBeCloseTo(5, 10);
     expect(distanceToSegment({ lateralYard: 13, downfieldYard: 4 }, a, b)).toBeCloseTo(5, 10);
   });
 
-  it("退化した線分（a=b）は点距離", () => {
+  it("returns the point distance for a degenerate segment (a=b)", () => {
     expect(distanceToSegment({ lateralYard: 3, downfieldYard: 4 }, a, a)).toBeCloseTo(5, 10);
   });
 });
@@ -99,61 +99,61 @@ describe("hitTestLine", () => {
     };
   }
 
-  it("直線の真上付近を指せばその線を返す", () => {
+  it("returns the line when the point is near a straight line", () => {
     const l = line("r1");
 
     expect(hitTestLine([l], players, { lateralYard: 5.2, downfieldYard: 55 })).toBe(l);
   });
 
-  it("許容半径より離れていれば undefined", () => {
+  it("returns undefined when the point is farther than the tolerance", () => {
     const l = line("r1");
 
     expect(hitTestLine([l], players, { lateralYard: 20, downfieldYard: 55 })).toBeUndefined();
   });
 
-  it("起点選手が存在しない線は hit 対象から外す（描画されないため）", () => {
+  it("skips a line whose start player does not exist, since it is not drawn", () => {
     const l = line("r1", { startPlayerId: "ghost" });
 
     expect(hitTestLine([l], players, { lateralYard: 5, downfieldYard: 55 })).toBeUndefined();
   });
 
-  it("waypoint を含む折れ線は各区間で判定する", () => {
+  it("tests each segment of a polyline with waypoints", () => {
     const l = line("r1", {
       waypoints: [{ lateralYard: 15, downfieldYard: 50 }],
       end: { lateralYard: 15, downfieldYard: 60 },
     });
 
-    // 起点 (5, 50) から waypoint (15, 50) への水平な区間の上。
+    // On the horizontal segment from the start (5, 50) to the waypoint (15, 50).
     expect(hitTestLine([l], players, { lateralYard: 10, downfieldYard: 50 })).toBe(l);
   });
 
-  it("bezier 線は曲線（サンプル後ポリライン）で判定する", () => {
-    // 起点 wr (5, 50)、waypoint (5, 60)、終点 (25, 60) を結ぶ L 字。
+  it("tests a bezier line against the sampled curve", () => {
+    // An L shape through the start wr (5, 50), the waypoint (5, 60), and the end (25, 60).
     const shape: Partial<Line> = {
       waypoints: [{ lateralYard: 5, downfieldYard: 60 }],
       end: { lateralYard: 25, downfieldYard: 60 },
     };
     const straight = line("s", { ...shape, interpolation: "straight" });
     const curved = line("c", { ...shape, interpolation: "bezier" });
-    // 第 1 区間の中点。直線なら線上(距離0)、bezier は内側へ膨らみ離れる。
+    // The midpoint of the first segment. It lies on the straight line, but the bezier bulges away.
     const probe = { lateralYard: 5, downfieldYard: 55 };
 
     expect(hitTestLine([straight], players, probe, 0.3)).toBe(straight);
     expect(hitTestLine([curved], players, probe, 0.3)).toBeUndefined();
   });
 
-  it("重なる線は、配列の後ろにあって上に描いた線を返す", () => {
+  it("returns the later line in the array, drawn on top, when lines overlap", () => {
     const back = line("back");
     const front = line("front");
 
     expect(hitTestLine([back, front], players, { lateralYard: 5, downfieldYard: 55 })).toBe(front);
   });
 
-  it("空配列なら undefined", () => {
+  it("returns undefined for an empty array", () => {
     expect(hitTestLine([], players, { lateralYard: 0, downfieldYard: 0 })).toBeUndefined();
   });
 
-  it("許容半径を渡すと、その距離までの点だけ当たる", () => {
+  it("hits only points within the given tolerance", () => {
     const l = line("r1");
     const target = { lateralYard: 6, downfieldYard: 55 };
 
@@ -161,7 +161,7 @@ describe("hitTestLine", () => {
     expect(hitTestLine([l], players, target, 2)).toBe(l);
   });
 
-  it("許容半径を渡さなければ、LINE_HIT_TOLERANCE_YARDS までの点が当たる", () => {
+  it("hits points within LINE_HIT_TOLERANCE_YARDS when no tolerance is given", () => {
     const l = line("r1");
     const near = { lateralYard: 5 + LINE_HIT_TOLERANCE_YARDS * 0.99, downfieldYard: 55 };
     const far = { lateralYard: 5 + LINE_HIT_TOLERANCE_YARDS * 1.01, downfieldYard: 55 };
@@ -170,24 +170,24 @@ describe("hitTestLine", () => {
     expect(hitTestLine([l], players, far)).toBeUndefined();
   });
 
-  it("許容半径が 0 以下なら例外", () => {
+  it("throws when the tolerance is 0 or less", () => {
     const l = line("r1");
 
     expect(() => hitTestLine([l], players, { lateralYard: 0, downfieldYard: 0 }, 0)).toThrow();
     expect(() => hitTestLine([l], players, { lateralYard: 0, downfieldYard: 0 }, -1)).toThrow();
   });
 
-  describe("終点が起点の選手と同じ位置にあり、waypoint もない線", () => {
-    // wr は (5, 50) にいる。
+  describe("a line without waypoints whose end sits on its start player", () => {
+    // wr stands at (5, 50).
     const degenerate = line("degen", { end: { lateralYard: 5, downfieldYard: 50 } });
 
-    it("その点と同座標（距離 0）は許容半径内で hit する", () => {
+    it("hits a point at those exact coordinates", () => {
       expect(hitTestLine([degenerate], players, { lateralYard: 5, downfieldYard: 50 })).toBe(
         degenerate,
       );
     });
 
-    it("許容半径より離れた点は undefined", () => {
+    it("returns undefined for a point farther than the tolerance", () => {
       expect(
         hitTestLine([degenerate], players, { lateralYard: 5, downfieldYard: 55 }),
       ).toBeUndefined();
@@ -196,7 +196,7 @@ describe("hitTestLine", () => {
 });
 
 describe("pointDistance", () => {
-  it("2 点間のユークリッド距離を返す", () => {
+  it("returns the Euclidean distance between two points", () => {
     expect(
       pointDistance({ lateralYard: 0, downfieldYard: 0 }, { lateralYard: 3, downfieldYard: 4 }),
     ).toBe(5);
@@ -212,7 +212,7 @@ describe("hitLineHandle", () => {
     end: { lateralYard: 20, downfieldYard: 5 },
   };
 
-  it("半径の内側にある waypoint の位置と index を返す", () => {
+  it("returns the position and index of a waypoint inside the radius", () => {
     expect(hitLineHandle(line, { lateralYard: 9.5, downfieldYard: 0 })).toEqual({
       kind: "waypoint",
       index: 0,
@@ -220,20 +220,20 @@ describe("hitLineHandle", () => {
     });
   });
 
-  it("waypoint が重なっていれば後ろの waypoint を返す", () => {
+  it("returns the later waypoint when waypoints overlap", () => {
     expect(hitLineHandle(line, { lateralYard: 10.25, downfieldYard: 0 })).toMatchObject({
       index: 1,
     });
   });
 
-  it("終点に当たれば終点を返す", () => {
+  it("returns the endpoint when the point hits it", () => {
     expect(hitLineHandle(line, { lateralYard: 20.5, downfieldYard: 5 })).toEqual({
       kind: "endpoint",
       point: line.end,
     });
   });
 
-  it("終点と waypoint が重なっていれば終点を返す", () => {
+  it("returns the endpoint when it overlaps a waypoint", () => {
     const overlapped = { ...line, end: { lateralYard: 10.5, downfieldYard: 0 } };
 
     expect(hitLineHandle(overlapped, { lateralYard: 10.5, downfieldYard: 0 })?.kind).toBe(
@@ -241,7 +241,7 @@ describe("hitLineHandle", () => {
     );
   });
 
-  it("どのハンドルにも当たらなければ undefined", () => {
+  it("returns undefined when no handle is hit", () => {
     expect(hitLineHandle(line, { lateralYard: 40, downfieldYard: 0 })).toBeUndefined();
   });
 });

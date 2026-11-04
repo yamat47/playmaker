@@ -8,24 +8,24 @@ import {
 import { CURRENT_PLAY_DATA_VERSION, type PlayData } from "./play-data.js";
 
 describe("readDeclaredVersion", () => {
-  it("有限数の version をそのまま返す", () => {
+  it("returns a finite version as is", () => {
     expect(readDeclaredVersion({ version: 1 })).toBe(1);
     expect(readDeclaredVersion({ version: 2 })).toBe(2);
     expect(readDeclaredVersion({ version: 0 })).toBe(0);
   });
 
-  it("version が数値でなければ版の宣言なし(0)とみなす", () => {
+  it("treats a non-numeric version as undeclared (0)", () => {
     expect(readDeclaredVersion({ version: "1" })).toBe(0);
     expect(readDeclaredVersion({ version: null })).toBe(0);
     expect(readDeclaredVersion({})).toBe(0);
   });
 
-  it("非有限数(NaN/Infinity)も版の宣言なし(0)とみなす", () => {
+  it("treats a non-finite version (NaN/Infinity) as undeclared (0)", () => {
     expect(readDeclaredVersion({ version: Number.NaN })).toBe(0);
     expect(readDeclaredVersion({ version: Number.POSITIVE_INFINITY })).toBe(0);
   });
 
-  it("オブジェクトでない/null の blob は 0 を返す", () => {
+  it("returns 0 for a non-object or null blob", () => {
     expect(readDeclaredVersion(undefined)).toBe(0);
     expect(readDeclaredVersion(null)).toBe(0);
     expect(readDeclaredVersion("nope")).toBe(0);
@@ -39,7 +39,7 @@ describe("applyPlayDataMigrations", () => {
     { to: 2, migrate: (d) => ({ ...d, v2: true }) },
   ];
 
-  it("宣言版より新しい段だけを to 昇順に適用する", () => {
+  it("applies only the steps newer than the declared version in ascending order of to", () => {
     expect(applyPlayDataMigrations({ base: true }, 0, steps)).toEqual({
       base: true,
       v1: true,
@@ -47,21 +47,21 @@ describe("applyPlayDataMigrations", () => {
     });
   });
 
-  it("宣言版と同じ版へ移す段は適用しない", () => {
+  it("skips the step that migrates to the declared version", () => {
     expect(applyPlayDataMigrations({ base: true }, 1, steps)).toEqual({ base: true, v2: true });
   });
 
-  it("宣言版がすべての段より新しければ、どの段も適用しない", () => {
+  it("applies no step when the declared version is newer than every step", () => {
     expect(applyPlayDataMigrations({ base: true }, 2, steps)).toEqual({ base: true });
   });
 
-  it("段が空なら入力をそのまま返す（現行 lib の本番経路）", () => {
+  it("returns the input itself when there are no steps", () => {
     const input = { version: 1 };
 
     expect(applyPlayDataMigrations(input, 0, [])).toBe(input);
   });
 
-  it("オブジェクトでない/null の blob は段適用せず素通しする", () => {
+  it("passes a non-object or null blob through without applying any step", () => {
     expect(applyPlayDataMigrations("garbage", 0, steps)).toBe("garbage");
     expect(applyPlayDataMigrations(undefined, 0, steps)).toBe(undefined);
     expect(applyPlayDataMigrations(null, 0, steps)).toBe(null);
@@ -69,7 +69,7 @@ describe("applyPlayDataMigrations", () => {
 });
 
 describe("migratePlayData", () => {
-  it("undefined/破損 blob でも投げず空の現行 PlayData を返す", () => {
+  it("returns an empty current PlayData for an undefined or broken blob without throwing", () => {
     const empty = {
       version: CURRENT_PLAY_DATA_VERSION,
       field: { zone: "middle", losYard: 50 },
@@ -83,7 +83,7 @@ describe("migratePlayData", () => {
     expect(migratePlayData(null)).toEqual(empty);
   });
 
-  it("正当な現行 PlayData は構造を保ち入力と切り離した新規オブジェクトを返す", () => {
+  it("returns a new object with the same structure for a valid current PlayData", () => {
     const input: PlayData = {
       version: 2,
       field: { zone: "redzone", losYard: 85 },
@@ -115,8 +115,8 @@ describe("migratePlayData", () => {
     expect(migrated.lines[0]).not.toBe(input.lines[0]);
   });
 
-  it("版なしの旧来 blob を現行版へ引き上げ、絶対ヤードを LOS からの位置に直す", () => {
-    // 商用ソフト初期の未バージョン化データ（version フィールドが無い）。
+  it("raises an unversioned legacy blob to the current version with LOS-relative yards", () => {
+    // Unversioned data from the first release, with no version field.
     const legacy = {
       field: { zone: "own-redzone" },
       players: [{ id: "wr", position: { lateralYard: 5, absoluteYard: 50 }, shape: "square" }],
@@ -132,7 +132,7 @@ describe("migratePlayData", () => {
     expect(migrated.lines).toEqual([]);
   });
 
-  it("未来版 blob は前方互換で現行へ寄せ、未知フィールドは落として投げない", () => {
+  it("coerces a future version blob to the current one and drops unknown fields", () => {
     const future = {
       version: 99,
       field: { zone: "middle" },
@@ -148,7 +148,7 @@ describe("migratePlayData", () => {
     expect(migrated.players.map((p) => p.id)).toEqual(["qb"]);
   });
 
-  it("id が重複した blob も、選手と線の id を一意にして取り込む", () => {
+  it("loads a blob with duplicate ids by making the player and line ids unique", () => {
     const duplicated = {
       version: 2,
       field: { zone: "middle" },
@@ -168,7 +168,7 @@ describe("migratePlayData", () => {
     expect(migrated.lines.map((l) => l.id)).toEqual(["rt", "rt-2"]);
   });
 
-  it("getData の値を JSON にして migratePlayData に渡すと、同じ値に戻る", () => {
+  it("returns the same value when getData output goes through JSON and migratePlayData", () => {
     const persisted: PlayData = {
       version: 2,
       field: { zone: "redzone", losYard: 85 },

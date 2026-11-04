@@ -1,46 +1,46 @@
-# Playmaker の設計
+# Playmaker design
 
-今のコードがどういう形をしていて、なぜそうしたかを書く。要件は `docs/prd.md`、テストの規約は `.claude/rules/testing.md` にある。
-パスは `library/` からの相対で書く。
+This document describes the shape of the current code and why it is that way. The requirements are in `docs/prd.md`, and the test conventions are in `.claude/rules/testing.md`.
+Paths are written relative to `library/`.
 
-## 層の分け方
+## Layer split
 
-VSCode のレイヤ分離を軽くしたものを使う。下の層は上の層に依存しない。
+The code uses a lightened version of VSCode's layer separation. Lower layers do not depend on upper layers.
 
-| 層 | 置き場 | 中身 |
+| Layer | Location | Contents |
 |---|---|---|
-| common | `src/common/` | DOM に触れないロジック。データ、座標、編集、コマンド、書き出しの寸法、線の飾りの形 |
-| browser | `src/browser/` | Canvas の描画、テーマの読み取り、ポインタとキーの入力、ツールバーとパネル |
-| 公開エントリ | `src/playmaker.ts` | 2 つの層を結線する `Playmaker` クラスと、利用者に見せる型と値の再エクスポート |
+| common | `src/common/` | Logic that does not touch the DOM. Data, coordinates, editing, commands, export dimensions, the shapes of line decorations |
+| browser | `src/browser/` | Canvas rendering, theme reading, pointer and key input, toolbar and panel |
+| Public entry | `src/playmaker.ts` | The `Playmaker` class that wires the two layers together, and re-exports of the types and values shown to the consumer |
 
-新しいロジックは、まず common に置けないかを考える。判断を common に寄せるほど、browser は薄い殻で済む。
+For new logic, first consider whether it can go in common. The more decisions move into common, the thinner the browser shell can be.
 
-browser は common の具象ではなくインターフェース（`IPlayModel`、`IEditorController`、`ILayerRenderer` など）に依存し、Model を直接書き換えずにコマンドを通す。依存はコンストラクタの引数で渡し、デコレータやサービスコンテナは持たない。イベントの購読や DOM のリスナは `Disposable` の `_register` で持ち主に登録し、`dispose()` でまとめて解放する。
+browser depends on interfaces (`IPlayModel`, `IEditorController`, `ILayerRenderer`, and so on) rather than on the concrete classes of common, and goes through commands instead of writing to the Model directly. Dependencies are passed as constructor arguments. There are no decorators and no service container. Event subscriptions and DOM listeners are registered with their owner through `_register` of `Disposable` and released together by `dispose()`.
 
-依存の向きは 2 か所で機械的に守る。
+The direction of dependencies is enforced mechanically in 2 places.
 
-- tsconfig を用途ごとに分け、`tsc -b` でまとめて型検査する。`tsconfig.common.json` は lib が ES2022 だけで types も空なので、common で `document` や `window` を書くと型エラーになる
-- `biome.jsonc` の `noRestrictedImports` で、common から browser と `playmaker.ts` への import を拒む。`src/test-support/` は build の対象外なので、本体からの import も拒む
+- tsconfigs are split by purpose and type-checked together with `tsc -b`. `tsconfig.common.json` has only ES2022 in lib and an empty types, so writing `document` or `window` in common is a type error
+- `noRestrictedImports` in `biome.jsonc` rejects imports of browser and `playmaker.ts` from common. `src/test-support/` is outside the build, so imports of it from the main code are rejected as well
 
-| tsconfig | 対象 | lib と types |
+| tsconfig | Target | lib and types |
 |---|---|---|
-| `tsconfig.base.json` | 共通の compilerOptions | ES2022、types なし |
-| `tsconfig.common.json` | `src/common`（テストを除く） | base のまま |
-| `tsconfig.browser.json` | `src/browser`、`src/playmaker.ts`、`demo` | DOM、vite/client |
-| `tsconfig.test.json` | node で動くテストと `src/test-support` | base のまま |
-| `tsconfig.browser-test.json` | `*.browser.test.ts` | DOM、vite/client、@vitest/browser-playwright |
+| `tsconfig.base.json` | Shared compilerOptions | ES2022, no types |
+| `tsconfig.common.json` | `src/common` (excluding tests) | As in base |
+| `tsconfig.browser.json` | `src/browser`, `src/playmaker.ts`, `demo` | DOM, vite/client |
+| `tsconfig.test.json` | Tests that run on node, and `src/test-support` | As in base |
+| `tsconfig.browser-test.json` | `*.browser.test.ts` | DOM, vite/client, @vitest/browser-playwright |
 | `tsconfig.tooling.json` | `vite.config.ts` | node |
-| `tsconfig.build.json` | vite-plugin-dts が型定義を書き出す範囲 | DOM、vite/client |
+| `tsconfig.build.json` | The range from which vite-plugin-dts emits type definitions | DOM, vite/client |
 
-`tsconfig.json` は build 用を除く 5 本を references で束ねるだけにしている。
+`tsconfig.json` only bundles the 5 configs other than the build one through references.
 
-common の Emitter はリスナの例外を `console.error` に流す。common には console の型が無いので、`base/event.ts` の中で `declare const console` に error だけを宣言した。グローバルに宣言すると DOM や @types/node の console とぶつかる。既定の出し先をなくす案は、common の Emitter すべてにエラーの出し先を注入することになるので採らなかった。
+The common Emitter forwards listener exceptions to `console.error`. common has no type for console, so `base/event.ts` declares only `error` on `declare const console` inside the file. Declaring it globally would clash with the console of the DOM or @types/node. The option of having no default destination was not taken, because it would mean injecting an error destination into every Emitter in common.
 
-## データ
+## Data
 
 ### PlayData
 
-`PlayData` は版、フィールド、選手、線の 4 つを持つ。型はすべて readonly で、利用者が受け取った値を書き換えても図には波及しない。
+`PlayData` has 4 parts: the version, the field, the players, and the lines. All types are readonly, so a consumer modifying a value it received does not affect the diagram.
 
 ```ts
 interface PlayData {
@@ -51,219 +51,219 @@ interface PlayData {
 }
 ```
 
-選手と線は配列の順に描き、後ろの要素ほど上に重なる。
+Players and lines are drawn in array order, and later elements are stacked on top.
 
-- 選手は id、位置、形状、ラベル、省略できる色と塗りを持つ。塗りは枠線だけ（`outline`、既定）か塗りつぶし（`solid`）かで、形状とは独立に持つ。攻守や役割の見分けはこの塗りで付け、プリセットは色も塗りも省いて既定で描く。形状は `circle` と `square` の 2 種だけにした。種類が多いと図が散らかるうえ、どちらも外接円で当たり判定ができるので、hit-test を形状で分けずに済む
-- 線は id、種別（`route` / `block` / `motion`）、起点の選手の id、waypoint の列、終点、補間（`straight` / `bezier`）、省略できる色と太さを持つ。起点を座標ではなく選手の id で持つので、選手を動かすと線の根元も付いてくる
-- 線の太さは、種別ごとの既定の太さに対する倍率で持つ（1 が既定）。px で持つと、描く大きさが変わったときに意味が変わる
-- 色、塗り、太さを省いた選手と線は、テーマの色と既定の塗りと太さで描く。パネルの「既定」ボタンで省いた状態に戻せる
-- パネルの選手の色は、4 色それぞれの枠線と塗りつぶしを並べた 8 つのスウォッチで選ぶ。「塗りつぶしか枠線か」を別の選択肢にすると 2 回選ぶことになるので、色と一緒に 1 回で選ばせる。自由な色の入力は無く、線と同じ 4 色に絞る
+- A player has an id, a position, a shape, a label, and an optional color and fill. The fill is either outline (`outline`, the default) or solid (`solid`), and is held independently of the shape. Offense and defense and roles are told apart by this fill, and the presets omit both color and fill and draw with the defaults. The shapes are limited to 2 kinds, `circle` and `square`. Many kinds make the diagram cluttered, and both can be hit-tested with their circumscribed circle, so the hit-test does not need to branch on shape
+- A line has an id, a kind (`route` / `block` / `motion`), the id of the start player, a sequence of waypoints, an end point, an interpolation (`straight` / `bezier`), and an optional color and width. The start is held as a player id rather than a coordinate, so moving the player moves the root of the line with it
+- Line width is held as a multiplier of the default width for its kind (1 is the default). Held in px, its meaning would change when the drawing size changes
+- Players and lines with color, fill, or width omitted are drawn with the theme color and the default fill and width. The "default" button in the panel returns them to the omitted state
+- The player color in the panel is chosen from 8 swatches, the outline and solid versions of each of the 4 colors. Making "solid or outline" a separate choice would mean choosing twice, so it is chosen together with the color in one step. There is no free color input. The choice is limited to the same 4 colors as lines
 
-### 座標
+### Coordinates
 
-フィールドの縦は絶対ヤードで考える。自陣のゴールラインが 0、相手のゴールラインが 100 で、エンドゾーンを含めて -10 から 110 まである。大きいほど攻撃方向で、画面の上になる。
+The vertical axis of the field is thought of in absolute yards. The own goal line is 0 and the opponent's goal line is 100. Including the end zones, the range is -10 to 110. Larger is the direction of attack, which is up on the screen.
 
-選手と線の位置は、絶対ヤードではなく LOS からの相対で持つ。
+The positions of players and lines are held relative to the LOS, not in absolute yards.
 
-- `lateralYard` は左サイドラインからの距離（0 から `FIELD_WIDTH_YARDS`）
-- `downfieldYard` は LOS からの距離で、正が攻撃方向、負がバックフィールド
+- `lateralYard` is the distance from the left sideline (0 to `FIELD_WIDTH_YARDS`)
+- `downfieldYard` is the distance from the LOS. Positive is the direction of attack, negative is the backfield
 
-ゾーンを切り替えると、LOS をそのゾーンの既定の位置（`LOS_YARD_BY_ZONE`、中央 50、相手 RZ 85、自陣 RZ 10）へ移す。位置が LOS 相対なので、図は形を保ったまま一緒に動く。絶対座標で持っていたときは、中央で描いた図がレッドゾーンでは窓の外に消えた。
+Switching the zone moves the LOS to the default position for that zone (`LOS_YARD_BY_ZONE`: middle 50, opponent's RZ 85, own RZ 10). Because positions are relative to the LOS, the diagram moves with it while keeping its shape. When positions were held in absolute coordinates, a diagram drawn at midfield disappeared outside the window in the red zone.
 
-`field.losYard` は保存するデータに入れるが、読み込むときはゾーンから決め直し、渡された値は使わない。保存したデータだけから選手の絶対位置を復元できるように値を持たせている。利用者が LOS を好きな位置に置く API は、要望が出てから考える。
+`field.losYard` is included in the saved data, but on load it is decided again from the zone and the passed value is not used. The value is held so that the absolute positions of players can be restored from the saved data alone. An API that lets the consumer place the LOS anywhere will be considered once there is a request for it.
 
-位置はどちらも 0.5 ヤード（`GRID_STEP_YARDS`）の格子点に限る。横はサイドライン、縦は LOS を原点にした格子で、`snapToGrid` が最も近い格子点へ寄せる。格子に乗せるのは、外から来る位置の入口である `parseFieldPosition`（`setPlayData`、`restorePlayData`、隊形とプレーのプリセット）と、ポインタから位置を決める `EditorController` の `clampToField` の 2 か所で、位置を作るのはこの 2 つだけなので、モデルの中に格子の外の位置は無い。パネルから届くパッチはラベル、形状、色、塗りだけで位置を持たない。要素同士を揃える操作を作らずに縦横を揃えるための仕組みで、格子を外して自由に置く手段は作らない。連続値で持っていたときは、揃えたい位置を目で合わせるしかなかった。
+Both positions are limited to grid points at 0.5 yards (`GRID_STEP_YARDS`). The grid has the sideline as its origin horizontally and the LOS vertically, and `snapToGrid` moves a position to the nearest grid point. Snapping to the grid happens in 2 places: `parseFieldPosition`, the entry point for positions from outside (`setPlayData`, `restorePlayData`, and the formation and play presets), and `clampToField` in `EditorController`, which decides positions from the pointer. These 2 are the only places that create positions, so there is no off-grid position inside the model. Patches from the panel carry only the label, shape, color, and fill, and have no position. This is the mechanism for aligning rows and columns without building an operation that aligns elements to each other, and there is no way to leave the grid and place freely. When positions were held as continuous values, the only way to align them was by eye.
 
-フィールドの幅は規定の 53⅓ ヤードではなく 53 ヤード（`FIELD_WIDTH_YARDS`）にしてある。中央（26.5）を格子点に乗せ、左右対称な配置を格子で書けるようにするためで、差は 1 フィートしかない。ハッシュの位置も同じ理由で格子点に丸めてある。
+The field width is 53 yards (`FIELD_WIDTH_YARDS`), not the regulation 53⅓ yards. This puts the center (26.5) on a grid point so that symmetric placements can be written on the grid, and the difference is only 1 foot. The hash positions are rounded to grid points for the same reason.
 
-ゾーンの窓は `fieldZoneWindow` が決める。中央は縦 30 ヤード、レッドゾーンはゴールラインから 25 ヤード手前とエンドゾーンまでを映す。レッドゾーンの窓が本来の 20 ヤードより深いのは、20 ヤードラインが窓の端に乗ってヤードの数字が見切れるのを避けるためである。
-ドラッグやクリックで置く位置は `clampToZoneWindow` で窓の中に寄せてから格子に乗せ、見えない場所に選手や点を置かない。窓の端はどれも格子点なので、寄せたあとに丸めても窓の外へは出ない。
+The zone window is decided by `fieldZoneWindow`. The middle shows 30 yards vertically, and the red zones show from 25 yards before the goal line through the end zone. The red zone window is deeper than the actual 20 yards to keep the 20-yard line off the edge of the window, where the yard numbers would be cut off.
+Positions placed by dragging or clicking are moved inside the window by `clampToZoneWindow` before snapping to the grid, so players and points are never placed where they cannot be seen. Every window edge is a grid point, so rounding after clamping does not leave the window.
 
-### 外から受け取る値
+### Values received from outside
 
-外から来る値はすべて `unknown` として受け取り、正規化してから中に入れる。入口と契約は次のとおり。
+All values from outside are received as `unknown` and normalized before they enter. The entry points and contracts are as follows.
 
-| 入口 | 受け取る型 | 通すもの |
+| Entry point | Accepted type | Passes through |
 |---|---|---|
-| `new Playmaker(container, { initialData })`、`restorePlayData(raw)` | `unknown` | `migratePlayData` |
-| `setPlayData(data)` | `PlayDataInput` | `migratePlayData`（型が合っていても id の重複と件数の上限は正規化する） |
+| `new Playmaker(container, { initialData })`, `restorePlayData(raw)` | `unknown` | `migratePlayData` |
+| `setPlayData(data)` | `PlayDataInput` | `migratePlayData` (even when the type matches, duplicate ids and count limits are normalized) |
 | `loadFormation(formation)` | `Formation` | `normalizeFormation` |
 | `exportToPng({ width })` | `ImageExportOptions` | `resolveImageExportSize` |
 
-`migratePlayData` は例外を投げない。書かれた版を読み（数でなければ 0 とみなす）、その版より新しい移行の段を順に通し、最後に `resolvePlayData` で形を整える。旧版も、版の無いものも、未来版も、今の版の `PlayData` になる。読めない要素だけを捨て、欠けた値は既定で補う。
+`migratePlayData` does not throw. It reads the written version (treated as 0 if it is not a number), passes the data through each migration step newer than that version in order, and finally shapes it with `resolvePlayData`. Old versions, data without a version, and future versions all become `PlayData` of the current version. Only unreadable elements are dropped, and missing values are filled with defaults.
 
-- 位置が有限の数でない選手、起点の選手が実在しない線、終点が読めない線は捨てる
-- id が無い選手と線には配列の位置から id を補い、重複した id は 2 つ目以降を未使用の id に振り直す
-- 選手、線、線 1 本あたりの waypoint は、`MAX_PLAYERS`、`MAX_LINES`、`MAX_WAYPOINTS_PER_LINE` の個数までしか読まない。配列は先頭から上限の個数だけを見て、読めなかった要素も数に入れる。巨大な配列や穴のある配列を渡されても、読む量が上限で止まる
+- Players whose position is not a finite number, lines whose start player does not exist, and lines whose end point cannot be read are dropped
+- Players and lines without an id get an id from their array position, and for duplicate ids the second and later ones are reassigned to unused ids
+- Players, lines, and waypoints per line are read only up to `MAX_PLAYERS`, `MAX_LINES`, and `MAX_WAYPOINTS_PER_LINE`. Only the first elements of the array up to the limit are examined, and unreadable elements count toward the limit. Even when a huge array or a sparse array is passed, the amount read stops at the limit
 
-実際の図は選手 22 人、線 20 本ほどなので、上限は壊れたデータや悪意のあるデータで描画が止まらないためのものである。編集でも上限は超えられない（後述）。
+A real diagram has about 22 players and 20 lines, so the limits exist to keep rendering from stalling on broken or malicious data. The limits cannot be exceeded through editing either (see below).
 
-省略できるキーを足すだけなら版は上げず、欠けた値は `resolvePlayData` が既定で補う（選手の `fill` がそれにあたる）。既にある項目の意味を変えるときは、`CURRENT_PLAY_DATA_VERSION` を 1 上げ、`PLAY_DATA_MIGRATIONS` に 1 つ前の版から変換する段を足し、その段のテストを書く。段は次の版で意味が変わる項目だけを変換すればよく、残りは `resolvePlayData` が整える。v1 から v2 への段は、v1 の絶対ヤードからゾーンの LOS を引いて LOS 相対にし、線の px の太さを 2 px を倍率 1 として割り戻す。
+Adding an optional key does not bump the version; `resolvePlayData` fills the missing value with the default (the player `fill` is an example). When the meaning of an existing item changes, bump `CURRENT_PLAY_DATA_VERSION` by 1, add a step to `PLAY_DATA_MIGRATIONS` that converts from the previous version, and write tests for that step. A step only needs to convert the items whose meaning changes in the next version; `resolvePlayData` shapes the rest. The v1 to v2 step subtracts the zone's LOS from the v1 absolute yards to make them LOS-relative, and divides the px line width back to a multiplier with 2 px as 1.
 
-`Formation` は選手の位置を LOS 相対で書く。v1 の絶対ヤードで書いたカスタムの隊形には移行を掛けない。位置が読めない選手は捨て、置ける選手が 1 人もいなければ `loadFormation` が false を返す。
+`Formation` writes player positions relative to the LOS. No migration is applied to custom formations written in v1 absolute yards. Players whose position cannot be read are dropped, and `loadFormation` returns false if there is not a single player that can be placed.
 
-### プリセット
+### Presets
 
-フォーメーション（`FORMATION_PRESETS`）と、線まで描き込んだプレー（`PLAY_PRESETS`）を同梱する。どちらも凍結した値をそのまま返す。型でも実行時でも書き換えられないので、渡すたびに複製しない。
+Formations (`FORMATION_PRESETS`) and plays with lines drawn in (`PLAY_PRESETS`) are bundled. Both return frozen values as they are. They cannot be modified either at the type level or at runtime, so they are not copied on each hand-off.
 
-- フォーメーションは `loadFormation` に渡し、今の図に選手を追記する。攻守の隊形を順に重ねられる
-- プレーは `data` がそのまま `setPlayData` に渡せる `PlayData` で、名前、攻守、種類、パーソネル、1 行の説明を添えてある。一覧でどう見せるかは使う側が決めるので、色は持たない
-- 配置は `presets/alignments.ts` に 1 か所で持ち、隊形とプレーの両方がそこから作る。守備ラインは OL の肩に付け（シェード）、ブロックの終点は相手のマーカーの縁に置くので、誰がどのギャップを守り、誰が誰をブロックするかが読める。守備の選手にも全員ラベルを付ける
+- A formation is passed to `loadFormation` and appends players to the current diagram. Offensive and defensive formations can be layered one after another
+- A play's `data` is a `PlayData` that can be passed directly to `setPlayData`, accompanied by a name, offense or defense, type, personnel, and a one-line description. How to show them in a list is up to the consumer, so they carry no color
+- Alignments are held in one place, `presets/alignments.ts`, and both formations and plays are built from there. The defensive line is set on the shoulders of the OL (shaded), and block end points are placed on the edge of the opponent's marker, so it is readable who covers which gap and who blocks whom. Every defensive player also gets a label
 
-## 編集
+## Editing
 
 ### PlayModel
 
-`PlayModel`（`IPlayModel`）が図の状態を持つ唯一の場所で、変わるたびに `onDidChange` を 1 回出す。次の不変条件を持ち、破る変更は throw で拒む。
+`PlayModel` (`IPlayModel`) is the only place that holds the diagram state, and it emits `onDidChange` once on every change. It has the following invariants, and rejects changes that break them by throwing.
 
-- 選手と線の id は重複しない
-- 線の起点は実在する選手を指す。選手を消すと、その選手を起点にする線も一緒に消し、Undo で元の並びまで戻す
-- 選手、線、waypoint の数は上限を超えない。件数が増える変更は 1 つの commit に通して、そこで上限を確かめる
-- 削除の記録にある添字で元の並びへ戻す。添字が今の並びの外を指すときは、端へ寄せずに throw する
+- Player and line ids are not duplicated
+- The start of a line points to an existing player. Deleting a player also deletes the lines that start from that player, and Undo restores the original order
+- The numbers of players, lines, and waypoints do not exceed the limits. Changes that increase a count go through a single commit, where the limit is checked
+- Deletion records carry the index used to restore the original order. When the index points outside the current order, it throws instead of clamping to the end
 
-状態は変更のたびに差し替えるので、`getSnapshot` はコピーせずに返す。深いコピーを作るのは、外へ渡す `getData` と、利用者に通知する直前だけである。
+The state is replaced on every change, so `getSnapshot` returns it without copying. Deep copies are made only for `getData`, which hands data out, and right before notifying the consumer.
 
-### コマンドと履歴
+### Commands and history
 
-編集はすべて `ICommand`（`apply` / `undo`）で表す。選手の追加、削除、更新、線の追加、削除、更新、ゾーンの切替、フォーメーションの読み込みがある。
+All edits are expressed as `ICommand` (`apply` / `undo`). There are commands for adding, deleting, and updating players, adding, deleting, and updating lines, switching the zone, and loading a formation.
 
-- `apply` は Model を変えたら true を返す。何も変えない操作は Model に触れずに false を返し、`CommandService` は履歴に積まない。値の変わらないパッチやゾーンの切替で Undo が空振りしない
-- 逆操作に要る直前の状態は、`apply` を実行したときに各コマンドが自分で覚える。redo は `apply` をもう一度呼ぶ
-- 更新はパッチで渡す。省いたキーは今の値のまま、`null` は省略できるキー（色、塗り、太さ）の値を消す。規則は `commands/patch.ts` の 1 か所にある
+- `apply` returns true when it changed the Model. An operation that changes nothing returns false without touching the Model, and `CommandService` does not push it onto the history. Undo never becomes a no-op step after a patch with unchanged values or a zone switch
+- The previous state needed for the inverse operation is remembered by each command itself when `apply` runs. redo calls `apply` again
+- Updates are passed as patches. Omitted keys keep the current value, and `null` clears the value of an optional key (color, fill, width). The rule lives in one place, `commands/patch.ts`
 
-`UndoRedoService` は直線の履歴で、新しい編集を積むと redo の履歴を捨てる。undo と redo は実行する関数を受け取り、それが戻ってから履歴を積み替えるので、通知を受けた側が見る履歴は常に確定したものになる。
+`UndoRedoService` is a linear history, and pushing a new edit discards the redo history. undo and redo take the function to run, and rearrange the history after it returns, so the history seen by a notified listener is always committed.
 
 ### EditorController
 
-`EditorController`（`IEditorController`）は DOM を知らずに、ツール、選択、ヤード座標でのジェスチャを受け取り、コマンドを組み立てる。browser の入力と UI はここだけを呼ぶ。
+`EditorController` (`IEditorController`) knows nothing about the DOM. It receives the tool, the selection, and gestures in yard coordinates, and assembles commands. The browser input and UI call only this.
 
-- IF は読み取り（`IEditorScene`）、ジェスチャ（`IEditorGestures`）、ボタンやパネルからの操作（`IEditorActions`）に分けてある。ツールバーとパネルはジェスチャを知らない `IEditorUi` を受け取る
-- 選択は id の希望で、対象が消えても解除しない。読むときに実在を確かめる。何も選んでいないことは、オーバーレイと同じく `kind: "none"` で表し、null や undefined は使わない
-- ドラッグと作図の途中は、コマンドを出さずに `interaction.ts` の状態として持つ。`preview.ts` が確定済みの図に途中の状態を重ねた図とオーバーレイを作り、描画はそれを使う。確定するまで履歴も `onChange` も動かない
-- 選手の追加、作図の開始、打点、フォーメーションの読み込みは、上限に達していると何もしない。判定は `editor.ts` の `isToolAvailable` と `canLoadFormation` にまとめ、ツールバーのボタンを押せなくする判定と共有する。フォーメーションは入り切らなければ 1 人も置かない
-- 通知は `EditorNotifier` が束ねる。公開の操作はどれも 1 つの batch で包み、Model、履歴、選択、途中の状態が何度変わっても、操作の終わりに `onDidChangeScene` と `onDidChangeViewState` を 1 回ずつ出す。表示状態の通知は値が変わったときだけ出るので、ドラッグ中にツールバーとパネルの同期は走らない
+- The interface is split into reading (`IEditorScene`), gestures (`IEditorGestures`), and operations from buttons and panels (`IEditorActions`). The toolbar and panel receive `IEditorUi`, which knows nothing about gestures
+- The selection is a desired id, and is not cleared when the target disappears. Existence is checked on read. "Nothing selected" is expressed as `kind: "none"`, the same as for overlays, and null and undefined are not used
+- A drag or a drawing in progress is held as state in `interaction.ts` without emitting commands. `preview.ts` builds the diagram with the in-progress state layered over the committed diagram, plus the overlay, and rendering uses that. Neither the history nor `onChange` moves until the edit is committed
+- Adding a player, starting a drawing, placing a point, and loading a formation do nothing when the limit is reached. The checks are gathered in `isToolAvailable` and `canLoadFormation` in `editor.ts` and shared with the checks that disable the toolbar buttons. A formation that does not fit places no player at all
+- Notifications are bundled by `EditorNotifier`. Every public operation is wrapped in one batch, and however many times the Model, history, selection, and in-progress state change, `onDidChangeScene` and `onDidChangeViewState` are each emitted once at the end of the operation. The view state notification is emitted only when the value changes, so the toolbar and panel are not synchronized during a drag
 
-id は `IdFactory` が接頭辞ごとに単調に増やして振る。消した id を使い回さないので、Undo で戻した要素と衝突しない。
+ids are assigned by `IdFactory`, which increases monotonically per prefix. Deleted ids are not reused, so they do not collide with elements restored by Undo.
 
-ジェスチャの解釈とコマンドの組み立てが同じクラスに残っていて、`editor-controller.ts` は 400 行ほどある。ジェスチャを別のクラスに分けるのは、入力の種類が増えたときに考える。
+Gesture interpretation and command assembly remain in the same class, and `editor-controller.ts` is about 400 lines. Splitting gestures into a separate class will be considered when the kinds of input grow.
 
 ### PlaySession
 
-`PlaySession` は 1 つの図の部品一式（Model、履歴、controller）を持つ。`setPlayData` は部品を丸ごと作り直して履歴を消し、`onDidReset` を出す。controller を 1 つに保って Model だけを差し替える案は、controller が Model を差し替えられる前提になるので採らなかった。
+`PlaySession` holds the full set of parts for one diagram (Model, history, controller). `setPlayData` rebuilds the parts entirely, clears the history, and emits `onDidReset`. The option of keeping one controller and swapping only the Model was not taken, because it assumes the controller can swap its Model.
 
-session は今の controller の `onDidChangeScene` と `onDidChangeViewState` を転送するので、描画は作り直しのあとも購読し直さなくてよい。ツールバー、パネル、ポインタの入力は controller を握っているので、`onDidReset` を受けて付け直す。
+The session forwards `onDidChangeScene` and `onDidChangeViewState` of the current controller, so rendering does not need to resubscribe after a rebuild. The toolbar, panel, and pointer input hold the controller, so they reattach on `onDidReset`.
 
-`onDidChange` は編集の確定ごとに 1 回、最新の図の深いコピーを渡す。コピーはリスナごとに作り、1 つのリスナが書き換えてもほかのリスナに波及しない。
+`onDidChange` passes a deep copy of the latest diagram once per committed edit. The copy is made per listener, so one listener modifying it does not affect the other listeners.
 
-`PlaySession` と `IEditorController` は公開しない。ジェスチャ単位の API を互換つきで固定する便益が、今の利用者には無い。
+`PlaySession` and `IEditorController` are not public. Freezing a gesture-level API with compatibility guarantees has no benefit for the current consumer.
 
-## 描画
+## Rendering
 
-### 層
+### Layers
 
-`CanvasSurface` は canvas の大きさ、DPR、再描画の時機だけを受け持ち、何を描くかは層に任せる。
+`CanvasSurface` is responsible only for the canvas size, the DPR, and the timing of redraws. What to draw is left to the layers.
 
-- 層は `ILayerRenderer { draw(ctx, frame) }` を実装する。`SurfaceLayers` は field（フィールド）、backdrop（編集中だけ敷く格子）、play（線と選手）、editor（編集中だけ重ねる選択の強調とハンドル）の 4 段で、この順に描き、線を選手の下に敷く
-- 図の層（field と play）は `RenderFrame`（geometry、metrics、図、テーマ）だけを受け取る。オーバーレイ（選択の強調とハンドル）は編集の層だけが `EditorRenderFrame` で受け取るので、図の層がオーバーレイを描くことは型で起こらない
-- 編集中だけの層（backdrop と editor）は、`setScene` にオーバーレイを渡したときだけ描く。view モードは渡さないので、格子も選択の強調も出ない。格子を play の中ではなく別の段にしたのは、フィールドの上で線と選手の下に敷く必要があり、かつ書き出しに入れないためである
-- `draw` をメソッドではなく関数型のプロパティで宣言している。メソッド記法だと引数が双変で比べられ、編集の層を図の層の配列に入れても型エラーにならない
-- 再描画は `requestAnimationFrame` で 1 回にまとめる。大きさが変わったときはバッファが消えるので、待たずにすぐ描く
-- geometry は状態として持たず、描くときと座標を変換するときに、host の大きさとゾーンからその都度求める
+- A layer implements `ILayerRenderer { draw(ctx, frame) }`. `SurfaceLayers` has 4 stages: field (the field), backdrop (the grid laid down only while editing), play (lines and players), and editor (selection highlights and handles overlaid only while editing). They are drawn in this order, which puts lines under players
+- The diagram layers (field and play) receive only `RenderFrame` (geometry, metrics, diagram, theme). The overlay (selection highlights and handles) is received only by the editor layer through `EditorRenderFrame`, so the type system makes it impossible for a diagram layer to draw the overlay
+- The editing-only layers (backdrop and editor) are drawn only when an overlay is passed to `setScene`. view mode does not pass one, so neither the grid nor the selection highlight appears. The grid is a separate stage rather than part of play because it has to lie above the field and below lines and players, and because it must stay out of the export
+- `draw` is declared as a function-typed property rather than a method. With method syntax, parameters are compared bivariantly, and putting an editor layer into an array of diagram layers would not be a type error
+- Redraws are batched into one with `requestAnimationFrame`. When the size changes, the buffer is lost, so it draws immediately without waiting
+- geometry is not held as state. It is computed each time from the host size and the zone, when drawing and when converting coordinates
 
-線と選手の形は common で決め、browser はそれを描くだけにしている。曲線は Catmull-Rom をベジェに変えてヤード空間の折れ線にサンプリングし（`sampleLinePath`）、描画と当たり判定が同じ折れ線を使う。矢じり、`block` の T 字、矢じりの手前での切り詰め（`line-decoration.ts`）、選手マーカーの輪郭（`player-marker.ts`）も common にあり、node でテストする。線の種別ごとの描き方は PRD 5.3 にある。
+The shapes of lines and players are decided in common, and browser only draws them. Curves convert Catmull-Rom to bezier and sample it into a polyline in yard space (`sampleLinePath`), and rendering and hit-testing use the same polyline. The arrowhead, the T of `block`, the trimming before the arrowhead (`line-decoration.ts`), and the outline of the player marker (`player-marker.ts`) are also in common and tested on node. How each line kind is drawn is in PRD 5.3.
 
-### テーマ
+### Theme
 
-配色と UI のフォントは CSS 変数 `--playmaker-<部位>-<部品>` で上書きできる。
+Colors and the UI font can be overridden with the CSS variables `--playmaker-<part>-<component>`.
 
-- 既定の配色は Material Design のパレットから選ぶ。フィールドは白い芝にグレーの濃淡だけで描き、選手と線の色が図の主役になるようにする。選択の色はパレットに無い橙にし、線の色と紛れないようにする
-- Canvas に描く色の既定値は `browser/theme/tokens.ts` の `THEME_TOKENS` の 1 か所にだけ書く。描く前に `getComputedStyle` で変数を読み、空か色として読めない値なら既定値にする。読んだ値は `normalizeCssColor` で書き方をそろえ、パネルのスウォッチと比べられるようにする
-- ツールバーとパネルの色は CSS だけで決まるので、既定値は `styles.css` の内部用の変数（`--_playmaker-ui-*`）に 1 回だけ書く
-- 公開の変数は `.playmaker-root` で宣言しない。宣言すると、利用者が祖先の要素で指定した値を打ち消してしまう
-- CSS 変数が変わってもブラウザは知らせてこないので、利用者が `refresh()` を呼んで読み直す
+- The default colors are chosen from the Material Design palette. The field is drawn as white grass with only shades of gray, so that the player and line colors are the focus of the diagram. The selection color is an orange that is not in the palette, so it is not confused with line colors
+- The default values of the colors drawn on the Canvas are written in only one place, `THEME_TOKENS` in `browser/theme/tokens.ts`. The variables are read with `getComputedStyle` before drawing, and a value that is empty or cannot be read as a color falls back to the default. Read values are normalized by `normalizeCssColor` so that they can be compared with the panel swatches
+- The toolbar and panel colors are decided by CSS alone, so their defaults are written once in the internal variables (`--_playmaker-ui-*`) of `styles.css`
+- The public variables are not declared on `.playmaker-root`. Declaring them there would cancel the values the consumer sets on an ancestor element
+- The browser does not notify when a CSS variable changes, so the consumer calls `refresh()` to read them again
 
-ヤードの数字と選手のラベルは同梱のフォント（`src/assets/`、`make font` で作り直す）に固定し、上書きできない。Canvas の `ctx.font` は CSS の `var()` を解釈しないので、フォントは変数ではなく定数から組み立てる。フォントの名前はホストのページのフォントと重ならないよう、ライブラリ専用にしてある。フォントは `styles.css` の `@font-face` ではなく、JS から `FontFace` で登録する。利用者が CSS を読み込む前に PNG を書き出しても同梱のフォントで描けるようにするためである。woff2 は build で JS に data URI として埋め込むので、利用者はフォントのファイルを置かなくてよい。
+The yard numbers and player labels are fixed to the bundled font (`src/assets/`, rebuilt with `make font`) and cannot be overridden. Canvas `ctx.font` does not interpret CSS `var()`, so the font is assembled from constants rather than variables. The font name is library-specific so that it does not collide with the fonts of the host page. The font is registered from JS with `FontFace`, not with `@font-face` in `styles.css`. This lets a PNG exported before the consumer loads the CSS still be drawn with the bundled font. The woff2 is embedded in the JS as a data URI at build time, so the consumer does not need to place a font file.
 
-### PNG の書き出し
+### PNG export
 
-書き出しと画面の描画は、同じ `renderLayers` で図の層を描く。書き出しは編集中だけの層を通さないので、格子、選択の強調、ハンドル、作図の途中の形は入らない。ツールバーとパネルは canvas の外の要素なので、もともと入らない。
+Export and on-screen rendering draw the diagram layers with the same `renderLayers`. Export does not go through the editing-only layers, so the grid, selection highlights, handles, and in-progress drawing shapes are not included. The toolbar and panel are elements outside the canvas, so they are never included in the first place.
 
-- 幅が `MAX_EXPORT_WIDTH` を超えたら、拒まずに切り詰める。上限は、iOS の Safari の canvas の面積の上限にどのゾーンでも収まる値にしてある
-- canvas を確保できないとき、PNG にできないとき、dispose したあとは reject する。フォントを読み込めなかったときは reject せず、代わりのフォントで描く
+- When the width exceeds `MAX_EXPORT_WIDTH`, it is clamped rather than rejected. The limit is a value that fits within the canvas area limit of Safari on iOS for every zone
+- It rejects when a canvas cannot be allocated, when the image cannot be turned into a PNG, and after dispose. When the font cannot be loaded, it does not reject and draws with a fallback font
 
-## 入力と内蔵 UI
+## Input and built-in UI
 
-- `PointerInput` はポインタのボタンを見て主ボタンだけを受け、`pointercancel` で途中の操作を取り消す。edit モードの canvas には `touch-action: none` を付け、ドラッグをページのスクロールに取られないようにする。キーの割り当ては `common/input/keymap.ts` の `resolveKeyAction` が決める。持つショートカットは Undo と Redo、作図を確定する Enter、取り消す Esc だけである
-- ツールバーとパネルはバニラ DOM で組む。パネルは表示中の要素の kind と id を覚え、同じ要素のあいだは入力を作り直さずに値だけを書き込むので、入力中のフォーカスが外れない
-- 上限に達したときは、選手の追加と作図のボタン、読み込むと上限を超えるフォーメーションの選択肢を押せなくし、理由を title で出す。ボタンは `disabled` ではなく `aria-disabled` にして、フォーカスと Tab 順に残す。押した直後に `disabled` にすると、フォーカスが body に落ちる
-- edit モードの root は grid で、ツールバーを図の上、パネルを図の右に置く。canvas は残りの領域の大きさで描き、UI と重ならない。view モードは UI を作らず、stage が root 全体を占める
+- `PointerInput` checks the pointer button and accepts only the primary button, and cancels the in-progress operation on `pointercancel`. The canvas in edit mode gets `touch-action: none` so that drags are not taken by page scrolling. Key bindings are decided by `resolveKeyAction` in `common/input/keymap.ts`. The only shortcuts are Undo and Redo, Enter to commit a drawing, and Esc to cancel it
+- The toolbar and panel are built with vanilla DOM. The panel remembers the kind and id of the element being shown, and while the same element is shown it writes only the values without rebuilding the inputs, so focus is not lost while typing
+- When a limit is reached, the add-player and drawing buttons and the formation choices that would exceed the limit are made unpressable, and the reason is shown in the title. Buttons use `aria-disabled` rather than `disabled`, so they stay in the focus and Tab order. Setting `disabled` right after a press drops focus to the body
+- The root in edit mode is a grid, with the toolbar above the diagram and the panel to its right. The canvas is drawn at the size of the remaining area and does not overlap the UI. view mode builds no UI, and the stage occupies the whole root
 
-## 公開 API
+## Public API
 
-利用者が触るのは `Playmaker` クラスと、`playmaker.ts` から再エクスポートする型と値だけである。メンバーの一覧は README にある。
+The consumer touches only the `Playmaker` class and the types and values re-exported from `playmaker.ts`. The list of members is in the README.
 
-- `setMode` は、図と履歴を持つ `PlaySession` を残したまま、編集 UI とポインタ、キーの入力の束だけを付け外しする。view に切り替えると途中の操作を取り消し、選択の強調を描かない。選択そのものは残すので、edit に戻すと強調も戻る
-- 入力の型は 2 本に分けた。永続化した値を形を確かめずに戻す `restorePlayData(raw: unknown)` と、型付きで組み立てた図を渡す `setPlayData(data: PlayDataInput)` である。`PlayDataInput` は `field.losYard` を省略できる。どちらも読み込みで、編集ではないので、履歴を消し、`onDidChange` は出さない
-- 変更の購読は `onDidChange: Event<PlayData>` で、戻り値の `IDisposable` を dispose するとやめる。`options.onChange` は構築時にこれへ登録するだけである
-- dispose したあとの変更は、例外を投げずに何もしない。`getPlayData` と `fieldZone` は dispose した時点の図を返し、`exportToPng` は Blob を返せないので reject する。開発時だけ `console.warn` で知らせる。開発時かどうかはバンドラが置き換える `process.env.NODE_ENV` で判定し、置き換えずに読み込んだときは本番とみなす
-- `Playmaker` は `Disposable` を継承せず、`IDisposable` を実装する。継承すると `_register` などの内部のメンバーが型定義に出る
+- `setMode` keeps the `PlaySession`, which holds the diagram and history, and attaches or detaches only the bundle of editing UI, pointer input, and key input. Switching to view cancels the in-progress operation and does not draw the selection highlight. The selection itself is kept, so switching back to edit brings the highlight back
+- The input types are split in 2: `restorePlayData(raw: unknown)`, which restores a persisted value without checking its shape, and `setPlayData(data: PlayDataInput)`, which takes a diagram assembled with types. `PlayDataInput` can omit `field.losYard`. Both are loads, not edits, so they clear the history and do not emit `onDidChange`
+- Changes are subscribed to with `onDidChange: Event<PlayData>`, and disposing the returned `IDisposable` unsubscribes. `options.onChange` only registers with this at construction
+- Changes after dispose do nothing and do not throw. `getPlayData` and `fieldZone` return the diagram as of dispose, and `exportToPng` rejects because it cannot return a Blob. Only in development does it report this with `console.warn`. Whether it is development is decided by `process.env.NODE_ENV`, which the bundler replaces; when loaded without the replacement, it is treated as production
+- `Playmaker` does not extend `Disposable` and implements `IDisposable` instead. Extending would expose internal members such as `_register` in the type definitions
 
-## 配布
+## Distribution
 
-- npm に `@yamat47/playmaker` として公開する（MIT）。パッケージの根は `library/` で、`files` は `dist/` だけなので、ビルド成果物はコミットしない。LICENSE と npm 用の README はパッケージの根に置き、GitHub が読む LICENSE はリポジトリの根にも同じものを置く
-- 版は `library/package.json` の `version` と git のタグ `vX.Y.Z` で、タグを push すると `release.yml` が typecheck、lint、node のテスト、build を通してから公開する。公開は取り消せないので、タグは CI が通った main のコミットにだけ打つ。認証は npm の trusted publishing（OIDC）で、トークンを持たない。Actions の environment `release` に縛り、environment は infra-github が宣言する
-- trusted publisher はレジストリに在るパッケージにしか登録できないので、0.1.0 だけは granular access token で公開し、そのあと npmjs.com のパッケージの設定に trusted publisher（このリポジトリ、`release.yml`、environment `release`）を登録した。許すのは `npm publish` だけで、`npm dist-tag` は許さない（workflow が使わないため）。`npm stage publish` は常に許されるが使わない。タグを push する前の検証で足りていて、承認の手順をもう 1 つ挟む価値が無い
-- CDN（jsDelivr）から読む利用者のために、`jsdelivr` と `unpkg` でファイル名を付けない URL が ESM を返すようにしてある。依存が無く、フォントを JS に同梱しているので、CDN からは JS と CSS の 2 つの URL で済む
-- 出力は ESM だけにした。利用側はバンドラを通すので CJS は要らず、CJS も出すと require した利用者に ESM 用の型が渡って型と実体がずれる
-- CSS は `@yamat47/playmaker/styles.css` として別に読み込む。`sideEffects` は CSS だけを指定する
-- 型定義は vite-plugin-dts が書き出し、api-extractor で `dist/playmaker.d.ts` の 1 ファイルに束ねる。起点を `src` に固定するため、build 専用の `tsconfig.build.json` を使う
+- Published to npm as `@yamat47/playmaker` (MIT). The package root is `library/`, and `files` is only `dist/`, so build artifacts are not committed. The LICENSE and the README for npm are placed at the package root, and the same LICENSE that GitHub reads is also placed at the repository root
+- The version is `version` in `library/package.json` and the git tag `vX.Y.Z`. Pushing a tag makes `release.yml` run typecheck, lint, the node tests, and build before publishing. Publishing is irreversible, so tags are put only on main commits that have passed CI. Authentication is npm trusted publishing (OIDC), with no token. It is bound to the Actions environment `release`, and the environment is declared by infra-github
+- A trusted publisher can only be registered for a package that already exists in the registry, so only 0.1.0 was published with a granular access token, and after that the trusted publisher (this repository, `release.yml`, environment `release`) was registered in the package settings on npmjs.com. Only `npm publish` is allowed; `npm dist-tag` is not (the workflow does not use it). `npm stage publish` is always allowed but not used. The verification before pushing the tag is enough, and there is no value in adding another approval step
+- For consumers loading from a CDN (jsDelivr), `jsdelivr` and `unpkg` make the URL without a file name return the ESM. There are no dependencies and the font is bundled in the JS, so 2 URLs from the CDN, the JS and the CSS, are enough
+- The output is ESM only. The consumer goes through a bundler, so CJS is not needed, and emitting CJS as well would hand ESM types to a consumer who uses require, making the types and the actual code diverge
+- The CSS is loaded separately as `@yamat47/playmaker/styles.css`. `sideEffects` specifies only the CSS
+- Type definitions are emitted by vite-plugin-dts and bundled by api-extractor into a single file, `dist/playmaker.d.ts`. The build-only `tsconfig.build.json` is used to fix the root at `src`
 
 
-## ツールチェーン
+## Toolchain
 
-### 開発環境と CI
+### Development environment and CI
 
-Node と pnpm はホストに入れず、Docker のコンテナの中で動かす。コマンドの入口は `Makefile` で、手順は `CLAUDE.md` にある。cloud 版の Claude Code では、Docker の代わりに SessionStart hook が環境を作る（これも `CLAUDE.md` にある）。
+Node and pnpm are not installed on the host; they run inside a Docker container. The entry point for commands is the `Makefile`, and the procedures are in `CLAUDE.md`. In the cloud version of Claude Code, a SessionStart hook sets up the environment instead of Docker (this is also in `CLAUDE.md`).
 
-CI（`.github/workflows/ci.yml`）は型検査、lint、テスト、build の `verify` と、Chromium でブラウザテストを動かす `browser-test` の 2 つのジョブを並べる。CI はランナーの上で直接動かす。setup-node の pnpm store のキャッシュが、コンテナでの実行より速いためである。
+CI (`.github/workflows/ci.yml`) runs 2 jobs side by side: `verify`, with type checking, lint, tests, and build, and `browser-test`, which runs the browser tests in Chromium. CI runs directly on the runner, because the pnpm store cache of setup-node is faster than running in the container.
 
-Actions は SHA で固定するのが原則だが、自分で管理している `yamat47/github-toolkit` だけは `@main` を追いかける。上流の action の SHA 固定と Dependabot での更新は toolkit 側で行う。toolkit の main の変更はレビューを通らずに次の CI から入るので、この例外は toolkit を自分で管理しているあいだだけ成り立つ。
+Actions are pinned by SHA as a rule, but `yamat47/github-toolkit`, which the author maintains, follows `@main`. SHA pinning of upstream actions and updates through Dependabot are done on the toolkit side. Changes to the toolkit's main enter from the next CI run without going through review, so this exception holds only while the author maintains the toolkit.
 
 ### tsconfig
 
-有効にしている検査は `tsconfig.base.json` にある。`module` は bundler が出力するので `preserve` にしている。`erasableSyntaxOnly` に合わせ、Biome の `noParameterProperties` でコンストラクタの引数プロパティも禁じる。
+The enabled checks are in `tsconfig.base.json`. `module` is `preserve` because the bundler produces the output. In line with `erasableSyntaxOnly`, Biome's `noParameterProperties` also forbids constructor parameter properties.
 
-`noPropertyAccessFromIndexSignature` は採らない。インデックスシグネチャの型が出てくるのは、外から来た値を `isRecord` で `Record<string, unknown>` に絞る正規化の境界だけである。そこで読む値は `unknown` で、読んだそばから型ガードに通すので、括弧記法を強いても見つかる誤りが無い。Biome の `useLiteralKeys` も括弧記法をドットに直すよう提案する。境界の外で、値の型を持つインデックスシグネチャを使うようになったら考え直す。
+`noPropertyAccessFromIndexSignature` is not adopted. Index signature types appear only at the normalization boundary, where values from outside are narrowed to `Record<string, unknown>` with `isRecord`. The values read there are `unknown` and go through a type guard as soon as they are read, so forcing bracket notation finds no errors. Biome's `useLiteralKeys` also suggests changing bracket notation to dot notation. This will be reconsidered if index signatures with typed values come into use outside the boundary.
 
 ### Biome
 
-lint と format は Biome で行い、`recommended` に `--error-on-warnings` を付けて warning でも CI を落とす。
+Lint and format are done with Biome, with `recommended` and `--error-on-warnings` so that warnings also fail CI.
 
-- `useImportType` は切っている。型だけを使う import に `type` が無いことは tsc が `verbatimModuleSyntax` で見つけるので、同じ指摘が 2 か所から出る
-- Promise の扱いと switch の網羅性の検査は、typescript-eslint を足さずに Biome の nursery の `noFloatingPromises`、`noMisusedPromises`、`useExhaustiveSwitchCases` で行う。lint の道具を 1 つに保つためである。nursery のルールは Biome の更新で名前や挙動が変わりうる。安定版のグループへ移ったら設定をそちらへ移す。誤検知や見落としで使えなくなったら、typescript-eslint の type-aware なルールに切り替える
+- `useImportType` is turned off. tsc finds imports used only as types that lack `type` through `verbatimModuleSyntax`, so the same report would come from 2 places
+- Promise handling and switch exhaustiveness are checked with Biome's nursery rules `noFloatingPromises`, `noMisusedPromises`, and `useExhaustiveSwitchCases`, without adding typescript-eslint. This keeps the lint tooling to one tool. Nursery rules may change their names or behavior with Biome updates. When they move to the stable group, move the configuration there. If false positives or misses make them unusable, switch to the type-aware rules of typescript-eslint
 
-### TypeScript 7 の回避策
+### TypeScript 7 workaround
 
-TypeScript 7.0 はネイティブ実装になり、`typescript` パッケージが JS API（`ts.createProgram` など）と `lib.*.d.ts` を同梱しなくなった。型検査（`tsc -b`）は TS 7 で動くが、型定義の生成は JS API が要る。
+TypeScript 7.0 is a native implementation, and the `typescript` package no longer bundles the JS API (`ts.createProgram` and so on) and `lib.*.d.ts`. Type checking (`tsc -b`) works on TS 7, but generating type definitions needs the JS API.
 
-- vite-plugin-dts（unplugin-dts）は、`typescript` に JS API が無ければ、TypeScript 公式の互換パッケージ `@typescript/typescript6` から読む。そのため `@typescript/typescript6` を devDependencies に置く
-- api-extractor で型定義を束ねるとき、unplugin-dts は `typescript` パッケージの場所を lib の置き場として渡す。TS 7 には `lib.*.d.ts` が無く `Omit` などを解決できないので、`vite.config.ts` の `bundleTypes.invokeOptions.typescriptCompilerFolder` で `@typescript/old`（`@typescript/typescript6` が依存する typescript@6）に向ける
+- vite-plugin-dts (unplugin-dts) reads from the official TypeScript compatibility package `@typescript/typescript6` when `typescript` has no JS API. That is why `@typescript/typescript6` is in devDependencies
+- When api-extractor bundles the type definitions, unplugin-dts passes the location of the `typescript` package as the lib location. TS 7 has no `lib.*.d.ts` and cannot resolve `Omit` and the like, so `bundleTypes.invokeOptions.typescriptCompilerFolder` in `vite.config.ts` points it to `@typescript/old` (the typescript@6 that `@typescript/typescript6` depends on)
 
-却下した案は 2 つある。pnpm の overrides で unplugin-dts の `typescript` を 6 に差し替える案は、互換パッケージと回避策は消えるが、回避策が pnpm の設定に隠れて見つけにくい。TS 7.0 の告知にある npm alias（`typescript` を `@typescript/typescript6` にする）は、`typescript` の名前が型検査に使う TS 7 と食い違ううえ、互換パッケージにも `lib.*.d.ts` が無いので同じ回避策が要る。
+Two options were rejected. Replacing unplugin-dts's `typescript` with 6 through pnpm overrides removes the compatibility package and the workaround, but the workaround becomes hidden in the pnpm configuration and hard to find. The npm alias from the TS 7.0 announcement (making `typescript` point to `@typescript/typescript6`) makes the name `typescript` disagree with the TS 7 used for type checking, and the compatibility package has no `lib.*.d.ts` either, so the same workaround is needed.
 
-unplugin-dts が TS 7.1 以降の API に対応し、`typescript` パッケージだけで型定義の生成と束ねができるようになったら、`typescriptCompilerFolder` の指定と `@typescript/typescript6` を外す。
+Once unplugin-dts supports the TS 7.1 and later API and the `typescript` package alone can generate and bundle type definitions, remove the `typescriptCompilerFolder` setting and `@typescript/typescript6`.
 
-エディタの型検査も同じ理由で変えている。TS 7 の `typescript` パッケージは tsserver を同梱しないので、Dev Container では `TypeScriptTeam.native-preview` 拡張を入れ、`typescript.experimental.useTsgo` で tsgo を使う。VS Code の組み込みの TypeScript 拡張が TS 7 の言語サーバーを標準で使うようになったら、拡張と `useTsgo` の指定を外す。
+Editor type checking is changed for the same reason. The TS 7 `typescript` package does not bundle tsserver, so the Dev Container installs the `TypeScriptTeam.native-preview` extension and uses tsgo through `typescript.experimental.useTsgo`. Once VS Code's built-in TypeScript extension uses the TS 7 language server by default, remove the extension and the `useTsgo` setting.
 
-## テスト
+## Testing
 
-置き場、書き方、カバレッジのゲートは `.claude/rules/testing.md` にある。編集の振る舞いは `PlaySession` と `IEditorController` を境界にした仕様テストで確かめるので、内部の分け方を変えてもテストを書き換えずに済む。判断を common に寄せるのは、このテストとカバレッジのゲートを DOM なしで回すためでもある。
+Locations, writing style, and the coverage gate are in `.claude/rules/testing.md`. Editing behavior is verified by specification tests with `PlaySession` and `IEditorController` as the boundary, so changing the internal split does not require rewriting the tests. Moving decisions into common is also for running these tests and the coverage gate without the DOM.
 
-## 持たないもの
+## What the library does not have
 
-PRD 4.1 のとおり、組み込みやすさを先に取り、表現の豊かさは絞っている。次のものは意図して持たない。
+As stated in PRD 4.1, ease of embedding comes first and richness of expression is narrowed. The following are deliberately not included.
 
-- 戦術の記法に合わせた見た目の作り込み（波線のモーション、ルートの種類ごとの矢じり）。見た目の最終調整は、商用ソフトで使ってみてから再開する
-- waypoint を 1 つずつ足したり消したりする操作。線を描き直せば同じ形になる
-- UI フレームワーク、外部の描画ライブラリ、Shadow DOM、DI コンテナ。依存は手動のコンストラクタ注入だけにしている
-- LOS の描画、ズームとパン、複数選択、コピーと貼り付け（PRD 8.1）
+- Visual refinement that matches tactical notation (wavy motion lines, arrowheads per route type). Final visual adjustments resume after trying the library in the commercial software
+- Operations that add or remove waypoints one at a time. Redrawing the line gives the same shape
+- UI frameworks, external drawing libraries, Shadow DOM, DI containers. Dependencies are limited to manual constructor injection
+- Drawing the LOS, zoom and pan, multi-select, copy and paste (PRD 8.1)

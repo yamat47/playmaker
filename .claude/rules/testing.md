@@ -1,82 +1,82 @@
 ---
-description: Vitest テスト規約。編集は仕様テストで確かめ、単体テストはモジュールの約束だけに絞る。
+description: Vitest test conventions. Verify editing through specification tests, and limit unit tests to the contract of a module.
 paths:
   - "library/src/**/*.test.ts"
   - "library/src/test-support/**"
 ---
 
-# テスト規約
+# Test conventions
 
-テストは実装の部品ではなく、利用者から見た振る舞いに付ける。内部の分け方を変えてもテストを書き換えずに済むようにするためである。
+Tests attach to the behavior the consumer sees, not to the parts of the implementation. This lets the internal boundaries change without rewriting the tests.
 
-## 仕様テスト
+## Specification tests
 
-編集の振る舞いは、`PlaySession` と `IEditorController` を境界にした仕様テストで確かめる。
+Verify editing behavior with specification tests that use `PlaySession` and `IEditorController` as the boundary.
 
-- 置き場は `src/common/specs/<機能>.test.ts`。機能ごとに 1 ファイルにし、ソースファイルごとには置かない
-- 入口は `src/test-support/play-driver.ts` の `openPlay`。操作はヤード座標（`yd(lateral, downfield)`）で行い、
-  クリック、ドラッグ、作図の開始は `click`、`drag`、`startLine` を使う。ツールの切替、Undo、パネルからの編集は `editor` を直接呼ぶ
-- 観測するのは、session の読み取り（`getPlayData()`、`getSnapshot()`、`fieldZone`）と `loadFormation` の戻り値、
-  表示状態（`editor.getViewState()`、`editor.getFrame()`、`editor.getSelectedPlayer()`、`editor.getSelectedLine()`）、
-  通知（`onChange`、`notified`、`session.onDidChange`、`session.onDidReset`）だけにする
-- 購読していない状態を確かめるときだけ、`openPlay` を使わずに `PlaySession` を直接作る
-- コマンド、interaction、preview、PlayModel のような内部のモジュールを import しない。
-  図の組み立てに使う型と、`MAX_PLAYERS` のような公開された定数は使ってよい
-- PlaySession と IEditorController は公開しない。ジェスチャ単位の API を互換つきで固定する便益が、今の利用者には無い
+- Put them in `src/common/specs/<feature>.test.ts`. Use one file per feature, not one per source file
+- The entry point is `openPlay` in `src/test-support/play-driver.ts`. Operate in yard coordinates (`yd(lateral, downfield)`), and
+  use `click`, `drag`, and `startLine` for clicks, drags, and starting a drawing. Call `editor` directly for tool switching, Undo, and edits from the panel
+- Observe only session reads (`getPlayData()`, `getSnapshot()`, `fieldZone`) and the return value of `loadFormation`,
+  view state (`editor.getViewState()`, `editor.getFrame()`, `editor.getSelectedPlayer()`, `editor.getSelectedLine()`),
+  and notifications (`onChange`, `notified`, `session.onDidChange`, `session.onDidReset`)
+- Create a `PlaySession` directly without `openPlay` only when verifying the unsubscribed state
+- Do not import internal modules such as commands, interaction, preview, or PlayModel.
+  Types used to build a diagram and public constants such as `MAX_PLAYERS` are fine
+- PlaySession and IEditorController stay unpublished. Freezing a gesture-level API with compatibility guarantees has no benefit for the current consumers
 
-## ブラウザテスト
+## Browser tests
 
-`new Playmaker(container)` の結線（DOM、ポインタ、キー、テーマ変数）は、Vitest の Browser Mode で Chromium を動かして確かめる。
+Verify the wiring of `new Playmaker(container)` (DOM, pointer, keys, theme variables) by running Chromium through Vitest Browser Mode.
 
-- 置き場は `src/playmaker.browser.test.ts`。編集の振る舞いそのものは仕様テストで確かめ、ここでは
-  UI の操作が図に届くことと、DOM の組み立てと後始末だけを確かめる。10〜20 本に保つ
-- 操作は `vitest/browser` の `page` と `userEvent` で行い、要素はロールと名前で探す。
-  canvas の中の位置は、canvas の左上からの px で渡す
-- 観測するのは公開 API（`getPlayData()`、`fieldZone`、`onChange`）と、container に置かれた DOM だけにする
+- Put them in `src/playmaker.browser.test.ts`. Verify the editing behavior itself with specification tests; here, verify only
+  that UI operations reach the diagram, plus DOM assembly and teardown. Keep it at 10 to 20 tests
+- Operate through `page` and `userEvent` from `vitest/browser`, and find elements by role and name.
+  Pass positions inside the canvas as px from the top-left corner of the canvas
+- Observe only the public API (`getPlayData()`, `fieldZone`, `onChange`) and the DOM placed in the container
 
-## 単体テスト
+## Unit tests
 
-モジュールとしての約束を書けるものだけ、ソースと同じ階層に `*.test.ts` を置く。
+Put `*.test.ts` next to the source only where the module's contract can be stated.
 
-- 対象は、bezier、polyline、field の座標変換、hit-test、keymap、base の Event と lifecycle、
-  PlayData の正規化と `migratePlayData`、プリセット
-- 公開の入口から観測できない数値計算は、単体テストで確かめる
-- 仕様テストで確かめられる振る舞いを、内部のモジュールの単体テストで重ねて確かめない。
-  `typescript-idioms` skill の「切り出した関数には単体テストを付ける」より、この節を優先する
-- `isPlayerShape` のような型ガードは、それを使う正規化のテストで確かめ、単体では確かめない。
-  値の判定は正規化が既定へ寄せる振る舞いとして見える
+- The targets are bezier, polyline, the field coordinate transforms, hit-test, keymap, the base Event and lifecycle,
+  PlayData normalization and `migratePlayData`, and the presets
+- Verify numeric computations that cannot be observed from the public entry points with unit tests
+- Do not re-verify behavior covered by specification tests with unit tests of internal modules.
+  This section takes precedence over "add unit tests to extracted functions" in the `typescript-idioms` skill
+- Verify type guards such as `isPlayerShape` through the normalization tests that use them, not on their own.
+  A value check shows up as normalization falling back to the default
 
-## 書き方
+## Style
 
-- Vitest は `src/**/*.test.ts` を node 環境で、`src/**/*.browser.test.ts` を Chromium で実行する。globals は使わず、`describe` `it` `expect` `vi` は `vitest` から import する
-- `describe` は機能か、単体テストならモジュールの名前にする。`it` の名前は `writing-conventions` skill に従う
-  （例: `it("選手をドラッグして離すと、動かした図を渡して 1 回だけ呼ぶ")`）
-- 1 つの `it` は 1 つの振る舞いだけを確かめる。準備、操作、検証の段は空行で区切り、`// Arrange` のようなコメントは書かない
-- テスト名とコメントに、カバレッジのどの分岐を通すかを書かない。書くのは振る舞いである
-- スパイは `vi.fn()` で作り、`toHaveBeenCalledOnce` や `toHaveBeenCalledExactlyOnceWith` で確かめる。
-  モンキーパッチやモジュールの差し替え（`vi.mock`）はしない
-- 複数のテストで使う部品は `src/test-support/` に置く。coverage と build の対象外で、
-  型検査は `tsconfig.test.json` がテストと一緒に行う
+- Vitest runs `src/**/*.test.ts` in the node environment and `src/**/*.browser.test.ts` in Chromium. Do not use globals; import `describe` `it` `expect` `vi` from `vitest`
+- Name `describe` after the feature, or after the module for a unit test. Name `it` according to the `writing-conventions` skill
+  (for example, `it("passes the moved diagram exactly once when a player is dragged and released")`)
+- One `it` verifies one behavior. Separate the arrange, act, and assert stages with blank lines, and do not write comments such as `// Arrange`
+- Do not write which coverage branch a test exercises in its name or comments. Write the behavior
+- Create spies with `vi.fn()` and verify them with `toHaveBeenCalledOnce` or `toHaveBeenCalledExactlyOnceWith`.
+  Do not monkey-patch or replace modules (`vi.mock`)
+- Put parts shared by multiple tests in `src/test-support/`. It is excluded from coverage and build, and
+  `tsconfig.test.json` type-checks it together with the tests
 
-## 実行
+## Running
 
-- `make test`（node のテスト全体、カバレッジゲート込み）、`make test FILE=<file>`（1 ファイル、ゲートなし）、
-  `make test-watch`（カバレッジなし）
-- `make test-browser`（ブラウザテスト）。CI では別のジョブで動く
-- 見た目（色、線の形、文字）はテストで確かめず、demo で目視する（`run-demo` skill）
+- `make test` (all node tests, with the coverage gate), `make test FILE=<file>` (one file, no gate),
+  `make test-watch` (no coverage)
+- `make test-browser` (browser tests). In CI it runs as a separate job
+- Do not verify appearance (colors, line shapes, text) with tests; do a visual check in the demo (`run-demo` skill)
 
-## カバレッジ（common 層 100% ゲート）
+## Coverage (100% gate on the common layer)
 
-- しきい値は `src/common/**` だけに掛け、4 指標すべて 100%、`perFile: true` で判定する。
-  `browser/` `playmaker.ts` `index.ts` は測るが落とさない。設定は `vite.config.ts` の `test.coverage` の 1 か所
-- ゲートは `make test` に入っているので、ローカルでも CI でも同じ判定になる
-- 落ちたら `text` レポーターの「Uncovered Line #s」を見て、次のどれかにする
-  1. 利用者から届く振る舞いなら、仕様テストか単体テストを足す
-  2. 仕様テストから届かず、利用者にも届かないコードなら消す
-  3. `noUncheckedIndexedAccess` のためのガードのように到達しない防御コードに限り、
-     `/* v8 ignore start -- <Why> */ … /* v8 ignore stop */` で外す。Why は必須で、PR のレビューで認める
-- ローカルで未カバーの行を辿るときは `coverage/index.html`（gitignore 済み）を開く
+- Apply the threshold only to `src/common/**`, with all 4 metrics at 100% and `perFile: true`.
+  `browser/` `playmaker.ts` `index.ts` are measured but do not fail the gate. The configuration lives in one place, `test.coverage` in `vite.config.ts`
+- The gate is part of `make test`, so local runs and CI make the same judgment
+- When it fails, look at "Uncovered Line #s" in the `text` reporter and do one of the following
+  1. If the behavior is reachable from the consumer, add a specification test or a unit test
+  2. If the code is unreachable from specification tests and from the consumer, delete it
+  3. Only for unreachable defensive code, such as guards for `noUncheckedIndexedAccess`,
+     exclude it with `/* v8 ignore start -- <Why> */ … /* v8 ignore stop */`. Why is required and is approved in PR review
+- To trace uncovered lines locally, open `coverage/index.html` (already gitignored)
 
-## やらないこと
+## What we do not do
 
-- スクリーンショットを比べる視覚回帰テスト（VRT）は採用しない
+- Do not adopt visual regression testing (VRT) that compares screenshots

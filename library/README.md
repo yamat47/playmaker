@@ -1,12 +1,12 @@
 # @yamat47/playmaker
 
-アメリカンフットボールのプレー図を作成・表示する、UI フレームワーク非依存の TypeScript ライブラリ。
-コンテナ要素に図を描き、編集 UI を置き、編集のたびに `PlayData` を渡す。永続化や共有は持たない。
+A UI-framework-agnostic TypeScript library for creating and displaying American football play diagrams.
+It draws the diagram in a container element, places the editing UI, and delivers `PlayData` on every edit. It does not persist or share anything.
 
-- デモ: https://playmaker-demo.yamat47.me/
-- ソースと詳しい使い方: https://github.com/yamat47/playmaker
+- Demo: https://playmaker-demo.yamat47.me/
+- Source and detailed usage: https://github.com/yamat47/playmaker
 
-## インストール
+## Installation
 
 ```sh
 npm install @yamat47/playmaker
@@ -17,14 +17,14 @@ import { Playmaker, type PlayData } from "@yamat47/playmaker";
 import "@yamat47/playmaker/styles.css";
 
 const playmaker = new Playmaker(document.getElementById("play")!, {
-  mode: "edit", // "edit"（既定・編集 UI あり）/ "view"（読み取り専用）
-  initialData: saved, // 永続化しておいた PlayData（省略可）
+  mode: "edit", // "edit" (default, with editing UI) / "view" (read-only)
+  initialData: saved, // a persisted PlayData (optional)
   onChange: (data: PlayData) => save(JSON.stringify(data)),
 });
 ```
 
-バンドラを通さず、CDN から読むこともできる。依存は無く、フォントは JS に同梱してある。
-URL の `0.1.0` は使う版に置き換える。
+You can also load it from a CDN without a bundler. It has no dependencies, and the fonts are bundled into the JS.
+Replace `0.1.0` in the URL with the version you use.
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yamat47/playmaker@0.1.0/dist/playmaker.css" />
@@ -35,18 +35,18 @@ URL の `0.1.0` は使う版に置き換える。
 </script>
 ```
 
-モダンブラウザと PC のマウス操作を想定する。
+It assumes modern browsers and mouse input on a PC.
 
-## できること
+## What it does
 
-- 選手（丸・四角）とラベル、ルート・ブロック・モーションの線を置き、ドラッグで動かす
-- 位置は 0.5 ヤードの格子に揃う
-- 同梱のフォーメーションとプレーのプリセットを読み込む（`FORMATION_PRESETS`、`PLAY_PRESETS`）
-- 編集 UI を含まない PNG を書き出す（`exportToPng`）
-- 色とフォントは CSS 変数（`--playmaker-*`）でホストに合わせる
+- Place players (circles and squares) with labels, and route, block, and motion lines, and move them by dragging
+- Positions snap to a 0.5-yard grid
+- Load the bundled formation and play presets (`FORMATION_PRESETS`, `PLAY_PRESETS`)
+- Export a PNG without the editing UI (`exportToPng`)
+- Match the colors and fonts to the host with CSS variables (`--playmaker-*`)
 
-公開 API の一覧、`PlayData` の形、テーマの変数は、リポジトリの README にある。
+The list of the public API, the shape of `PlayData`, and the theme variables are in the repository README.
 
-## ライセンス
+## License
 
 MIT

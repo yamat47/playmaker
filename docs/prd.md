@@ -173,6 +173,11 @@ The fonts for yard numbers and player labels are fixed to the bundled ones and c
 `PlayData` has a `version` field. When the schema changes in the future, a migration path that converts old versions to the current one is provided.
 Because the commercial software persists and restores `PlayData`, the version management contract is kept explicit.
 
+### 6.7 Language of the built-in UI
+
+The toolbar and property panel are English by default. Japanese is bundled, and the commercial software chooses the language with the `locale` option at construction.
+The language is fixed for the lifetime of the instance. Error messages and warnings are English regardless of the locale, because they are for developers.
+
 ## 7. Success criteria
 
 MVP completion is judged by:
@@ -212,7 +217,6 @@ The following are deliberately left out of scope.
 
 - **Mobile-specific UI / touch support** (PC + mouse only)
 - **Accessibility (a11y) support**
-- **Multilingual support (i18n)** (the UI is Japanese only)
 
 ### 8.4 Distribution and operation policies left out
 

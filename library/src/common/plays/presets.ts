@@ -83,7 +83,7 @@ const INSIDE_ZONE = play(
   "offense",
   "run-zone",
   "11 pers",
-  "ゾーンブロックで内側を一気に。RB は RG の内側を狙い、3 テクの動きで B ギャップか裏の A ギャップへ切る。",
+  "Zone blocking, hitting inside in one motion. The RB aims inside the RG and cuts to the B gap or the backside A gap off the 3-technique's movement.",
   [
     ...offensiveLine(),
     player("y", "Y", pt(34.5, -1), "square"),
@@ -111,7 +111,7 @@ const OUTSIDE_ZONE = play(
   "offense",
   "run-zone",
   "11 pers",
-  "ワイドゾーンで横へ伸ばす。RB は TE の外側を狙い、E と S の動きで外へ出るか縦に切り返す。",
+  "Wide zone, stretching the defense sideways. The RB aims outside the TE and bounces out or cuts upfield off the E and S.",
   [...singlebackAce(), ...defense43()],
   [
     ln("bl-lt", "block", "lt", [], shortOf(FRONT_4.eL), "straight"),
@@ -130,7 +130,7 @@ const POWER = play(
   "offense",
   "run-gap",
   "21 pers",
-  "プレイサイドはダウンブロック、FB が 9 テクの E をキックアウト、バックサイドガードがプルして C ギャップをリードする。",
+  "Down blocks on the play side, the FB kicks out the 9-technique E, and the backside guard pulls to lead through the C gap.",
   [...iFormation(), ...defense43()],
   [
     ln("bl-y", "block", "y", [], shortOf(LB_43.s), "straight"),
@@ -164,7 +164,7 @@ const COUNTER = play(
   "offense",
   "run-gap",
   "21 pers",
-  "バックサイドのガードが 9 テクの E をキックアウト、タックルが C ギャップへ巻き込み、FB がタックルの跡を埋める（GT カウンター）。",
+  "The backside guard kicks out the 9-technique E, the tackle wraps through the C gap, and the FB fills where the tackle left (GT counter).",
   [...iFormation(), ...defense43()],
   [
     ln("bl-y", "block", "y", [], shortOf(LB_43.s), "straight"),
@@ -198,7 +198,7 @@ const FOUR_VERTICALS = play(
   "offense",
   "pass-deep",
   "10 pers",
-  "トリップスから 4 本の縦。対シングルハイのシームで勝負する。",
+  "Four verticals from trips, attacking the seams against a single-high safety.",
   [...trips(), ...nickel(COVER_3_SHELL, END_OVER_TE)],
   [
     ln("go-x", "route", "x", [pt(4, 4)], pt(4, 13), "straight"),
@@ -215,7 +215,7 @@ const MESH = play(
   "offense",
   "pass-dropback",
   "10 pers",
-  "浅いクロスの交差。対マン/ゾーン両対応で空いた所へ運ぶ。",
+  "Shallow crossers that mesh. Works against man and zone by running to the open spot.",
   [...shotgunSpread(), ...nickel(NICKEL_BASE)],
   [
     ln("cross-y", "route", "y", [pt(20, 3.5)], pt(38, 4), "straight"),
@@ -232,7 +232,7 @@ const SMASH = play(
   "offense",
   "pass-dropback",
   "11 pers",
-  "コーナー＋ヒッチのハイロー。対カバー 2 のコーナーを攻める。",
+  "A corner and hitch high-low that attacks the corner against Cover 2.",
   [...singlebackAce(), ...nickel(COVER_2_SHELL, END_OVER_TE)],
   [
     ln("hitch-z", "route", "z", [], pt(47, 3), "straight"),
@@ -249,7 +249,7 @@ const STICK = play(
   "offense",
   "pass-quick",
   "11 pers",
-  "3 ステップの速攻。スティック（座り）＋フラットで素早く配球する。",
+  "A three-step quick game. Stick (sit down) and flat for a fast distribution.",
   [...singlebackAce(), ...nickel(NICKEL_BASE, END_OVER_TE)],
   [
     ln("stick-y", "route", "y", [], pt(34.5, 4), "straight"),
@@ -266,7 +266,7 @@ const RPO_BUBBLE = play(
   "offense",
   "rpo",
   "11 pers",
-  "バブル側の W を読み、W がボックスに入ればバブル、残ればインサイドゾーンへ分岐する。",
+  "Reads the W on the bubble side: bubble if the W enters the box, inside zone if he stays.",
   [...shotgunSpread(), ...nickel(NICKEL_BASE)],
   [
     ln("bl-lt", "block", "lt", [], shortOf(FRONT_4.eL), "straight"),
@@ -287,7 +287,7 @@ const PA_BOOT = play(
   "offense",
   "pa",
   "11 pers",
-  "プレイアクションで QB がブートし、フラット/セイル/縦の 3 段で攻める。",
+  "Play action with the QB booting out, attacking in three levels: flat, sail, and vertical.",
   [...singlebackAce(), ...defense43()],
   [
     ln("fake-rb", "motion", "rb", [pt(24, -6)], pt(20.5, -4.5), "straight"),
@@ -308,7 +308,7 @@ const COVER_1 = play(
   "defense",
   "coverage",
   "Nickel",
-  "1 ディープのフリーセイフティを残し、残りは全マン。W は穴（ラット）で待つ。",
+  "One deep free safety, everyone else in man. The W waits in the hole (rat).",
   [...nickel({ cornerDepth: 6, fs: pt(26.5, 11), ss: pt(38, 6) }), ...shotgunSpread()],
   [
     ln("man-cbl", "motion", "cb-l", [], pt(5.5, 0.5), "straight"),
@@ -327,7 +327,7 @@ const COVER_2 = play(
   "defense",
   "coverage",
   "Nickel",
-  "2 ディープ 5 アンダーのゾーン。深いハーフを 2 人で分け、CB はフラットに座る。",
+  "Two-deep, five-under zone. Two safeties split the deep halves, and the CBs sit in the flats.",
   [...nickel({ cornerDepth: 5, fs: pt(15, 11), ss: pt(38, 11) }), ...shotgunSpread()],
   [
     ln("half-fs", "motion", "fs", [], pt(13, 14), "straight"),
@@ -346,7 +346,7 @@ const COVER_3 = play(
   "defense",
   "coverage",
   "Nickel",
-  "3 ディープ 4 アンダー。現代の基準となるシングルハイのゾーン。",
+  "Three-deep, four-under. The single-high zone that is today's baseline.",
   [...nickel(COVER_3_SHELL), ...shotgunSpread()],
   [
     ln("deep-cbl", "motion", "cb-l", [], pt(7, 13), "straight"),
@@ -365,7 +365,7 @@ const COVER_4 = play(
   "defense",
   "coverage",
   "Nickel",
-  "4 ディープのクォーターズ。縦パスを上から踏み潰す。",
+  "Four-deep quarters, stamping out vertical passes from above.",
   [...nickel({ cornerDepth: 7, fs: pt(20, 11), ss: pt(33, 11) }), ...shotgunSpread()],
   [
     ln("qtr-cbl", "motion", "cb-l", [], pt(6, 13), "straight"),
@@ -384,7 +384,7 @@ const FIRE_ZONE = play(
   "defense",
   "pressure",
   "Nickel",
-  "5 人ブリッツ＋ライン 1 枚をドロップ、3 ディープ 3 アンダーで覆う。",
+  "A five-man blitz with one lineman dropping, covered by three-deep, three-under.",
   [...nickel(COVER_3_SHELL), ...shotgunSpread()],
   [
     ln("rush-dtl", "route", "dt-l", [], pt(25, 0), "straight"),
@@ -407,7 +407,7 @@ const COVER_0 = play(
   "defense",
   "pressure",
   "Nickel",
-  "セイフティを残さず全マン、6 人で最大限の圧力をかける。FS が RB をマンで受け持つ。",
+  "All-out man with no safety deep, six rushers for maximum pressure. The FS takes the RB in man.",
   [...nickel({ cornerDepth: 5, fs: pt(22, 9), ss: pt(31, 9) }), ...shotgunSpread()],
   [
     ln("rush-del", "route", "de-l", [], pt(20, 0), "straight"),
@@ -431,7 +431,7 @@ const DOUBLE_A = play(
   "defense",
   "pressure",
   "Nickel",
-  "両 A ギャップに 2 人を提示。実行・シム（見せ）どちらにも化ける。",
+  "Two defenders shown in both A gaps. It can turn into a real pressure or a simulated one.",
   [
     player("de-l", "E", FRONT_4.eL),
     player("dt-l", "T", pt(23, 1.5)),
@@ -469,7 +469,7 @@ const COVER_6 = play(
   "defense",
   "coverage",
   "Nickel",
-  "クォーター×2＋ハーフの分割カバー。フィールドはクォーターズ、バウンダリは 2。",
+  "Split coverage: two quarters plus a half. Quarters to the field, Cover 2 to the boundary.",
   [
     ...nickelFront(),
     player("nb", "NB", pt(39, 5)),

@@ -1,28 +1,28 @@
 ---
 name: run-demo
-description: Playmaker の demo playground を Docker コンテナで起動し、ブラウザで表示・操作して変更を目視確認する。src/browser や demo/ の変更を実際の画面で確かめたいとき、demo を起動・スクリーンショットしたいとき、「動かして確認して」と言われたときに使う。
+description: Start Playmaker's demo playground in the Docker container and check a change by looking at it and operating it in a browser. Use when a change under src/browser or demo/ should be verified on the real screen, when the demo should be started or screenshotted, or when asked to "run it and check".
 ---
 
-# demo を起動して目視確認する
+# Start the demo and check it by eye
 
-dev サーバーは Docker の `dev` サービスで動く。ホストで `pnpm dev` は実行できない。
+The dev server runs in the Docker `dev` service. `pnpm dev` cannot be run on the host.
 
-## 手順
+## Steps
 
-1. 起動する。dev サーバーが応答を返すまで待ってから戻る（healthcheck）。すでに起動済みでも問題ない
+1. Start it. The command waits until the dev server responds (healthcheck) and then returns. It is fine if it is already running
    ```sh
    make up
    ```
-2. `make up` が失敗したら `docker compose -f docker/compose.yaml logs --tail 50 dev` で原因を見る
-   （`node_modules` が空なら `make install`、イメージが古ければ `make setup`）
-3. ブラウザ（chrome-devtools MCP など）で http://localhost:5173/ を開き、変更箇所を操作して確かめる。
-   コンソールエラーも確認する
-4. ソースを編集すると自動でリロードされる（ホスト側の編集はポーリングで拾う）。
-   `library/vite.config.ts` や依存を変えたときは `make down && make up`
-5. 確認が終わったら、ユーザーが使い続けると言っていない限り `make down` で止める
+2. If `make up` fails, look at the cause with `docker compose -f docker/compose.yaml logs --tail 50 dev`
+   (run `make install` if `node_modules` is empty, `make setup` if the image is old)
+3. Open http://localhost:5173/ in a browser (the chrome-devtools MCP or similar), operate the changed part, and check it.
+   Also check for console errors. `http://localhost:5173/?locale=ja` shows the editing UI in Japanese
+4. Editing a source file reloads the page automatically (edits on the host are picked up by polling).
+   After changing `library/vite.config.ts` or the dependencies, run `make down && make up`
+5. When the check is done, stop it with `make down` unless the user said they will keep using it
 
-## 注意
+## Notes
 
-- ポート 5173 が使用中だと起動に失敗する（`--strictPort`）。Dev Containers 内で別に
-  `pnpm dev` を動かしていないか確認する
-- 目視確認はテストの代わりではない。振る舞いは `make test` で担保する（`.claude/rules/testing.md`）
+- Starting fails if port 5173 is in use (`--strictPort`). Check that no other `pnpm dev` is running
+  inside Dev Containers
+- A visual check is not a substitute for tests. Behavior is covered by `make test` (`.claude/rules/testing.md`)

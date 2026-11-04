@@ -106,7 +106,7 @@ export function displayYardNumber(absoluteYard: number): number | null {
 /** ゾーンの窓の中にある、stepYards の倍数の絶対ヤードを小さい順に返す。 */
 export function yardLinesInWindow(zone: FieldZone, stepYards: number): number[] {
   if (stepYards <= 0) {
-    throw new Error("Playmaker: stepYards は正の数である必要があります。");
+    throw new Error("Playmaker: stepYards must be a positive number.");
   }
   const { startYard, endYard } = fieldZoneWindow(zone);
   const lines: number[] = [];

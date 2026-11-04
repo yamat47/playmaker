@@ -14,7 +14,7 @@ export function hitTestPlayer(
   radiusYards: number = PLAYER_RADIUS_YARDS,
 ): Player | undefined {
   if (radiusYards <= 0) {
-    throw new Error("Playmaker: radiusYards は正の数である必要があります。");
+    throw new Error("Playmaker: radiusYards must be a positive number.");
   }
   const r2 = radiusYards * radiusYards;
   for (const player of [...players].reverse()) {
@@ -70,7 +70,7 @@ export function hitTestLine(
   toleranceYards: number = LINE_HIT_TOLERANCE_YARDS,
 ): Line | undefined {
   if (toleranceYards <= 0) {
-    throw new Error("Playmaker: toleranceYards は正の数である必要があります。");
+    throw new Error("Playmaker: toleranceYards must be a positive number.");
   }
   const byId = indexPlayersById(players);
   for (const line of [...lines].reverse()) {

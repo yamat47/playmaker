@@ -1,3 +1,9 @@
+export {
+  type Messages,
+  PLAYMAKER_LOCALE_VALUES,
+  type PlaymakerLocale,
+  resolveMessages,
+} from "./i18n/index.js";
 export { PointerInput } from "./input/pointer-input.js";
 export { CanvasSurface } from "./rendering/canvas-surface.js";
 export { replaceKeepingFocus } from "./ui/focus.js";

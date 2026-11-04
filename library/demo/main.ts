@@ -16,7 +16,7 @@ import "@yamat47/playmaker/styles.css";
 function need<T extends HTMLElement>(id: string, type: new () => T): T {
   const el = document.getElementById(id);
   if (!(el instanceof type)) {
-    throw new Error(`#${id} の ${type.name} が見つかりません`);
+    throw new Error(`#${id} is not a ${type.name}`);
   }
   return el;
 }
@@ -312,7 +312,7 @@ let changeCount = 0;
 
 function onChange(data: PlayData): void {
   changeCount += 1;
-  statusEl.textContent = `onChange #${changeCount}｜選手 ${data.players.length}・線 ${data.lines.length}・ゾーン ${data.field.zone}`;
+  statusEl.textContent = `onChange #${changeCount} | players ${data.players.length}, lines ${data.lines.length}, zone ${data.field.zone}`;
   jsonArea.value = JSON.stringify(data, null, 2);
 }
 
@@ -320,8 +320,14 @@ function refreshJson(): void {
   jsonArea.value = JSON.stringify(playmaker.getPlayData(), null, 2);
 }
 
-statusEl.textContent = "onChange 待ち（編集すると更新されます）";
-const playmaker = new Playmaker(mountPoint, { initialData: PLAY_PRESETS[0]?.data, onChange });
+statusEl.textContent = "Waiting for onChange (edit the diagram to update)";
+// ?locale=ja shows the editing UI in Japanese, for checking the bundled dictionary.
+const locale = new URLSearchParams(location.search).get("locale") === "ja" ? "ja" : "en";
+const playmaker = new Playmaker(mountPoint, {
+  initialData: PLAY_PRESETS[0]?.data,
+  onChange,
+  locale,
+});
 
 let activeButton: HTMLButtonElement | null = null;
 
@@ -434,14 +440,14 @@ function formationRow(formation: Formation): PresetRow {
     tagColor: offense ? "var(--off)" : "var(--def)",
     select: () => {
       if (!playmaker.loadFormation(formation)) {
-        infoSummary.textContent = `${formation.name} は、選手の上限を超えるので置きませんでした。`;
+        infoSummary.textContent = `${formation.name} was not placed because it would exceed the player limit.`;
         return false;
       }
       setInfo(
         formation.name,
         null,
         "Formation",
-        "今の図に選手を足しました（線は付きません）。攻守の隊形を重ねられます。",
+        "Added players to the current diagram (no lines). Offense and defense formations can be layered.",
       );
       return true;
     },
@@ -495,7 +501,7 @@ modeButton.addEventListener(
 
 function syncModeButton(): void {
   const { mode } = playmaker;
-  modeButton.textContent = mode === "edit" ? "view モードへ" : "edit モードへ";
+  modeButton.textContent = mode === "edit" ? "Switch to view" : "Switch to edit";
   modeButton.setAttribute("aria-pressed", String(mode === "view"));
 }
 syncModeButton();
@@ -519,7 +525,7 @@ async function downloadPng(): Promise<void> {
   a.click();
   // click() のダウンロードは環境により非同期。同期 revoke で取りこぼす環境があるため遅延する。
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  statusEl.textContent = `PNG 出力（${playmaker.mode} モード・${Math.round(blob.size / 1024)}KB）`;
+  statusEl.textContent = `Exported PNG (${playmaker.mode} mode, ${Math.round(blob.size / 1024)} KB)`;
 }
 
 need("export-png", HTMLButtonElement).addEventListener(
@@ -527,7 +533,7 @@ need("export-png", HTMLButtonElement).addEventListener(
   () => {
     downloadPng().catch((error: unknown) => {
       const reason = error instanceof Error ? error.message : String(error);
-      statusEl.textContent = `PNG 出力に失敗しました: ${reason}`;
+      statusEl.textContent = `PNG export failed: ${reason}`;
     });
   },
   { signal },
@@ -550,10 +556,10 @@ need("load-stress", HTMLButtonElement).addEventListener(
     replacePlayKeepingZone(STRESS_PLAYERS, STRESS_LINES);
     setActive(null);
     setInfo(
-      "密度ストレス",
+      "Density stress",
       null,
-      `選手 ${STRESS_PLAYERS.length}・線 ${STRESS_LINES.length}`,
-      "描画・操作の体感速度を手動目視する fixture。",
+      `players ${STRESS_PLAYERS.length}, lines ${STRESS_LINES.length}`,
+      "A fixture for checking rendering and interaction speed by eye.",
     );
   },
   { signal },
@@ -565,12 +571,12 @@ function loadFromJsonText(): void {
     parsed = JSON.parse(jsonArea.value);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    dataStatus.textContent = `JSON 解析エラー: ${reason}`;
+    dataStatus.textContent = `JSON parse error: ${reason}`;
     return;
   }
   playmaker.restorePlayData(parsed);
   refreshJson();
-  dataStatus.textContent = "読込完了（version は現行へ寄せて再表示）";
+  dataStatus.textContent = "Loaded (version migrated to the current one and shown again)";
 }
 
 function loadFixture(blob: unknown): void {
@@ -582,7 +588,7 @@ need("json-export", HTMLButtonElement).addEventListener(
   "click",
   () => {
     refreshJson();
-    dataStatus.textContent = "現在の getPlayData を書き出し";
+    dataStatus.textContent = "Exported the current getPlayData";
   },
   { signal },
 );

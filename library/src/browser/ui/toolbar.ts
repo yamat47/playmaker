@@ -4,7 +4,6 @@ import {
   EDITOR_TOOL_VALUES,
   type EditorTool,
   type EditorViewState,
-  FIELD_ZONE_LABELS,
   FIELD_ZONE_VALUES,
   type FieldZone,
   FORMATION_PRESETS,
@@ -14,32 +13,14 @@ import {
   MAX_LINES,
   MAX_PLAYERS,
   TEAM_SIDE_VALUES,
-  type TeamSide,
   toDisposable,
 } from "../../common/index.js";
-
-const TOOL_LABELS = {
-  select: "選択",
-  "add-player": "選手を追加",
-  "draw-line": "線を描く",
-} satisfies Record<EditorTool, string>;
-
-// 件数の上限に達して押せない部品に、理由として出す文。
-const FORMATION_LIMIT_REASON = `置くと ${MAX_PLAYERS} 人を超えるフォーメーションは読み込めません`;
-const TOOL_UNAVAILABLE_REASONS: Readonly<Partial<Record<EditorTool, string>>> = {
-  "add-player": `選手は ${MAX_PLAYERS} 人までです`,
-  "draw-line": `線は ${MAX_LINES} 本までです`,
-};
-
-const SIDE_LABELS = {
-  offense: "オフェンス",
-  defense: "ディフェンス",
-} satisfies Record<TeamSide, string>;
+import type { Messages } from "../i18n/index.js";
 
 /**
- * disabled ではなく aria-disabled で無効を示す。disabled にすると、押した直後に
- * 無効になったボタンからフォーカスが body へ落ち、
- * 編集 UI の中で受けているショートカットが効かなくなる。
+ * Disabled state is shown with aria-disabled, not disabled. With disabled, focus falls to the
+ * body from a button that became disabled right after it was pressed, and the shortcuts
+ * received inside the editing UI stop working.
  */
 function setEnabled(button: HTMLButtonElement, enabled: boolean, reason?: string): void {
   button.setAttribute("aria-disabled", String(!enabled));
@@ -56,6 +37,7 @@ function setTitle(element: HTMLElement, title: string | undefined): void {
 
 export class Toolbar extends Disposable {
   readonly element: HTMLElement;
+  private readonly messages: Messages;
   private readonly toolButtons = new Map<EditorTool, HTMLButtonElement>();
   private readonly zoneButtons = new Map<FieldZone, HTMLButtonElement>();
   private readonly undoButton: HTMLButtonElement;
@@ -64,30 +46,37 @@ export class Toolbar extends Disposable {
   private readonly commitButton: HTMLButtonElement;
   private readonly cancelButton: HTMLButtonElement;
   private readonly formationPicker: HTMLSelectElement;
+  // Text shown as the reason on parts that cannot be pressed because a count limit is reached.
+  private readonly toolUnavailableReasons: Readonly<Partial<Record<EditorTool, string>>>;
 
-  constructor(parent: HTMLElement, controller: IEditorUi) {
+  constructor(parent: HTMLElement, controller: IEditorUi, messages: Messages) {
     super();
+    this.messages = messages;
+    this.toolUnavailableReasons = {
+      "add-player": messages.playerLimit(MAX_PLAYERS),
+      "draw-line": messages.lineLimit(MAX_LINES),
+    };
     this.element = document.createElement("div");
     this.element.className = "playmaker-toolbar";
 
     for (const tool of EDITOR_TOOL_VALUES) {
-      const btn = this.addButton(TOOL_LABELS[tool], () => controller.setTool(tool));
+      const btn = this.addButton(messages.tool[tool], () => controller.setTool(tool));
       this.toolButtons.set(tool, btn);
     }
     this.addSeparator();
-    this.undoButton = this.addButton("元に戻す", () => controller.undo());
-    this.redoButton = this.addButton("やり直す", () => controller.redo());
-    this.deleteButton = this.addButton("削除", () => controller.deleteSelection());
+    this.undoButton = this.addButton(messages.undo, () => controller.undo());
+    this.redoButton = this.addButton(messages.redo, () => controller.redo());
+    this.deleteButton = this.addButton(messages.delete, () => controller.deleteSelection());
     this.addSeparator();
     for (const zone of FIELD_ZONE_VALUES) {
-      const btn = this.addButton(FIELD_ZONE_LABELS[zone], () => controller.setFieldZone(zone));
+      const btn = this.addButton(messages.zone[zone], () => controller.setFieldZone(zone));
       this.zoneButtons.set(zone, btn);
     }
     this.addSeparator();
     this.formationPicker = this.addFormationPicker(controller);
     this.addSeparator();
-    this.commitButton = this.addButton("線を確定", () => controller.commitLine());
-    this.cancelButton = this.addButton("取消", () => controller.cancelInteraction());
+    this.commitButton = this.addButton(messages.finishLine, () => controller.commitLine());
+    this.cancelButton = this.addButton(messages.cancel, () => controller.cancelInteraction());
 
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
@@ -117,22 +106,22 @@ export class Toolbar extends Disposable {
   }
 
   /**
-   * 選んだあとはプレースホルダへ戻す。選んだ隊形を表示したままにすると、
-   * 同じ隊形をもう一度選んでも change が起きず、続けて重ねられない。
+   * Returns to the placeholder after a choice. If the chosen formation stayed displayed,
+   * choosing the same formation again would not fire change, so it could not be layered again.
    */
   private addFormationPicker(controller: IEditorUi): HTMLSelectElement {
     const select = document.createElement("select");
     select.className = "playmaker-toolbar__select";
-    select.setAttribute("aria-label", "フォーメーション");
+    select.setAttribute("aria-label", this.messages.formation);
 
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = "フォーメーション読込…";
+    placeholder.textContent = this.messages.loadFormation;
     select.appendChild(placeholder);
 
     for (const side of TEAM_SIDE_VALUES) {
       const group = document.createElement("optgroup");
-      group.label = SIDE_LABELS[side];
+      group.label = this.messages.side[side];
       for (const formation of FORMATION_PRESETS.filter((f) => f.side === side)) {
         const option = document.createElement("option");
         option.value = formation.id;
@@ -158,7 +147,7 @@ export class Toolbar extends Disposable {
     const state = controller.getViewState();
     for (const [tool, btn] of this.toolButtons) {
       btn.setAttribute("aria-pressed", String(tool === state.tool));
-      setEnabled(btn, isToolAvailable(tool, state), TOOL_UNAVAILABLE_REASONS[tool]);
+      setEnabled(btn, isToolAvailable(tool, state), this.toolUnavailableReasons[tool]);
     }
     for (const [zone, btn] of this.zoneButtons) {
       btn.setAttribute("aria-pressed", String(zone === state.fieldZone));
@@ -178,6 +167,9 @@ export class Toolbar extends Disposable {
       option.disabled = formation !== undefined && !canLoadFormation(formation, state);
       isAnyUnavailable ||= option.disabled;
     }
-    setTitle(this.formationPicker, isAnyUnavailable ? FORMATION_LIMIT_REASON : undefined);
+    setTitle(
+      this.formationPicker,
+      isAnyUnavailable ? this.messages.formationLimit(MAX_PLAYERS) : undefined,
+    );
   }
 }

@@ -11,7 +11,7 @@ export function applyPlayerPatch(current: Player, patch: PlayerPatch): Player {
 }
 
 export class AddPlayerCommand implements ICommand {
-  readonly label = "選手の追加";
+  readonly label = "Add player";
   private readonly player: Player;
 
   constructor(player: Player) {
@@ -32,7 +32,7 @@ export class AddPlayerCommand implements ICommand {
 
 /** 起点がその選手の線も一緒に消す。undo は選手と線を元の並びの位置へ戻す。 */
 export class RemovePlayerCommand implements ICommand {
-  readonly label = "選手の削除";
+  readonly label = "Delete player";
   private readonly playerId: string;
   private removal: PlayerRemoval | undefined;
 
@@ -52,7 +52,7 @@ export class RemovePlayerCommand implements ICommand {
 
 /** 位置、ラベル、形状、色、塗りをまとめて編集する。 */
 export class UpdatePlayerCommand implements ICommand {
-  readonly label = "選手の編集";
+  readonly label = "Update player";
   private readonly playerId: string;
   private readonly patch: PlayerPatch;
   private previous: Player | undefined;

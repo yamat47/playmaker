@@ -52,7 +52,8 @@ written in English (the `writing-conventions` skill follows the repository's lan
    English names plus one for `ja`, the PRD and design revisions, the README usage and its "Supported environments"
    sentence about i18n, the demo in English with `?locale=ja`.
 3. docs(api): JSDoc of the public API and the source comments, split in two pull requests
-   (`common/`, then `browser/` and the entry) so each stays reviewable.
+   (`common/`, then `browser/`, the entry, and the comments in `library/demo`) so each stays
+   reviewable.
 4. Tag `v0.2.0` once step 3 is merged, so the published `d.ts` and README are English.
 5. test: test names and comments inside tests.
 6. Afterwards, outside this plan: shrink `library/demo` to a development playground and build

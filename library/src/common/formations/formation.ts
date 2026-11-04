@@ -40,7 +40,7 @@ export function normalizeFormation(raw: unknown): Formation | null {
   }
   return {
     id: isNonEmptyString(raw.id) ? raw.id : "formation",
-    name: isNonEmptyString(raw.name) ? raw.name : "フォーメーション",
+    name: isNonEmptyString(raw.name) ? raw.name : "Formation",
     side: isTeamSide(raw.side) ? raw.side : "offense",
     players,
   };

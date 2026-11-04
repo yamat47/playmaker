@@ -19,7 +19,7 @@ export interface ICommand {
 export function requireApplied<T>(value: T | undefined, command: ICommand): T {
   /* v8 ignore start -- 履歴は apply が済んだコマンドしか積まないので、編集の操作からは届かない。 */
   if (value === undefined) {
-    throw new Error(`${command.label}: apply より前に undo された`);
+    throw new Error(`${command.label}: undone before apply`);
   }
   /* v8 ignore stop */
   return value;

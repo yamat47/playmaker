@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -323,14 +323,14 @@
       <header class="topbar">
         <div class="brand">
           <span class="brand__name">Playmaker</span>
-          <span class="brand__tag">プレー図デザイナー — デモ</span>
+          <span class="brand__tag">Play diagram designer (demo)</span>
         </div>
         <div class="topbar__spacer"></div>
         <div class="topbar__actions">
-          <button id="mode-toggle" class="btn" type="button">view モードへ</button>
-          <button id="clear" class="btn" type="button">クリア</button>
-          <button id="export-png" class="btn" type="button">PNG 出力</button>
-          <button id="dev-toggle" class="btn" type="button" aria-pressed="false">開発者</button>
+          <button id="mode-toggle" class="btn" type="button">Switch to view</button>
+          <button id="clear" class="btn" type="button">Clear</button>
+          <button id="export-png" class="btn" type="button">Export PNG</button>
+          <button id="dev-toggle" class="btn" type="button" aria-pressed="false">Developer</button>
         </div>
       </header>
 
@@ -353,19 +353,19 @@
         </main>
       </div>
 
-      <section id="drawer" class="drawer" aria-label="開発者ツール">
+      <section id="drawer" class="drawer" aria-label="Developer tools">
         <div class="drawer__inner">
           <div class="drawer__row">
             <span class="drawer__label">Fixtures</span>
-            <button id="load-stress" class="btn" type="button">密度ストレス</button>
+            <button id="load-stress" class="btn" type="button">Density stress</button>
             <span id="status" class="drawer__status"></span>
           </div>
           <div class="drawer__row">
             <span class="drawer__label">PlayData JSON</span>
-            <button id="json-export" class="btn" type="button">書き出す</button>
-            <button id="json-import" class="btn" type="button">読み込む（往復）</button>
-            <button id="json-legacy" class="btn" type="button">版なし旧 blob</button>
-            <button id="json-future" class="btn" type="button">未来版(v99) blob</button>
+            <button id="json-export" class="btn" type="button">Export</button>
+            <button id="json-import" class="btn" type="button">Import (round trip)</button>
+            <button id="json-legacy" class="btn" type="button">Legacy blob without version</button>
+            <button id="json-future" class="btn" type="button">Future (v99) blob</button>
             <span id="data-status" class="drawer__status"></span>
           </div>
           <textarea id="json" spellcheck="false" aria-label="PlayData JSON"></textarea>

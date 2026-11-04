@@ -29,7 +29,7 @@ Verify editing behavior with specification tests that use `PlaySession` and `IEd
 Verify the wiring of `new Playmaker(container)` (DOM, pointer, keys, theme variables) by running Chromium through Vitest Browser Mode.
 
 - Put them in `src/playmaker.browser.test.ts`. Verify the editing behavior itself with specification tests; here, verify only
-  that UI operations reach the diagram, plus DOM assembly and teardown. Keep it at 10 to 20 tests
+  that UI operations reach the diagram, plus DOM assembly and teardown. Keep it at 10 to 25 tests
 - Operate through `page` and `userEvent` from `vitest/browser`, and find elements by role and name.
   Pass positions inside the canvas as px from the top-left corner of the canvas
 - Observe only the public API (`getPlayData()`, `fieldZone`, `onChange`) and the DOM placed in the container

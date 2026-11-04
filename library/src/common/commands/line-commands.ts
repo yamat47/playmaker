@@ -11,7 +11,7 @@ export function applyLinePatch(current: Line, patch: LinePatch): Line {
 }
 
 export class AddLineCommand implements ICommand {
-  readonly label = "線の追加";
+  readonly label = "Add line";
   private readonly line: Line;
 
   constructor(line: Line) {
@@ -30,7 +30,7 @@ export class AddLineCommand implements ICommand {
 
 /** undo は線を元の並びの位置へ戻す。 */
 export class RemoveLineCommand implements ICommand {
-  readonly label = "線の削除";
+  readonly label = "Delete line";
   private readonly lineId: string;
   private removal: LineRemoval | undefined;
 
@@ -51,7 +51,7 @@ export class RemoveLineCommand implements ICommand {
 
 /** 種別、補間、waypoint、終点、色、太さをまとめて編集する。 */
 export class UpdateLineCommand implements ICommand {
-  readonly label = "線の編集";
+  readonly label = "Update line";
   private readonly lineId: string;
   private readonly patch: LinePatch;
   private previous: Line | undefined;

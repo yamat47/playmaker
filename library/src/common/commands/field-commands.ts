@@ -3,7 +3,7 @@ import type { IPlayModel } from "../model/play-model.js";
 import { type ICommand, requireApplied } from "./command.js";
 
 export class SetFieldZoneCommand implements ICommand {
-  readonly label = "フィールドゾーンの切替";
+  readonly label = "Switch field zone";
   private readonly zone: FieldZone;
   private previous: FieldZone | undefined;
 

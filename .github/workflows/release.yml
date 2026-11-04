@@ -1,14 +1,14 @@
-# v で始まるタグを push すると、library/ を npm に @yamat47/playmaker として公開する。
-# 公開は取り消せないので、タグは CI が通った main のコミットに打ち、ここでも typecheck、lint、
-# node のテストを通してから公開する。provenance を付けるので、公開した版がこの workflow のこの
-# コミットから出たことを npm 上で辿れる。
+# Pushing a tag that starts with v publishes library/ to npm as @yamat47/playmaker.
+# Publishing cannot be undone, so tags are put on a main commit that passed CI, and this workflow also runs
+# typecheck, lint, and the node tests before publishing. Provenance is attached, so on npm you can trace
+# a published version back to this commit of this workflow.
 #
-# 認証は npm の trusted publishing（OIDC）で、トークンを持たない。npmjs.com のパッケージの設定で、
-# このリポジトリとこのファイル名と environment の release を trusted publisher として登録してある
-# （docs/design.md の「配布」）。
+# Authentication uses npm trusted publishing (OIDC) and holds no token. In the package settings on npmjs.com,
+# this repository, this file name, and the release environment are registered as the trusted publisher
+# (see "Distribution" in docs/design.md).
 #
-# action は SHA で固定するのが原則だが、github-toolkit だけは例外として @main を直接追いかける
-# （ci.yml のコメントを参照）。
+# Actions are pinned by SHA as a rule, but github-toolkit is the one exception and tracks @main directly
+# (see the comment in ci.yml).
 name: Release
 
 on:
@@ -18,7 +18,7 @@ on:
 permissions:
   contents: read
 
-# 公開の途中で止めない。2 つのタグが並んでも順に公開する
+# Do not stop in the middle of publishing. If two tags arrive together, publish them in order
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -31,7 +31,7 @@ jobs:
     environment: release
     permissions:
       contents: read
-      id-token: write # OIDC で npm に身元を示し、provenance に署名する
+      id-token: write # Proves identity to npm via OIDC and signs the provenance
     defaults:
       run:
         working-directory: library
@@ -72,6 +72,6 @@ jobs:
         run: pnpm run build
 
       - name: Publish
-        # access と provenance は package.json の publishConfig にある。
-        # タグの checkout は detached HEAD なので、ブランチの検査は飛ばす
+        # access and provenance are in publishConfig in package.json.
+        # A tag checkout is a detached HEAD, so skip the branch check
         run: pnpm publish --no-git-checks

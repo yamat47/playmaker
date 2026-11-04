@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
 
-# 同一ブランチで新しい push があれば実行中の古い run をキャンセルする
+# Cancel the running older run when a new push arrives on the same branch
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -13,8 +13,8 @@ concurrency:
 permissions:
   contents: read
 
-# ライブラリ本体は library/ にある。ローカルは Docker コンテナの中で動かすが（Makefile）、
-# CI は setup-node の pnpm store キャッシュのほうが速いのでランナーで直接動かす
+# The library itself lives in library/. Locally it runs inside a Docker container (Makefile), but
+# CI runs it directly on the runner because setup-node's pnpm store cache is faster
 defaults:
   run:
     working-directory: library
@@ -25,16 +25,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # action は SHA で固定するのが原則だが、github-toolkit だけは例外として @main を直接追いかける。
-      # 自分で管理しているリポジトリで、上流 action の SHA 固定と Dependabot での更新は toolkit 側で行うため。
-      # toolkit の main の変更は、レビューを通さず次の CI からそのまま入る
+      # Actions are pinned by SHA as a rule, but github-toolkit is the one exception and tracks @main directly.
+      # The author maintains that repository, and pinning upstream actions by SHA and updating them with Dependabot happen on the toolkit side.
+      # Changes to the toolkit's main land as is from the next CI run, without going through review
       - name: Checkout
         uses: yamat47/github-toolkit/actions/checkout@main
         with:
           persist-credentials: false
 
       - name: Setup Node.js with pnpm and install dependencies
-        # pnpm のバージョンは library/package.json の packageManager から、Node は .node-version から読む。
+        # The pnpm version is read from packageManager in library/package.json, and Node from .node-version.
         uses: yamat47/github-toolkit/actions/setup-node-with-pnpm@main
         with:
           node-version-file: .node-version
@@ -54,7 +54,7 @@ jobs:
       - name: Build (Vite library mode)
         run: pnpm run build
 
-  # Chromium の取得と起動に時間がかかるので、verify と並べて走らせる。
+  # Fetching and starting Chromium takes time, so run this alongside verify.
   browser-test:
     name: browser test
     runs-on: ubuntu-latest
@@ -74,8 +74,8 @@ jobs:
           working-directory: library
 
       - name: Install Chromium
-        # lockfile の playwright が想定する版の Chromium と、それを動かす OS のパッケージを入れる。
-        # ブラウザ本体は playwright の版ごとにキャッシュされ、当たれば OS のパッケージだけ入れ直す
+        # Install the Chromium version that the playwright in the lockfile expects, plus the OS packages to run it.
+        # The browser itself is cached per playwright version; on a cache hit, only the OS packages are reinstalled
         uses: yamat47/github-toolkit/actions/setup-playwright-chromium@main
         with:
           working-directory: library
@@ -83,9 +83,9 @@ jobs:
       - name: Browser test (Vitest Browser Mode)
         run: pnpm run test:browser
 
-  # workflow の書き方の検査。zizmor は permissions の抜け、script injection、
-  # SHA で固定していない action などを見つける。public リポジトリなので
-  # SARIF を security タブへ上げることもできるが、PR の中で読めるよう注釈にする
+  # Checks how the workflows are written. zizmor finds missing permissions, script injection,
+  # actions not pinned by SHA, and so on. The repository is public, so SARIF could be uploaded
+  # to the security tab, but annotations are used so the findings can be read within the PR
   lint-workflows:
     name: lint workflows (zizmor)
     runs-on: ubuntu-latest

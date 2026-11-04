@@ -1,60 +1,62 @@
 # Playmaker
 
-アメフトのプレー図を作成・表示する、UI フレームワーク非依存の TypeScript ライブラリ。
-要件は `docs/prd.md`、今の設計とその理由は `docs/design.md`、
-テストの規約は `.claude/rules/testing.md`（テストを触ると自動で読み込まれる）。
+A UI-framework-agnostic TypeScript library for creating and displaying American football play diagrams.
+The requirements are in `docs/prd.md`, the current design and its rationale in `docs/design.md`,
+and the test conventions in `.claude/rules/testing.md` (loaded automatically when you touch tests).
 
-## 規約の置き場
+## Where the conventions live
 
-- コメント、コミット、PR の書き方は `writing-conventions` skill、TypeScript の書き方は `typescript-idioms` skill に従う
-- テストの価値は `test-audit` skill で測る。Dependabot の PR は `review-dependency-bump` skill、
-  skill 更新の PR は `review-skill-update` skill で確かめる
-- `.claude/skills/` のうち frontmatter の `metadata.github-repo` が github-toolkit のものは、取り込んだ版をそのまま使う。
-  直接書き換えない。このリポジトリ固有の決まりはこのファイルと `.claude/rules/` に書き、skill と食い違うときはこちらを優先する
-- `library/src/` を変える前に `docs/design.md` の該当する節を読む。層の分け方、データの形、公開 API の契約、
-  ツールチェーンの回避策など、`docs/design.md` に書いてある設計を変えたら、同じ PR で `docs/design.md` も直す
+- Follow the `writing-conventions` skill for comments, commits, and PRs, and the `typescript-idioms` skill for TypeScript
+- Everything written around code (documents, comments, test names, commits, PRs) is in English. The commit history
+  before the switch to English is Japanese; do not infer the language from it
+- Measure the value of tests with the `test-audit` skill. Check Dependabot PRs with the `review-dependency-bump` skill,
+  and skill update PRs with the `review-skill-update` skill
+- In `.claude/skills/`, use the imported version as is for any skill whose frontmatter `metadata.github-repo` is github-toolkit.
+  Do not edit it directly. Write the rules specific to this repository in this file and in `.claude/rules/`; when they conflict with a skill, these take precedence
+- Read the relevant section of `docs/design.md` before changing `library/src/`. If you change a design decision written in `docs/design.md` (layer boundaries, data shapes, public API contracts,
+  toolchain workarounds, and so on), fix `docs/design.md` in the same PR
 
-## ディレクトリ
+## Directories
 
-| パス | 中身 |
+| Path | Contents |
 |---|---|
-| `library/` | ライブラリ本体（npm パッケージ）。`src/` `demo/` と package.json・tsconfig・vite・biome の設定 |
-| `docker/` | 開発用イメージと compose |
-| `docs/` | 要件・設計・計画 |
-| `Makefile` | 開発コマンドの入口 |
+| `library/` | The library itself (npm package). `src/` `demo/` plus the package.json, tsconfig, vite, and biome configuration |
+| `docker/` | Development image and compose |
+| `docs/` | Requirements, design, and plans |
+| `Makefile` | Entry point for development commands |
 
-規約やドキュメントに出てくる `src/` `demo/` `vite.config.ts` などは `library/` からの相対パス。
+Paths such as `src/` `demo/` `vite.config.ts` in the conventions and documentation are relative to `library/`.
 
-`docs/plans/` には実行中の計画だけを置き、完了したら削除する（経緯は git 履歴に残る）。
+Keep only in-progress plans in `docs/plans/`, and delete them when complete (the history stays in git).
 
-## コマンドは必ず make 経由
+## Always run commands through make
 
-Node / pnpm はホストに入っていない。ツールチェーンは Docker コンテナの中にだけあり、
-`Makefile` がホストから `docker compose -f docker/compose.yaml run` で呼び出す（pnpm は `library/` で動く）。
-**`pnpm` `npm` `npx` `node` `vitest` `tsc` `biome` をホストで直接実行しない**（`.claude/settings.json` の `permissions.deny` で拒否される）。
+Node and pnpm are not installed on the host. The toolchain exists only inside the Docker container, and
+the `Makefile` invokes it from the host with `docker compose -f docker/compose.yaml run` (pnpm runs in `library/`).
+**Do not run `pnpm` `npm` `npx` `node` `vitest` `tsc` `biome` directly on the host** (`permissions.deny` in `.claude/settings.json` rejects them).
 
-| やりたいこと | コマンド |
+| Goal | Command |
 |---|---|
-| CI と同じ検証を全部 | `make check` |
-| テスト（カバレッジゲート込み） | `make test` |
-| テストを 1 ファイルだけ | `make test FILE=library/src/common/base/event.test.ts` |
-| ブラウザテスト（Chromium） | `make test-browser` |
-| 型検査 / lint / 自動修正 | `make typecheck` / `make lint` / `make fix` |
-| ライブラリのビルド | `make build`（`library/dist/`） |
-| 依存の追加・更新 | `make pnpm ARGS="add -D <pkg>"` → lockfile もホストに反映される |
-| その他の pnpm コマンド | `make pnpm ARGS="exec vitest run --reporter=verbose"` など |
-| demo の dev サーバー | `make up`（http://localhost:5173）/ `make logs` / `make down` |
-| 初回・Dockerfile 変更後 | `make setup` |
-| フィールド用フォントの作り直し | `make font`（`library/src/assets/`） |
+| Run every check CI runs | `make check` |
+| Tests (with the coverage gate) | `make test` |
+| Tests for a single file | `make test FILE=library/src/common/base/event.test.ts` |
+| Browser tests (Chromium) | `make test-browser` |
+| Type check / lint / auto-fix | `make typecheck` / `make lint` / `make fix` |
+| Build the library | `make build` (`library/dist/`) |
+| Add or update dependencies | `make pnpm ARGS="add -D <pkg>"` (the lockfile is also updated on the host) |
+| Other pnpm commands | `make pnpm ARGS="exec vitest run --reporter=verbose"` and so on |
+| Dev server for the demo | `make up` (http://localhost:5173) / `make logs` / `make down` |
+| First run, or after changing the Dockerfile | `make setup` |
+| Regenerate the field font | `make font` (`library/src/assets/`) |
 
-- skill や agent の手順が `pnpm run <script>` を指示していたら、上の表の make ターゲットに読み替える
-  （例: create-pr の検証ステップと test-audit の「changed gate」は `make check`、テスト 1 ファイルは `make test FILE=<file>`）
-- `node_modules` は Docker volume の中にある。ホストの `library/node_modules/` は空のマウントポイントなので、
-  中身を読みたいときは `make pnpm ARGS="exec ls node_modules/<pkg>"` を使う
-- pnpm 本体と Node は Dependabot が上げない（Node はイメージだけ上がる）。pnpm は `library/package.json` の
-  `packageManager`、Node は `.node-version` と `docker/Dockerfile` を書き換え、イメージに焼き込むので `make setup` する
-- playwright は Dependabot が上げるが、ブラウザテストの Chromium はその版に合わせてイメージに焼き込むので、上がったら `make setup` する
-- demo をブラウザで確かめる手順は `run-demo` skill にある
-- cloud 版の Claude Code では Docker が動かない。SessionStart hook（`docker/cloud-session-setup.sh`）が
-  `.node-version` の Node と pnpm、依存を入れて `IN_CONTAINER=1` にするので、make はそのまま使える。
-  ただし Docker を操作するホスト専用のターゲット（`setup` `up` `down` `logs` `sh` `clean`）は使えない
+- When a skill or agent procedure tells you to run `pnpm run <script>`, map it to the make target in the table above
+  (for example, the verification step in create-pr and the "changed gate" in test-audit are `make check`, and a single test file is `make test FILE=<file>`)
+- `node_modules` lives inside a Docker volume. `library/node_modules/` on the host is an empty mount point, so
+  use `make pnpm ARGS="exec ls node_modules/<pkg>"` when you need to read its contents
+- Dependabot does not bump pnpm itself or Node (for Node, only the image is bumped). Change `packageManager` in `library/package.json` for pnpm,
+  and `.node-version` and `docker/Dockerfile` for Node, then run `make setup` because they are baked into the image
+- Dependabot bumps playwright, but the Chromium for browser tests is baked into the image to match that version, so run `make setup` after a bump
+- The procedure for checking the demo in a browser is in the `run-demo` skill
+- Docker does not run in the cloud version of Claude Code. The SessionStart hook (`docker/cloud-session-setup.sh`)
+  installs the Node from `.node-version`, pnpm, and the dependencies, and sets `IN_CONTAINER=1`, so make works as is.
+  The host-only targets that operate Docker (`setup` `up` `down` `logs` `sh` `clean`) are not available, though

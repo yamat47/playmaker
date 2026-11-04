@@ -20,8 +20,8 @@
     "rules": {
       "preset": "recommended",
       "style": {
-        // 型だけを使う import に type が付いていないことは、tsc が verbatimModuleSyntax で検出する。
-        // Biome でも検査すると同じ指摘が 2 か所から出るので、tsc に任せる。
+        // tsc detects type-only imports that lack type through verbatimModuleSyntax.
+        // Checking it in Biome too would report the same finding from two places, so leave it to tsc.
         "useImportType": "off",
         "noParameterProperties": "error"
       },
@@ -32,7 +32,7 @@
       }
     }
   },
-  // 同じルールの options は override をまたいでマージされないので、禁止する group は override ごとに全部書く。
+  // Options for the same rule are not merged across overrides, so each override lists all the groups it forbids.
   "overrides": [
     {
       "includes": ["src/common/**/*.test.ts"],
@@ -45,7 +45,7 @@
                 "patterns": [
                   {
                     "group": ["**/browser", "**/browser/**", "**/playmaker.js"],
-                    "message": "common から browser と公開エントリは import しない。DOM に触れる処理は browser に置く。"
+                    "message": "Do not import browser or the public entry from common. Code that touches the DOM belongs in browser."
                   }
                 ]
               }
@@ -65,11 +65,11 @@
                 "patterns": [
                   {
                     "group": ["**/browser", "**/browser/**", "**/playmaker.js"],
-                    "message": "common から browser と公開エントリは import しない。DOM に触れる処理は browser に置く。"
+                    "message": "Do not import browser or the public entry from common. Code that touches the DOM belongs in browser."
                   },
                   {
                     "group": ["**/test-support/**"],
-                    "message": "test-support はテストからだけ使う。build の対象外なので、本体から import すると型定義が壊れる。"
+                    "message": "test-support is used only from tests. It is excluded from the build, so importing it from the main code breaks the type declarations."
                   }
                 ]
               }
@@ -89,7 +89,7 @@
                 "patterns": [
                   {
                     "group": ["**/test-support/**"],
-                    "message": "test-support はテストからだけ使う。build の対象外なので、本体から import すると型定義が壊れる。"
+                    "message": "test-support is used only from tests. It is excluded from the build, so importing it from the main code breaks the type declarations."
                   }
                 ]
               }

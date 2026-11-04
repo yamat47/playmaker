@@ -1,7 +1,7 @@
-// フィールドに描く文字のフォントを、使う文字だけに絞った woff2 にする。`make font` で動かす。
-// 元の ttf は作り直せるようにリポジトリに置いてある（SIL OFL 1.1）。
-// ヤードの数字と選手のラベルに出る英数字と記号だけを入れ、ほかの文字は sans-serif で描く。
-// フォントはビルドで JS に埋め込むので、使わない文字の分だけライブラリが大きくなる。
+// Build a woff2 of the font for text drawn on the field, narrowed to the characters in use. Run with `make font`.
+// The source ttf is kept in the repository so the subset can be regenerated (SIL OFL 1.1).
+// Only the alphanumerics and symbols that appear in yard numbers and player labels are included; other characters are drawn in sans-serif.
+// The font is embedded into the JS at build time, so every unused character makes the library larger.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -15,7 +15,7 @@ const OUTPUT = resolve(root, "src/assets/playmaker-saira-subset.woff2");
 const digits = "0123456789";
 const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const lower = "abcdefghijklmnopqrstuvwxyz";
-// 選手のラベルに使いそうな記号（例: "C/G"、"H-back"、"WILL/MIKE"）と空白。
+// Symbols likely to appear in player labels (for example "C/G", "H-back", "WILL/MIKE") and the space.
 const symbols = " .-/&'(),:#+";
 const CHARS = digits + upper + lower + symbols;
 

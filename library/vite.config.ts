@@ -5,22 +5,22 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
-// demo の dev サーバーは `make up` で起動する（中身は vite demo）。
+// The demo dev server is started with `make up` (which runs vite demo).
 const root = import.meta.dirname;
 
-// TypeScript 7 の typescript パッケージは JS API も lib.*.d.ts も同梱しない。vite-plugin-dts は
-// JS API を @typescript/typescript6 から読むが、api-extractor に渡す lib の場所は typescript
-// パッケージのままなので、Omit などの標準型を解決できず dts の束ねに失敗する。lib の場所は
-// @typescript/typescript6 が依存する @typescript/old（= typescript@6）に向ける。
-// 外す条件は docs/design.md の「TypeScript 7 の回避策」に置く。
+// The typescript package of TypeScript 7 ships neither the JS API nor lib.*.d.ts. vite-plugin-dts reads
+// the JS API from @typescript/typescript6, but the lib location passed to api-extractor still points at the
+// typescript package, so standard types such as Omit cannot be resolved and bundling the dts fails. Point
+// the lib location at @typescript/old (= typescript@6), which @typescript/typescript6 depends on.
+// The conditions for removing this are in "TypeScript 7 workaround" in docs/design.md.
 const requireFromRoot = createRequire(import.meta.url);
 const typescript6 = requireFromRoot.resolve("@typescript/typescript6/package.json");
 const typescriptLibFolder = dirname(
   createRequire(typescript6).resolve("@typescript/old/package.json"),
 );
 
-// playwright の版に合う Chromium が入っていない環境（cloud 版の Claude Code のセッション）では、
-// CHROMIUM_PATH で入っている Chromium を指す。
+// In environments without a Chromium matching the playwright version (cloud Claude Code sessions),
+// point at the installed Chromium with CHROMIUM_PATH.
 function chromiumLaunchOptions(): { executablePath?: string } {
   const executablePath = process.env.CHROMIUM_PATH;
   return executablePath === undefined ? {} : { executablePath };
@@ -28,9 +28,9 @@ function chromiumLaunchOptions(): { executablePath?: string } {
 
 export default defineConfig({
   resolve: {
-    // demo からは、配布版を使う利用者と同じ指定子で src を直接参照する。
+    // From the demo, reference src directly with the same specifiers as a consumer of the distributed version.
     alias: [
-      // 文字列で指定すると "@yamat47/playmaker/styles.css" にも前方一致するので、完全一致の正規表現にする。
+      // A string would also prefix-match "@yamat47/playmaker/styles.css", so use an exact-match regular expression.
       { find: /^@yamat47\/playmaker$/, replacement: resolve(root, "src/playmaker.ts") },
       { find: "@yamat47/playmaker/styles.css", replacement: resolve(root, "src/styles.css") },
     ],
@@ -39,23 +39,23 @@ export default defineConfig({
     lib: {
       entry: resolve(root, "src/playmaker.ts"),
       name: "Playmaker",
-      // 利用側はバンドラ経由の ESM だけなので CJS は出さない。CJS を出すと、
-      // require した利用者にも ESM 用の型が渡って型と実体がずれる。
+      // Consumers use only ESM through a bundler, so no CJS is emitted. Emitting CJS would hand
+      // the ESM types to consumers that `require` it, and the types and the runtime would diverge.
       formats: ["es"],
       fileName: "playmaker",
       cssFileName: "playmaker",
     },
-    // 同梱フォント（woff2）は data URI として JS へ inline する。利用側はフォントのファイルを
-    // 配置したりパスを解決したりしなくてよい。他のアセットは既定に従う。
+    // The bundled font (woff2) is inlined into the JS as a data URI. Consumers do not have to place
+    // the font file or resolve its path. Other assets follow the default.
     assetsInlineLimit: (filePath) => (filePath.endsWith(".woff2") ? true : undefined),
     sourcemap: true,
   },
   plugins: [
     dts({
-      // 型定義を書き出す起点を src に固定するため、build 専用の tsconfig を使う。demo や vite.config.ts を
-      // include に含めると共通の祖先がプロジェクトのルートに上がり、型定義が dist/src/ の下に出てしまう。
+      // Use a build-only tsconfig to pin the root for emitting type declarations to src. Including demo or vite.config.ts
+      // in include raises the common ancestor to the project root, and the type declarations end up under dist/src/.
       tsconfigPath: "tsconfig.build.json",
-      // 型定義は api-extractor で dist/playmaker.d.ts の 1 ファイルに束ねる。
+      // Type declarations are bundled with api-extractor into the single file dist/playmaker.d.ts.
       bundleTypes: {
         invokeOptions: { typescriptCompilerFolder: typescriptLibFolder },
       },
@@ -72,8 +72,8 @@ export default defineConfig({
           exclude: ["src/**/*.browser.test.ts"],
         },
       },
-      // build 用の dts plugin を引き継がないよう、root の設定は extends しない。
-      // Vitest 5 から inline project の extends は既定で true なので、false を明示する。
+      // Do not extend the root config, so the build-only dts plugin is not inherited.
+      // Since Vitest 5, extends defaults to true for inline projects, so set false explicitly.
       {
         extends: false,
         test: {
@@ -84,30 +84,30 @@ export default defineConfig({
             headless: true,
             provider: playwright({ launchOptions: chromiumLaunchOptions() }),
             instances: [{ browser: "chromium" }],
-            // テストの iframe が Playwright のページ（1280x720）に収まらないと、Vitest は iframe を縮めて映す。
-            // 縮めると userEvent に渡す要素内の位置が操作によってずれるので、縮めずに済む大きさにする。
+            // If the test iframe does not fit in the Playwright page (1280x720), Vitest scales the iframe down to show it.
+            // Scaling shifts the in-element positions passed to userEvent depending on the operation, so use a size that needs no scaling.
             viewport: { width: 1000, height: 640 },
-            // 失敗したときのスクリーンショットは .vitest/attachments/ に書き出される。
-            // 画面を見比べる運用はしないので撮らない。
+            // Screenshots on failure are written to .vitest/attachments/.
+            // We do not compare screens as a practice, so do not take them.
             screenshotFailures: false,
           },
         },
       },
     ],
     coverage: {
-      // istanbul と違ってコードを計装しないので、テストが遅くならない。
+      // Unlike istanbul, it does not instrument the code, so the tests do not slow down.
       provider: "v8",
-      // include に一致するファイルは、テストが 1 つも読まなくても 0% として表に出る。
-      // include を絞ると、テストの無いファイルが表から消えて 100% に見えるので、src の下をすべて入れる。
+      // Files matching include appear in the table as 0% even if no test reads them.
+      // Narrowing include hides files without tests from the table and makes it look like 100%, so include everything under src.
       include: ["src/**/*.ts"],
       exclude: ["**/*.test.ts", "**/*.d.ts", "src/test-support/**"],
-      // text はログで未カバーの行を見るため、html は手元でソースと並べて見るため。
+      // text is for seeing uncovered lines in the log, html for viewing side by side with the source locally.
       reporter: ["text", "html"],
       thresholds: {
-        // 落とすのは common だけにする。browser と playmaker.ts は DOM が要り、node のテストでは届かない。
+        // Only common fails the gate. browser and playmaker.ts need the DOM, and the node tests cannot reach them.
         "src/common/**": {
-          // 全体の平均では、よく網羅したファイルが網羅の薄いファイルを隠すので、ファイルごとに判定する。
-          // Vitest 5 から、トップレベルの perFile は glob の閾値に効かない。
+          // In an overall average, well-covered files hide thinly covered ones, so judge per file.
+          // Since Vitest 5, the top-level perFile does not apply to glob thresholds.
           perFile: true,
           lines: 100,
           branches: 100,

@@ -1,7 +1,7 @@
 {
   "name": "@yamat47/playmaker",
   "version": "0.1.1",
-  "description": "アメリカンフットボールのプレー図を作成・表示する JavaScript ライブラリ",
+  "description": "A JavaScript library for creating and displaying American football play diagrams",
   "keywords": [
     "american-football",
     "football",

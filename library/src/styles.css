@@ -1,10 +1,10 @@
 /*
- * 公開の --playmaker-ui-* はここで宣言しない。宣言すると、ホストが祖先の要素で上書きした値が
- * 届かなくなる。既定値は内部用の --_playmaker-ui-* に 1 回だけ書き、各ルールはそちらを読む。
- * Canvas に描く色の既定値は browser/theme/tokens.ts にある。
- * 既定の見た目は Material Design に合わせる。面は紙（影で浮かせる）、押せるものは輪郭の
- * ボタン、押された状態は塗りつぶしのボタンにする。薄い文字や仕切りの色は、公開の変数から
- * color-mix で導くので、ホストが文字色と面の色を暗い配色に変えても追従する。
+ * The public --playmaker-ui-* variables are not declared here. Declaring them would block values that
+ * the host overrides on an ancestor element. Defaults are written once on the internal --_playmaker-ui-* variables, and each rule reads those.
+ * Defaults for the colors drawn on the canvas are in browser/theme/tokens.ts.
+ * The default look follows Material Design. Surfaces are paper (raised with a shadow), pressable things are
+ * outlined buttons, and the pressed state is a filled button. Dim text and divider colors are derived from the
+ * public variables with color-mix, so they follow when the host switches the text and surface colors to a dark scheme.
  */
 .playmaker-root {
   --_playmaker-ui-font: var(--playmaker-ui-font, Roboto, system-ui, sans-serif);
@@ -16,7 +16,7 @@
   );
   --_playmaker-ui-accent: var(--playmaker-ui-accent, #1976d2);
   --_playmaker-ui-accent-text: var(--playmaker-ui-accent-text, #ffffff);
-  /* Material の elevation 1。 */
+  /* Material elevation 1. */
   --_playmaker-ui-shadow:
     0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14),
     0 1px 3px 0 rgba(0, 0, 0, 0.12);
@@ -43,8 +43,8 @@
 }
 
 /*
- * 編集 UI は canvas に描かず HTML で置くので、PNG に書き出すときに UI が入らない。
- * canvas に重ねるとフィールドが隠れるので、grid で canvas の上と横に並べる。
+ * The editing UI is placed as HTML rather than drawn on the canvas, so it does not appear in the exported PNG.
+ * Overlaying it on the canvas would hide the field, so lay it out above and beside the canvas with grid.
  */
 .playmaker-root[data-mode="edit"] {
   display: grid;
@@ -63,8 +63,8 @@
 }
 
 /*
- * 指でのドラッグをページのスクロールやズームに取られると pointercancel で中断される。
- * 入力を受けない view モードでは、図の上でもページをスクロールできるよう残す。
+ * If a finger drag is taken by page scrolling or zooming, it is interrupted with pointercancel.
+ * In view mode, which takes no input, keep page scrolling possible even over the diagram.
  */
 .playmaker-root[data-mode="edit"] .playmaker-canvas {
   touch-action: none;
@@ -84,7 +84,7 @@
   box-shadow: var(--_playmaker-ui-shadow);
 }
 
-/* 輪郭のボタン。ツールバーの操作と、パネルの「既定」に戻すボタンで同じ形にする。 */
+/* Outlined button. The toolbar actions and the panel's reset-to-default button share the same shape. */
 .playmaker-toolbar__button,
 .playmaker-panel__reset {
   font: inherit;
@@ -161,7 +161,7 @@
   box-shadow: var(--_playmaker-ui-shadow);
 }
 
-/* 文字の大きさは root の 14px からの比で決め、ツールバーとパネルが一緒に拡縮するようにする。 */
+/* Font sizes are ratios of the root's 14px, so the toolbar and panel scale together. */
 .playmaker-panel__title {
   margin: 0;
   font-size: 1.15em;
@@ -181,7 +181,7 @@
   gap: 8px;
 }
 
-/* ラベルの箱を消し、中の文字と入力を、ラベルの外に置く部品と同じ行の flex に並べる。 */
+/* Remove the label's box and line up the text and input inside it in the same row flex as the parts placed outside the label. */
 .playmaker-panel__label {
   display: contents;
 }
@@ -220,7 +220,7 @@
   gap: 6px;
 }
 
-/* 選手の色。上の段に枠線、下の段に塗りつぶしを、同じ色が縦に並ぶように置く。列の数はパレットの色の数（palette.ts）。 */
+/* Player colors. Outlines in the top row and fills in the bottom row, with the same color stacked vertically. The number of columns is the number of palette colors (palette.ts). */
 .playmaker-panel__swatches--rows {
   display: grid;
   grid-template-columns: repeat(4, auto);

@@ -1,6 +1,6 @@
-# 開発コマンドの入口。Node / pnpm はコンテナ（docker/compose.yaml）の中にしかない前提で、
-# ホストからは docker compose 経由、Dev Containers のターミナルからは直接 pnpm を呼ぶ。
-# pnpm はどちらも library/ で動く。
+# Entry point for development commands. Node / pnpm exist only inside the container (docker/compose.yaml):
+# the host goes through docker compose, and a Dev Containers terminal calls pnpm directly.
+# In both cases pnpm runs in library/.
 
 .DEFAULT_GOAL := help
 
@@ -12,50 +12,50 @@ else
 PNPM := $(COMPOSE) run --rm workspace pnpm
 endif
 
-# FILE はリポジトリのルートからでも library/ からでも書けるようにする
+# Allow FILE to be written from the repository root or from library/
 TEST_FILE := $(patsubst library/%,%,$(FILE))
 
-# docker を操作するターゲットはホスト専用（コンテナ内には docker がない）
+# Targets that operate docker are host only (there is no docker inside the container)
 define host_only
-	@if [ -n "$$IN_CONTAINER" ]; then echo "make $@ はホストで実行してください" >&2; exit 1; fi
+	@if [ -n "$$IN_CONTAINER" ]; then echo "run make $@ on the host" >&2; exit 1; fi
 endef
 
 .PHONY: help
-help: ## ターゲット一覧を表示する
+help: ## Show the list of targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  make %-12s %s\n", $$1, $$2}'
 
 .PHONY: setup
-setup: ## イメージをビルドして依存を入れる（初回・Dockerfile 変更時）
+setup: ## Build the image and install dependencies (first time, and when the Dockerfile changes)
 	$(host_only)
-	@# workspace と dev は同じイメージなので片方だけビルドする（両方だと並行ビルドがタグを取り合う）
+	@# workspace and dev share the same image, so build only one (building both makes the parallel builds fight over the tag)
 	$(COMPOSE) build workspace
 	$(MAKE) install
 
 .PHONY: install
-install: ## pnpm install（package.json / lockfile 変更時）
+install: ## pnpm install (when package.json / lockfile change)
 	$(PNPM) install
 
 .PHONY: up
-up: ## demo の dev サーバーをバックグラウンドで起動する（http://localhost:5173）
+up: ## Start the demo dev server in the background (http://localhost:5173)
 	$(host_only)
 	$(COMPOSE) up -d --wait dev
 
 .PHONY: down
-down: ## コンテナを止める
+down: ## Stop the containers
 	$(host_only)
 	$(COMPOSE) down
 
 .PHONY: logs
-logs: ## dev サーバーのログを追う
+logs: ## Follow the dev server logs
 	$(host_only)
 	$(COMPOSE) logs -f dev
 
 .PHONY: build
-build: ## ライブラリをビルドする（library/dist/）
+build: ## Build the library (library/dist/)
 	$(PNPM) run build
 
 .PHONY: test
-test: ## テストを実行する（カバレッジゲート込み）。FILE= で 1 ファイルだけ（ゲートなし）
+test: ## Run the tests (with the coverage gate). FILE= runs a single file (no gate)
 ifdef FILE
 	$(PNPM) exec vitest run $(TEST_FILE)
 else
@@ -63,43 +63,43 @@ else
 endif
 
 .PHONY: test-browser
-test-browser: ## Playmaker の結線を Chromium で確かめる
+test-browser: ## Check Playmaker's wiring in Chromium
 	$(PNPM) run test:browser
 
 .PHONY: test-watch
-test-watch: ## テストを watch モードで実行する
+test-watch: ## Run the tests in watch mode
 	$(PNPM) run test:watch
 
 .PHONY: typecheck
-typecheck: ## 型検査
+typecheck: ## Typecheck
 	$(PNPM) run typecheck
 
 .PHONY: lint
-lint: ## Biome で検査する
+lint: ## Check with Biome
 	$(PNPM) run lint
 
 .PHONY: fix
-fix: ## Biome で自動修正する
+fix: ## Auto-fix with Biome
 	$(PNPM) run lint:fix
 
 .PHONY: check
-check: ## CI と同じ検証（typecheck / lint / test / test-browser / build）
+check: ## The same verification as CI (typecheck / lint / test / test-browser / build)
 	$(PNPM) run check
 
 .PHONY: font
-font: ## フィールド描画用フォントのサブセットを作り直す（library/src/assets/）
+font: ## Regenerate the font subset for drawing the field (library/src/assets/)
 	$(PNPM) run font
 
 .PHONY: pnpm
-pnpm: ## 任意の pnpm コマンド（例: make pnpm ARGS="add -D foo"）
+pnpm: ## Any pnpm command (example: make pnpm ARGS="add -D foo")
 	$(PNPM) $(ARGS)
 
 .PHONY: sh
-sh: ## コンテナのシェルに入る
+sh: ## Open a shell in the container
 	$(host_only)
 	$(COMPOSE) run --rm workspace bash
 
 .PHONY: clean
-clean: ## コンテナと volume（node_modules・pnpm store）を消す
+clean: ## Remove the containers and volumes (node_modules and pnpm store)
 	$(host_only)
 	$(COMPOSE) down -v

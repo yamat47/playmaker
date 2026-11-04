@@ -1,231 +1,231 @@
 # Playmaker - Product Requirements Document
 
-## 1. 背景
+## 1. Background
 
-Playmaker は、アメリカンフットボールのプレー図を作成・表示するための JavaScript ライブラリである。
-日本国内のアメフト指導者向けに提供する商用ソフトウェアの「図作成コア」を独立したライブラリとして切り出したもの。
+Playmaker is a JavaScript library for creating and displaying American football play diagrams.
+It is the "diagram-authoring core" of the commercial software for American football coaches in Japan, split out as a standalone library.
 
-### 1.1 なぜ別リポジトリのライブラリとして切り出すか
+### 1.1 Why split it out as a library in a separate repository
 
-図作成という関心領域は、ホスト側（プレーブック管理、ユーザー管理、データ永続化、共有など）とは性質が異なる。
-描画・編集 UX は密度高く仕上げる必要がある一方、ホスト側は業務フローや権限設計が主題になる。
-両者を同じリポジトリで抱えると、どちらの関心にも集中しにくい。
+Diagram authoring is a different kind of concern from the host side (playbook management, user management, data persistence, sharing, and so on).
+The drawing and editing UX needs dense polish, while the host side centers on business flows and permission design.
+Keeping both in the same repository makes it hard to focus on either concern.
 
-また、商用ソフトウェアが将来リライトや置き換えの可能性を抱えていても、
-図作成ライブラリは長く使い続けられるコア資産として位置付けたい。
+Also, even if the commercial software may be rewritten or replaced in the future,
+the diagram library is meant to be a core asset that stays in use for a long time.
 
-### 1.2 商用ソフトウェアとの関係
+### 1.2 Relationship to the commercial software
 
-Playmaker を組み込んだ商用ソフトウェアは別リポジトリで開発する。
-このライブラリはそこに組み込まれる「コンポーネント」であり、商用ソフト側の責務（永続化、認証、共有、チーム管理など）は持たない。
+The commercial software that embeds Playmaker is developed in a separate repository.
+This library is a "component" embedded there. It does not take on the responsibilities of the commercial software (persistence, authentication, sharing, team management, and so on).
 
-商用ソフトの詳細な仕様はこの PRD のスコープ外とし、別リポジトリの PRD で管理する。
+The detailed specification of the commercial software is out of scope for this PRD and is managed in the PRD of that separate repository.
 
-## 2. スコープ
+## 2. Scope
 
-### 2.1 このライブラリが担うもの
+### 2.1 What this library is responsible for
 
-- アメフトのプレー図の **描画**（フィールド、選手、線）
-- プレー図の **編集 UI**（ツールバー、プロパティパネル、操作）
-- プレー図の **データ表現**（`PlayData` の入出力、バージョニング）
-- プレー図の **画像エクスポート**（PNG）
+- **Rendering** American football play diagrams (field, players, lines)
+- The **editing UI** for play diagrams (toolbar, property panel, operations)
+- The **data representation** of play diagrams (`PlayData` input and output, versioning)
+- **Image export** of play diagrams (PNG)
 
-### 2.2 商用ソフトウェア側の責務（このライブラリは担わない）
+### 2.2 Responsibilities of the commercial software (not handled by this library)
 
-- データの永続化（サーバ / DB への保存・読み込み）
-- ユーザー認証・権限管理
-- チーム管理・メンバー管理
-- プレーブック全体の管理（複数プレーの集約・並び替え・カテゴリ分け）
-- プレー間の共有・コメント
-- アクセスログ・閲覧トラッキング
-- 商用ソフト独自の業務フロー
+- Data persistence (saving to and loading from a server / DB)
+- User authentication and permission management
+- Team management and member management
+- Management of the playbook as a whole (aggregating, reordering, and categorizing multiple plays)
+- Sharing and comments between plays
+- Access logs and view tracking
+- Business flows specific to the commercial software
 
-## 3. 想定ユーザー
+## 3. Target users
 
-### 3.1 一次ユーザー（ライブラリの直接の使い手）
+### 3.1 Primary users (the direct users of the library)
 
-**商用ソフトウェアを開発する作り手自身。** ライブラリは npm に公開し（MIT）、外部の開発者も使えるが、要件は作り手の商用ソフトの都合で決める。外部からの要望に合わせて範囲を広げることはしない。
+**The author who develops the commercial software.** The library is published to npm (MIT) and external developers can use it, but the requirements are decided by the needs of the author's commercial software. The scope is not widened to match requests from outside.
 
-一次ユーザーにとっての価値：
+Value for the primary users:
 
-- 薄いラッパーと `onChange` ハンドラを書けば、プレー図作成・表示機能を商用ソフトに組み込める
-- 商用ソフトの UI トーンに合わせて見た目を CSS 変数で調整できる
-- プレーデータ（`PlayData`）を自分の DB スキーマに素直に保存できる
+- Writing a thin wrapper and an `onChange` handler is enough to embed play diagram creation and display in the commercial software
+- The appearance can be adjusted with CSS variables to match the UI tone of the commercial software
+- Play data (`PlayData`) can be stored directly in their own DB schema
 
-### 3.2 二次ユーザー（エンドユーザー）
+### 3.2 Secondary users (end users)
 
-**日本国内のアメリカンフットボール指導者・コーチ。** 練習・試合・ミーティングで使うプレー図を作成し、選手やスタッフに共有する人たち。
+**American football coaches in Japan.** People who create play diagrams for practice, games, and meetings and share them with players and staff.
 
-ただし二次ユーザー体験の全体設計は商用ソフト側で担う。このライブラリは「図を描く・編集する・表示する」部分の体験だけを提供し、
-それ以外（プレーブックの構成、共有、閲覧フロー、通知など）は商用ソフト側で設計する。
+The overall design of the secondary user experience is the responsibility of the commercial software. This library provides only the "draw, edit, and display a diagram" part of the experience.
+Everything else (playbook structure, sharing, viewing flow, notifications, and so on) is designed on the commercial software side.
 
-## 4. 大切にする価値
+## 4. Values
 
-### 4.1 最優先: 商用ソフトへの組み込みやすさ
+### 4.1 Top priority: ease of embedding in the commercial software
 
-このライブラリの唯一の最優先価値は、商用ソフトへの **組み込みやすさ** である。
-エンドユーザー体験の磨き込みや出力品質の極大化、アメフト戦術表現の厳密性は、この価値の次に来る。
+The single top-priority value of this library is **ease of embedding** in the commercial software.
+Polishing the end-user experience, maximizing output quality, and rigor in expressing football tactics come after this value.
 
-「組み込みやすさ」を支える副次的な原則：
+Secondary principles that support "ease of embedding":
 
-- **UI フレームワーク非依存**: 商用ソフトの技術選定（React / Vue / vanilla など）に縛られない
-- **CSS 変数によるスタイルカスタマイズ**: 商用ソフトのデザインシステムに合わせた外観調整が CSS だけで完結
-- **フックによる振る舞い制御**: `onChange` 等で商用ソフト側に状態変更を通知し、永続化や業務ロジックは商用ソフト側に委ねる
-- **データ可搬性**: `PlayData` は商用ソフトの DB に素直に保存でき、将来のスキーマ変更に備えたバージョニングを持つ
+- **UI framework independence**: not tied to the technology choices of the commercial software (React / Vue / vanilla, and so on)
+- **Style customization through CSS variables**: adjusting the appearance to the design system of the commercial software is done with CSS alone
+- **Behavior control through hooks**: state changes are reported to the commercial software through `onChange` and similar hooks, and persistence and business logic are left to the commercial software
+- **Data portability**: `PlayData` can be stored directly in the DB of the commercial software and carries versioning to prepare for future schema changes
 
-### 4.2 トレードオフの方針
+### 4.2 Trade-off policy
 
-上記の優先順序は、機能追加や設計判断で迷ったときの拠り所として使う。
+The priority order above is the reference point when a feature addition or design decision is in doubt.
 
-- 組み込みやすさと、エンドユーザーの操作性が衝突したら → **組み込みやすさを優先**、エンドユーザー側は商用ソフトで調整
-- 組み込みやすさと、出力画像の美しさが衝突したら → **組み込みやすさを優先**、画質は許容範囲で妥協
-- 組み込みやすさと、戦術表現の豊かさが衝突したら → **組み込みやすさを優先**、表現範囲は意図的に絞る
+- When ease of embedding conflicts with end-user usability: **prioritize ease of embedding**, and adjust the end-user side in the commercial software
+- When ease of embedding conflicts with the beauty of the output image: **prioritize ease of embedding**, and accept image quality within a tolerable range
+- When ease of embedding conflicts with richness of tactical expression: **prioritize ease of embedding**, and deliberately narrow the range of expression
 
-## 5. 機能要件（概要）
+## 5. Functional requirements (overview)
 
-MVP として以下の機能セットを提供する。API 署名・型定義・レンダリング詳細は `docs/design.md` で管理する。
+The MVP provides the following feature set. API signatures, type definitions, and rendering details are managed in `docs/design.md`.
 
-### 5.1 フィールド描画
+### 5.1 Field rendering
 
-- アメフトのフィールドをハーフフィールド（約 30 ヤード分）で描画する
-- フィールドゾーン切替: `middle`（中央付近）/ `redzone`（相手レッドゾーン）/ `own-redzone`（自陣レッドゾーン）
-- ヤードライン、ハッシュマーク、ヤード番号を描画する
+- Draw the football field as a half field (about 30 yards)
+- Field zone switching: `middle` (around midfield) / `redzone` (opponent's red zone) / `own-redzone` (own red zone)
+- Draw yard lines, hash marks, and yard numbers
 
-### 5.2 選手の配置
+### 5.2 Player placement
 
-- 選手をフィールド上に配置できる。置ける位置は 0.5 ヤード刻みの格子点で、ドラッグでもデータの読み込みでも格子に寄せる。
-  要素同士を揃える操作が無くても、縦横がきれいに揃うようにするため。1 つの図に置けるのは 64 人まで（典型的な図は 22 人ほど）
-- 各選手は形状（丸と四角の 2 種）とラベルで表示する
-- 選手ごとに色と塗り（枠線だけか塗りつぶしか）を設定でき、既定に戻せる。色はパネルで 4 色から選ぶ
+- Players can be placed on the field. Available positions are grid points at 0.5-yard steps, and both dragging and loading data snap to the grid.
+  This keeps rows and columns aligned without an operation for aligning elements to each other. One diagram holds up to 64 players (a typical diagram has about 22)
+- Each player is displayed with a shape (circle or square) and a label
+- Color and fill (outline or solid) can be set per player and reset to the default. The color is chosen from 4 colors in the panel
 
-### 5.3 線の描画
+### 5.3 Line drawing
 
-3 種類の線を描画できる。
+Three kinds of lines can be drawn.
 
-- **ルート線 (route)**: レシーバー / ランナーの走路。終点に矢印
-- **ブロッキング線 (block)**: OL 等のブロックアサインメント。終点に T 字のバー
-- **モーション線 (motion)**: スナップ前の選手移動。破線で、終点に矢印
+- **Route line (route)**: the path of a receiver / runner. Arrowhead at the end
+- **Block line (block)**: the block assignment of an OL and others. T-shaped bar at the end
+- **Motion line (motion)**: player movement before the snap. Dashed, with an arrowhead at the end
 
-種別は色ではなく終点の記法と線種で見分ける。どの種別も、直線と、制御点をすべて通る曲線のどちらでも描ける。
-色と太さは線ごとに設定でき、既定に戻せる。
+The kind is distinguished by the end marker and the line style, not by color. Every kind can be drawn either as a straight line or as a curve that passes through all control points.
+Color and width can be set per line and reset to the default.
 
-各線は起点（選手）と終点、0 個以上の waypoint で定義する。1 つの図に 128 本、1 本あたり waypoint 32 個まで。
+Each line is defined by a start point (a player), an end point, and zero or more waypoints. One diagram holds up to 128 lines, and each line up to 32 waypoints.
 
-### 5.4 edit モード
+### 5.4 edit mode
 
-edit モードでは以下の編集操作が可能：
+In edit mode the following editing operations are available:
 
-- 選手の追加 / 移動 / 削除 / プロパティ編集（ラベル・形状・色と塗り）
-- 線の描画 / 削除 / プロパティ編集（色・太さ・補間方法）/ waypoint 編集
+- Add / move / delete players and edit their properties (label, shape, color and fill)
+- Draw / delete lines, edit their properties (color, width, interpolation), and edit waypoints
 - Undo / Redo
-- フォーメーションテンプレートの読み込み
-- フィールドゾーン切替
+- Load formation templates
+- Switch the field zone
 
-ツールバーとプロパティパネルを Canvas 周辺に配置する。
+The toolbar and property panel are placed around the Canvas.
 
-### 5.5 view モード
+### 5.5 view mode
 
-プレー図を読み取り専用で表示する。編集 UI（ツールバー、プロパティパネル、ドラッグ操作など）は無効化する。
+Displays the play diagram read-only. The editing UI (toolbar, property panel, drag operations, and so on) is disabled.
 
-### 5.6 フォーメーションテンプレート
+### 5.6 Formation templates
 
-プリセットのフォーメーション（オフェンス・ディフェンスの代表的な隊形）を読み込んで選手を自動配置する。
-商用ソフト側でカスタムテンプレートを管理し、外部から渡して読み込むこともできる。
-線まで描き込んだ代表的なプレーも同梱し、そのまま読み込める。
+Load a preset formation (typical offensive and defensive formations) to place players automatically.
+The commercial software can also manage custom templates and pass them in from outside to be loaded.
+Typical plays with lines already drawn are also bundled and can be loaded as they are.
 
-### 5.7 エクスポート
+### 5.7 Export
 
-プレー図を PNG 画像として出力できる。エクスポート時は編集 UI を含めない。
+The play diagram can be output as a PNG image. The export does not include the editing UI.
 
-### 5.8 商用ソフトへのデータ連携
+### 5.8 Data exchange with the commercial software
 
-- 初期化時に `PlayData` を渡せる
-- 編集操作のたびに `onChange` で最新の `PlayData` を通知する
-- 商用ソフト側で永続化した `PlayData` を後から再読み込みできる
+- `PlayData` can be passed at initialization
+- On every editing operation, the latest `PlayData` is reported through `onChange`
+- `PlayData` persisted by the commercial software can be loaded again later
 
-## 6. 非機能要件
+## 6. Non-functional requirements
 
-### 6.1 ブラウザサポート
+### 6.1 Browser support
 
-モダンブラウザ（Chrome / Firefox / Safari / Edge の最新 2 バージョン）。**デスクトップ環境のみ**。
+Modern browsers (the latest 2 versions of Chrome / Firefox / Safari / Edge). **Desktop environments only**.
 
-### 6.2 パフォーマンス
+### 6.2 Performance
 
-典型的なアメフトのフォーメーション（選手 22 人 + 線 20 本程度）を遅延なく描画・操作できる。
+A typical football formation (about 22 players + 20 lines) can be drawn and operated without lag.
 
-### 6.3 UI フレームワーク非依存
+### 6.3 UI framework independence
 
-React / Vue / 他のフレームワーク / vanilla JS のどれからでも使える。
-ライブラリ自体は特定のフレームワークに依存しない。
+Usable from React / Vue / other frameworks / vanilla JS.
+The library itself does not depend on any specific framework.
 
-### 6.4 ランタイム依存最小
+### 6.4 Minimal runtime dependencies
 
-商用ソフトのバンドルに乗せても違和感のない範囲の依存に抑える。UI フレームワークへの依存は持ち込まない。
+Dependencies are kept to a range that fits naturally in the bundle of the commercial software. No dependency on a UI framework is brought in.
 
-### 6.5 CSS 変数によるスタイルカスタマイズ
+### 6.5 Style customization through CSS variables
 
-フィールド・選手・線・選択の配色と、ツールバー・プロパティパネルの配色とフォントを CSS 変数（`--playmaker-*`）で提供する。
-商用ソフト側が Playmaker を置いた要素かその祖先で CSS 変数を上書きすることで、アプリのデザインシステムに合わせられる。
-ヤード番号と選手ラベルのフォントは同梱のものに固定し、上書きできない。
+The colors of the field, players, lines, and selection, and the colors and fonts of the toolbar and property panel, are provided as CSS variables (`--playmaker-*`).
+The commercial software overrides the CSS variables on the element where Playmaker is placed or on one of its ancestors to match its design system.
+The fonts for yard numbers and player labels are fixed to the bundled ones and cannot be overridden.
 
-### 6.6 データバージョニング
+### 6.6 Data versioning
 
-`PlayData` は `version` フィールドを持つ。将来スキーマを変更する場合は、旧バージョンを現行に変換するマイグレーション手段を提供する。
-`PlayData` の永続化・復元は商用ソフト側で行うため、バージョン管理の契約は明確にしておく。
+`PlayData` has a `version` field. When the schema changes in the future, a migration path that converts old versions to the current one is provided.
+Because the commercial software persists and restores `PlayData`, the version management contract is kept explicit.
 
-## 7. 成功基準
+## 7. Success criteria
 
-MVP の完了判定：
+MVP completion is judged by:
 
-- 上記 **機能要件（5 章）のすべてが仕様通り動作する**
-- ユニットテストおよび統合テストが通る
+- **All of the functional requirements above (chapter 5) work as specified**
+- Unit tests and integration tests pass
 
-実使用での評価（コーチが実際に使って満足するか、商用ソフトの事業性など）は、商用ソフト側の PRD の責務とする。
-このライブラリ単体の PRD では、**機能カバレッジとテスト通過** をもって完了とする。
+Evaluation in real use (whether coaches are satisfied when they actually use it, the business viability of the commercial software, and so on) is the responsibility of the PRD of the commercial software.
+In the PRD for this library alone, completion is defined as **feature coverage and passing tests**.
 
-## 8. 対象外
+## 8. Out of scope
 
-以下は意識的にスコープから外す。
+The following are deliberately left out of scope.
 
-### 8.1 機能スコープから外すもの
+### 8.1 Out of the feature scope
 
-- アニメーション（プレーの動き再生）
-- PDF / SVG エクスポート（PNG のみ提供）
-- 動画連携
-- LOS（Line of Scrimmage）の描画
-- マルチセレクト（複数選手 / 線の同時選択・一括操作）
-- 要素同士の位置を揃える操作（PowerPoint の整列のような機能。一括移動が要るので作らず、位置を格子点に限ることで代える）
-- ズーム / パン
-- コピー & ペースト
-- Undo / Redo と、線の作図の確定・取り消し以外のキーボードショートカット
-- コンテナサイズの最小値・最大値制約（消費側の責務）
+- Animation (playing back the motion of a play)
+- PDF / SVG export (only PNG is provided)
+- Video integration
+- Drawing the LOS (Line of Scrimmage)
+- Multi-select (selecting multiple players / lines at once and operating on them in bulk)
+- Operations that align elements to each other (features like PowerPoint's alignment. This needs bulk movement, so it is not built. Restricting positions to grid points replaces it)
+- Zoom / pan
+- Copy & paste
+- Keyboard shortcuts other than Undo / Redo and committing or canceling a line drawing
+- Minimum and maximum constraints on the container size (the consumer's responsibility)
 
-### 8.2 商用ソフト側の責務にするもの
+### 8.2 Responsibilities of the commercial software
 
-- データの永続化
-- ユーザー認証・チーム管理
-- 他ユーザーとの共有・閲覧トラッキング
-- プレーブック全体の管理
-- コメント・アノテーション
+- Data persistence
+- User authentication and team management
+- Sharing with other users and view tracking
+- Management of the playbook as a whole
+- Comments and annotations
 
-### 8.3 プラットフォーム・環境として外すもの
+### 8.3 Platforms and environments left out
 
-- **モバイル専用 UI / タッチ操作のサポート**（PC + マウス専用）
-- **アクセシビリティ（a11y）対応**
-- **多言語対応（i18n）**（UI は日本語のみ）
+- **Mobile-specific UI / touch support** (PC + mouse only)
+- **Accessibility (a11y) support**
+- **Multilingual support (i18n)** (the UI is Japanese only)
 
-### 8.4 配布・運営方針として外すもの
+### 8.4 Distribution and operation policies left out
 
-- **外部の利用者に向けた運営**（要望の受け付け、互換性の約束、サポート）。npm に公開し MIT で配るが、要件は作り手の商用ソフトの都合で決める
-- プライベートレジストリや git 依存での配布（npm に一本化する）
+- **Operation for external consumers** (accepting requests, compatibility promises, support). The library is published to npm and distributed under MIT, but the requirements are decided by the needs of the author's commercial software
+- Distribution through a private registry or git dependencies (npm is the only channel)
 
-## 9. ベンチマーク
+## 9. Benchmark
 
-図作成機能の参考として [Hudl](https://www.hudl.com/) のダイアグラム機能を参照する。
-ただし、Hudl が提供する以下の機能はこのライブラリのスコープ外（8 章参照）：
+The diagram feature of [Hudl](https://www.hudl.com/) is the reference for the diagram-authoring features.
+However, the following features that Hudl provides are out of scope for this library (see chapter 8):
 
-- プレー再生アニメーション
-- 動画との連携
-- チーム内共有・閲覧トラッキング
+- Play playback animation
+- Video integration
+- Sharing within a team and view tracking
 
-Hudl との差別化軸（価格・日本市場向け UX・商用ソフト独自機能など）は商用ソフト側の PRD で扱う。
+The axes of differentiation from Hudl (price, UX for the Japanese market, features specific to the commercial software, and so on) are handled in the PRD of the commercial software.

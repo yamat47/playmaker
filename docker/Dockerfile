@@ -1,38 +1,38 @@
-# 開発用イメージ。ホストに Node / pnpm を入れず、ツールチェーンはすべてこの中で動かす。
-# Node のメジャーはリポジトリのルートの .node-version（CI が読む）と揃える。
-# Dependabot はここだけを上げるので、その PR では .node-version も同じ版に直す。
-# ビルドコンテキストはリポジトリのルート（docker/compose.yaml）。
+# Development image. Node / pnpm are not installed on the host; the whole toolchain runs in here.
+# The Node major matches .node-version at the repository root (which CI reads).
+# Dependabot bumps only this file, so in that PR, also update .node-version to the same version.
+# The build context is the repository root (docker/compose.yaml).
 FROM node:26-trixie-slim
 
-# git: Dev Containers 内の VS Code から commit / diff するため
-# make: Dev Containers のターミナルからも Makefile の同じターゲットを使うため
+# git: for commit / diff from VS Code inside Dev Containers
+# make: so the same Makefile targets can be used from a Dev Containers terminal too
 RUN apt-get update \
   && apt-get install -y --no-install-recommends git make ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# named volume は初回マウント時にイメージ側のディレクトリの所有者を引き継ぐ。
-# 先に node 所有で作っておかないと root 所有になり、node ユーザーで install できない
+# A named volume inherits the owner of the image-side directory on its first mount.
+# Unless created as node-owned first, it becomes root-owned and the node user cannot install
 RUN mkdir -p /workspace/library/node_modules /home/node/.local/share/pnpm/store \
   && chown -R node:node /workspace /home/node/.local
 
-# Dev Containers のターミナルは library/ で開くので、ルートの Makefile を使えるようにする
+# A Dev Containers terminal opens in library/, so make the root Makefile usable from there
 RUN echo "alias make='make -C /workspace'" >> /home/node/.bashrc
 
-# store の場所を明示する。既定のままだと node_modules の volume と別ファイルシステムに
-# なるのを嫌って、pnpm がバインドマウント（リポジトリ）の直下に .pnpm-store を作る
+# State the store location explicitly. With the default, pnpm dislikes the store being on a different
+# filesystem from the node_modules volume and creates .pnpm-store right under the bind mount (the repository)
 ENV pnpm_config_store_dir=/home/node/.local/share/pnpm/store
 
-# Makefile はこれを見て、docker compose を経由せず pnpm を直接呼ぶ
+# The Makefile checks this and calls pnpm directly instead of going through docker compose
 ENV IN_CONTAINER=1
 
-# ブラウザテストの Chromium は、package.json で固定した playwright と同じ版の install で入れる。
-# Debian の chromium は版が playwright の想定とずれる。入れる先の既定は root のホームで、
-# テストを動かす node ユーザーから読めないので、共有の場所を指す
+# Chromium for the browser tests is installed with the install of the same playwright version pinned in package.json.
+# Debian's chromium version drifts from what playwright expects. The default install location is root's home,
+# which the node user running the tests cannot read, so point at a shared location
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# pnpm は packageManager と同じ版を焼き込む。ずれていると pnpm が起動のたびに
-# 指定版をダウンロードし直し、docker compose run --rm では毎回それが起きる。
-# package.json は依存更新のたびに変わり、この層のキャッシュが崩れるので、最後の層に置く
+# Bake the same pnpm version as packageManager into the image. If they differ, pnpm re-downloads
+# the specified version on every start, and with docker compose run --rm that happens every time.
+# package.json changes on every dependency update and invalidates this layer's cache, so keep it as the last layer
 COPY library/package.json /tmp/package.json
 RUN npm install -g "$(node -p "require('/tmp/package.json').packageManager")" \
   && npx -y "playwright@$(node -p "require('/tmp/package.json').devDependencies.playwright")" \

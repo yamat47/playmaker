@@ -2,19 +2,19 @@
   "name": "playmaker",
   "dockerComposeFile": "../docker/compose.yaml",
   "service": "workspace",
-  // library/ を開く。Biome / TypeScript / Vitest の拡張はワークスペース直下の
-  // node_modules と設定ファイルを探すため、リポジトリのルートで開くと動かない
+  // Open library/. The Biome / TypeScript / Vitest extensions look for node_modules and the
+  // configuration files directly under the workspace, so they do not work when the repository root is opened
   "workspaceFolder": "/workspace/library",
   "remoteUser": "node",
   "postCreateCommand": "pnpm install",
   "forwardPorts": [5173],
   "customizations": {
     "vscode": {
-      // TypeScript 7 の typescript パッケージは tsserver を同梱しないので、エディタの型検査は
-      // Native Preview 拡張の tsgo で動かす。typescript.tsdk で node_modules を指すと言語機能が止まる
+      // The typescript package of TypeScript 7 does not bundle tsserver, so editor type checking
+      // runs on tsgo from the Native Preview extension. Pointing typescript.tsdk at node_modules stops the language features
       "extensions": ["biomejs.biome", "vitest.explorer", "TypeScriptTeam.native-preview"],
       "settings": {
-        // .git はひとつ上（リポジトリのルート）にある
+        // .git is one level up (at the repository root)
         "git.openRepositoryInParentFolders": "always",
         "editor.defaultFormatter": "biomejs.biome",
         "editor.formatOnSave": true,

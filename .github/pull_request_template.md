@@ -1,11 +1,11 @@
-## 背景
+## Background
 
-<!-- 利用者から見て何が起きていて、この PR で何が変わるか。Issue や台帳の項目があればリンクする。書くことがなければ節ごと消す。 -->
+<!-- What the user runs into, and what this PR changes. Link the issue or the backlog item if there is one. Delete the whole section if there is nothing to write. -->
 
-## やらなかったこと
+## Not done
 
-<!-- 検討して採らなかった案、意図して範囲から外したこと、分かっている制約。書くことがなければ節ごと消す。 -->
+<!-- Options considered and not taken, things intentionally left out of scope, and known constraints. Delete the whole section if there is nothing to write. -->
 
-## 見てほしいところ
+## Where to look
 
-<!-- レビューで判断してほしいトレードオフ、破壊的変更、確かめきれていないこと。1 文 1 行で。書くことがなければ節ごと消す。 -->
+<!-- Trade-offs you want the reviewer to judge, breaking changes, and things not fully verified. One sentence per line. Delete the whole section if there is nothing to write. -->

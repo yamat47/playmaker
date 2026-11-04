@@ -38,6 +38,7 @@ const container = document.getElementById("play")!;
 
 const playmaker = new Playmaker(container, {
   mode: "edit", // "edit" (default, with editing UI) / "view" (read-only)
+  locale: "en", // language of the editing UI: "en" (default) / "ja"
   initialData: savedPlayData, // the value the commercial software persisted (optional; accepted without checking its shape)
   onChange: (data: PlayData) => {
     // Delivers the latest deep snapshot once per committed edit command or Undo/Redo.
@@ -54,7 +55,7 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 
 | Member | Description |
 |---|---|
-| `new Playmaker(container, options?)` | Creates an instance. `options` takes `mode` / `initialData` / `onChange` |
+| `new Playmaker(container, options?)` | Creates an instance. `options` takes `mode` / `locale` / `initialData` / `onChange` |
 | `onDidChange(listener): IDisposable` | Subscribes to committed edits. Delivers the same value as `options.onChange` |
 | `getPlayData(): PlayData` | The canonical snapshot of the current play diagram (a deep copy; `version` is the current one) |
 | `restorePlayData(raw: unknown)` | Reloads a persisted value in full (resets the history; does not emit `onChange`) |
@@ -68,13 +69,13 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 
 Re-exports:
 
-- Types: `PlaymakerOptions` `PlaymakerMode` `PlayData` `PlayDataInput` `FieldState` `FieldZone`
+- Types: `PlaymakerOptions` `PlaymakerMode` `PlaymakerLocale`(`en`/`ja`) `PlayData` `PlayDataInput` `FieldState` `FieldZone`
   `FieldPosition` `Player` `PlayerShape`(`circle`/`square`) `PlayerFill`(`outline`/`solid`)
   `Line` `LineKind`(`route`/`block`/`motion`)
   `LineInterpolation`(`straight`/`bezier`) `Formation` `FormationPlayer` `PlayPreset` `PlayCategory`
   `TeamSide` `ImageExportOptions` `Event` `IDisposable`
 - Values: `FORMATION_PRESETS` `getFormationPreset(id)` `PLAY_PRESETS` `getPlayPreset(id)`
-  `FIELD_ZONE_VALUES` `FIELD_ZONE_LABELS` `migratePlayData(raw)` `CURRENT_PLAY_DATA_VERSION`
+  `FIELD_ZONE_VALUES` `FIELD_ZONE_LABELS` `PLAYMAKER_LOCALE_VALUES` `migratePlayData(raw)` `CURRENT_PLAY_DATA_VERSION`
 
 ### Presets
 
@@ -154,7 +155,8 @@ Variables take the form `--playmaker-<part>-<component>`. The following are avai
 ## Supported environments
 
 **Desktop environments only**, on modern browsers (the latest 2 versions of
-Chrome / Firefox / Safari / Edge). Mobile / touch, a11y, and i18n are out of scope (`docs/prd.md`, chapter 8).
+Chrome / Firefox / Safari / Edge). Mobile / touch and a11y are out of scope (`docs/prd.md`, chapter 8).
+The editing UI is English by default and ships Japanese, chosen with the `locale` option. Error messages are English only.
 
 ## Development
 

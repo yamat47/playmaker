@@ -1,8 +1,12 @@
 import {
   CanvasSurface,
+  type Messages,
+  PLAYMAKER_LOCALE_VALUES,
+  type PlaymakerLocale,
   PointerInput,
   PropertyPanel,
   replaceKeepingFocus,
+  resolveMessages,
   Toolbar,
 } from "./browser/index.js";
 import {
@@ -56,6 +60,8 @@ export {
 
 export type PlaymakerMode = "view" | "edit";
 
+export { PLAYMAKER_LOCALE_VALUES, type PlaymakerLocale };
+
 // バンドラは process.env.NODE_ENV を文字列に置き換える。置き換えずにブラウザで読み込むと
 // process が無く ReferenceError になるので、そのときは本番とみなす。
 declare const process: { readonly env: { readonly NODE_ENV?: string } };
@@ -78,6 +84,12 @@ export interface PlaymakerOptions {
   initialData?: unknown;
   /** 構築時に `onDidChange` へ登録するリスナ。解除するには Playmaker を dispose する。 */
   onChange?: ((data: PlayData) => void) | undefined;
+  /**
+   * Language of the built-in UI (the toolbar and the property panel). The default is "en".
+   * Fixed at construction; to switch, construct again with the same data.
+   * Error messages are English regardless of the locale, because they are for developers.
+   */
+  locale?: PlaymakerLocale | undefined;
 }
 
 /**
@@ -101,12 +113,15 @@ export class Playmaker implements IDisposable {
   private readonly surface: CanvasSurface;
   private readonly session: PlaySession;
   private currentMode: PlaymakerMode;
+  private readonly messages: Messages;
   private panel: PropertyPanel | undefined;
   // 今の controller に付けた UI と入力。controller かモードが変わると付け直す。
   private ui: DisposableStore;
 
   constructor(container: HTMLElement, options: PlaymakerOptions = {}) {
     this.currentMode = options.mode ?? "edit";
+    const locale = options.locale ?? "en";
+    this.messages = resolveMessages(locale);
     this.session = this.store.add(new PlaySession(options.initialData));
     this.onDidChange = this.session.onDidChange;
     if (options.onChange !== undefined) {
@@ -116,6 +131,8 @@ export class Playmaker implements IDisposable {
     this.root = document.createElement("div");
     this.root.className = "playmaker-root";
     this.root.dataset.mode = this.currentMode;
+    // Tells assistive technology and font fallback which language the UI text is in.
+    this.root.lang = locale;
     container.appendChild(this.root);
     this.store.add(toDisposable(() => this.root.remove()));
 
@@ -234,7 +251,7 @@ export class Playmaker implements IDisposable {
    */
   exportToPng(options?: ImageExportOptions): Promise<Blob> {
     if (this.store.isDisposed) {
-      return Promise.reject(new Error("Playmaker: dispose したあとは PNG を書き出せません。"));
+      return Promise.reject(new Error("Playmaker: cannot export a PNG after dispose."));
     }
     return this.surface.exportToPngBlob(this.session.getSnapshot(), options);
   }
@@ -260,7 +277,7 @@ export class Playmaker implements IDisposable {
   /** dispose したあとの呼び出しは何もしないので、開発時だけそのことを知らせる。 */
   private warnIgnoredAfterDispose(method: string): void {
     if (isDevelopment()) {
-      console.warn(`Playmaker: dispose したあとに ${method} を呼んだので、何もしません。`);
+      console.warn(`Playmaker: ${method} was called after dispose, so it did nothing.`);
     }
   }
 
@@ -277,8 +294,10 @@ export class Playmaker implements IDisposable {
     const controller = this.session.controller;
     this.panel = undefined;
     if (this.currentMode === "edit") {
-      ui.add(new Toolbar(this.root, controller));
-      this.panel = ui.add(new PropertyPanel(this.root, controller, this.surface.canvas));
+      ui.add(new Toolbar(this.root, controller, this.messages));
+      this.panel = ui.add(
+        new PropertyPanel(this.root, controller, this.surface.canvas, this.messages),
+      );
       ui.add(new PointerInput(this.root, this.surface, controller));
     }
     return ui;

@@ -7,7 +7,7 @@ import type { ICommand } from "./command.js";
  * Model への変更は 1 回にまとめ、通知も 1 回だけにする。
  */
 export class LoadFormationCommand implements ICommand {
-  readonly label = "フォーメーションの読み込み";
+  readonly label = "Load formation";
   private readonly players: readonly Player[];
 
   constructor(players: readonly Player[]) {

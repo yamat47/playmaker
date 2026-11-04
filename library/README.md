@@ -18,6 +18,7 @@ import "@yamat47/playmaker/styles.css";
 
 const playmaker = new Playmaker(document.getElementById("play")!, {
   mode: "edit", // "edit" (default, with editing UI) / "view" (read-only)
+  locale: "en", // language of the editing UI: "en" (default) / "ja"
   initialData: saved, // a persisted PlayData (optional)
   onChange: (data: PlayData) => save(JSON.stringify(data)),
 });

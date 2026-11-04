@@ -29,7 +29,7 @@ describe("normalizeFormation: 既定補完", () => {
     );
 
     expect(result.id).toBe("formation");
-    expect(result.name).toBe("フォーメーション");
+    expect(result.name).toBe("Formation");
     expect(result.side).toBe("offense");
     // FormationPlayer は id を持たない（shape/label は normalizePlayers が既定補完）。
     expect(result.players).toEqual([

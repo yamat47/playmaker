@@ -53,7 +53,7 @@ export class CanvasSurface extends Disposable {
 
     const ctx = this.canvas.getContext("2d");
     if (!ctx) {
-      throw new Error("Playmaker: 2D canvas context を取得できませんでした。");
+      throw new Error("Playmaker: could not get a 2D canvas context.");
     }
     this.ctx = ctx;
 
@@ -111,7 +111,7 @@ export class CanvasSurface extends Disposable {
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      throw new Error("Playmaker: エクスポート用 2D canvas context を取得できませんでした。");
+      throw new Error("Playmaker: could not get a 2D canvas context for the export.");
     }
     const geometry = new FieldGeometry(width, height, data.field);
     this.paint(ctx, this.frameFor(geometry, data, theme), undefined);
@@ -120,7 +120,7 @@ export class CanvasSurface extends Disposable {
         if (blob) {
           resolve(blob);
         } else {
-          reject(new Error("Playmaker: PNG への変換に失敗しました。"));
+          reject(new Error("Playmaker: could not convert the canvas to a PNG."));
         }
       }, "image/png");
     });

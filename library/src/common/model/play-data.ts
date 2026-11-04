@@ -15,10 +15,11 @@ export type FieldZone = (typeof FIELD_ZONE_VALUES)[number];
 /** ゾーンを指定しないときの既定。LOS の位置を選ばない図が多いので中央にする。 */
 export const DEFAULT_FIELD_ZONE: FieldZone = "middle";
 
+/** English names of the zones. The `en` dictionary uses them; other locales carry their own. */
 export const FIELD_ZONE_LABELS = {
-  "own-redzone": "自陣RZ",
-  middle: "中央",
-  redzone: "相手RZ",
+  "own-redzone": "Own red zone",
+  middle: "Midfield",
+  redzone: "Red zone",
 } as const satisfies Record<FieldZone, string>;
 
 /**

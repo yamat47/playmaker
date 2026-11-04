@@ -8,40 +8,17 @@ import {
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,
-  type LineInterpolation,
-  type LineKind,
   PLAYER_FILL_VALUES,
   PLAYER_SHAPE_VALUES,
   type Player,
   type PlayerFill,
-  type PlayerShape,
   toDisposable,
 } from "../../common/index.js";
+import type { Messages } from "../i18n/index.js";
 import { normalizeCssColor } from "../theme/css-color.js";
-import { COLOR_PALETTE } from "../theme/palette.js";
+import { SWATCH_TOKENS } from "../theme/palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
 import { replaceKeepingFocus } from "./focus.js";
-
-const SHAPE_LABELS = {
-  circle: "丸",
-  square: "四角",
-} satisfies Record<PlayerShape, string>;
-
-const FILL_LABELS = {
-  outline: "枠線",
-  solid: "塗りつぶし",
-} satisfies Record<PlayerFill, string>;
-
-const KIND_LABELS = {
-  route: "ルート",
-  block: "ブロック",
-  motion: "モーション",
-} satisfies Record<LineKind, string>;
-
-const INTERPOLATION_LABELS = {
-  straight: "直線",
-  bezier: "曲線",
-} satisfies Record<LineInterpolation, string>;
 
 /** 色を選ぶ丸いボタン 1 つ分。枠線のスウォッチは縁だけを色にし、塗りつぶしは中まで塗る。 */
 interface SwatchChoice {
@@ -88,6 +65,7 @@ export class PropertyPanel extends Disposable {
   readonly element: HTMLElement;
   private readonly controller: IEditorUi;
   private readonly focusFallback: HTMLElement;
+  private readonly messages: Messages;
   // 選択中の要素が同じあいだは入力を作り直さず、値だけを書き込む。作り直すと、
   // 値を確定して Tab で次の入力へ移った直後に、移った先の入力ごと消えてフォーカスが外れる。
   private shown: ShownFields | undefined;
@@ -95,10 +73,16 @@ export class PropertyPanel extends Disposable {
   /**
    * @param focusFallback 選択が変わって入力を作り直したときに、消えた入力にあったフォーカスを移す先。
    */
-  constructor(parent: HTMLElement, controller: IEditorUi, focusFallback: HTMLElement) {
+  constructor(
+    parent: HTMLElement,
+    controller: IEditorUi,
+    focusFallback: HTMLElement,
+    messages: Messages,
+  ) {
     super();
     this.controller = controller;
     this.focusFallback = focusFallback;
+    this.messages = messages;
     this.element = document.createElement("div");
     this.element.className = "playmaker-panel";
 
@@ -161,7 +145,7 @@ export class PropertyPanel extends Disposable {
       case "none": {
         const hint = document.createElement("p");
         hint.className = "playmaker-panel__hint";
-        hint.textContent = "対象を選択するとプロパティを編集できます";
+        hint.textContent = this.messages.selectionHint;
         this.element.appendChild(hint);
         return { kind: "hint" };
       }
@@ -169,26 +153,26 @@ export class PropertyPanel extends Disposable {
   }
 
   private addPlayerFields(): (player: Player) => void {
-    const controller = this.controller;
-    this.addTitle("選手");
+    const { controller, messages } = this;
+    this.addTitle(messages.player);
     const setLabel = this.addText({
-      label: "ラベル",
+      label: messages.label,
       onChange: (v) => controller.updateSelectedPlayer({ label: v }),
     });
-    const setShape = this.addSelect("形状", PLAYER_SHAPE_VALUES, SHAPE_LABELS, (v) =>
+    const setShape = this.addSelect(messages.shape, PLAYER_SHAPE_VALUES, messages.shapes, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
     // 4 色それぞれの枠線と塗りつぶしを並べた 8 つのスウォッチ。上の段が枠線、下の段が塗りつぶし。
     // 「塗りつぶしか枠線か」を別の選択肢にせず、色と一緒に 1 回で選べるようにする。
     const read = createThemeReader(this.element);
     const choices = PLAYER_FILL_VALUES.flatMap((fill) =>
-      COLOR_PALETTE.map((opt) => ({
-        name: `${opt.label}の${FILL_LABELS[fill]}`,
-        color: read(opt.token),
+      SWATCH_TOKENS.map((token) => ({
+        name: messages.swatch(messages.colors[token], messages.fills[fill]),
+        color: read(token),
         fill,
       })),
     );
-    const setPressed = this.addSwatches("色", choices, {
+    const setPressed = this.addSwatches(messages.color, choices, {
       onChange: ({ color, fill }) => controller.updateSelectedPlayer({ color, fill }),
       onReset: () => controller.updateSelectedPlayer({ color: null, fill: null }),
     });
@@ -204,29 +188,29 @@ export class PropertyPanel extends Disposable {
   }
 
   private addLineFields(): (line: Line) => void {
-    const controller = this.controller;
-    this.addTitle("線");
-    const setKind = this.addSelect("種別", LINE_KIND_VALUES, KIND_LABELS, (v) =>
+    const { controller, messages } = this;
+    this.addTitle(messages.line);
+    const setKind = this.addSelect(messages.kind, LINE_KIND_VALUES, messages.kinds, (v) =>
       controller.updateSelectedLine({ kind: v }),
     );
     const setInterpolation = this.addSelect(
-      "補間",
+      messages.interpolation,
       LINE_INTERPOLATION_VALUES,
-      INTERPOLATION_LABELS,
+      messages.interpolations,
       (v) => controller.updateSelectedLine({ interpolation: v }),
     );
     const read = createThemeReader(this.element);
-    const choices = COLOR_PALETTE.map((opt) => ({
-      name: opt.label,
-      color: read(opt.token),
+    const choices = SWATCH_TOKENS.map((token) => ({
+      name: messages.colors[token],
+      color: read(token),
       fill: "solid" as const,
     }));
-    const setPressed = this.addSwatches("色", choices, {
+    const setPressed = this.addSwatches(messages.color, choices, {
       onChange: ({ color }) => controller.updateSelectedLine({ color }),
       onReset: () => controller.updateSelectedLine({ color: null }),
     });
     const setThickness = this.addNumber({
-      label: "太さ",
+      label: messages.width,
       onChange: (v) => controller.updateSelectedLine({ thickness: v }),
       onReset: () => controller.updateSelectedLine({ thickness: null }),
     });
@@ -291,8 +275,8 @@ export class PropertyPanel extends Disposable {
       const reset = document.createElement("button");
       reset.type = "button";
       reset.className = "playmaker-panel__reset";
-      reset.textContent = "既定";
-      reset.setAttribute("aria-label", `${labelText}を既定に戻す`);
+      reset.textContent = this.messages.reset;
+      reset.setAttribute("aria-label", this.messages.resetField(labelText));
       reset.addEventListener("click", onReset);
       row.appendChild(reset);
     }

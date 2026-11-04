@@ -1,12 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import {
-  FIELD_ZONE_LABELS,
-  FORMATION_PRESETS,
-  type PlayData,
-  Playmaker,
-  type PlaymakerOptions,
-} from "./playmaker.js";
+import { FORMATION_PRESETS, type PlayData, Playmaker, type PlaymakerOptions } from "./playmaker.js";
 import { must } from "./test-support/must.js";
 
 // 右に 200px のパネル、上にツールバーを置いても、canvas に選手を置ける広さが残る大きさ。
@@ -47,7 +41,7 @@ function button(name: string) {
 
 /** 選手の追加ツールで canvas の SPOT をクリックし、選手を 1 人置く。 */
 async function addPlayerAtSpot(container: HTMLElement): Promise<void> {
-  await button("選手を追加").click();
+  await button("Add player").click();
   await userEvent.click(canvasIn(container), { position: SPOT });
 }
 
@@ -58,6 +52,7 @@ describe("置く要素", () => {
     expect(container.querySelector("canvas")).not.toBeNull();
     expect(container.querySelector(".playmaker-toolbar")).not.toBeNull();
     expect(container.querySelector(".playmaker-panel")).not.toBeNull();
+    expect(container.querySelector(".playmaker-root")).toHaveAttribute("lang", "en");
   });
 
   it("view モードでは、canvas だけを置き、ツールバーとパネルは置かない", () => {
@@ -101,7 +96,7 @@ describe("ポインタでの編集", () => {
   it("選手を canvas の上の方へドラッグして離すと、選手をダウンフィールドへ動かす", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
-    await button("選択").click();
+    await button("Select").click();
     const before = must(playmaker.getPlayData().players[0]).position.downfieldYard;
 
     const canvas = canvasIn(container);
@@ -118,7 +113,7 @@ describe("ポインタでの編集", () => {
     await addPlayerAtSpot(container);
     const canvas = canvasIn(container);
 
-    await button("線を描く").click();
+    await button("Draw line").click();
     await userEvent.click(canvas, { position: SPOT });
     await userEvent.dblClick(canvas, { position: OTHER_SPOT });
 
@@ -127,7 +122,7 @@ describe("ポインタでの編集", () => {
 
   it("view モードに切り替えると、canvas をクリックしても選手を足さない", async () => {
     const { container, playmaker } = mount();
-    await button("選手を追加").click();
+    await button("Add player").click();
 
     playmaker.setMode("view");
     await userEvent.click(canvasIn(container), { position: SPOT });
@@ -150,7 +145,7 @@ describe("キー操作", () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
-    await button("選択").click();
+    await button("Select").click();
     await userEvent.keyboard("{Control>}z{/Control}");
 
     expect(playmaker.getPlayData().players).toEqual([]);
@@ -162,7 +157,7 @@ describe("ツールバー", () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
-    await button("元に戻す").click();
+    await button("Undo").click();
 
     expect(playmaker.getPlayData().players).toEqual([]);
   });
@@ -170,7 +165,7 @@ describe("ツールバー", () => {
   it("ゾーンのボタンを押すと、フィールドゾーンを切り替える", async () => {
     const { playmaker } = mount();
 
-    await button(FIELD_ZONE_LABELS["own-redzone"]).click();
+    await button("Own red zone").click();
 
     expect(playmaker.fieldZone).toBe("own-redzone");
   });
@@ -179,10 +174,7 @@ describe("ツールバー", () => {
     const { playmaker } = mount();
     const formation = must(FORMATION_PRESETS[0]);
 
-    await userEvent.selectOptions(
-      page.getByRole("combobox", { name: "フォーメーション" }),
-      formation.id,
-    );
+    await userEvent.selectOptions(page.getByRole("combobox", { name: "Formation" }), formation.id);
 
     expect(playmaker.getPlayData().players).toHaveLength(formation.players.length);
   });
@@ -193,7 +185,7 @@ describe("プロパティパネル", () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
-    await page.getByRole("textbox", { name: "ラベル" }).fill("QB");
+    await page.getByRole("textbox", { name: "Label" }).fill("QB");
     await userEvent.tab();
 
     expect(must(playmaker.getPlayData().players[0]).label).toBe("QB");
@@ -203,17 +195,17 @@ describe("プロパティパネル", () => {
     const { container } = mount();
     await addPlayerAtSpot(container);
 
-    await page.getByRole("textbox", { name: "ラベル" }).fill("QB");
+    await page.getByRole("textbox", { name: "Label" }).fill("QB");
     await userEvent.tab();
 
-    expect(document.activeElement).toBe(page.getByRole("combobox", { name: "形状" }).element());
+    expect(document.activeElement).toBe(page.getByRole("combobox", { name: "Shape" }).element());
   });
 
   it("色のスウォッチを押すと、選んでいる選手にテーマの色と塗りを入れる", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
-    await page.getByRole("button", { name: "赤の塗りつぶし" }).click();
+    await page.getByRole("button", { name: "Red solid" }).click();
 
     expect(playmaker.getPlayData().players[0]).toMatchObject({ color: "#d32f2f", fill: "solid" });
   });
@@ -225,14 +217,23 @@ describe("プロパティパネル", () => {
     container.style.setProperty("--playmaker-player-color", "#d32f2f");
     playmaker.refresh();
 
-    expect(page.getByRole("button", { name: "赤の枠線" }).element()).toHaveAttribute(
+    expect(page.getByRole("button", { name: "Red outline" }).element()).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(page.getByRole("button", { name: "黒の枠線" }).element()).toHaveAttribute(
+    expect(page.getByRole("button", { name: "Black outline" }).element()).toHaveAttribute(
       "aria-pressed",
       "false",
     );
+  });
+});
+
+describe("locale", () => {
+  it("shows the toolbar in Japanese and marks the root as Japanese when the locale is ja", () => {
+    const { container } = mount({ locale: "ja" });
+
+    expect(container.querySelector(".playmaker-root")).toHaveAttribute("lang", "ja");
+    expect(button("選手を追加").element()).toBeInTheDocument();
   });
 });
 
@@ -248,7 +249,7 @@ describe("読み直し", () => {
 
   it("ツールバーにフォーカスがあるときに読み直すと、フォーカスを canvas へ移す", async () => {
     const { container, playmaker } = mount();
-    await button("選択").click();
+    await button("Select").click();
 
     playmaker.setPlayData(playmaker.getPlayData());
 

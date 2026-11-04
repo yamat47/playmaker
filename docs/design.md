@@ -90,6 +90,8 @@ All values from outside are received as `unknown` and normalized before they ent
 | `loadFormation(formation)` | `Formation` | `normalizeFormation` |
 | `exportToPng({ width })` | `ImageExportOptions` | `resolveImageExportSize` |
 
+Constructor options (`mode`, `locale`, `onChange`) are not normalized; their TypeScript types are the contract, and a value outside them is a caller bug.
+
 `migratePlayData` does not throw. It reads the written version (treated as 0 if it is not a number), passes the data through each migration step newer than that version in order, and finally shapes it with `resolvePlayData`. Old versions, data without a version, and future versions all become `PlayData` of the current version. Only unreadable elements are dropped, and missing values are filled with defaults.
 
 - Players whose position is not a finite number, lines whose start player does not exist, and lines whose end point cannot be read are dropped
@@ -194,6 +196,7 @@ Export and on-screen rendering draw the diagram layers with the same `renderLaye
 ## Input and built-in UI
 
 - `PointerInput` checks the pointer button and accepts only the primary button, and cancels the in-progress operation on `pointercancel`. The canvas in edit mode gets `touch-action: none` so that drags are not taken by page scrolling. Key bindings are decided by `resolveKeyAction` in `common/input/keymap.ts`. The only shortcuts are Undo and Redo, Enter to commit a drawing, and Esc to cancel it
+- Every string the toolbar and panel show comes from a `Messages` dictionary in `browser/i18n/`. `en` is the default and `ja` is bundled; `PlaymakerOptions.locale` picks one at construction, and `Playmaker` sets `lang` on its root to the same value. Sentences whose word order differs between languages (a swatch name, a limit reason) are functions in the dictionary. Both dictionaries are a few kilobytes, so both are bundled rather than loaded on demand. There is no `setLocale`: the host knows its language at start-up, and switching means constructing again with the same data. Error messages, `console.warn`, command labels, and the preset summaries are English only and not in the dictionary, because developers read them
 - The toolbar and panel are built with vanilla DOM. The panel remembers the kind and id of the element being shown, and while the same element is shown it writes only the values without rebuilding the inputs, so focus is not lost while typing
 - When a limit is reached, the add-player and drawing buttons and the formation choices that would exceed the limit are made unpressable, and the reason is shown in the title. Buttons use `aria-disabled` rather than `disabled`, so they stay in the focus and Tab order. Setting `disabled` right after a press drops focus to the body
 - The root in edit mode is a grid, with the toolbar above the diagram and the panel to its right. The canvas is drawn at the size of the remaining area and does not overlap the UI. view mode builds no UI, and the stage occupies the whole root

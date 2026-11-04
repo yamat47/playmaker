@@ -3,20 +3,21 @@ type OptionalKeys<T> = {
 }[keyof T];
 
 /**
- * 指定したキーだけを差し替えるパッチ。指定しないキーは今の値を保つ。
- * 省略できるキーだけは null を指定でき、値を消して既定に戻す。
+ * A patch that replaces only the specified keys. Unspecified keys keep their current values.
+ * Only optional keys accept null, which removes the value and restores the default.
  */
 export type Patch<T> = {
   readonly [K in keyof T]?: K extends OptionalKeys<T> ? T[K] | null : T[K];
 };
 
-// Line や Player はインターフェースなので添字シグネチャを持たず、そのままではキーを文字列で引けない。
-// パッチの規則をキーの一覧に依らず 1 か所に書くため、この 2 関数の中だけ見方を変える。
+// Line and Player are interfaces without an index signature, so their keys cannot be looked up
+// by string as is. To write the patch rules in one place without depending on the list of keys,
+// the view is changed only inside these two functions.
 function asRecord(value: object): Readonly<Record<string, unknown>> {
   return value as Record<string, unknown>;
 }
 
-/** current にパッチを当てた新しいオブジェクトを返す。current は書き換えない。 */
+/** Returns a new object with the patch applied to current. Does not modify current. */
 export function applyPatch<T extends object>(current: T, patch: Patch<T>): T {
   const next = { ...asRecord(current) };
   for (const [key, value] of Object.entries(patch)) {
@@ -26,11 +27,11 @@ export function applyPatch<T extends object>(current: T, patch: Patch<T>): T {
       next[key] = value;
     }
   }
-  // パッチの値は Patch<T> で T の各キーの型に揃っているので、当てた結果も T になる。
+  // Patch<T> types each value to match the key's type in T, so the patched result is also a T.
   return next as T;
 }
 
-/** パッチを当てると、current から何か 1 つでも値が変わるか。オブジェクトの値は参照で比べる。 */
+/** Whether applying the patch changes any value in current. Objects are compared by reference. */
 export function patchChangesAnything<T extends object>(current: T, patch: Patch<T>): boolean {
   const values = asRecord(current);
   return Object.entries(patch).some(([key, value]) => (value ?? undefined) !== values[key]);

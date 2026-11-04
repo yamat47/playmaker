@@ -5,8 +5,9 @@ import { sampleLinePath } from "./bezier.js";
 import { segments } from "./polyline.js";
 
 /**
- * target に重なる選手のうち、いちばん上に描いたものを返す。後の要素ほど上に描くので末尾から探す。
- * 四角の選手も外接円で当てる。形ごとに当たりを変えるほどの差が無いため。
+ * Returns the topmost drawn player overlapping target. Later elements are drawn on top, so the
+ * search runs from the end. Square players are also hit by their circumscribed circle; the
+ * difference is too small to justify a per-shape hit test.
  */
 export function hitTestPlayer(
   players: readonly Player[],
@@ -28,8 +29,9 @@ export function hitTestPlayer(
 }
 
 /**
- * 線に当たったとみなす距離（ヤード）。線の太さでは細すぎて掴めないので、太さとは別に持つ。
- * 選手の半径より小さくし、選手の近くを押したときに線を掴みにくくしている。
+ * Distance (in yards) within which a line counts as hit. The line width is too thin to grab, so
+ * this is kept separate from it. It is smaller than the player radius, which makes lines harder
+ * to grab when pressing near a player.
  */
 export const LINE_HIT_TOLERANCE_YARDS = 0.6;
 
@@ -39,14 +41,14 @@ export function distanceToSegment(p: FieldPosition, a: FieldPosition, b: FieldPo
   const apx = p.lateralYard - a.lateralYard;
   const apy = p.downfieldYard - a.downfieldYard;
   const lenSq = abx * abx + aby * aby;
-  // a と b が同じ点なら、a までの距離にする。
+  // If a and b are the same point, use the distance to a.
   const t = lenSq > 0 ? Math.max(0, Math.min(1, (apx * abx + apy * aby) / lenSq)) : 0;
   const dx = apx - t * abx;
   const dy = apy - t * aby;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-/** 点が 0 個なら +Infinity。 */
+/** +Infinity when there are no points. */
 function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]): number {
   const only = points.length === 1 ? points[0] : undefined;
   if (only !== undefined) {
@@ -60,8 +62,9 @@ function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]):
 }
 
 /**
- * target に重なる線のうち、いちばん上に描いたものを返す。描くときと同じ折れ線への距離で測るので、
- * 曲線も見えている形のとおりに当たる。起点の選手が無い線は描かれないので、当てない。
+ * Returns the topmost drawn line overlapping target. The distance is measured to the same
+ * polyline used for drawing, so curves are hit exactly as they appear. A line without its start
+ * player is not drawn, so it is not hit either.
  */
 export function hitTestLine(
   lines: readonly Line[],
@@ -86,21 +89,22 @@ export function hitTestLine(
   return undefined;
 }
 
-/** 選択中の線の waypoint と終点のハンドルを掴める半径（ヤード）。 */
+/** Radius (in yards) for grabbing the waypoint and end point handles of the selected line. */
 export const WAYPOINT_HANDLE_RADIUS_YARDS = 0.9;
 
 export function pointDistance(a: FieldPosition, b: FieldPosition): number {
   return Math.hypot(a.lateralYard - b.lateralYard, a.downfieldYard - b.downfieldYard);
 }
 
-/** 線のハンドルに当たったときの、掴んだハンドルとその位置。 */
+/** The grabbed handle and its position when a line handle is hit. */
 export type LineHandleHit =
   | { readonly kind: "endpoint"; readonly point: FieldPosition }
   | { readonly kind: "waypoint"; readonly index: number; readonly point: FieldPosition };
 
 /**
- * target に当たる線のハンドルを返す。終点を waypoint より先に当て、先端を動かしたい操作を
- * 最後の waypoint に奪われないようにする。waypoint は後ろほど手前に描くので、末尾から探す。
+ * Returns the line handle hit by target. The end point is tested before the waypoints so that
+ * an attempt to move the tip is not stolen by the last waypoint. Later waypoints are drawn in
+ * front, so the search runs from the end.
  */
 export function hitLineHandle(
   line: Pick<Line, "waypoints" | "end">,

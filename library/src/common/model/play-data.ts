@@ -3,16 +3,16 @@ import { cloneLine, type Line, normalizeLines } from "./line.js";
 import { clonePlayer, normalizePlayers, type Player } from "./player.js";
 
 /**
- * フィールドのどの範囲を映すか。
- * - `middle`: センター付近
- * - `redzone`: 相手のゴール側
- * - `own-redzone`: 自陣のゴール側
+ * Which part of the field is shown.
+ * - `middle`: around midfield
+ * - `redzone`: the opponent's goal side
+ * - `own-redzone`: the own goal side
  */
 export const FIELD_ZONE_VALUES = ["own-redzone", "middle", "redzone"] as const;
 
 export type FieldZone = (typeof FIELD_ZONE_VALUES)[number];
 
-/** ゾーンを指定しないときの既定。LOS の位置を選ばない図が多いので中央にする。 */
+/** Default when no zone is given. Many diagrams do not depend on where the LOS is, so middle. */
 export const DEFAULT_FIELD_ZONE: FieldZone = "middle";
 
 /** English names of the zones. The `en` dictionary uses them; other locales carry their own. */
@@ -23,11 +23,11 @@ export const FIELD_ZONE_LABELS = {
 } as const satisfies Record<FieldZone, string>;
 
 /**
- * ゾーンごとの LOS の絶対ヤード（0 = 自ゴール、100 = 相手ゴール）。
- * 窓の中にバックフィールドとダウンフィールドの両方が収まる位置に置く。
- * - `middle`: センター
- * - `redzone`: 相手 15 ヤード
- * - `own-redzone`: 自陣 10 ヤード
+ * Absolute yard of the LOS per zone (0 = own goal, 100 = opponent's goal).
+ * Placed so that both the backfield and the downfield fit inside the window.
+ * - `middle`: midfield
+ * - `redzone`: the opponent's 15 yard line
+ * - `own-redzone`: the own 10 yard line
  */
 export const LOS_YARD_BY_ZONE = {
   "own-redzone": 10,
@@ -38,34 +38,34 @@ export const LOS_YARD_BY_ZONE = {
 export interface FieldState {
   readonly zone: FieldZone;
   /**
-   * LOS の絶対ヤード。今はゾーンから決まり、読み込んだデータの値は使わない。
-   * 保存するデータから選手の絶対位置を復元できるよう、値としては持たせる。
+   * Absolute yard of the LOS. For now it is derived from the zone, and the loaded value is not
+   * used. It is kept as a value so the absolute player positions can be recovered from saved data.
    */
   readonly losYard: number;
 }
 
 /**
- * 今の PlayData のスキーマの版。スキーマを変えるときは 1 上げ、`PLAY_DATA_MIGRATIONS` に
- * 1 つ前の版から変換する段を足す。
+ * Current version of the PlayData schema. When the schema changes, raise it by 1 and add a step
+ * to `PLAY_DATA_MIGRATIONS` that converts from the previous version.
  */
 export const CURRENT_PLAY_DATA_VERSION = 2 as const;
 
 /**
- * プレー図のデータ。保存したものを `restorePlayData` に渡すと、古い版や版の無いもの、
- * 新しい版のものも今の版に寄せて読む。
+ * Data of a play diagram. Passing saved data to `restorePlayData` loads it coerced to the
+ * current version, whether it is an older version, has no version, or is a newer version.
  */
 export interface PlayData {
   readonly version: typeof CURRENT_PLAY_DATA_VERSION;
   readonly field: FieldState;
-  /** 後の要素ほど上に重ねて描く。 */
+  /** Later elements are drawn on top. */
   readonly players: readonly Player[];
-  /** 後の要素ほど上に重ねて描く。 */
+  /** Later elements are drawn on top. */
   readonly lines: readonly Line[];
 }
 
 /**
- * 型付きで組み立てて読み込む図。LOS の位置は読み込むときにゾーンから決め直すので、
- * `field.losYard` は省略できる。
+ * A diagram built with types and loaded. The LOS position is derived again from the zone on
+ * load, so `field.losYard` can be omitted.
  */
 export interface PlayDataInput extends Omit<PlayData, "field"> {
   readonly field: Omit<FieldState, "losYard"> & { readonly losYard?: number | undefined };
@@ -79,7 +79,7 @@ export function fieldStateForZone(zone: FieldZone): FieldState {
   return { zone, losYard: LOS_YARD_BY_ZONE[zone] };
 }
 
-/** field、選手、線まで複製し、元のデータと参照を共有しない。 */
+/** Copies down to the field, players, and lines, sharing no references with the original data. */
 export function clonePlayData(data: PlayData): PlayData {
   return {
     version: CURRENT_PLAY_DATA_VERSION,
@@ -90,15 +90,17 @@ export function clonePlayData(data: PlayData): PlayData {
 }
 
 /**
- * 今の版の形をしている値を PlayData に正規化する。版を見て変換する段は通さないので、
- * 古い版のデータは `migratePlayData` に渡す。
- * 欠けた項目は既定で補い、読めない要素は捨てる。返り値は新しいオブジェクトで、入力と参照を共有しない。
+ * Normalizes a value shaped like the current version into a PlayData. It does not run the
+ * version-based migration steps, so pass data of an older version to `migratePlayData`.
+ * Missing fields are filled with defaults and unreadable entries are dropped. The return value
+ * is a new object that shares no references with the input.
  */
 export function resolvePlayData(data: unknown): PlayData {
   const source: Record<string, unknown> = isRecord(data) ? data : {};
   const zone = isRecord(source.field) ? source.field.zone : undefined;
-  // 線の起点参照を弾けるよう、先に選手を確定してから id 集合を渡す。
-  // 重複した選手 id は後ろの方を振り直すので、その id を指す線は先頭の選手に付く。
+  // Settle the players first and pass their id set, so lines with bad start references can be
+  // rejected. Of duplicate player ids the later ones are renumbered, so a line pointing at that
+  // id attaches to the first player.
   const players = makeIdsUnique(normalizePlayers(source.players));
   const validPlayerIds = new Set(players.map((p) => p.id));
   return {
@@ -110,9 +112,10 @@ export function resolvePlayData(data: unknown): PlayData {
 }
 
 /**
- * 2 回目以降に現れた id を `${id}-2` のような未使用の id へ振り直す（先頭はそのまま）。
- * 同じ id が 2 つあると、hit-test は末尾を返すのに更新は先頭に当たり、別の要素が編集される。
- * 振り直した id は、入力にあるほかの id とも重ねない。
+ * Renumbers the second and later occurrences of an id to an unused id such as `${id}-2` (the
+ * first keeps its id). With two equal ids, the hit test returns the last while an update hits
+ * the first, so a different element gets edited. A renumbered id does not collide with any
+ * other id in the input either.
  */
 function makeIdsUnique<T extends { readonly id: string }>(items: readonly T[]): T[] {
   const taken = new Set(items.map((item) => item.id));

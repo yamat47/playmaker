@@ -1,4 +1,5 @@
-// 配置は presets/alignments.ts にあり、プレーのプリセットと共有する。ここでは id を外して隊形にする。
+// The alignments live in presets/alignments.ts and are shared with the play presets.
+// Here the ids are stripped to turn them into formations.
 
 import type { Player } from "../model/player.js";
 import {

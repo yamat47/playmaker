@@ -6,7 +6,7 @@ export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-/** 空白だけの文字列も空とみなす。 */
+/** A string of only whitespace also counts as empty. */
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
@@ -16,8 +16,9 @@ export function isOneOf<const T extends string>(value: unknown, values: readonly
 }
 
 /**
- * 配列の先頭 `max` 個だけを読み、`parse` が null を返した要素は捨てる。
- * 復元できない要素も読んだ数に入れるので、どんな入力でも読むのは `max` 個までで済む。
+ * Reads only the first `max` entries of the array and drops those for which `parse` returns null.
+ * Unrecoverable entries also count toward the number read, so at most `max` entries are ever
+ * read for any input.
  */
 export function parseBoundedArray<T>(
   raw: unknown,

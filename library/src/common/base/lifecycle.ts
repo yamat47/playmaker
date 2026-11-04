@@ -6,12 +6,12 @@ export function toDisposable(fn: () => void): IDisposable {
   return { dispose: fn };
 }
 
-/** まとめて解放する。解放したあとに add したものは、その場で解放する。 */
+/** Disposes items together. An item added after disposal is disposed on the spot. */
 export class DisposableStore implements IDisposable {
   private readonly items = new Set<IDisposable>();
   private disposed = false;
 
-  /** 非同期の処理が終わったとき、破棄したあとなら何もしないための判定に使える。 */
+  /** Lets async work that finishes after disposal check for it and do nothing. */
   get isDisposed(): boolean {
     return this.disposed;
   }
@@ -37,7 +37,7 @@ export class DisposableStore implements IDisposable {
   }
 }
 
-/** `_register` に渡したものを、dispose のときに一緒に解放する。 */
+/** Disposes everything passed to `_register` together with itself on dispose. */
 export abstract class Disposable implements IDisposable {
   protected readonly _store = new DisposableStore();
 

@@ -1,11 +1,12 @@
 export interface IIdFactory {
-  /** `${prefix}-${n}` 形式で、taken に無い未使用 id を返す。 */
+  /** Returns an unused id of the form `${prefix}-${n}` that is not in taken. */
   next(prefix: string, taken: ReadonlySet<string>): string;
 }
 
 /**
- * prefix ごとのカウンタで id を払い出す。一度使った番号は、その id の要素が消えても使い直さない。
- * 消した要素を Undo で戻したとき、あとから足した要素と id がぶつからないようにするため。
+ * Issues ids from a counter per prefix. A number once used is never reused, even after the
+ * element with that id is gone, so that an element restored by Undo does not collide with an
+ * element added later.
  */
 export class IdFactory implements IIdFactory {
   private readonly counters = new Map<string, number>();

@@ -3,7 +3,7 @@ import type { Player } from "../model/player.js";
 import { type ICommand, requireApplied } from "./command.js";
 import { applyPatch, type Patch, patchChangesAnything } from "./patch.js";
 
-/** id は選手を見分ける鍵なので、パッチでは変えない。 */
+/** The id identifies a player, so a patch never changes it. */
 export type PlayerPatch = Patch<Omit<Player, "id">>;
 
 export function applyPlayerPatch(current: Player, patch: PlayerPatch): Player {
@@ -24,13 +24,16 @@ export class AddPlayerCommand implements ICommand {
   }
 
   undo(model: IPlayModel): void {
-    // 追加した直後の選手を起点にした線は、それより後のコマンドなので先に取り消されている。
-    // 削除で控える従属線は空なので捨てる。
+    // Lines starting from the added player come from later commands, so they are already undone.
+    // The dependent lines recorded by the removal are therefore empty and are dropped.
     model.removePlayer(this.player.id);
   }
 }
 
-/** 起点がその選手の線も一緒に消す。undo は選手と線を元の並びの位置へ戻す。 */
+/**
+ * Also removes the lines that start from the player. Undo puts the player and the lines back at
+ * their original positions in the order.
+ */
 export class RemovePlayerCommand implements ICommand {
   readonly label = "Delete player";
   private readonly playerId: string;
@@ -50,7 +53,7 @@ export class RemovePlayerCommand implements ICommand {
   }
 }
 
-/** 位置、ラベル、形状、色、塗りをまとめて編集する。 */
+/** Edits the position, label, shape, color, and fill together. */
 export class UpdatePlayerCommand implements ICommand {
   readonly label = "Update player";
   private readonly playerId: string;

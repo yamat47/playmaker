@@ -59,9 +59,9 @@ import {
 import { composePreview, computeOverlay } from "./preview.js";
 
 /**
- * ツール、選択、ジェスチャを受けてコマンドを発行する。Model を直接書き換えない。
- * ドラッグや作図の途中は Model に載せず、getFrame で重ねて見せるので、
- * 確定までは Model の onDidChange も履歴も動かない。
+ * Takes the tool, the selection, and gestures, and issues commands. It never writes to the
+ * Model directly. An in-progress drag or drawing is not put into the Model but is overlaid by
+ * getFrame, so neither the Model's onDidChange nor the history moves until the edit is committed.
  */
 export class EditorController extends Disposable implements IEditorController {
   private readonly model: IPlayModel;
@@ -167,19 +167,21 @@ export class EditorController extends Disposable implements IEditorController {
 
   pointerUp(pos: FieldPosition): void {
     const interaction = this.interaction;
-    // 作図はクリック（pointerDown）で点を打つので、up では何もしない。
+    // Drawing places points on click (pointerDown), so up does nothing.
     if (interaction?.type !== "drag") {
       return;
     }
     this.notifier.batch(() => {
       this.setInteraction(undefined);
       const moved = dragPosition(interaction, pos);
-      // 寄せる前の位置で比べる。窓の外にある選手をクリックしただけで、窓の端へ動かさない。
+      // Compare the position before snapping. Merely clicking a player that sits outside the window
+      // must not move it to the window's edge.
       if (isSamePosition(moved, interaction.origin)) {
         return;
       }
       const to = this.clampToField(moved);
-      // 同じ格子点に収まる動きは図を変えないので、履歴にも通知にも載せない。
+      // A move that lands on the same grid point does not change the diagram, so it is put into
+      // neither the history nor a notification.
       if (isSamePosition(to, interaction.origin)) {
         return;
       }
@@ -206,7 +208,8 @@ export class EditorController extends Disposable implements IEditorController {
         return;
       }
       this.commands.execute(new AddLineCommand(line));
-      // 作図の直後は選択ツールへ戻し、引いた線を選ぶ。続けて引くより、すぐ編集できるほうを取る。
+      // Right after drawing, switch back to the select tool and select the drawn line. Being able
+      // to edit it right away is preferred over drawing the next line in a row.
       this.setTool("select");
       this.setSelection({ kind: "line", id: line.id });
     });
@@ -245,7 +248,7 @@ export class EditorController extends Disposable implements IEditorController {
 
   setFieldZone(zone: FieldZone): void {
     this.notifier.batch(() => {
-      // 同じゾーンを選び直しただけなら、途中のドラッグや作図は残す。
+      // If the same zone was merely selected again, keep the in-progress drag or drawing.
       if (this.commands.execute(new SetFieldZoneCommand(zone))) {
         this.setInteraction(undefined);
       }
@@ -265,7 +268,7 @@ export class EditorController extends Disposable implements IEditorController {
     return this.notifier.batch(() => {
       const loaded = this.commands.execute(new LoadFormationCommand(added));
       if (loaded) {
-        // 読み込んだあとは、途中の操作と元の選択に意味が無いので外す。
+        // After loading, the in-progress operation and old selection mean nothing, so clear them.
         this.setInteraction(undefined);
         this.setSelection(NO_SELECTION);
       }
@@ -312,12 +315,13 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.markSceneChanged();
   }
 
-  // 窓の端（横はサイドライン、縦は LOS から整数ヤード）はどれも格子点なので、寄せてから丸めても窓の外へは出ない。
+  // Every window edge (the sidelines horizontally, whole yards from the LOS vertically) is a grid
+  // point, so clamping and then rounding never leaves the window.
   private clampToField(pos: FieldPosition): FieldPosition {
     return snapToGrid(clampToZoneWindow(pos, this.model.getSnapshot().field));
   }
 
-  // ドラッグ中に対象が消えていたら undefined を返し、コマンドを出さない。
+  // Returns undefined and issues no command if the target disappeared during the drag.
   private dropCommand(drag: DragInteraction, to: FieldPosition): ICommand | undefined {
     const drop = dragPatch(this.model.getSnapshot(), drag.target, to);
     if (drop === undefined) {
@@ -328,7 +332,7 @@ export class EditorController extends Disposable implements IEditorController {
       : new UpdateLineCommand(drop.lineId, drop.patch);
   }
 
-  // 起点の選手が消えていれば確定しない。
+  // Does not commit if the starting player has disappeared.
   private lineFromDraft(draw: DrawInteraction): Line | undefined {
     const start = this.model.findPlayer(draw.startPlayerId);
     const split = start === undefined ? undefined : committableDraft(draw, start.position);
@@ -341,13 +345,14 @@ export class EditorController extends Disposable implements IEditorController {
 
   private selectPointerDown(pos: FieldPosition): void {
     const data = this.model.getSnapshot();
-    // 選択中の線のハンドルを最優先で掴む。選手や線と重なっていても編集できるようにする。
+    // Grab a handle of the selected line before anything else, so it can be edited even when it
+    // overlaps a player or another line.
     const handle = this.hitSelectedLineHandle(pos);
     if (handle !== undefined) {
       this.setInteraction(handle);
       return;
     }
-    // 選手は選択しつつドラッグを始める。動かさずに離せばただの選択になる。
+    // Selecting a player also starts a drag. Releasing without moving is just a selection.
     const player = hitTestPlayer(data.players, pos);
     if (player !== undefined) {
       this.setSelection({ kind: "player", id: player.id });
@@ -381,7 +386,7 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     const data = this.model.getSnapshot();
-    // 選手以外から始めようとしたら無視する。
+    // Ignore an attempt to start anywhere other than on a player.
     const player = hitTestPlayer(data.players, pos);
     if (player === undefined) {
       return;

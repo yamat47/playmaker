@@ -1,20 +1,20 @@
 import type { ICommand } from "./command.js";
 
 /**
- * 適用済みコマンドの履歴。Model を持たず、コマンドを実行するのは呼び出し側の役目。
- * 履歴は分岐させない。新しいコマンドを積むと redo の履歴は捨てる。
+ * The history of applied commands. It holds no Model; running the commands is the caller's job.
+ * The history never branches. Pushing a new command drops the redo history.
  */
 export interface IUndoRedoService {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  /** 実行を済ませたコマンドを積む。 */
+  /** Pushes a command that has already been run. */
   push(command: ICommand): void;
   /**
-   * 最後に積んだコマンドを revert に渡し、revert が戻ったら redo の側へ移す。
-   * revert が throw したら履歴は動かさない。戻す対象が無ければ何もしない。
+   * Passes the last pushed command to revert and moves it to the redo side once revert returns.
+   * If revert throws, the history stays as is. Does nothing when there is nothing to undo.
    */
   undo(revert: (command: ICommand) => void): void;
-  /** undo の逆向き。reapply が throw したら履歴は動かさない。 */
+  /** The reverse of undo. If reapply throws, the history stays as is. */
   redo(reapply: (command: ICommand) => void): void;
 }
 
@@ -43,7 +43,7 @@ export class UndoRedoService implements IUndoRedoService {
     this.move(this.redoStack, this.undoStack, reapply);
   }
 
-  // 実行が成功してから積み替える。先に取り出すと、実行が throw したときにコマンドが履歴から消える。
+  // Move only after the run succeeds. Popping first would lose the command if the run throws.
   private move(from: ICommand[], to: ICommand[], run: (command: ICommand) => void): void {
     const command = from.at(-1);
     if (command === undefined) {

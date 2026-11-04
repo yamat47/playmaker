@@ -1,23 +1,23 @@
 import type { IPlayModel } from "../model/play-model.js";
 
 /**
- * 編集操作 1 つ。redo は apply をもう一度呼んで表す。
- * 取り消しに要る直前の状態は、apply のたびに各コマンドが自分で控える。
+ * A single editing operation. Redo is expressed by calling apply again.
+ * Each command records by itself, on every apply, the prior state that undo needs.
  */
 export interface ICommand {
-  /** 履歴の表示に使う日本語のラベル。 */
+  /** Short English name of the command, such as "Add line"; it appears in error messages. */
   readonly label: string;
   /**
-   * Model を変えたら true を返す。何も変えないときは Model に触れずに false を返し、
-   * 履歴に空の段を積ませない。
+   * Returns true when it changed the Model. When nothing changes, returns false without touching
+   * the Model, so that no empty entry is pushed onto the history.
    */
   apply(model: IPlayModel): boolean;
   undo(model: IPlayModel): void;
 }
 
-/** apply で控えた値を undo で取り出す。apply より前に undo されたら throw する。 */
+/** Retrieves a value recorded by apply for use in undo. Throws if undo runs before apply. */
 export function requireApplied<T>(value: T | undefined, command: ICommand): T {
-  /* v8 ignore start -- 履歴は apply が済んだコマンドしか積まないので、編集の操作からは届かない。 */
+  /* v8 ignore start -- Only applied commands enter the history, so edits never get here. */
   if (value === undefined) {
     throw new Error(`${command.label}: undone before apply`);
   }

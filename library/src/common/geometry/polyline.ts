@@ -1,8 +1,8 @@
 import type { CanvasPoint } from "./field.js";
 
-/** 隣り合う 2 点の組を先頭から順に返す。2 点未満なら何も返さない。 */
+/** Yields adjacent point pairs in order from the start. Yields nothing for fewer than 2 points. */
 export function* segments<T>(points: readonly T[]): Generator<readonly [T, T]> {
-  // 前の点を箱に入れて持つ。T が undefined を含んでも「前の点が無い」と区別できる。
+  // Box the previous point so "no previous point" stays distinct even when T includes undefined.
   let previous: { readonly point: T } | undefined;
   for (const point of points) {
     if (previous !== undefined) {
@@ -12,7 +12,7 @@ export function* segments<T>(points: readonly T[]): Generator<readonly [T, T]> {
   }
 }
 
-/** 隣接点間の距離を足し上げた全長。2 点未満なら 0。 */
+/** Total length as the sum of distances between adjacent points. 0 for fewer than 2 points. */
 export function polylineLength(path: readonly CanvasPoint[]): number {
   let total = 0;
   for (const [a, b] of segments(path)) {
@@ -22,10 +22,11 @@ export function polylineLength(path: readonly CanvasPoint[]): number {
 }
 
 /**
- * 終点から折れ線に沿って distance だけ戻った点で終わる、新しい折れ線を返す。
- * 最後の区間だけで戻らないのは、細かく刻んだ曲線では 1 区間が distance より短いため。
- * maxFraction は削る長さの上限で、全長に対する割合で渡す。既定の 1 では上限が無く、
- * distance が全長以上なら始点 1 点だけを返す。
+ * Returns a new polyline that ends at the point reached by walking back distance from the end
+ * along the polyline. It does not walk back within the last segment only, because on a finely
+ * sampled curve one segment is shorter than distance. maxFraction limits the trimmed length as
+ * a fraction of the total length. The default of 1 sets no limit, and a distance at or beyond
+ * the total length returns only the start point.
  */
 export function trimPolylineEnd(
   path: readonly CanvasPoint[],
@@ -41,17 +42,19 @@ export function trimPolylineEnd(
     return [...path];
   }
 
-  // 矢じりの長さは全長よりずっと短く、たいてい終点側の数区間で止まるので、配列を複製せずに遡る。
+  // The arrowhead is much shorter than the total length and usually stops within a few segments
+  // from the end, so walk back without copying the array.
   for (let i = path.length - 1; i > 0; i--) {
     const a = path[i - 1];
     const b = path[i];
-    /* v8 ignore start -- i は 1 から path.length - 1 までなので、a も b も範囲の内側にある。 */
+    /* v8 ignore start -- i runs from 1 to path.length - 1, so both a and b are inside the range. */
     if (a === undefined || b === undefined) {
       break;
     }
     /* v8 ignore stop */
     const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-    // 等号で切ると a と同じ座標を足し、長さ 0 の区間が末尾に残る（丸キャップが点を描く）。
+    // Cutting on equality would add a point equal to a, leaving a zero-length segment at the end
+    // (a round cap would draw a dot).
     if (segLen > remaining) {
       const t = (segLen - remaining) / segLen;
       return [...path.slice(0, i), { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }];

@@ -75,8 +75,9 @@ export interface IPlayModel {
   /** Replaces the player with the same id and returns the player it replaced. */
   updatePlayer(player: Player): Player;
   /**
-   * Throws when given a line whose id already exists. Also throws when the lines would exceed
-   * MAX_LINES, and for a line whose waypoints exceed MAX_WAYPOINTS_PER_LINE.
+   * Throws when given a line whose id already exists or whose start player does not exist. Also
+   * throws when the lines would exceed MAX_LINES, and for a line whose waypoints exceed
+   * MAX_WAYPOINTS_PER_LINE.
    */
   addLine(line: Line): void;
   /** index ranges from 0 to the line count; throws outside it, and otherwise as addLine does. */
@@ -270,6 +271,11 @@ export class PlayModel extends Disposable implements IPlayModel {
 
   insertLine(line: Line, index: number): void {
     assertNewId(this.state.lines, line.id, "PlayModel: duplicate line id");
+    // A line without its start player is never drawn and cannot be selected, so nothing in the
+    // editor could ever remove it again.
+    if (this.findPlayer(line.startPlayerId) === undefined) {
+      throw new Error(`PlayModel: unknown start player id "${line.startPlayerId}"`);
+    }
     this.commit({ ...this.state, lines: insertAt(this.state.lines, index, line, "line") });
   }
 

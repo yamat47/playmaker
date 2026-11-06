@@ -56,6 +56,13 @@ describe("PlayModel construction", () => {
 });
 
 describe("PlayModel unknown ids", () => {
+  it("throws when adding a line whose start player does not exist, without changing it", () => {
+    const model = new PlayModel(seed());
+
+    expect(() => model.addLine(line("lz", "z"))).toThrow('PlayModel: unknown start player id "z"');
+    expect(model.getData().lines.map((l) => l.id)).toEqual(["la", "lb", "lc"]);
+  });
+
   it("throws when updating a player with an unknown id", () => {
     const model = new PlayModel(seed());
 

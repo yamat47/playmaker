@@ -12,6 +12,7 @@ import {
 } from "../commands/line-commands.js";
 import {
   AddPlayerCommand,
+  MovePlayerCommand,
   type PlayerPatch,
   RemovePlayerCommand,
   UpdatePlayerCommand,
@@ -41,7 +42,9 @@ import {
   isLineTool,
   isSameSelection,
   isToolAvailable,
+  NO_MODIFIERS,
   NO_SELECTION,
+  type PointerModifiers,
 } from "./editor.js";
 import { EditorNotifier } from "./editor-notifier.js";
 import {
@@ -161,7 +164,7 @@ export class EditorController extends Disposable implements IEditorController {
     });
   }
 
-  pointerMove(pos: FieldPosition): void {
+  pointerMove(pos: FieldPosition, modifiers: PointerModifiers = NO_MODIFIERS): void {
     const interaction = this.interaction;
     if (interaction === undefined) {
       return;
@@ -170,12 +173,16 @@ export class EditorController extends Disposable implements IEditorController {
       this.setInteraction(
         interaction.type === "draw-line"
           ? { ...interaction, cursor: this.placeDraftPoint(interaction, pos) }
-          : { ...interaction, current: this.placeDragged(interaction, pos) },
+          : {
+              ...interaction,
+              current: this.placeDragged(interaction, pos),
+              alone: modifiers.altKey,
+            },
       ),
     );
   }
 
-  pointerUp(pos: FieldPosition): void {
+  pointerUp(pos: FieldPosition, modifiers: PointerModifiers = NO_MODIFIERS): void {
     const interaction = this.interaction;
     if (interaction?.type === "draw-line") {
       this.releaseDrawing(interaction, pos);
@@ -198,7 +205,7 @@ export class EditorController extends Disposable implements IEditorController {
       if (isSamePosition(to, interaction.origin)) {
         return;
       }
-      this.commands.execute(this.dropCommand(interaction, to));
+      this.commands.execute(this.dropCommand(interaction, to, modifiers.altKey));
     });
   }
 
@@ -374,10 +381,10 @@ export class EditorController extends Disposable implements IEditorController {
     return stopShortOfPlayer(point, from, others);
   }
 
-  private dropCommand(drag: DragInteraction, to: FieldPosition): ICommand {
-    const drop = dragPatch(drag.target, to);
+  private dropCommand(drag: DragInteraction, to: FieldPosition, alone: boolean): ICommand {
+    const drop = dragPatch(drag.target, to, alone);
     return drop.kind === "player"
-      ? new UpdatePlayerCommand(drop.playerId, drop.patch)
+      ? new MovePlayerCommand(drop.player.id, to, drop.withLines)
       : new UpdateLineCommand(drop.lineId, drop.patch);
   }
 
@@ -426,7 +433,7 @@ export class EditorController extends Disposable implements IEditorController {
       return false;
     }
     this.setSelection({ kind: "player", id: player.id });
-    this.setInteraction(startDrag({ kind: "player", playerId: player.id }, player.position, pos));
+    this.setInteraction(startDrag({ kind: "player", player }, player.position, pos));
     return true;
   }
 

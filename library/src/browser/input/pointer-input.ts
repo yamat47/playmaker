@@ -55,7 +55,7 @@ export class PointerInput extends Disposable {
     // The line being drawn follows the pointer without a button held, so every move is passed on.
     const onPointerMove = (e: PointerEvent) => {
       if (e.isPrimary) {
-        controller.pointerMove(toYard(e));
+        controller.pointerMove(toYard(e), { altKey: e.altKey });
       }
     };
     // Clears the record and returns true when this ends the pressed pointer. Right after up, the
@@ -70,7 +70,7 @@ export class PointerInput extends Disposable {
     };
     const onPointerUp = (e: PointerEvent) => {
       if (endPress(e)) {
-        controller.pointerUp(toYard(e));
+        controller.pointerUp(toYard(e), { altKey: e.altKey });
       }
     };
     // A press that ended without an up, because a touch scroll started or the window changed.

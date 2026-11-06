@@ -120,6 +120,7 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
   Redo = `Cmd/Ctrl+Shift+Z` or `Cmd/Ctrl+Y`, Delete or Backspace deletes the selection, and Esc steps back
   (cancels the drag or drawing in progress, then clears the selection, then returns to the select tool).
   A double-click or Enter finishes the line being drawn.
+  Dragging a player moves its lines along with it; hold Option (Alt) to move the player alone.
   The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
   The diagram is drawn at a size that fits the container area left after excluding them
 - `view`: read-only. No editing UI is shown

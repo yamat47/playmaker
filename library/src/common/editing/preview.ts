@@ -1,5 +1,5 @@
 import { applyLinePatch } from "../commands/line-commands.js";
-import { applyPlayerPatch } from "../commands/player-commands.js";
+import { movePlayerWithLines } from "../commands/player-commands.js";
 import type { Line } from "../model/line.js";
 import type { EditorOverlay, EditorSelection, SceneData } from "./editor.js";
 import {
@@ -15,16 +15,22 @@ import {
 /** The id of the line being drawn. Never enters the Model; used only inside the preview. */
 const DRAFT_LINE_ID = "__playmaker_draft_line__";
 
-// A line starts at a player, so replacing the player is enough for the line to follow.
 function applyDragPatch(data: SceneData, drop: DragPatch): SceneData {
   switch (drop.kind) {
-    case "player":
+    case "player": {
+      const moved = movePlayerWithLines(
+        drop.player,
+        drop.to,
+        drop.withLines ? data.lines : [],
+        data.field,
+      );
+      const lines = new Map(moved.lines.map((l) => [l.id, l]));
       return {
         ...data,
-        players: data.players.map((p) =>
-          p.id === drop.playerId ? applyPlayerPatch(p, drop.patch) : p,
-        ),
+        players: data.players.map((p) => (p.id === moved.player.id ? moved.player : p)),
+        lines: data.lines.map((l) => lines.get(l.id) ?? l),
       };
+    }
     case "line":
       return {
         ...data,
@@ -47,7 +53,10 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
   }
   switch (interaction.type) {
     case "drag":
-      return applyDragPatch(data, dragPatch(interaction.target, interaction.current));
+      return applyDragPatch(
+        data,
+        dragPatch(interaction.target, interaction.current, interaction.alone),
+      );
     case "draw-line":
       return { ...data, lines: [...data.lines, draftLine(interaction)] };
   }

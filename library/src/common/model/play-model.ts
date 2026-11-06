@@ -21,6 +21,12 @@ export interface LineRemoval {
   readonly index: number;
 }
 
+/** The elements a replacement took out, ready to put back with another replacement. */
+export interface ReplacedElements {
+  readonly players: readonly Player[];
+  readonly lines: readonly Line[];
+}
+
 /**
  * State of the play diagram. An implementation never keeps a line whose start player is gone.
  * Removals and replacements return the previous values needed to undo them.
@@ -74,6 +80,11 @@ export interface IPlayModel {
   restorePlayer(removal: PlayerRemoval): void;
   /** Replaces the player with the same id and returns the player it replaced. */
   updatePlayer(player: Player): Player;
+  /**
+   * Replaces the players and lines with the same ids in one change, so onDidChange fires once, and
+   * returns the ones they replaced. Throws for an unknown id.
+   */
+  replaceElements(players: readonly Player[], lines: readonly Line[]): ReplacedElements;
   /**
    * Throws when given a line whose id already exists or whose start player does not exist. Also
    * throws when the lines would exceed MAX_LINES, and for a line whose waypoints exceed
@@ -263,6 +274,21 @@ export class PlayModel extends Disposable implements IPlayModel {
       players: this.state.players.map((p) => (p === prev ? player : p)),
     });
     return prev;
+  }
+
+  replaceElements(players: readonly Player[], lines: readonly Line[]): ReplacedElements {
+    const replaced = {
+      players: players.map((p) => this.getPlayer(p.id)),
+      lines: lines.map((l) => this.getLine(l.id)),
+    };
+    const nextPlayers = new Map(players.map((p) => [p.id, p]));
+    const nextLines = new Map(lines.map((l) => [l.id, l]));
+    this.commit({
+      ...this.state,
+      players: this.state.players.map((p) => nextPlayers.get(p.id) ?? p),
+      lines: this.state.lines.map((l) => nextLines.get(l.id) ?? l),
+    });
+    return replaced;
   }
 
   addLine(line: Line): void {

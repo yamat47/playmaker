@@ -96,6 +96,7 @@ The MVP provides the following feature set. API signatures, type definitions, an
 - Players can be placed on the field. Available positions are grid points at 0.5-yard steps, and both dragging and loading data snap to the grid.
   This keeps rows and columns aligned without an operation for aligning elements to each other. One diagram holds up to 64 players (a typical diagram has about 22)
 - Each player is displayed with a shape (circle or square) and a label
+- Dragging a player moves the lines that start at it along with it, keeping their shape. Holding Option (Alt) moves the player alone
 - Color and fill (outline or solid) can be set per player and reset to the default. The color is chosen from 4 colors in the panel
 
 ### 5.3 Line drawing

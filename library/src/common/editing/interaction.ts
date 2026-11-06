@@ -1,5 +1,4 @@
 import type { LinePatch } from "../commands/line-commands.js";
-import type { PlayerPatch } from "../commands/player-commands.js";
 import {
   DEFAULT_LINE_INTERPOLATION,
   type Line,
@@ -13,7 +12,7 @@ import type { FieldPosition, Player } from "../model/player.js";
  * Any change to the diagram ends the drag, so they still match the line when it is dropped.
  */
 export type DragTarget =
-  | { readonly kind: "player"; readonly playerId: string }
+  | { readonly kind: "player"; readonly player: Player }
   | {
       readonly kind: "waypoint";
       readonly lineId: string;
@@ -37,6 +36,8 @@ export interface DragInteraction {
   readonly grabOffset: FieldPosition;
   /** The current position of the target, after being clamped into the window. */
   readonly current: FieldPosition;
+  /** Whether a dragged player leaves its lines where they are (Option or Alt held). */
+  readonly alone: boolean;
 }
 
 export interface DrawInteraction {
@@ -88,6 +89,7 @@ export function startDrag(
       downfieldYard: origin.downfieldYard - pointer.downfieldYard,
     },
     current: origin,
+    alone: false,
   };
 }
 
@@ -104,14 +106,19 @@ export function dragPosition(drag: DragInteraction, pointer: FieldPosition): Fie
  * it, so what is shown never differs from the result.
  */
 export type DragPatch =
-  | { readonly kind: "player"; readonly playerId: string; readonly patch: PlayerPatch }
+  | {
+      readonly kind: "player";
+      readonly player: Player;
+      readonly to: FieldPosition;
+      readonly withLines: boolean;
+    }
   | { readonly kind: "line"; readonly lineId: string; readonly patch: LinePatch };
 
 /** The change that puts the target at to. */
-export function dragPatch(target: DragTarget, to: FieldPosition): DragPatch {
+export function dragPatch(target: DragTarget, to: FieldPosition, alone: boolean): DragPatch {
   switch (target.kind) {
     case "player":
-      return { kind: "player", playerId: target.playerId, patch: { position: to } };
+      return { kind: "player", player: target.player, to, withLines: !alone };
     case "endpoint":
       return { kind: "line", lineId: target.lineId, patch: { end: to } };
     case "waypoint":

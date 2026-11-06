@@ -147,6 +147,64 @@ describe("Dragging a player", () => {
     expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(14, 3));
   });
 
+  it("moves the lines that start at a dragged player by the same distance", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.drag(yd(10, 0), yd(12, 1));
+
+    expect(play.session.getPlayData().lines[0]).toMatchObject({
+      waypoints: [yd(17, 3)],
+      end: yd(27, 6),
+    });
+  });
+
+  it("draws the lines moving along with the player while it is dragged", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.editor.pointerDown(yd(10, 0));
+    play.editor.pointerMove(yd(12, 1));
+
+    expect(play.editor.getFrame().scene.lines[0]?.end).toEqual(yd(27, 6));
+  });
+
+  it("draws the player moving alone while Option or Alt is held", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.editor.pointerDown(yd(10, 0));
+    play.editor.pointerMove(yd(12, 1), { altKey: true });
+
+    expect(play.editor.getFrame().scene.lines).toEqual(twoPlayersWithRoute().lines);
+  });
+
+  it("moves the player alone when Option or Alt is held on release", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.drag(yd(10, 0), yd(12, 1), { altKey: true });
+
+    expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(12, 1));
+    expect(play.session.getPlayData().lines).toEqual(twoPlayersWithRoute().lines);
+  });
+
+  it("keeps each moved line point inside the zone window", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.drag(yd(10, 0), yd(10, 12));
+
+    expect(play.session.getPlayData().lines[0]).toMatchObject({
+      waypoints: [yd(15, 14)],
+      end: yd(25, 15),
+    });
+  });
+
+  it("puts the player and its lines back together on Undo", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.drag(yd(10, 0), yd(12, 1));
+
+    play.editor.undo();
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
   it("does not record history when released without moving", () => {
     const play = openPlay(twoPlayersWithRoute());
 

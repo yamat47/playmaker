@@ -98,11 +98,19 @@ export interface IEditorScene {
   getFrame(): EditorFrame;
 }
 
+/** The modifier keys held during a pointer operation. */
+export interface PointerModifiers {
+  /** Option on a Mac. A dragged player moves without its lines while it is held. */
+  readonly altKey: boolean;
+}
+
+export const NO_MODIFIERS: PointerModifiers = { altKey: false };
+
 /** Pointer operations (in yard space). */
 export interface IEditorGestures {
   pointerDown(pos: FieldPosition): void;
-  pointerMove(pos: FieldPosition): void;
-  pointerUp(pos: FieldPosition): void;
+  pointerMove(pos: FieldPosition, modifiers?: PointerModifiers): void;
+  pointerUp(pos: FieldPosition, modifiers?: PointerModifiers): void;
 }
 
 /** Edits invoked from the toolbar, the panels, and keyboard input. */

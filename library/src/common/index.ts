@@ -3,6 +3,8 @@ export { Disposable, DisposableStore, type IDisposable, toDisposable } from "./b
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
   EDITOR_TOOL_VALUES,
+  type EditorFrame,
+  type EditorHover,
   type EditorOverlay,
   type EditorTool,
   type IEditorActions,

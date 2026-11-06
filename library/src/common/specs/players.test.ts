@@ -323,12 +323,14 @@ describe("Dragging a player", () => {
     expect(positionOf(play.session.getPlayData(), "far")).toEqual(yd(10, 16));
   });
 
-  it("does not notify when the pointer moves and releases without a press", () => {
+  it("neither moves anything nor notifies when the pointer is released without a press", () => {
     const play = openPlay(twoPlayersWithRoute());
-
     play.editor.pointerMove(yd(10, 0));
+    play.notified.mockClear();
+
     play.editor.pointerUp(yd(10, 0));
 
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
     expect(play.notified).not.toHaveBeenCalled();
   });
 

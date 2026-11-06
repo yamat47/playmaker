@@ -81,6 +81,24 @@ export interface EditorViewState {
   readonly canStartLine: boolean;
 }
 
+/**
+ * The element a press at the pointer would act on, marked before the press. It has the shape of
+ * a selection, and like one it names "nothing" with `kind: "none"`.
+ */
+export type EditorHover = EditorSelection;
+
+/**
+ * The pointer shape over the field, as a CSS cursor keyword. It tells what a press would do:
+ * grab something, select a line, place or start something, or nothing at all.
+ */
+export type EditorCursor =
+  | "default"
+  | "pointer"
+  | "grab"
+  | "grabbing"
+  | "crosshair"
+  | "not-allowed";
+
 /** The overlay is computed from the same in-progress state as the scene. */
 export interface EditorFrame {
   /**
@@ -89,6 +107,9 @@ export interface EditorFrame {
    */
   readonly scene: SceneData;
   readonly overlay: EditorOverlay;
+  /** What a press at the pointer would act on. None while a drag or drawing is in progress. */
+  readonly hover: EditorHover;
+  readonly cursor: EditorCursor;
 }
 
 /** The read-only surface used to keep rendering and the UI in sync. */
@@ -131,6 +152,8 @@ export interface IEditorGestures {
    */
   pointerMove(pos: FieldPosition, modifiers?: PointerModifiers): void;
   pointerUp(pos: FieldPosition): void;
+  /** The pointer left the field, so nothing is marked as under it. */
+  pointerLeave(): void;
   /**
    * Finishes the line being drawn, removes the waypoint of the selected line under pos, or asks
    * for the label of the player under pos. The two presses of the double-click have already

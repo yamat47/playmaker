@@ -92,6 +92,7 @@ export class PointerInput extends Disposable {
         controller.cancelInteraction();
       }
     };
+    const onPointerLeave = () => controller.pointerLeave();
     const onDoubleClick = (e: MouseEvent) => controller.doubleClick(toYard(e));
     const onKeyDown = (e: KeyboardEvent) => {
       onModifierChange(e);
@@ -136,6 +137,7 @@ export class PointerInput extends Disposable {
     canvas.addEventListener("pointerup", onPointerUp, { signal });
     canvas.addEventListener("pointercancel", onPointerAbort, { signal });
     canvas.addEventListener("lostpointercapture", onPointerAbort, { signal });
+    canvas.addEventListener("pointerleave", onPointerLeave, { signal });
     canvas.addEventListener("dblclick", onDoubleClick, { signal });
     root.addEventListener("keydown", onKeyDown, { signal });
     root.addEventListener("keyup", onModifierChange, { signal });

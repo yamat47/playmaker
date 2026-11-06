@@ -120,6 +120,17 @@ describe("Pointer editing", () => {
     expect(playmaker.getPlayData().lines).toHaveLength(1);
   });
 
+  it("shows on the canvas cursor that a player under the pointer can be grabbed", async () => {
+    const { container } = mount();
+    await addPlayerAtSpot(container);
+    const canvas = canvasIn(container);
+
+    await userEvent.hover(canvas, { position: OTHER_SPOT });
+    await userEvent.hover(canvas, { position: SPOT });
+
+    expect(canvas.style.cursor).toBe("grab");
+  });
+
   it("adds no player on a canvas click after switching to view mode", async () => {
     const { container, playmaker } = mount();
     await button("Add player").click();

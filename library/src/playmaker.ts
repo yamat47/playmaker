@@ -1,5 +1,6 @@
 import {
   CanvasSurface,
+  type EditorDecorations,
   type Messages,
   PLAYMAKER_LOCALE_VALUES,
   type PlaymakerLocale,
@@ -11,7 +12,7 @@ import {
 } from "./browser/index.js";
 import {
   DisposableStore,
-  type EditorOverlay,
+  type EditorFrame,
   type Event,
   type FieldZone,
   type Formation,
@@ -142,8 +143,10 @@ export class Playmaker implements IDisposable {
     const stage = document.createElement("div");
     stage.className = "playmaker-stage";
     this.root.appendChild(stage);
-    const { scene, overlay } = this.session.controller.getFrame();
-    this.surface = this.store.add(new CanvasSurface(stage, scene, this.surfaceOverlay(overlay)));
+    const frame = this.session.controller.getFrame();
+    this.surface = this.store.add(
+      new CanvasSurface(stage, frame.scene, this.surfaceDecorations(frame)),
+    );
     // CanvasSurface draws the current diagram once its first size is known, so no draw here.
     this.ui = this.createUi();
     this.store.add(this.session.onDidChangeScene(() => this.draw()));
@@ -172,6 +175,9 @@ export class Playmaker implements IDisposable {
     this.root.dataset.mode = mode;
     if (mode === "view") {
       this.session.controller.cancelInteraction();
+      // The pointer input goes away with the editing UI and reports no leave, so the mark under
+      // the pointer would come back with edit mode.
+      this.session.controller.pointerLeave();
     }
     this.replaceUi();
     this.draw();
@@ -314,12 +320,13 @@ export class Playmaker implements IDisposable {
   }
 
   private draw(): void {
-    const { scene, overlay } = this.session.controller.getFrame();
-    this.surface.setScene(scene, this.surfaceOverlay(overlay));
+    const frame = this.session.controller.getFrame();
+    this.surface.setScene(frame.scene, this.surfaceDecorations(frame));
+    this.surface.canvas.style.cursor = this.currentMode === "edit" ? frame.cursor : "";
   }
 
   /** Undefined in view mode, so edit-only layers (the grid, selection highlight) are not drawn. */
-  private surfaceOverlay(overlay: EditorOverlay): EditorOverlay | undefined {
-    return this.currentMode === "edit" ? overlay : undefined;
+  private surfaceDecorations({ overlay, hover }: EditorFrame): EditorDecorations | undefined {
+    return this.currentMode === "edit" ? { overlay, hover } : undefined;
   }
 }

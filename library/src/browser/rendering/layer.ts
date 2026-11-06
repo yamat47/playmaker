@@ -1,7 +1,14 @@
-import type { EditorOverlay, FieldGeometry, FieldMetrics, SceneData } from "../../common/index.js";
+import type {
+  EditorHover,
+  EditorOverlay,
+  FieldGeometry,
+  FieldMetrics,
+  SceneData,
+} from "../../common/index.js";
 import type { ThemeReader } from "../theme/tokens.js";
 import { FieldRenderer } from "./field-renderer.js";
 import { GridRenderer } from "./grid-renderer.js";
+import { HoverRenderer } from "./hover-renderer.js";
 import { LineRenderer } from "./line-renderer.js";
 import { OverlayRenderer } from "./overlay-renderer.js";
 import { PlayerRenderer } from "./player-renderer.js";
@@ -14,13 +21,17 @@ export interface RenderFrame {
   readonly theme: ThemeReader;
 }
 
-/**
- * The input only the editor layers receive. The overlay is never passed to the diagram layers, so
- * no selection highlight or handle can slip into a diagram exported as PNG.
- */
-export interface EditorRenderFrame extends RenderFrame {
+/** What only the editing screen draws besides the diagram: the selection and the hover mark. */
+export interface EditorDecorations {
   readonly overlay: EditorOverlay;
+  readonly hover: EditorHover;
 }
+
+/**
+ * The input only the editor layers receive. The decorations are never passed to the diagram
+ * layers, so no selection highlight, handle, or hover mark can slip into a PNG export.
+ */
+export interface EditorRenderFrame extends RenderFrame, EditorDecorations {}
 
 /**
  * Draws one layer of the diagram. ctx already has the DPR transform applied, so drawing can use
@@ -41,7 +52,10 @@ export interface ILayerRenderer<F extends RenderFrame = RenderFrame> {
 export interface SurfaceLayers {
   /** The field. The diagram layers drawn below the editing-time backdrop. */
   readonly field: readonly ILayerRenderer[];
-  /** Editing-only layers between the field and the lines and players. Holds the position grid. */
+  /**
+   * Editing-only layers between the field and the lines and players: the position grid and the
+   * hover mark, which lies under what it marks so it never hides a line's color.
+   */
   readonly backdrop: readonly ILayerRenderer<EditorRenderFrame>[];
   /** The lines and players. */
   readonly play: readonly ILayerRenderer[];
@@ -53,7 +67,7 @@ export interface SurfaceLayers {
 export function createDefaultLayers(): SurfaceLayers {
   return {
     field: [new FieldRenderer()],
-    backdrop: [new GridRenderer()],
+    backdrop: [new GridRenderer(), new HoverRenderer()],
     play: [new LineRenderer(), new PlayerRenderer()],
     editor: [new OverlayRenderer()],
   };

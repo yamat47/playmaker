@@ -38,7 +38,9 @@ import {
   type Player,
 } from "../model/player.js";
 import {
+  type EditorCursor,
   type EditorFrame,
+  type EditorHover,
   type EditorSelection,
   type EditorTool,
   type EditorViewState,
@@ -62,6 +64,7 @@ import {
   type Interaction,
   isSamePosition,
   type LineStyle,
+  MAX_DRAFT_POINTS,
   type PlayerStyle,
   splitDraftPoints,
   startDrag,
@@ -89,6 +92,19 @@ type PressTarget =
   | { readonly kind: "none" };
 
 const NO_PRESS_TARGET: PressTarget = { kind: "none" };
+
+/** What a press at the pointer would act on, and the cursor that says what the press would do. */
+type Hover = Pick<EditorFrame, "hover" | "cursor">;
+
+const NOTHING_UNDER_POINTER: Hover = { hover: NO_SELECTION, cursor: "default" };
+
+function isSameHover(a: Hover, b: Hover): boolean {
+  return a.cursor === b.cursor && isSameSelection(a.hover, b.hover);
+}
+
+function cursorOnly(cursor: EditorCursor): Hover {
+  return { hover: NO_SELECTION, cursor };
+}
 
 function handleTarget(line: Line, hit: LineHandleHit): DragTarget {
   switch (hit.kind) {
@@ -139,6 +155,10 @@ export class EditorController extends Disposable implements IEditorController {
   // a drawing, which any change to the diagram ends, it is committed before anything else the
   // editor does, so a typed label is never lost to another edit.
   private labelDraft: LabelDraft | undefined;
+  // Where the pointer last was over the field, or undefined once it left. Only the position is
+  // kept: the frame works out what is under it when it is read, so the mark follows any change to
+  // the diagram, the selection, or the tool while the pointer rests.
+  private pointer: FieldPosition | undefined;
   // The style of the player and of the line last styled in the panel, given to the next player
   // placed and the next line drawn, so a run of defenders or of curved routes is styled once.
   private playerStyle: PlayerStyle = { shape: DEFAULT_PLAYER_SHAPE };
@@ -202,7 +222,11 @@ export class EditorController extends Disposable implements IEditorController {
       composePreview(this.model.getSnapshot(), this.interaction),
       this.labelDraft,
     );
-    return { scene, overlay: computeOverlay(scene, this.selection, this.livePickedWaypoint()) };
+    return {
+      scene,
+      overlay: computeOverlay(scene, this.selection, this.livePickedWaypoint()),
+      ...this.frameHover(),
+    };
   }
 
   setTool(tool: EditorTool): void {
@@ -213,12 +237,15 @@ export class EditorController extends Disposable implements IEditorController {
       this.commitLabelDraft();
       this.tool = tool;
       this.setInteraction(undefined);
+      // The cursor over the field depends on the tool.
+      this.notifier.markSceneChanged();
     });
   }
 
   pointerDown(pos: FieldPosition): void {
     this.pressOrigin = pos;
     this.notifier.batch(() => {
+      this.movePointer(pos);
       this.commitLabelDraft();
       this.setPickedWaypoint(undefined);
       const interaction = this.interaction;
@@ -249,8 +276,10 @@ export class EditorController extends Disposable implements IEditorController {
   pointerMove(pos: FieldPosition, modifiers: PointerModifiers = NO_MODIFIERS): void {
     const interaction = this.interaction;
     if (interaction === undefined) {
+      this.movePointer(pos);
       return;
     }
+    this.pointer = pos;
     // A move that lands on the same grid point changes nothing on screen, so it is not redrawn.
     this.notifier.batch(() => {
       if (interaction.type === "draw-line") {
@@ -271,15 +300,16 @@ export class EditorController extends Disposable implements IEditorController {
   pointerUp(pos: FieldPosition): void {
     this.lastPressDragged =
       this.pressOrigin !== undefined && pointDistance(pos, this.pressOrigin) >= CLICK_SLOP_YARDS;
-    const interaction = this.interaction;
-    if (interaction?.type === "draw-line") {
-      this.releaseDrawing(interaction, pos);
-      return;
-    }
-    if (interaction === undefined) {
-      return;
-    }
     this.notifier.batch(() => {
+      this.movePointer(pos);
+      const interaction = this.interaction;
+      if (interaction?.type === "draw-line") {
+        this.releaseDrawing(interaction, pos);
+        return;
+      }
+      if (interaction === undefined) {
+        return;
+      }
       this.setInteraction(undefined);
       const dropped = { ...interaction, current: this.placeDragged(interaction, pos) };
       // A drop where the target already is, after a click or a drag back to where it started,
@@ -289,6 +319,10 @@ export class EditorController extends Disposable implements IEditorController {
       }
       this.execute(dropCommand(dropped));
     });
+  }
+
+  pointerLeave(): void {
+    this.movePointer(undefined);
   }
 
   cancelInteraction(): void {
@@ -580,6 +614,71 @@ export class EditorController extends Disposable implements IEditorController {
     }
     const id = this.ids.next("line", new Set(this.model.getSnapshot().lines.map((l) => l.id)));
     return draftToLine(draw, id, split);
+  }
+
+  /**
+   * Moves the pointer, and redraws only when what is marked under it, or the cursor, changes. An
+   * idle move within a player then costs no redraw and no view state check.
+   */
+  private movePointer(next: FieldPosition | undefined): void {
+    const before = this.hoverAt(this.pointer);
+    this.pointer = next;
+    if (!isSameHover(before, this.hoverAt(next))) {
+      this.notifier.markSceneChanged();
+    }
+  }
+
+  /** The hover of the frame: what is under the pointer, unless a drag or drawing is in progress. */
+  private frameHover(): Hover {
+    const interaction = this.interaction;
+    if (interaction === undefined) {
+      return this.hoverAt(this.pointer);
+    }
+    if (interaction.type === "drag") {
+      return cursorOnly("grabbing");
+    }
+    // A press places a point until the line holds as many as it can take.
+    return cursorOnly(interaction.points.length < MAX_DRAFT_POINTS ? "crosshair" : "not-allowed");
+  }
+
+  /** What a press at pos would act on with the current tool, found as the press finds it. */
+  private hoverAt(pos: FieldPosition | undefined): Hover {
+    if (pos === undefined) {
+      return NOTHING_UNDER_POINTER;
+    }
+    const target = this.pressTargetAt(pos);
+    switch (target.kind) {
+      case "handle":
+        return cursorOnly("grab");
+      case "player":
+        return this.playerHover(target.player);
+      case "line":
+        return { hover: { kind: "line", id: target.line.id }, cursor: "pointer" };
+      case "none":
+        if (this.tool !== "add-player") {
+          return NOTHING_UNDER_POINTER;
+        }
+        return cursorOnly(this.canUseTool() ? "crosshair" : "not-allowed");
+    }
+  }
+
+  private playerHover(player: Player): Hover {
+    const hover: EditorHover = { kind: "player", id: player.id };
+    switch (this.tool) {
+      case "select":
+      case "add-player":
+        return { hover, cursor: "grab" };
+      case "route":
+      case "block":
+      case "motion":
+        // At the line limit a press on a player starts nothing, so nothing is marked.
+        return this.canUseTool() ? { hover, cursor: "crosshair" } : cursorOnly("not-allowed");
+    }
+  }
+
+  /** Whether the tool can place anything. Read only where it decides the cursor. */
+  private canUseTool(): boolean {
+    return isToolAvailable(this.tool, this.getViewState());
   }
 
   /**

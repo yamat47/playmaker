@@ -124,6 +124,7 @@ In edit mode the following editing operations are available:
 - Undo / Redo
 - Load formation templates (the commercial software lists the formations and loads the chosen one through the API; the toolbar has no formation picker)
 - Switch the field zone
+- See before pressing what a press would act on: the player or line under the pointer is marked, and the pointer shape says whether a press grabs, selects, places, or starts something
 
 The toolbar and property panel are placed around the Canvas.
 

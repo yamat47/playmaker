@@ -65,8 +65,9 @@ function refreshJson(): void {
   jsonArea.value = JSON.stringify(playmaker.getPlayData(), null, 2);
 }
 
+// Applied as an edit, so Undo brings the previous diagram back, as a host's template list would.
 function replacePlayKeepingZone(players: readonly Player[], lines: readonly Line[]): void {
-  playmaker.setPlayData({
+  playmaker.replacePlayData({
     version: CURRENT_PLAY_DATA_VERSION,
     field: { zone: playmaker.fieldZone },
     players,
@@ -156,9 +157,12 @@ playSelect.value = PLAY_PRESETS[0]?.id ?? "";
 playSelect.addEventListener("change", () => {
   const preset = getPlayPreset(playSelect.value);
   if (preset !== undefined) {
-    playmaker.setPlayData(preset.data);
+    playmaker.replacePlayData(preset.data);
     refreshJson();
   }
+  // Back to the placeholder: after Undo the diagram is no longer that play, and choosing the same
+  // play again has to fire a change to apply it.
+  playSelect.value = "";
 });
 
 // The toolbar has no formation picker; a host lists formations itself and calls loadFormation.

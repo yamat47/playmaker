@@ -72,7 +72,7 @@ Switching the zone moves the LOS to the default position for that zone (`LOS_YAR
 
 `field.losYard` is included in the saved data, but on load it is decided again from the zone and the passed value is not used. The value is held so that the absolute positions of players can be restored from the saved data alone. An API that lets the consumer place the LOS anywhere will be considered once there is a request for it.
 
-Both positions are limited to grid points at 0.5 yards (`GRID_STEP_YARDS`). The grid has the sideline as its origin horizontally and the LOS vertically, and `snapToGrid` moves a position to the nearest grid point. Snapping to the grid happens in 2 places: `parseFieldPosition`, the entry point for positions from outside (`setPlayData`, `restorePlayData`, and the formation and play presets), and `clampToField` in `EditorController`, which decides positions from the pointer. These 2 are the only places that make positions from outside values; moving a player's lines along with it shifts them by the distance between two grid points, and flipping the play mirrors them across the center line, which is a grid point, so both keep them on the grid, and there is no off-grid position inside the model. Patches from the panel carry only the label, shape, color, and fill, and have no position. This is the mechanism for aligning rows and columns without building an operation that aligns elements to each other, and there is no way to leave the grid and place freely. When positions were held as continuous values, the only way to align them was by eye.
+Both positions are limited to grid points at 0.5 yards (`GRID_STEP_YARDS`). The grid has the sideline as its origin horizontally and the LOS vertically, and `snapToGrid` moves a position to the nearest grid point. Snapping to the grid happens in 2 places: `parseFieldPosition`, the entry point for positions from outside (`setPlayData`, `replacePlayData`, `restorePlayData`, and the formation and play presets), and `clampToField` in `EditorController`, which decides positions from the pointer. These 2 are the only places that make positions from outside values; moving a player's lines along with it shifts them by the distance between two grid points, and flipping the play mirrors them across the center line, which is a grid point, so both keep them on the grid, and there is no off-grid position inside the model. Patches from the panel carry only the label, shape, color, and fill, and have no position. This is the mechanism for aligning rows and columns without building an operation that aligns elements to each other, and there is no way to leave the grid and place freely. When positions were held as continuous values, the only way to align them was by eye.
 
 The field width is 53 yards (`FIELD_WIDTH_YARDS`), not the regulation 53⅓ yards. This puts the center (26.5) on a grid point so that symmetric placements can be written on the grid, and the difference is only 1 foot. The hash positions are rounded to grid points for the same reason.
 
@@ -86,7 +86,7 @@ All values from outside are received as `unknown` and normalized before they ent
 | Entry point | Accepted type | Passes through |
 |---|---|---|
 | `new Playmaker(container, { initialData })`, `restorePlayData(raw)` | `unknown` | `migratePlayData` |
-| `setPlayData(data)` | `PlayDataInput` | `migratePlayData` (even when the type matches, duplicate ids and count limits are normalized) |
+| `setPlayData(data)`, `replacePlayData(data)` | `PlayDataInput` | `migratePlayData` (even when the type matches, duplicate ids and count limits are normalized) |
 | `loadFormation(formation)` | `Formation` | `normalizeFormation` |
 | `exportToPng({ width })` | `ImageExportOptions` | `resolveImageExportSize` |
 
@@ -109,7 +109,7 @@ Adding an optional key does not bump the version; `resolvePlayData` fills the mi
 Formations (`FORMATION_PRESETS`) and plays with lines drawn in (`PLAY_PRESETS`) are bundled. Both return frozen values as they are. They cannot be modified either at the type level or at runtime, so they are not copied on each hand-off.
 
 - A formation is passed to `loadFormation` and appends players to the current diagram. Offensive and defensive formations can be layered one after another
-- A play's `data` is a `PlayData` that can be passed directly to `setPlayData`, accompanied by a name, offense or defense, type, personnel, and a one-line description. How to show them in a list is up to the consumer, so they carry no color
+- A play's `data` is a `PlayData` that can be passed directly to `setPlayData`, or to `replacePlayData` to apply it as an edit, accompanied by a name, offense or defense, type, personnel, and a one-line description. How to show them in a list is up to the consumer, so they carry no color
 - Alignments are held in one place, `presets/alignments.ts`, and both formations and plays are built from there. The defensive line is set on the shoulders of the OL (shaded), and block end points are placed on the edge of the opponent's marker, so it is readable who covers which gap and who blocks whom. Every defensive player also gets a label
 
 ## Editing
@@ -127,11 +127,12 @@ The state is replaced on every change, so `getSnapshot` returns it without copyi
 
 ### Commands and history
 
-All edits are expressed as `ICommand` (`apply` / `undo`). There are commands for adding, deleting, updating, and moving players, adding, deleting, and updating lines, switching the zone, loading a formation, and flipping the play.
+All edits are expressed as `ICommand` (`apply` / `undo`). There are commands for adding, deleting, updating, and moving players, adding, deleting, and updating lines, switching the zone, loading a formation, flipping the play, and replacing the whole play.
 
 - `apply` returns true when it changed the Model. An operation that changes nothing returns false without touching the Model, and `CommandService` does not push it onto the history. Undo never becomes a no-op step after a patch with unchanged values or a zone switch
 - The previous state needed for the inverse operation is remembered by each command itself when `apply` runs. redo calls `apply` again
 - Updates are passed as patches. Omitted keys keep the current value, and `null` clears the value of an optional key (color and fill). The rule lives in one place, `commands/patch.ts`
+- An edit after which an id may name a different element (`reassignsIds`), which only replacing the whole play does, clears the selection when it is applied, undone, or redone: the selection is held by id, and would otherwise move to whatever element now has that id
 - An edit that changes many elements at once, such as moving a player with its lines or flipping the play, computes the next diagram as a pure function (`movePlayer`, `flipPlay`), puts it in with `replaceAll`, and puts the previous diagram back on Undo. Edits are undone in reverse order, so the diagram at that point is always the one the edit produced, and the Model needs no operation per kind of bulk change
 
 `UndoRedoService` is a linear history, and pushing a new edit discards the redo history. undo and redo take the function to run, and rearrange the history after it returns, so the history seen by a notified listener is always committed.
@@ -222,6 +223,7 @@ The consumer touches only the `Playmaker` class and the types and values re-expo
 
 - `setMode` keeps the `PlaySession`, which holds the diagram and history, and attaches or detaches only the bundle of editing UI, pointer input, and key input. Switching to view cancels the in-progress operation and does not draw the selection highlight. The selection itself is kept, so switching back to edit brings the highlight back
 - The input types are split in 2: `restorePlayData(raw: unknown)`, which restores a persisted value without checking its shape, and `setPlayData(data: PlayDataInput)`, which takes a diagram assembled with types. `PlayDataInput` can omit `field.losYard`. Both are loads, not edits, so they clear the history and do not emit `onDidChange`
+- `replacePlayData(data: PlayDataInput)` replaces the whole diagram as an edit (`ReplacePlayCommand`, through `PlayModel.replaceAll`): the session and its history stay, Undo brings the previous diagram back, and `onDidChange` fires. A diagram equal to the current one is not an edit, so applying the same template twice adds no step for Undo. It is for applying a template to the diagram being edited. Opening a different saved play stays a load, because with an edit, Undo would bring the previous play's contents into the newly opened one and `onChange` would save them under it
 - Changes are subscribed to with `onDidChange: Event<PlayData>`, and disposing the returned `IDisposable` unsubscribes. `options.onChange` only registers with this at construction
 - Changes after dispose do nothing and do not throw. `getPlayData` and `fieldZone` return the diagram as of dispose, and `exportToPng` rejects because it cannot return a Blob. Only in development does it report this with `console.warn`. Whether it is development is decided by `process.env.NODE_ENV`, which the bundler replaces; when loaded without the replacement, it is treated as production
 - `Playmaker` does not extend `Disposable` and implements `IDisposable` instead. Extending would expose internal members such as `_register` in the type definitions

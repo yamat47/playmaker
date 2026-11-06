@@ -10,7 +10,7 @@ import {
   RemoveLineCommand,
   UpdateLineCommand,
 } from "../commands/line-commands.js";
-import { FlipPlayCommand } from "../commands/play-commands.js";
+import { FlipPlayCommand, ReplacePlayCommand } from "../commands/play-commands.js";
 import {
   AddPlayerCommand,
   MovePlayerCommand,
@@ -30,7 +30,7 @@ import {
 } from "../geometry/hit-test.js";
 import type { IIdFactory } from "../model/id-factory.js";
 import { DEFAULT_LINE_INTERPOLATION, type Line, type LineKind, MAX_LINES } from "../model/line.js";
-import type { FieldZone } from "../model/play-data.js";
+import type { FieldZone, PlayData } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
 import {
   DEFAULT_PLAYER_SHAPE,
@@ -472,6 +472,11 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.batch(() => this.execute(new FlipPlayCommand()));
   }
 
+  /** Replaces the whole diagram as one edit. */
+  replacePlay(data: PlayData): void {
+    this.notifier.batch(() => this.execute(new ReplacePlayCommand(data)));
+  }
+
   /**
    * Appends the players to the existing diagram and returns true. Returns false without placing
    * anyone when they would exceed MAX_PLAYERS. PlaySession passes only normalized formations, and
@@ -510,7 +515,7 @@ export class EditorController extends Disposable implements IEditorController {
       this.setInteraction(undefined);
       // The waypoints may differ afterward, and the index would then point at another waypoint.
       this.setPickedWaypoint(undefined);
-      this.commands.undo();
+      this.dropSelectionAfter(this.commands.undo());
     });
   }
 
@@ -519,14 +524,26 @@ export class EditorController extends Disposable implements IEditorController {
       this.commitLabelDraft();
       this.setInteraction(undefined);
       this.setPickedWaypoint(undefined);
-      this.commands.redo();
+      this.dropSelectionAfter(this.commands.redo());
     });
   }
 
   /** Runs an edit after committing the typed label, so the label is not lost to the edit. */
   private execute(command: ICommand): void {
     this.commitLabelDraft();
-    this.commands.execute(command);
+    if (this.commands.execute(command)) {
+      this.dropSelectionAfter(command);
+    }
+  }
+
+  /**
+   * After an edit that reassigns ids, applied or undone or redone, the selection would name
+   * whatever element now has that id, so it is cleared.
+   */
+  private dropSelectionAfter(command: ICommand | undefined): void {
+    if (command?.reassignsIds === true) {
+      this.setSelection(NO_SELECTION);
+    }
   }
 
   private setLabelDraft(next: LabelDraft | undefined): void {

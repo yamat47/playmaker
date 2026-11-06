@@ -60,6 +60,7 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 | `getPlayData(): PlayData` | The canonical snapshot of the current play diagram (a deep copy; `version` is the current one) |
 | `restorePlayData(raw: unknown)` | Reloads a persisted value in full (resets the history; does not emit `onChange`) |
 | `setPlayData(data: PlayDataInput)` | Loads a whole diagram assembled with the typed API (`field.losYard` is optional) |
+| `replacePlayData(data: PlayDataInput)` | Replaces the whole diagram as an edit: Undo brings the previous diagram back and `onChange` fires (a diagram equal to the current one changes nothing). For applying a template to the diagram being edited; open a different saved play with `setPlayData` / `restorePlayData` instead. To apply a persisted value, pass it through `migratePlayData` first |
 | `loadFormation(formation): boolean` | Appends a formation to the existing diagram and returns whether it was placed (offense and defense presets can be layered in turn) |
 | `get mode` / `setMode(mode)` | Switches between `edit` / `view`. The diagram and the Undo history remain |
 | `get fieldZone` / `setFieldZone(zone)` | The field zone (`middle` / `redzone` / `own-redzone`) |
@@ -93,9 +94,13 @@ if (offense) playmaker.loadFormation(offense);
 ```ts
 import { PLAY_PRESETS } from "@yamat47/playmaker";
 
-// A play is a diagram with the lines drawn in. Loading its data replaces the current diagram.
+// A play is a diagram with the lines drawn in. Loading its data replaces the current diagram
+// and starts a fresh history, as opening another play should.
 const play = PLAY_PRESETS[0];
 if (play) playmaker.setPlayData(play.data);
+
+// Or apply it to the diagram being edited, as one edit that Undo takes back:
+// if (play) playmaker.replacePlayData(play.data);
 ```
 
 Both have `name` and `side` (`offense` / `defense`), so you can use them for list headings or to split offense and defense.
@@ -107,7 +112,8 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
 ### Data integration and versioning
 
 - `onChange` delivers a deep snapshot of the latest PlayData **once per committed edit command or Undo/Redo**.
-  It does not fire on construction, on `restorePlayData` / `setPlayData` reloads, or on PNG export
+  It does not fire on construction, on `restorePlayData` / `setPlayData` reloads, or on PNG export;
+  `replacePlayData` is an edit and fires it, unless the diagram it is given equals the current one
 - `getPlayData()` can be persisted as is. Passing it back to `restorePlayData` / `initialData`
   restores an equivalent play diagram (round-trip contract)
 - Even when given an old version, no version, a future version, or corrupted data, `migratePlayData` coerces it

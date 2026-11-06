@@ -1,5 +1,5 @@
 import { FIELD_WIDTH_YARDS } from "../geometry/field.js";
-import type { PlayData } from "../model/play-data.js";
+import { isSamePlayData, type PlayData } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
 import type { FieldPosition } from "../model/player.js";
 import { type ICommand, requireApplied } from "./command.js";
@@ -48,6 +48,36 @@ export class FlipPlayCommand implements ICommand {
   }
 
   // Edits are undone in reverse order, so putting back the whole previous diagram undoes the flip.
+  undo(model: IPlayModel): void {
+    model.replaceAll(requireApplied(this.previous, this));
+  }
+}
+
+/**
+ * Replaces the whole diagram as one edit, so applying a template to the diagram being edited can
+ * be taken back with Undo. Opening another saved diagram is a load instead, which starts a fresh
+ * history, so that Undo never brings back the contents of a different play.
+ */
+export class ReplacePlayCommand implements ICommand {
+  readonly label = "Replace play";
+  // The new diagram may give an id of the old one to a different element.
+  readonly reassignsIds = true;
+  private readonly data: PlayData;
+  private previous: PlayData | undefined;
+
+  constructor(data: PlayData) {
+    this.data = data;
+  }
+
+  apply(model: IPlayModel): boolean {
+    // Applying the diagram already shown changes nothing, so it adds no step for Undo.
+    if (isSamePlayData(model.getSnapshot(), this.data)) {
+      return false;
+    }
+    this.previous = model.replaceAll(this.data);
+    return true;
+  }
+
   undo(model: IPlayModel): void {
     model.replaceAll(requireApplied(this.previous, this));
   }

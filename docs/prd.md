@@ -148,6 +148,7 @@ The play diagram can be output as a PNG image. The export does not include the e
 - `PlayData` can be passed at initialization
 - On every editing operation, the latest `PlayData` is reported through `onChange`
 - `PlayData` persisted by the commercial software can be loaded again later
+- A whole diagram can also be applied as an edit, so that applying a template to the diagram being edited can be undone
 
 ## 6. Non-functional requirements
 

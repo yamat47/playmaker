@@ -106,6 +106,7 @@ export class Playmaker implements IDisposable {
   /**
    * Fires once per committed edit command or Undo / Redo, with a deep copy of the latest diagram.
    * `version` is always the current one, so the received value can be persisted as is.
+   * `replacePlayData` is an edit and fires it too.
    * Does not fire at construction, on loads through `setPlayData` and `restorePlayData`, or on PNG
    * export (a load is not an edit).
    * The copy is made per listener, so mutating it affects neither this diagram nor other listeners.
@@ -228,6 +229,23 @@ export class Playmaker implements IDisposable {
       return;
     }
     this.session.setPlayData(data);
+  }
+
+  /**
+   * Replaces the current diagram as one edit, for applying a template or a bundled play to the
+   * diagram being edited. Unlike `setPlayData`, the Undo history stays and gains this change, so
+   * Undo brings the previous diagram back, and onDidChange fires with the new diagram.
+   * The selection is cleared. The input is normalized as in `setPlayData`, and a diagram equal to
+   * the current one changes nothing. Callable in view mode as well.
+   * To open a different saved play, use `setPlayData` or `restorePlayData`: with this method, Undo
+   * would bring the contents of the previous play into the newly opened one.
+   */
+  replacePlayData(data: PlayDataInput): void {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("replacePlayData");
+      return;
+    }
+    this.session.replacePlayData(data);
   }
 
   /**

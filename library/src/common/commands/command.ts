@@ -8,6 +8,12 @@ export interface ICommand {
   /** Short English name of the command, such as "Add line"; it appears in error messages. */
   readonly label: string;
   /**
+   * True for an edit after which an id may name a different element than before, such as a
+   * replacement of the whole diagram. A selection held by id then means nothing after the edit,
+   * its Undo, or its Redo.
+   */
+  readonly reassignsIds?: true;
+  /**
    * Returns true when it changed the Model. When nothing changes, returns false without touching
    * the Model, so that no empty entry is pushed onto the history.
    */

@@ -344,23 +344,43 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private selectPointerDown(pos: FieldPosition): void {
+    if (!this.grabHandle(pos) && !this.grabPlayer(pos)) {
+      this.selectLineAt(pos);
+    }
+  }
+
+  private selectLineAt(pos: FieldPosition): void {
     const data = this.model.getSnapshot();
-    // Grab a handle of the selected line before anything else, so it can be edited even when it
-    // overlaps a player or another line.
-    const handle = this.hitSelectedLineHandle(pos);
-    if (handle !== undefined) {
-      this.setInteraction(handle);
-      return;
-    }
-    // Selecting a player also starts a drag. Releasing without moving is just a selection.
-    const player = hitTestPlayer(data.players, pos);
-    if (player !== undefined) {
-      this.setSelection({ kind: "player", id: player.id });
-      this.setInteraction(startDrag({ kind: "player", playerId: player.id }, player.position, pos));
-      return;
-    }
     const line = hitTestLine(data.lines, data.players, pos);
     this.setSelection(line === undefined ? NO_SELECTION : { kind: "line", id: line.id });
+  }
+
+  /**
+   * Starts dragging the handle of the selected line under pos and returns true, or returns false
+   * when there is none. The select tool tries this before anything else, so a handle can be
+   * edited even when it overlaps a player or another line.
+   */
+  private grabHandle(pos: FieldPosition): boolean {
+    const handle = this.hitSelectedLineHandle(pos);
+    if (handle === undefined) {
+      return false;
+    }
+    this.setInteraction(handle);
+    return true;
+  }
+
+  /**
+   * Selects the player under pos and starts dragging it, returning true, or returns false when
+   * there is none. Releasing without moving is just a selection.
+   */
+  private grabPlayer(pos: FieldPosition): boolean {
+    const player = hitTestPlayer(this.model.getSnapshot().players, pos);
+    if (player === undefined) {
+      return false;
+    }
+    this.setSelection({ kind: "player", id: player.id });
+    this.setInteraction(startDrag({ kind: "player", playerId: player.id }, player.position, pos));
+    return true;
   }
 
   private hitSelectedLineHandle(pos: FieldPosition): DragInteraction | undefined {

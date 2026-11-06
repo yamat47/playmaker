@@ -112,7 +112,7 @@ export type LineHandleHit =
 /**
  * Returns the line handle hit by target. The end point is tested before the waypoints so that
  * an attempt to move the tip is not stolen by the last waypoint. Later waypoints are drawn in
- * front, so the search runs from the end. Insert handles come last: on a short segment they sit
+ * front, so the searches run from the end. Insert handles come last: on a short segment they sit
  * close to the points that bound it, and moving an existing point is the likelier intent.
  */
 export function hitLineHandle(
@@ -129,7 +129,7 @@ export function hitLineHandle(
       return { kind: "waypoint", index, point };
     }
   }
-  for (const [index, point] of handles.insertHandles.entries()) {
+  for (const [index, point] of [...handles.insertHandles.entries()].reverse()) {
     if (within(point)) {
       return { kind: "insert", index, point };
     }

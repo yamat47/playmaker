@@ -16,6 +16,7 @@ import {
   draftToLine,
   dragPatch,
   type Interaction,
+  isSamePosition,
   MAX_DRAFT_POINTS,
   splitDraftPoints,
 } from "./interaction.js";
@@ -49,7 +50,12 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
   }
   switch (interaction.type) {
     case "drag":
-      return applyDragPatch(data, dragPatch(interaction));
+      // Until the pointer leaves the click slop the target stays at its origin, and a drop there
+      // changes nothing, so neither does the preview. Pressing an insert handle would otherwise
+      // show a bend at the handle, which reshapes a curve, during a mere click.
+      return isSamePosition(interaction.current, interaction.origin)
+        ? data
+        : applyDragPatch(data, dragPatch(interaction));
     case "draw-line":
       return { ...data, lines: [...data.lines, draftLine(interaction)] };
   }

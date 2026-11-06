@@ -174,6 +174,16 @@ describe("Drawing with a drag", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
+  it("keeps drawing with clicks when a drag from a player ends on a grid point in its marker", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("route");
+
+    play.drag(yd(10, 0), yd(10.7, 0.65));
+
+    expect(play.editor.getViewState().isDrawing).toBe(true);
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
   it("keeps drawing with clicks when the starting press drifts slightly off the start player", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.setTool("route");
@@ -216,6 +226,17 @@ describe("Placing points", () => {
     const play = openDrawingFromA();
     play.editor.pointerUp(yd(10, 0));
     play.editor.pointerDown(yd(10.5, 0.5));
+    play.editor.pointerDown(yd(14, 4));
+
+    play.editor.commitLine();
+
+    expect(addedLine(play)).toMatchObject({ waypoints: [], end: yd(14, 4) });
+  });
+
+  it("places no first point for a press on the start player whose grid point lies outside it", () => {
+    const play = openDrawingFromA();
+    play.editor.pointerUp(yd(10, 0));
+    play.editor.pointerDown(yd(10.8, 0));
     play.editor.pointerDown(yd(14, 4));
 
     play.editor.commitLine();

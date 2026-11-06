@@ -256,6 +256,21 @@ describe("hitLineHandle", () => {
     });
   });
 
+  it("returns the later insert handle, drawn on top, when insert handles overlap", () => {
+    const crowded = {
+      ...line,
+      insertHandles: [
+        { lateralYard: 30, downfieldYard: 5 },
+        { lateralYard: 30.5, downfieldYard: 5 },
+      ],
+    };
+
+    expect(hitLineHandle(crowded, { lateralYard: 30.5, downfieldYard: 5 })).toMatchObject({
+      kind: "insert",
+      index: 1,
+    });
+  });
+
   it("returns the waypoint rather than an insert handle that overlaps it", () => {
     const crowded = { ...line, insertHandles: [{ lateralYard: 10.25, downfieldYard: 0 }] };
 

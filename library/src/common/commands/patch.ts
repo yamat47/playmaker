@@ -1,3 +1,5 @@
+import { isRecord } from "../model/guards.js";
+
 type OptionalKeys<T> = {
   [K in keyof T]-?: Record<never, never> extends Pick<T, K> ? K : never;
 }[keyof T];
@@ -31,8 +33,23 @@ export function applyPatch<T extends object>(current: T, patch: Patch<T>): T {
   return next as T;
 }
 
-/** Whether applying the patch changes any value in current. Objects are compared by reference. */
+// A position, or a list of positions, is written anew by every drag even where it ends up equal,
+// so values are compared by content rather than by reference.
+function isSameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => isSameValue(item, b[i]));
+  }
+  if (isRecord(a) && isRecord(b)) {
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every((k) => isSameValue(a[k], b[k]));
+  }
+  return a === b;
+}
+
+/** Whether applying the patch changes any value in current. Values are compared by content. */
 export function patchChangesAnything<T extends object>(current: T, patch: Patch<T>): boolean {
   const values = asRecord(current);
-  return Object.entries(patch).some(([key, value]) => (value ?? undefined) !== values[key]);
+  return Object.entries(patch).some(
+    ([key, value]) => !isSameValue(value ?? undefined, values[key]),
+  );
 }

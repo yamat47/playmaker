@@ -36,7 +36,7 @@ function openWithTwoLines() {
 
 /**
  * Players a (10, 0) and b (20, 0), and line s from a straight to the center of b, selected. The
- * line is drawn up to the edge of b's marker, at (20 - PLAYER_RADIUS_YARDS, 0).
+ * line is drawn up to the circle the hit test uses around b, at (20 - PLAYER_RADIUS_YARDS, 0).
  */
 function openWithLineEndingOnB() {
   const play = openPlay(
@@ -173,6 +173,15 @@ describe("Dragging the end point", () => {
     const data = play.session.getPlayData();
     expect(lineOf(data, "s")?.end).toEqual(yd(19, 5));
     expect(data.players[1]?.position).toEqual(yd(20, 0));
+  });
+
+  it("neither records history nor notifies when the end is dragged back onto its player", () => {
+    const play = openWithLineEndingOnB();
+
+    play.drag(yd(19.07, 0), yd(20, 0));
+
+    expect(play.editor.getViewState().canUndo).toBe(false);
+    expect(play.onChange).not.toHaveBeenCalled();
   });
 
   it("keeps the end on the player when its handle is pressed and released after a slight drift", () => {
@@ -315,6 +324,14 @@ describe("Adding a bend", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
+  it("draws the line unchanged while the middle of a segment is pressed and not yet dragged", () => {
+    const play = openWithLineSelected();
+
+    play.editor.pointerDown(yd(20, 3.5));
+
+    expect(lineOf(play.editor.getFrame().scene, "l")?.waypoints).toEqual([yd(15, 2)]);
+  });
+
   it("leaves the line as it is when the middle of a segment is clicked with a slight drift", () => {
     const play = openWithLineSelected();
 
@@ -360,6 +377,16 @@ describe("Removing a bend", () => {
     play.editor.doubleClick(yd(15, 2));
 
     expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([]);
+  });
+
+  it("keeps a bend dragged right after a click when the browser reports a double-click", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+    play.drag(yd(15, 2), yd(18, 6));
+
+    play.editor.doubleClick(yd(18, 6));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([yd(18, 6)]);
   });
 
   it("marks a pressed bend as picked", () => {

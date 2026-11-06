@@ -35,7 +35,6 @@ import {
   DEFAULT_PLAYER_SHAPE,
   type FieldPosition,
   MAX_PLAYERS,
-  PLAYER_RADIUS_YARDS,
   type Player,
 } from "../model/player.js";
 import {
@@ -120,6 +119,11 @@ export class EditorController extends Disposable implements IEditorController {
   // An index into the waypoints of the selected line, set by pressing a waypoint so that Delete
   // removes that waypoint instead of the whole line. Any other press lets go of it.
   private pickedWaypoint: number | undefined;
+  // Where the current press went down, and whether the last press traveled CLICK_SLOP_YARDS before
+  // its release. A browser reports a double-click for a click followed by a quick drag too, and
+  // that must not remove the bend the drag just moved.
+  private pressOrigin: FieldPosition | undefined;
+  private lastPressDragged = false;
 
   constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
     super();
@@ -188,6 +192,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   pointerDown(pos: FieldPosition): void {
+    this.pressOrigin = pos;
     this.notifier.batch(() => {
       this.setPickedWaypoint(undefined);
       const interaction = this.interaction;
@@ -238,6 +243,8 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   pointerUp(pos: FieldPosition): void {
+    this.lastPressDragged =
+      this.pressOrigin !== undefined && pointDistance(pos, this.pressOrigin) >= CLICK_SLOP_YARDS;
     const interaction = this.interaction;
     if (interaction?.type === "draw-line") {
       this.releaseDrawing(interaction, pos);
@@ -263,6 +270,9 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   doubleClick(pos: FieldPosition): void {
+    if (this.lastPressDragged) {
+      return;
+    }
     if (this.interaction?.type === "draw-line") {
       this.commitLine();
       return;
@@ -458,7 +468,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   private placePoint(draw: DrawInteraction, pos: FieldPosition): void {
-    this.setInteraction(addDraftPoint(draw, this.clampToField(pos)));
+    this.setInteraction(addDraftPoint(draw, pos, this.clampToField(pos)));
   }
 
   private lineFromDraft(draw: DrawInteraction): Line | undefined {
@@ -559,8 +569,9 @@ export class EditorController extends Disposable implements IEditorController {
 
   /**
    * Clicks place points on press, so a release matters only for the press that started the
-   * drawing: off the start player, once the pointer has traveled CLICK_SLOP_YARDS, it ends a
-   * straight line drawn in one drag.
+   * drawing: once the pointer has traveled CLICK_SLOP_YARDS, a release where a point can go ends a
+   * straight line drawn in one drag. A release on the start player, or after a mere tremble,
+   * leaves the drawing open for clicks.
    */
   private releaseDrawing(draw: DrawInteraction, pos: FieldPosition): void {
     if (!draw.pressing) {
@@ -568,14 +579,12 @@ export class EditorController extends Disposable implements IEditorController {
     }
     this.notifier.batch(() => {
       const released = { ...draw, pressing: false };
-      const dragged =
-        pointDistance(pos, draw.pressedAt) >= CLICK_SLOP_YARDS &&
-        pointDistance(pos, draw.start) > PLAYER_RADIUS_YARDS;
-      if (!dragged) {
+      const placed = addDraftPoint(released, pos, this.clampToField(pos));
+      if (pointDistance(pos, draw.pressedAt) < CLICK_SLOP_YARDS || placed.points.length === 0) {
         this.setInteraction(released);
         return;
       }
-      this.placePoint(released, pos);
+      this.setInteraction(placed);
       this.commitLine();
     });
   }

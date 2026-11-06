@@ -181,19 +181,28 @@ export function startDrawing(
   };
 }
 
+function isOnMarker(point: FieldPosition, center: FieldPosition): boolean {
+  return pointDistance(point, center) <= PLAYER_RADIUS_YARDS;
+}
+
 /**
- * Places a point at point. When it is at the same position as the previous point, when it is the
- * first point and lies on the starting player's marker, or when the point limit has been reached,
- * only the cursor advances and no point is placed. Same positions are rejected because committing
- * with a double-click delivers pointerdown twice, which would place another point right on top of
- * the previous one. A first point on the marker would begin the line hidden under it, and a line
- * ending there would be invisible and impossible to select.
+ * Places a point at point, the grid point for a press at press. When it is at the same position as
+ * the previous point, when it is the first point and the press or the point lies on the starting
+ * player's marker, or when the point limit has been reached, only the cursor advances and no point
+ * is placed. Same positions are rejected because committing with a double-click delivers
+ * pointerdown twice, which would place another point right on top of the previous one. A press on
+ * the starting player is meant for the player, even where its grid point lies just outside the
+ * marker, and a first point on the marker would begin the line hidden under it.
  */
-export function addDraftPoint(draw: DrawInteraction, point: FieldPosition): DrawInteraction {
+export function addDraftPoint(
+  draw: DrawInteraction,
+  press: FieldPosition,
+  point: FieldPosition,
+): DrawInteraction {
   const last = draw.points.at(-1);
   const clear =
     last === undefined
-      ? pointDistance(point, draw.start) > PLAYER_RADIUS_YARDS
+      ? !isOnMarker(press, draw.start) && !isOnMarker(point, draw.start)
       : !isSamePosition(last, point);
   const accepts = clear && draw.points.length < MAX_DRAFT_POINTS;
   return { ...draw, points: accepts ? [...draw.points, point] : draw.points, cursor: point };

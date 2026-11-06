@@ -127,11 +127,12 @@ The state is replaced on every change, so `getSnapshot` returns it without copyi
 
 ### Commands and history
 
-All edits are expressed as `ICommand` (`apply` / `undo`). There are commands for adding, deleting, and updating players, adding, deleting, and updating lines, switching the zone, and loading a formation.
+All edits are expressed as `ICommand` (`apply` / `undo`). There are commands for adding, deleting, updating, and moving players, adding, deleting, and updating lines, switching the zone, and loading a formation.
 
 - `apply` returns true when it changed the Model. An operation that changes nothing returns false without touching the Model, and `CommandService` does not push it onto the history. Undo never becomes a no-op step after a patch with unchanged values or a zone switch
 - The previous state needed for the inverse operation is remembered by each command itself when `apply` runs. redo calls `apply` again
 - Updates are passed as patches. Omitted keys keep the current value, and `null` clears the value of an optional key (color and fill). The rule lives in one place, `commands/patch.ts`
+- An edit that changes many elements at once, such as moving a player with its lines, computes the next diagram as a pure function (`movePlayer`), puts it in with `replaceAll`, and puts the previous diagram back on Undo. Edits are undone in reverse order, so the diagram at that point is always the one the edit produced, and the Model needs no operation per kind of bulk change
 
 `UndoRedoService` is a linear history, and pushing a new edit discards the redo history. undo and redo take the function to run, and rearrange the history after it returns, so the history seen by a notified listener is always committed.
 

@@ -1,4 +1,5 @@
 import type { LinePatch } from "../commands/line-commands.js";
+import type { PlayerMove } from "../commands/player-commands.js";
 import {
   DEFAULT_LINE_INTERPOLATION,
   type Line,
@@ -12,7 +13,7 @@ import type { FieldPosition, Player } from "../model/player.js";
  * Any change to the diagram ends the drag, so they still match the line when it is dropped.
  */
 export type DragTarget =
-  | { readonly kind: "player"; readonly player: Player }
+  | { readonly kind: "player"; readonly playerId: string }
   | {
       readonly kind: "waypoint";
       readonly lineId: string;
@@ -113,33 +114,31 @@ export function dragPosition(drag: DragInteraction, pointer: FieldPosition): Fie
  * it, so what is shown never differs from the result.
  */
 export type DragPatch =
-  | {
-      readonly kind: "player";
-      readonly player: Player;
-      readonly to: FieldPosition;
-      readonly withLines: boolean;
-    }
+  | { readonly kind: "player"; readonly move: PlayerMove }
   | { readonly kind: "line"; readonly lineId: string; readonly patch: LinePatch };
 
-/** The change that puts the target at to. */
-export function dragPatch(target: DragTarget, to: FieldPosition, alone: boolean): DragPatch {
+/** The change that puts the dragged target at its current position. */
+export function dragPatch({ target, origin, current, alone }: DragInteraction): DragPatch {
   switch (target.kind) {
     case "player":
-      return { kind: "player", player: target.player, to, withLines: !alone };
+      return {
+        kind: "player",
+        move: { playerId: target.playerId, from: origin, to: current, withLines: !alone },
+      };
     case "endpoint":
-      return { kind: "line", lineId: target.lineId, patch: { end: to } };
+      return { kind: "line", lineId: target.lineId, patch: { end: current } };
     case "waypoint":
       return {
         kind: "line",
         lineId: target.lineId,
-        patch: { waypoints: target.waypoints.map((w, i) => (i === target.index ? to : w)) },
+        patch: { waypoints: target.waypoints.map((w, i) => (i === target.index ? current : w)) },
       };
     case "insert": {
       const { waypoints, index } = target;
       return {
         kind: "line",
         lineId: target.lineId,
-        patch: { waypoints: [...waypoints.slice(0, index), to, ...waypoints.slice(index)] },
+        patch: { waypoints: [...waypoints.slice(0, index), current, ...waypoints.slice(index)] },
       };
     }
   }

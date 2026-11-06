@@ -215,7 +215,9 @@ export class EditorController extends Disposable implements IEditorController {
       if (isSamePosition(to, interaction.origin)) {
         return;
       }
-      this.commands.execute(this.dropCommand(interaction, to, modifiers.altKey));
+      this.commands.execute(
+        this.dropCommand({ ...interaction, current: to, alone: modifiers.altKey }),
+      );
     });
   }
 
@@ -436,11 +438,11 @@ export class EditorController extends Disposable implements IEditorController {
     return stopShortOfPlayer(point, from, others);
   }
 
-  private dropCommand(drag: DragInteraction, to: FieldPosition, alone: boolean): ICommand {
-    const drop = dragPatch(drag.target, to, alone);
-    return drop.kind === "player"
-      ? new MovePlayerCommand(drop.player.id, to, drop.withLines)
-      : new UpdateLineCommand(drop.lineId, drop.patch);
+  private dropCommand(drop: DragInteraction): ICommand {
+    const patch = dragPatch(drop);
+    return patch.kind === "player"
+      ? new MovePlayerCommand(patch.move)
+      : new UpdateLineCommand(patch.lineId, patch.patch);
   }
 
   private lineFromDraft(draw: DrawInteraction): Line | undefined {
@@ -491,7 +493,7 @@ export class EditorController extends Disposable implements IEditorController {
       return false;
     }
     this.setSelection({ kind: "player", id: player.id });
-    this.setInteraction(startDrag({ kind: "player", player }, player.position, pos));
+    this.setInteraction(startDrag({ kind: "player", playerId: player.id }, player.position, pos));
     return true;
   }
 

@@ -158,6 +158,14 @@ describe("Dragging a player", () => {
     });
   });
 
+  it("leaves the lines of other players where they are when a player is dragged", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.drag(yd(20, 0), yd(22, 1));
+
+    expect(play.session.getPlayData().lines).toEqual(twoPlayersWithRoute().lines);
+  });
+
   it("draws the lines moving along with the player while it is dragged", () => {
     const play = openPlay(twoPlayersWithRoute());
 

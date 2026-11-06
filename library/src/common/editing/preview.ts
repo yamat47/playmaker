@@ -1,5 +1,5 @@
 import { applyLinePatch } from "../commands/line-commands.js";
-import { movePlayerWithLines } from "../commands/player-commands.js";
+import { movePlayer } from "../commands/player-commands.js";
 import { segmentMidpoints } from "../geometry/bezier.js";
 import type { LineHandles } from "../geometry/hit-test.js";
 import {
@@ -24,20 +24,8 @@ const DRAFT_LINE_ID = "__playmaker_draft_line__";
 
 function applyDragPatch(data: SceneData, drop: DragPatch): SceneData {
   switch (drop.kind) {
-    case "player": {
-      const moved = movePlayerWithLines(
-        drop.player,
-        drop.to,
-        drop.withLines ? data.lines : [],
-        data.field,
-      );
-      const lines = new Map(moved.lines.map((l) => [l.id, l]));
-      return {
-        ...data,
-        players: data.players.map((p) => (p.id === moved.player.id ? moved.player : p)),
-        lines: data.lines.map((l) => lines.get(l.id) ?? l),
-      };
-    }
+    case "player":
+      return movePlayer(data, drop.move);
     case "line":
       return {
         ...data,
@@ -60,10 +48,7 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
   }
   switch (interaction.type) {
     case "drag":
-      return applyDragPatch(
-        data,
-        dragPatch(interaction.target, interaction.current, interaction.alone),
-      );
+      return applyDragPatch(data, dragPatch(interaction));
     case "draw-line":
       return { ...data, lines: [...data.lines, draftLine(interaction)] };
   }

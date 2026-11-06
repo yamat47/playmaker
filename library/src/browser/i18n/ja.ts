@@ -5,8 +5,6 @@ export const ja: Messages = {
   undo: "元に戻す",
   redo: "やり直す",
   delete: "削除",
-  finishLine: "線を確定",
-  cancel: "取消",
   zone: { "own-redzone": "自陣RZ", middle: "中央", redzone: "相手RZ" },
   formation: "フォーメーション",
   loadFormation: "フォーメーション読込…",

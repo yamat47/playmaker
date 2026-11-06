@@ -24,8 +24,6 @@ export interface Messages {
   readonly undo: string;
   readonly redo: string;
   readonly delete: string;
-  readonly finishLine: string;
-  readonly cancel: string;
   readonly zone: Readonly<Record<FieldZone, string>>;
   readonly formation: string;
   readonly loadFormation: string;
@@ -61,8 +59,6 @@ export const en: Messages = {
   undo: "Undo",
   redo: "Redo",
   delete: "Delete",
-  finishLine: "Finish line",
-  cancel: "Cancel",
   zone: FIELD_ZONE_LABELS,
   formation: "Formation",
   loadFormation: "Load formation…",

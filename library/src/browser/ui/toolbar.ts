@@ -43,8 +43,6 @@ export class Toolbar extends Disposable {
   private readonly undoButton: HTMLButtonElement;
   private readonly redoButton: HTMLButtonElement;
   private readonly deleteButton: HTMLButtonElement;
-  private readonly commitButton: HTMLButtonElement;
-  private readonly cancelButton: HTMLButtonElement;
   private readonly formationPicker: HTMLSelectElement;
   // Text shown as the reason on parts that cannot be pressed because a count limit is reached.
   private readonly toolUnavailableReasons: Readonly<Partial<Record<EditorTool, string>>>;
@@ -74,9 +72,6 @@ export class Toolbar extends Disposable {
     }
     this.addSeparator();
     this.formationPicker = this.addFormationPicker(controller);
-    this.addSeparator();
-    this.commitButton = this.addButton(messages.finishLine, () => controller.commitLine());
-    this.cancelButton = this.addButton(messages.cancel, () => controller.cancelInteraction());
 
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
@@ -155,8 +150,6 @@ export class Toolbar extends Disposable {
     setEnabled(this.undoButton, state.canUndo);
     setEnabled(this.redoButton, state.canRedo);
     setEnabled(this.deleteButton, state.selection.kind !== "none");
-    setEnabled(this.commitButton, state.isDrawing);
-    setEnabled(this.cancelButton, state.isDrawing);
     this.syncFormationPicker(state);
   }
 

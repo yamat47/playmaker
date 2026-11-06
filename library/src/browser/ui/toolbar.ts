@@ -12,6 +12,7 @@ import {
   toDisposable,
 } from "../../common/index.js";
 import type { Messages } from "../i18n/index.js";
+import { createButton } from "./focus.js";
 
 /**
  * Disabled state is shown with aria-disabled, not disabled. With disabled, focus falls to the
@@ -65,15 +66,7 @@ export class Toolbar extends Disposable {
   }
 
   private addButton(label: string, onClick: () => void): HTMLButtonElement {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-    button.className = "playmaker-toolbar__button";
-    // A pointer press leaves the focus where it was, usually the canvas. Focused, the button would
-    // take Enter for itself, so Enter pressed to finish a line after clicking Undo mid-drawing
-    // would press Undo again. Tab still reaches the buttons.
-    button.addEventListener("mousedown", (e) => e.preventDefault());
-    button.addEventListener("click", () => {
+    const button = createButton("playmaker-toolbar__button", label, () => {
       if (button.getAttribute("aria-disabled") !== "true") {
         onClick();
       }

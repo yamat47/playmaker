@@ -21,7 +21,7 @@ export const ja: Messages = {
   shape: "形状",
   color: "色",
   kind: "種別",
-  interpolation: "補間",
+  interpolation: "線の形",
   shapes: { circle: "丸", square: "四角" },
   fills: { outline: "枠線", solid: "塗りつぶし" },
   kinds: { route: "ルート", block: "ブロック", motion: "モーション" },

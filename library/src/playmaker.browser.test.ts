@@ -218,6 +218,16 @@ describe("Property panel", () => {
     expect(document.activeElement).toBe(canvasIn(container));
   });
 
+  it("keeps a label still being typed when Square is pressed", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+
+    await userEvent.keyboard("QB");
+    await button("Square").click();
+
+    expect(playmaker.getPlayData().players[0]).toMatchObject({ label: "QB", shape: "square" });
+  });
+
   it("changes the label of the selected player when the label is rewritten", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
@@ -235,7 +245,7 @@ describe("Property panel", () => {
     await page.getByRole("textbox", { name: "Label" }).fill("QB");
     await userEvent.tab();
 
-    expect(document.activeElement).toBe(page.getByRole("combobox", { name: "Shape" }).element());
+    expect(document.activeElement).toBe(button("Circle").element());
   });
 
   it("gives the selected player the theme color and fill when a swatch is pressed", async () => {

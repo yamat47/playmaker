@@ -16,11 +16,7 @@ export interface IPointerSurface {
 
 // Keys that reach a form control are left to the control's default behavior (text undo and so on).
 function isFormControl(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLSelectElement ||
-    target instanceof HTMLTextAreaElement
-  );
+  return target instanceof HTMLInputElement;
 }
 
 export class PointerInput extends Disposable {

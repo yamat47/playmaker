@@ -74,7 +74,7 @@ export const en: Messages = {
   shape: "Shape",
   color: "Color",
   kind: "Kind",
-  interpolation: "Interpolation",
+  interpolation: "Path",
   shapes: { circle: "Circle", square: "Square" },
   fills: { outline: "Outline", solid: "Solid" },
   kinds: { route: "Route", block: "Block", motion: "Motion" },

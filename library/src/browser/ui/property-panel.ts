@@ -3,7 +3,6 @@ import {
   Disposable,
   type IEditorUi,
   isLineTool,
-  isOneOf,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,
@@ -17,7 +16,7 @@ import type { Messages } from "../i18n/index.js";
 import { normalizeCssColor } from "../theme/css-color.js";
 import { SWATCH_TOKENS } from "../theme/palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
-import { replaceKeepingFocus } from "./focus.js";
+import { createButton, replaceKeepingFocus } from "./focus.js";
 
 /** One round color button. An outline swatch colors only its rim; a solid one fills the inside. */
 interface SwatchChoice {
@@ -178,7 +177,7 @@ export class PropertyPanel extends Disposable {
     const { controller, messages } = this;
     this.addTitle(messages.player);
     const setLabel = this.addLabel(messages.label);
-    const setShape = this.addSelect(messages.shape, PLAYER_SHAPE_VALUES, messages.shapes, (v) =>
+    const setShape = this.addChoices(messages.shape, PLAYER_SHAPE_VALUES, messages.shapes, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
     // Eight swatches, outline and solid for each of the four colors. The top row is outline, the
@@ -209,10 +208,10 @@ export class PropertyPanel extends Disposable {
   private addLineFields(): (line: Line) => void {
     const { controller, messages } = this;
     this.addTitle(messages.line);
-    const setKind = this.addSelect(messages.kind, LINE_KIND_VALUES, messages.kinds, (v) =>
+    const setKind = this.addChoices(messages.kind, LINE_KIND_VALUES, messages.kinds, (v) =>
       controller.updateSelectedLine({ kind: v }),
     );
-    const setInterpolation = this.addSelect(
+    const setInterpolation = this.addChoices(
       messages.interpolation,
       LINE_INTERPOLATION_VALUES,
       messages.interpolations,
@@ -267,10 +266,10 @@ export class PropertyPanel extends Disposable {
     labelText: string,
     group: HTMLElement,
     onReset: (() => void) | undefined,
-  ): void {
+  ): HTMLElement {
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", labelText);
-    this.appendRow(labelText, [this.createRowText(labelText), group], onReset);
+    return this.appendRow(labelText, [this.createRowText(labelText), group], onReset);
   }
 
   private createRowText(text: string): HTMLElement {
@@ -288,7 +287,7 @@ export class PropertyPanel extends Disposable {
     labelText: string,
     children: readonly HTMLElement[],
     onReset: (() => void) | undefined,
-  ): void {
+  ): HTMLElement {
     const row = document.createElement("div");
     row.className = "playmaker-panel__row";
     row.append(...children);
@@ -302,6 +301,7 @@ export class PropertyPanel extends Disposable {
       row.appendChild(reset);
     }
     this.element.appendChild(row);
+    return row;
   }
 
   /**
@@ -373,27 +373,31 @@ export class PropertyPanel extends Disposable {
     };
   }
 
-  private addSelect<T extends string>(
+  /**
+   * A row of buttons, one per option, with the current one pressed. With two or three options,
+   * buttons show every choice at once and take one click, where a dropdown takes two.
+   */
+  private addChoices<T extends string>(
     labelText: string,
     options: readonly T[],
     optionLabels: Readonly<Record<T, string>>,
     onChange: (v: T) => void,
   ): (value: T) => void {
-    const select = document.createElement("select");
-    for (const opt of options) {
-      const o = document.createElement("option");
-      o.value = opt;
-      o.textContent = optionLabels[opt];
-      select.appendChild(o);
-    }
-    select.addEventListener("change", () => {
-      if (isOneOf(select.value, options)) {
-        onChange(select.value);
-      }
+    const group = document.createElement("div");
+    group.className = "playmaker-panel__choices";
+    const buttons = options.map((option) => {
+      const btn = createButton("playmaker-panel__choice", optionLabels[option], () =>
+        onChange(option),
+      );
+      group.appendChild(btn);
+      return { btn, option };
     });
-    this.addRow(labelText, select);
+    // The buttons take the full width under their name, which a 220px panel needs for three.
+    this.addGroupRow(labelText, group, undefined).classList.add("playmaker-panel__row--stacked");
     return (value) => {
-      select.value = value;
+      for (const { btn, option } of buttons) {
+        btn.setAttribute("aria-pressed", String(option === value));
+      }
     };
   }
 }

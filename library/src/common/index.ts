@@ -39,7 +39,6 @@ export {
 export { drawnLinePath } from "./geometry/line-path.js";
 export { playerMarkerOutline } from "./geometry/player-marker.js";
 export { resolveKeyAction } from "./input/keymap.js";
-export { isOneOf } from "./model/guards.js";
 export {
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,

@@ -1,13 +1,7 @@
 import type { Messages } from "./messages.js";
 
 export const ja: Messages = {
-  tool: {
-    select: "選択",
-    "add-player": "選手を追加",
-    route: "ルート",
-    block: "ブロック",
-    motion: "モーション",
-  },
+  tool: { select: "選択", "add-player": "選手を追加" },
   undo: "元に戻す",
   redo: "やり直す",
   delete: "削除",

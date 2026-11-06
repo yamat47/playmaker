@@ -19,7 +19,8 @@ export type PlaymakerLocale = (typeof PLAYMAKER_LOCALE_VALUES)[number];
  * between languages are functions, so each dictionary decides the order itself.
  */
 export interface Messages {
-  readonly tool: Readonly<Record<EditorTool, string>>;
+  /** The line tools are named by `kinds`, after the kind of line they draw. */
+  readonly tool: Readonly<Record<Exclude<EditorTool, LineKind>, string>>;
   readonly undo: string;
   readonly redo: string;
   readonly delete: string;
@@ -53,13 +54,7 @@ export interface Messages {
 }
 
 export const en: Messages = {
-  tool: {
-    select: "Select",
-    "add-player": "Add player",
-    route: "Route",
-    block: "Block",
-    motion: "Motion",
-  },
+  tool: { select: "Select", "add-player": "Add player" },
   undo: "Undo",
   redo: "Redo",
   delete: "Delete",

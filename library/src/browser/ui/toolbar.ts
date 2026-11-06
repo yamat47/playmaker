@@ -5,6 +5,7 @@ import {
   FIELD_ZONE_VALUES,
   type FieldZone,
   type IEditorUi,
+  isLineTool,
   isToolAvailable,
   MAX_LINES,
   MAX_PLAYERS,
@@ -33,23 +34,18 @@ export class Toolbar extends Disposable {
   private readonly undoButton: HTMLButtonElement;
   private readonly redoButton: HTMLButtonElement;
   private readonly deleteButton: HTMLButtonElement;
-  // Text shown as the reason on parts that cannot be pressed because a count limit is reached.
-  private readonly toolUnavailableReasons: Readonly<Partial<Record<EditorTool, string>>>;
+  private readonly messages: Messages;
 
   constructor(parent: HTMLElement, controller: IEditorUi, messages: Messages) {
     super();
-    const lineLimit = messages.lineLimit(MAX_LINES);
-    this.toolUnavailableReasons = {
-      "add-player": messages.playerLimit(MAX_PLAYERS),
-      route: lineLimit,
-      block: lineLimit,
-      motion: lineLimit,
-    };
+    this.messages = messages;
     this.element = document.createElement("div");
     this.element.className = "playmaker-toolbar";
 
     for (const tool of EDITOR_TOOL_VALUES) {
-      const btn = this.addButton(messages.tool[tool], () => controller.setTool(tool));
+      // A line tool is named after the kind of line it draws, as the panel names that kind.
+      const label = isLineTool(tool) ? messages.kinds[tool] : messages.tool[tool];
+      const btn = this.addButton(label, () => controller.setTool(tool));
       this.toolButtons.set(tool, btn);
     }
     this.addSeparator();
@@ -93,11 +89,19 @@ export class Toolbar extends Disposable {
     this.element.appendChild(sep);
   }
 
+  /** Why a tool cannot be pressed when a count limit is reached. */
+  private unavailableReason(tool: EditorTool): string | undefined {
+    if (isLineTool(tool)) {
+      return this.messages.lineLimit(MAX_LINES);
+    }
+    return tool === "add-player" ? this.messages.playerLimit(MAX_PLAYERS) : undefined;
+  }
+
   private sync(controller: IEditorUi): void {
     const state = controller.getViewState();
     for (const [tool, btn] of this.toolButtons) {
       btn.setAttribute("aria-pressed", String(tool === state.tool));
-      setEnabled(btn, isToolAvailable(tool, state), this.toolUnavailableReasons[tool]);
+      setEnabled(btn, isToolAvailable(tool, state), this.unavailableReason(tool));
     }
     for (const [zone, btn] of this.zoneButtons) {
       btn.setAttribute("aria-pressed", String(zone === state.fieldZone));

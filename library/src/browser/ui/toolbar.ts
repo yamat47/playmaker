@@ -38,9 +38,12 @@ export class Toolbar extends Disposable {
 
   constructor(parent: HTMLElement, controller: IEditorUi, messages: Messages) {
     super();
+    const lineLimit = messages.lineLimit(MAX_LINES);
     this.toolUnavailableReasons = {
       "add-player": messages.playerLimit(MAX_PLAYERS),
-      "draw-line": messages.lineLimit(MAX_LINES),
+      route: lineLimit,
+      block: lineLimit,
+      motion: lineLimit,
     };
     this.element = document.createElement("div");
     this.element.className = "playmaker-toolbar";

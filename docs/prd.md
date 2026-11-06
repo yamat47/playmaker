@@ -106,6 +106,7 @@ Three kinds of lines can be drawn.
 - **Block line (block)**: the block assignment of an OL and others. T-shaped bar at the end
 - **Motion line (motion)**: player movement before the snap. Dashed, with an arrowhead at the end
 
+Each kind has its own drawing tool. The kind is chosen before drawing, the tool stays chosen for the next line, and the kind can still be changed afterward.
 The kind is distinguished by the end marker and the line style, not by color. Every kind can be drawn either as a straight line or as a curve that passes through all control points.
 Color can be set per line and reset to the default. Every line of a kind has the same width.
 

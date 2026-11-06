@@ -1,13 +1,24 @@
 import type { Event } from "../base/event.js";
 import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerPatch } from "../commands/player-commands.js";
-import type { Line } from "../model/line.js";
+import { isOneOf } from "../model/guards.js";
+import { LINE_KIND_VALUES, type Line, type LineKind } from "../model/line.js";
 import type { FieldZone, PlayData } from "../model/play-data.js";
 import type { FieldPosition, Player } from "../model/player.js";
 
-export const EDITOR_TOOL_VALUES = ["select", "add-player", "draw-line"] as const;
+/**
+ * The line tools are named after the kind of line they draw. Choosing the kind before drawing
+ * saves changing it in the panel afterward, which is how a coach thinks: the blocks, then the
+ * routes, then the motion.
+ */
+export const EDITOR_TOOL_VALUES = ["select", "add-player", ...LINE_KIND_VALUES] as const;
 
 export type EditorTool = (typeof EDITOR_TOOL_VALUES)[number];
+
+/** Whether the tool draws lines; the tool is then the kind of line it draws. */
+export function isLineTool(tool: EditorTool): tool is LineKind {
+  return isOneOf(tool, LINE_KIND_VALUES);
+}
 
 /**
  * A selection is a desired id; it is not cleared when the target disappears. Existence is
@@ -29,14 +40,10 @@ export function isSameSelection(a: EditorSelection, b: EditorSelection): boolean
 
 /** False when the count limit has been reached and the tool can place nothing. */
 export function isToolAvailable(tool: EditorTool, state: EditorViewState): boolean {
-  switch (tool) {
-    case "add-player":
-      return state.remainingPlayerSlots > 0;
-    case "draw-line":
-      return state.canStartLine;
-    case "select":
-      return true;
+  if (isLineTool(tool)) {
+    return state.canStartLine;
   }
+  return tool === "add-player" ? state.remainingPlayerSlots > 0 : true;
 }
 
 /** The play diagram to draw. The version is needed only when saving, so it is left out. */

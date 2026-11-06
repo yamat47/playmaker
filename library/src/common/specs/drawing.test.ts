@@ -9,12 +9,12 @@ function startDrawingFromA(play: PlayDriver): PlayDriver {
   return play;
 }
 
-/** A diagram where drawing started from player a with the draw-line tool. */
+/** A diagram where drawing started from player a with a line tool. */
 function openDrawingFromA(): PlayDriver {
   return startDrawingFromA(openPlay(twoPlayersWithRoute()));
 }
 
-/** A diagram where player b was selected, then drawing started from a with the draw-line tool. */
+/** A diagram where player b was selected, then drawing started from a with a line tool. */
 function openDrawingWithBSelected(): PlayDriver {
   const play = openPlay(twoPlayersWithRoute());
   play.click(yd(20, 0));
@@ -41,9 +41,9 @@ function addedLine(play: PlayDriver): Line | undefined {
 }
 
 describe("Starting a drawing", () => {
-  it("neither starts drawing nor notifies when the draw-line tool presses empty space", () => {
+  it("neither starts drawing nor notifies when a line tool presses empty space", () => {
     const play = openPlay(twoPlayersWithRoute());
-    play.editor.setTool("draw-line");
+    play.editor.setTool("route");
     play.notified.mockClear();
 
     play.editor.pointerDown(yd(40, -10));
@@ -52,7 +52,7 @@ describe("Starting a drawing", () => {
     expect(play.notified).not.toHaveBeenCalled();
   });
 
-  it("starts drawing when a player is pressed with the draw-line tool", () => {
+  it("starts drawing when a player is pressed with a line tool", () => {
     const play = openDrawingFromA();
 
     expect(play.editor.getViewState().isDrawing).toBe(true);
@@ -88,7 +88,7 @@ describe("Starting a drawing", () => {
 
   it("does not start drawing when a player is pressed with MAX_LINES lines present", () => {
     const play = openWithMaxLines();
-    play.editor.setTool("draw-line");
+    play.editor.setTool("route");
 
     play.editor.pointerDown(yd(10, 0));
 
@@ -209,13 +209,36 @@ describe("Committing a line", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "line-1" });
   });
 
-  it("returns to the select tool on commit", () => {
+  it("keeps the line tool on commit, ready for the next line", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));
 
     play.editor.commitLine();
 
-    expect(play.editor.getViewState().tool).toBe("select");
+    expect(play.editor.getViewState().tool).toBe("route");
+  });
+
+  it("adds a line of the kind of the tool it was drawn with", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.startLine(yd(10, 0), "block");
+    play.editor.pointerDown(yd(18, 10));
+
+    play.editor.commitLine();
+
+    expect(addedLine(play)?.kind).toBe("block");
+  });
+
+  it("starts the next line from another player right after a commit", () => {
+    const play = openDrawingFromA();
+    play.editor.pointerDown(yd(18, 10));
+    play.editor.commitLine();
+
+    play.editor.pointerDown(yd(20, 0));
+
+    expect(play.editor.getViewState()).toMatchObject({
+      isDrawing: true,
+      selection: { kind: "none" },
+    });
   });
 
   it("notifies the scene and the view state once each on commit", () => {

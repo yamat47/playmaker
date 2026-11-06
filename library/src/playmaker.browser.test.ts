@@ -108,12 +108,12 @@ describe("Pointer editing", () => {
     expect(must(playmaker.getPlayData().players[0]).position.downfieldYard).toBeGreaterThan(before);
   });
 
-  it("adds one line when Draw line starts at a player and ends with a double-click", async () => {
+  it("adds one line when Route starts at a player and ends with a double-click", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
     const canvas = canvasIn(container);
 
-    await button("Draw line").click();
+    await button("Route").click();
     await userEvent.click(canvas, { position: SPOT });
     await userEvent.dblClick(canvas, { position: OTHER_SPOT });
 
@@ -154,7 +154,7 @@ describe("Keyboard", () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
     const canvas = canvasIn(container);
-    await button("Draw line").click();
+    await button("Route").click();
     await userEvent.click(canvas, { position: SPOT });
     await userEvent.click(canvas, { position: { x: 360, y: 200 } });
     await userEvent.click(canvas, { position: OTHER_SPOT });

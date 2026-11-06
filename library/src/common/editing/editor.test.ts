@@ -16,15 +16,21 @@ describe("isToolAvailable", () => {
   it("every tool is available while no limit is reached", () => {
     expect(isToolAvailable("select", state)).toBe(true);
     expect(isToolAvailable("add-player", state)).toBe(true);
-    expect(isToolAvailable("draw-line", state)).toBe(true);
+    expect(isToolAvailable("route", state)).toBe(true);
+    expect(isToolAvailable("block", state)).toBe(true);
+    expect(isToolAvailable("motion", state)).toBe(true);
   });
 
   it("the add-player tool is unavailable when no player slot remains", () => {
     expect(isToolAvailable("add-player", { ...state, remainingPlayerSlots: 0 })).toBe(false);
   });
 
-  it("the draw-line tool is unavailable when a line cannot be started", () => {
-    expect(isToolAvailable("draw-line", { ...state, canStartLine: false })).toBe(false);
+  it("every line tool is unavailable when a line cannot be started", () => {
+    const full = { ...state, canStartLine: false };
+
+    expect(isToolAvailable("route", full)).toBe(false);
+    expect(isToolAvailable("block", full)).toBe(false);
+    expect(isToolAvailable("motion", full)).toBe(false);
   });
 
   it("the select tool stays available when every limit is reached", () => {

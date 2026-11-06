@@ -2,8 +2,8 @@ import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerPatch } from "../commands/player-commands.js";
 import {
   DEFAULT_LINE_INTERPOLATION,
-  DEFAULT_LINE_KIND,
   type Line,
+  type LineKind,
   MAX_WAYPOINTS_PER_LINE,
 } from "../model/line.js";
 import type { FieldPosition, Player } from "../model/player.js";
@@ -35,6 +35,8 @@ export interface DragInteraction {
 
 export interface DrawInteraction {
   readonly type: "draw-line";
+  /** The kind of the line tool the drawing started with. */
+  readonly kind: LineKind;
   readonly startPlayerId: string;
   /**
    * The starting player's position when drawing began. Used to check whether the first placed
@@ -121,9 +123,10 @@ export function splitDraftPoints(
 }
 
 /** A line always starts at a player, so drawing begins from a player. */
-export function startDrawing(player: Player): DrawInteraction {
+export function startDrawing(player: Player, kind: LineKind): DrawInteraction {
   return {
     type: "draw-line",
+    kind,
     startPlayerId: player.id,
     start: player.position,
     points: [],
@@ -153,7 +156,7 @@ export function draftToLine(
 ): Line {
   return {
     id,
-    kind: DEFAULT_LINE_KIND,
+    kind: draw.kind,
     startPlayerId: draw.startPlayerId,
     waypoints: shape.waypoints,
     end: shape.end,

@@ -49,7 +49,13 @@ export interface Messages {
 }
 
 export const en: Messages = {
-  tool: { select: "Select", "add-player": "Add player", "draw-line": "Draw line" },
+  tool: {
+    select: "Select",
+    "add-player": "Add player",
+    route: "Route",
+    block: "Block",
+    motion: "Motion",
+  },
   undo: "Undo",
   redo: "Redo",
   delete: "Delete",

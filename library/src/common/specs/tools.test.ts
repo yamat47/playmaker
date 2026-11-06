@@ -46,7 +46,7 @@ describe("Stepping back", () => {
 
     play.editor.stepBack();
 
-    expect(play.editor.getViewState()).toMatchObject({ isDrawing: false, tool: "draw-line" });
+    expect(play.editor.getViewState()).toMatchObject({ isDrawing: false, tool: "route" });
   });
 
   it("cancels a drag in progress and leaves the player where it was grabbed", () => {

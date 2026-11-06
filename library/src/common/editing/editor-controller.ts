@@ -21,7 +21,7 @@ import { clampToZoneWindow } from "../geometry/field.js";
 import { snapToGrid } from "../geometry/grid.js";
 import { hitLineHandle, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
 import type { IIdFactory } from "../model/id-factory.js";
-import { type Line, MAX_LINES } from "../model/line.js";
+import { type Line, type LineKind, MAX_LINES } from "../model/line.js";
 import type { FieldZone } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
 import {
@@ -36,6 +36,7 @@ import {
   type EditorTool,
   type EditorViewState,
   type IEditorController,
+  isLineTool,
   isSameSelection,
   isToolAvailable,
   NO_SELECTION,
@@ -143,20 +144,17 @@ export class EditorController extends Disposable implements IEditorController {
 
   pointerDown(pos: FieldPosition): void {
     this.notifier.batch(() => {
-      switch (this.tool) {
-        case "add-player":
-          // A press on a player grabs it rather than stacking a new player that hides it. A handle
-          // of the selected line is not grabbed, so a player can still be placed at a line's end.
-          if (!this.grabPlayer(pos)) {
-            this.addPlayerAt(pos);
-          }
-          return;
-        case "draw-line":
-          this.drawLinePointerDown(pos);
-          return;
-        case "select":
-          this.selectPointerDown(pos);
-          return;
+      const tool = this.tool;
+      if (isLineTool(tool)) {
+        this.drawLinePointerDown(pos, tool);
+      } else if (tool === "add-player") {
+        // A press on a player grabs it rather than stacking a new player that hides it. A handle
+        // of the selected line is not grabbed, so a player can still be placed at a line's end.
+        if (!this.grabPlayer(pos)) {
+          this.addPlayerAt(pos);
+        }
+      } else {
+        this.selectPointerDown(pos);
       }
     });
   }
@@ -227,9 +225,8 @@ export class EditorController extends Disposable implements IEditorController {
         return;
       }
       this.commands.execute(new AddLineCommand(line));
-      // Right after drawing, switch back to the select tool and select the drawn line. Being able
-      // to edit it right away is preferred over drawing the next line in a row.
-      this.setTool("select");
+      // The tool stays, because the lines of a play come in runs (all the blocks, all the routes),
+      // and the drawn line is selected so the panel can adjust it before the next one starts.
       this.setSelection({ kind: "line", id: line.id });
     });
   }
@@ -413,13 +410,13 @@ export class EditorController extends Disposable implements IEditorController {
     return startDrag(target, hit.point, pos);
   }
 
-  private drawLinePointerDown(pos: FieldPosition): void {
+  private drawLinePointerDown(pos: FieldPosition, kind: LineKind): void {
     const interaction = this.interaction;
     if (interaction?.type === "draw-line") {
       this.setInteraction(addDraftPoint(interaction, this.clampToField(pos)));
       return;
     }
-    if (!isToolAvailable("draw-line", this.getViewState())) {
+    if (!isToolAvailable(kind, this.getViewState())) {
       return;
     }
     const data = this.model.getSnapshot();
@@ -431,7 +428,7 @@ export class EditorController extends Disposable implements IEditorController {
     // Left selected, the panel and the handles would keep pointing at another element while the
     // new line is drawn, and a panel edit would change that element instead of the new line.
     this.setSelection(NO_SELECTION);
-    this.setInteraction(startDrawing(player));
+    this.setInteraction(startDrawing(player, kind));
   }
 
   private addPlayerAt(pos: FieldPosition): void {

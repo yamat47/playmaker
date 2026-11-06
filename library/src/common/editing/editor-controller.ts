@@ -95,17 +95,15 @@ export class EditorController extends Disposable implements IEditorController {
 
   getViewState(): EditorViewState {
     const { players, lines } = this.model.getSnapshot();
+    const isDrawing = this.interaction?.type === "draw-line";
     return {
       tool: this.tool,
-      selection:
-        this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
-          ? NO_SELECTION
-          : this.selection,
+      selection: this.liveSelection(),
       // Undo while drawing removes the last placed point, or stops drawing when there is none.
-      canUndo: this.commands.canUndo || this.interaction?.type === "draw-line",
+      canUndo: this.commands.canUndo || isDrawing,
       canRedo: this.commands.canRedo,
       fieldZone: this.model.getFieldZone(),
-      isDrawing: this.interaction?.type === "draw-line",
+      isDrawing,
       remainingPlayerSlots: MAX_PLAYERS - players.length,
       canStartLine: lines.length < MAX_LINES,
     };
@@ -205,7 +203,7 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.batch(() => {
       if (this.interaction !== undefined) {
         this.setInteraction(undefined);
-      } else if (this.getSelectedPlayer() !== undefined || this.getSelectedLine() !== undefined) {
+      } else if (this.liveSelection().kind !== "none") {
         this.setSelection(NO_SELECTION);
       } else {
         this.setTool("select");
@@ -314,6 +312,13 @@ export class EditorController extends Disposable implements IEditorController {
       this.setInteraction(undefined);
       this.commands.redo();
     });
+  }
+
+  /** The selection, or none once its target has vanished. */
+  private liveSelection(): EditorSelection {
+    return this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
+      ? NO_SELECTION
+      : this.selection;
   }
 
   private setSelection(next: EditorSelection): void {

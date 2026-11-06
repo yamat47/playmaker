@@ -139,7 +139,11 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.batch(() => {
       switch (this.tool) {
         case "add-player":
-          this.addPlayerAt(pos);
+          // A press on a player grabs it rather than stacking a new player that hides it. A handle
+          // of the selected line is not grabbed, so a player can still be placed at a line's end.
+          if (!this.grabPlayer(pos)) {
+            this.addPlayerAt(pos);
+          }
           return;
         case "draw-line":
           this.drawLinePointerDown(pos);

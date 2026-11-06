@@ -43,6 +43,37 @@ describe("Adding a player", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "player-1" });
   });
 
+  it("selects a player pressed with the add-player tool instead of stacking a new one on it", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("add-player");
+
+    play.click(yd(10, 0));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+    expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "a" });
+  });
+
+  it("places a player at the end of the selected line rather than grabbing its handle", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(25, 5));
+    play.editor.setTool("add-player");
+
+    play.click(yd(25, 5));
+
+    expect(positionOf(play.session.getPlayData(), "player-1")).toEqual(yd(25, 5));
+    expect(play.session.getPlayData().lines).toEqual(twoPlayersWithRoute().lines);
+  });
+
+  it("moves a player dragged with the add-player tool and keeps the tool", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("add-player");
+
+    play.drag(yd(10, 0), yd(14, 3));
+
+    expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(14, 3));
+    expect(play.editor.getViewState().tool).toBe("add-player");
+  });
+
   it("assigns the added player an id that does not collide with existing players", () => {
     const play = openPlay(playData([player("player-1", 10, 0)]));
     play.editor.setTool("add-player");

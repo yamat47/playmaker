@@ -36,7 +36,6 @@ export interface Messages {
   readonly color: string;
   readonly kind: string;
   readonly interpolation: string;
-  readonly width: string;
   readonly shapes: Readonly<Record<PlayerShape, string>>;
   readonly fills: Readonly<Record<PlayerFill, string>>;
   readonly kinds: Readonly<Record<LineKind, string>>;
@@ -67,7 +66,6 @@ export const en: Messages = {
   color: "Color",
   kind: "Kind",
   interpolation: "Interpolation",
-  width: "Width",
   shapes: { circle: "Circle", square: "Square" },
   fills: { outline: "Outline", solid: "Solid" },
   kinds: { route: "Route", block: "Block", motion: "Motion" },

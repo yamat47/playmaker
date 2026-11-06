@@ -49,7 +49,7 @@ export class RemoveLineCommand implements ICommand {
   }
 }
 
-/** Edits the kind, interpolation, waypoints, end point, color, and thickness together. */
+/** Edits the kind, interpolation, waypoints, end point, and color together. */
 export class UpdateLineCommand implements ICommand {
   readonly label = "Update line";
   private readonly lineId: string;

@@ -107,7 +107,7 @@ Three kinds of lines can be drawn.
 - **Motion line (motion)**: player movement before the snap. Dashed, with an arrowhead at the end
 
 The kind is distinguished by the end marker and the line style, not by color. Every kind can be drawn either as a straight line or as a curve that passes through all control points.
-Color and width can be set per line and reset to the default.
+Color can be set per line and reset to the default. Every line of a kind has the same width.
 
 Each line is defined by a start point (a player), an end point, and zero or more waypoints. One diagram holds up to 128 lines, and each line up to 32 waypoints.
 
@@ -116,7 +116,7 @@ Each line is defined by a start point (a player), an end point, and zero or more
 In edit mode the following editing operations are available:
 
 - Add / move / delete players and edit their properties (label, shape, color and fill)
-- Draw / delete lines, edit their properties (color, width, interpolation), and edit waypoints
+- Draw / delete lines, edit their properties (color, interpolation), and edit waypoints
 - Undo / Redo
 - Load formation templates (the commercial software lists the formations and loads the chosen one through the API; the toolbar has no formation picker)
 - Switch the field zone

@@ -3,12 +3,6 @@ import { MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
 import { DEFAULT_FIELD_ZONE, fieldStateForZone, isFieldZone } from "./play-data.js";
 import { MAX_PLAYERS } from "./player.js";
 
-/**
- * In v1 the line thickness was in CSS px. The property panel showed an unspecified line as 2 px,
- * so v2 treats that value as multiplier 1 and divides by it.
- */
-export const V1_DEFAULT_THICKNESS_PX = 2;
-
 /** A malformed value is returned as is; whether to drop it is left to the later normalization. */
 function toV2Position(raw: unknown, losYard: number): unknown {
   if (!isRecord(raw)) {
@@ -38,9 +32,6 @@ function toV2Line(raw: unknown, losYard: number): unknown {
       ? raw.waypoints.slice(0, MAX_WAYPOINTS_PER_LINE).map((p) => toV2Position(p, losYard))
       : raw.waypoints,
     end: toV2Position(raw.end, losYard),
-    thickness: isFiniteNumber(raw.thickness)
-      ? raw.thickness / V1_DEFAULT_THICKNESS_PX
-      : raw.thickness,
   };
 }
 

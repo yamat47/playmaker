@@ -1,10 +1,4 @@
-import {
-  isFiniteNumber,
-  isNonEmptyString,
-  isOneOf,
-  isRecord,
-  parseBoundedArray,
-} from "./guards.js";
+import { isNonEmptyString, isOneOf, isRecord, parseBoundedArray } from "./guards.js";
 import { type FieldPosition, type Player, parseFieldPosition } from "./player.js";
 
 /**
@@ -32,9 +26,6 @@ export const DEFAULT_LINE_KIND: LineKind = "route";
 /** Default when no interpolation is given. */
 export const DEFAULT_LINE_INTERPOLATION: LineInterpolation = "straight";
 
-/** Multiplier when no thickness is given. Draws at the default width of each kind as is. */
-export const DEFAULT_LINE_THICKNESS = 1;
-
 /**
  * Limits on the lines received from outside and on the waypoints per line. A real play diagram
  * has about 20 lines with a few waypoints each, so these limits are never reached. Normalization
@@ -45,8 +36,8 @@ export const MAX_WAYPOINTS_PER_LINE = 32;
 
 /**
  * A single line. The start is held as a player id rather than coordinates, so moving the player
- * carries the line's start along. Omitting `color` and `thickness` draws with the theme color
- * and the default width of the kind.
+ * carries the line's start along. Omitting `color` draws with the theme color of the kind. Every
+ * line of a kind has the same width.
  */
 export interface Line {
   readonly id: string;
@@ -60,8 +51,6 @@ export interface Line {
   readonly interpolation: LineInterpolation;
   /** A CSS color string. */
   readonly color?: string;
-  /** Multiplier on the default width of the kind. DEFAULT_LINE_THICKNESS when omitted. */
-  readonly thickness?: number;
 }
 
 function isLineKind(value: unknown): value is LineKind {
@@ -70,11 +59,6 @@ function isLineKind(value: unknown): value is LineKind {
 
 function isLineInterpolation(value: unknown): value is LineInterpolation {
   return isOneOf(value, LINE_INTERPOLATION_VALUES);
-}
-
-/** Whether a value is accepted as a width multiplier. 0 or less hides the line and is rejected. */
-export function isLineThickness(value: unknown): value is number {
-  return isFiniteNumber(value) && value > 0;
 }
 
 /**
@@ -113,7 +97,6 @@ function normalizeLine(
       : DEFAULT_LINE_INTERPOLATION,
     // exactOptionalPropertyTypes rejects undefined, so the key is set only when a value exists.
     ...(isNonEmptyString(raw.color) ? { color: raw.color } : {}),
-    ...(isLineThickness(raw.thickness) ? { thickness: raw.thickness } : {}),
   };
 }
 
@@ -138,7 +121,6 @@ export function cloneLine(line: Line): Line {
     end: { ...line.end },
     interpolation: line.interpolation,
     ...(line.color === undefined ? {} : { color: line.color }),
-    ...(line.thickness === undefined ? {} : { thickness: line.thickness }),
   };
 }
 

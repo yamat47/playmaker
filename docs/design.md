@@ -54,9 +54,9 @@ interface PlayData {
 Players and lines are drawn in array order, and later elements are stacked on top.
 
 - A player has an id, a position, a shape, a label, and an optional color and fill. The fill is either outline (`outline`, the default) or solid (`solid`), and is held independently of the shape. Offense and defense and roles are told apart by this fill, and the presets omit both color and fill and draw with the defaults. The shapes are limited to 2 kinds, `circle` and `square`. Many kinds make the diagram cluttered, and both can be hit-tested with their circumscribed circle, so the hit-test does not need to branch on shape
-- A line has an id, a kind (`route` / `block` / `motion`), the id of the start player, a sequence of waypoints, an end point, an interpolation (`straight` / `bezier`), and an optional color and width. The start is held as a player id rather than a coordinate, so moving the player moves the root of the line with it
-- Line width is held as a multiplier of the default width for its kind (1 is the default). Held in px, its meaning would change when the drawing size changes
-- Players and lines with color, fill, or width omitted are drawn with the theme color and the default fill and width. The "default" button in the panel returns them to the omitted state
+- A line has an id, a kind (`route` / `block` / `motion`), the id of the start player, a sequence of waypoints, an end point, an interpolation (`straight` / `bezier`), and an optional color. The start is held as a player id rather than a coordinate, so moving the player moves the root of the line with it
+- Lines have no width setting; every line of a kind is drawn at the same width, and emphasis is left to color. A `thickness` that version 0.2 and earlier saved is dropped on load, without bumping `CURRENT_PLAY_DATA_VERSION`, and the line is drawn at the default width
+- Players and lines with color or fill omitted are drawn with the theme color and the default fill. The "default" button in the panel returns them to the omitted state
 - The player color in the panel is chosen from 8 swatches, the outline and solid versions of each of the 4 colors. Making "solid or outline" a separate choice would mean choosing twice, so it is chosen together with the color in one step. There is no free color input. The choice is limited to the same 4 colors as lines
 
 ### Coordinates
@@ -100,7 +100,7 @@ Constructor options (`mode`, `locale`, `onChange`) are not normalized; their Typ
 
 A real diagram has about 22 players and 20 lines, so the limits exist to keep rendering from stalling on broken or malicious data. The limits cannot be exceeded through editing either (see below).
 
-Adding an optional key does not bump the version; `resolvePlayData` fills the missing value with the default (the player `fill` is an example). When the meaning of an existing item changes, bump `CURRENT_PLAY_DATA_VERSION` by 1, add a step to `PLAY_DATA_MIGRATIONS` that converts from the previous version, and write tests for that step. A step only needs to convert the items whose meaning changes in the next version; `resolvePlayData` shapes the rest. The v1 to v2 step subtracts the zone's LOS from the v1 absolute yards to make them LOS-relative, and divides the px line width back to a multiplier with 2 px as 1.
+Adding an optional key does not bump the version; `resolvePlayData` fills the missing value with the default (the player `fill` is an example). Removing an optional key does not bump it either; normalization drops the key (the line `thickness` is an example). When the meaning of an existing item changes, bump `CURRENT_PLAY_DATA_VERSION` by 1, add a step to `PLAY_DATA_MIGRATIONS` that converts from the previous version, and write tests for that step. A step only needs to convert the items whose meaning changes in the next version; `resolvePlayData` shapes the rest. The v1 to v2 step subtracts the zone's LOS from the v1 absolute yards to make them LOS-relative.
 
 `Formation` writes player positions relative to the LOS. No migration is applied to custom formations written in v1 absolute yards. Players whose position cannot be read are dropped, and `loadFormation` returns false if there is not a single player that can be placed.
 
@@ -131,7 +131,7 @@ All edits are expressed as `ICommand` (`apply` / `undo`). There are commands for
 
 - `apply` returns true when it changed the Model. An operation that changes nothing returns false without touching the Model, and `CommandService` does not push it onto the history. Undo never becomes a no-op step after a patch with unchanged values or a zone switch
 - The previous state needed for the inverse operation is remembered by each command itself when `apply` runs. redo calls `apply` again
-- Updates are passed as patches. Omitted keys keep the current value, and `null` clears the value of an optional key (color, fill, width). The rule lives in one place, `commands/patch.ts`
+- Updates are passed as patches. Omitted keys keep the current value, and `null` clears the value of an optional key (color and fill). The rule lives in one place, `commands/patch.ts`
 
 `UndoRedoService` is a linear history, and pushing a new edit discards the redo history. undo and redo take the function to run, and rearrange the history after it returns, so the history seen by a notified listener is always committed.
 

@@ -18,7 +18,6 @@ export const ja: Messages = {
   color: "色",
   kind: "種別",
   interpolation: "補間",
-  width: "太さ",
   shapes: { circle: "丸", square: "四角" },
   fills: { outline: "枠線", solid: "塗りつぶし" },
   kinds: { route: "ルート", block: "ブロック", motion: "モーション" },

@@ -2,7 +2,6 @@ import {
   arrowHeadVertices,
   blockCapEndpoints,
   type CanvasPoint,
-  DEFAULT_LINE_THICKNESS,
   type FieldMetrics,
   indexPlayersById,
   type LineKind,
@@ -40,8 +39,7 @@ export class LineRenderer implements ILayerRenderer {
       }
 
       const color = line.color ?? frame.theme(LINE_COLOR_TOKENS[line.kind]);
-      // thickness is a factor on the default width, so the look matches on screen and in the PNG.
-      const width = this.widthFor(line.kind, metrics) * (line.thickness ?? DEFAULT_LINE_THICKNESS);
+      const width = this.widthFor(line.kind, metrics);
       const isBlock = line.kind === "block";
 
       ctx.save();

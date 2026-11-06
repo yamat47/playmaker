@@ -280,30 +280,24 @@ describe("Deleting a line", () => {
 });
 
 describe("Editing line values", () => {
-  it("changes the kind, interpolation, thickness, and color of the selected line", () => {
+  it("changes the kind, interpolation, and color of the selected line", () => {
     const play = openWithLineSelected();
 
-    play.editor.updateSelectedLine({
-      kind: "motion",
-      interpolation: "bezier",
-      thickness: 2,
-      color: "#ff0000",
-    });
+    play.editor.updateSelectedLine({ kind: "motion", interpolation: "bezier", color: "#ff0000" });
 
     expect(lineOf(play.session.getPlayData(), "l")).toEqual({
       ...twoPlayersWithRoute().lines[0],
       kind: "motion",
       interpolation: "bezier",
-      thickness: 2,
       color: "#ff0000",
     });
   });
 
-  it("returns to a default line without color or thickness when both receive null", () => {
+  it("returns to a default line without color when the color receives null", () => {
     const play = openWithLineSelected();
-    play.editor.updateSelectedLine({ color: "#ff0000", thickness: 2 });
+    play.editor.updateSelectedLine({ color: "#ff0000" });
 
-    play.editor.updateSelectedLine({ color: null, thickness: null });
+    play.editor.updateSelectedLine({ color: null });
 
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
@@ -358,7 +352,7 @@ describe("Editing line values", () => {
     const play = openWithLineSelected();
     play.notified.mockClear();
 
-    play.editor.updateSelectedLine({ kind: "route", interpolation: "straight", thickness: null });
+    play.editor.updateSelectedLine({ kind: "route", interpolation: "straight", color: null });
 
     expect(play.editor.getViewState().canUndo).toBe(false);
     expect(play.notified).not.toHaveBeenCalled();

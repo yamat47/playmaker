@@ -1,9 +1,7 @@
 import {
-  DEFAULT_LINE_THICKNESS,
   DEFAULT_PLAYER_FILL,
   Disposable,
   type IEditorUi,
-  isLineThickness,
   isOneOf,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
@@ -225,18 +223,12 @@ export class PropertyPanel extends Disposable {
       onChange: ({ color }) => controller.updateSelectedLine({ color }),
       onReset: () => controller.updateSelectedLine({ color: null }),
     });
-    const setThickness = this.addNumber({
-      label: messages.width,
-      onChange: (v) => controller.updateSelectedLine({ thickness: v }),
-      onReset: () => controller.updateSelectedLine({ thickness: null }),
-    });
     return (line) => {
       setKind(line.kind);
       setInterpolation(line.interpolation);
       // A saved color may come from outside, so it is normalized like the theme colors to compare.
       const color = line.color === undefined ? undefined : normalizeCssColor(line.color);
       setPressed((choice) => choice.color === color);
-      setThickness(line.thickness ?? DEFAULT_LINE_THICKNESS);
     };
   }
 
@@ -306,23 +298,6 @@ export class PropertyPanel extends Disposable {
     this.addRow(label, input, onReset);
     return (value) => {
       input.value = value;
-    };
-  }
-
-  private addNumber({ label, onChange, onReset }: InputOptions<number>): (value: number) => void {
-    const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0.25";
-    input.step = "0.25";
-    input.addEventListener("change", () => {
-      const n = Number(input.value);
-      if (isLineThickness(n)) {
-        onChange(n);
-      }
-    });
-    this.addRow(label, input, onReset);
-    return (value) => {
-      input.value = String(value);
     };
   }
 

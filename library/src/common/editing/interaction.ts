@@ -46,6 +46,12 @@ export interface DrawInteraction {
   /** The placed points. The last one becomes the end point and the rest become waypoints. */
   readonly points: readonly FieldPosition[];
   readonly cursor: FieldPosition;
+  /**
+   * Whether the press that started the drawing is still held. Releasing it away from the start
+   * player finishes a straight line in one drag; releasing it on the player leaves the drawing
+   * open for clicks.
+   */
+  readonly pressing: boolean;
 }
 
 /** The in-progress state of a drag or drawing. Not put into the Model; overlaid when rendering. */
@@ -131,6 +137,7 @@ export function startDrawing(player: Player, kind: LineKind): DrawInteraction {
     start: player.position,
     points: [],
     cursor: player.position,
+    pressing: true,
   };
 }
 

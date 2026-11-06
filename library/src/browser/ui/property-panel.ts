@@ -2,6 +2,7 @@ import {
   DEFAULT_PLAYER_FILL,
   Disposable,
   type IEditorUi,
+  isLineTool,
   isOneOf,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
@@ -124,11 +125,13 @@ export class PropertyPanel extends Disposable {
   }
 
   // Starting a drawing clears the selection, so while a line is drawn the panel always shows a
-  // hint, and it says how to finish the line.
+  // hint, and it says how to finish the line. With a line tool chosen it says how to start one.
   private hintText(): string {
-    return this.controller.getViewState().isDrawing
-      ? this.messages.drawingHint
-      : this.messages.selectionHint;
+    const { isDrawing, tool } = this.controller.getViewState();
+    if (isDrawing) {
+      return this.messages.drawingHint;
+    }
+    return isLineTool(tool) ? this.messages.lineToolHint : this.messages.selectionHint;
   }
 
   private selectedItem(): SelectedItem {

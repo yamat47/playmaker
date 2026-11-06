@@ -17,6 +17,8 @@ export const ja: Messages = {
   selectionHint: "対象を選択するとプロパティを編集できます",
   drawingHint:
     "クリックで折れ点を置きます。ダブルクリックか Enter で線を確定し、Esc で取り消します。",
+  lineToolHint:
+    "選手からドラッグすると直線を引けます。選手をクリックしてから、クリックで折れ点を置くこともできます。",
   player: "選手",
   line: "線",
   label: "ラベル",

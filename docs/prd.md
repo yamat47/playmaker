@@ -107,6 +107,7 @@ Three kinds of lines can be drawn.
 - **Motion line (motion)**: player movement before the snap. Dashed, with an arrowhead at the end
 
 Each kind has its own drawing tool. The kind is chosen before drawing, the tool stays chosen for the next line, and the kind can still be changed afterward.
+A line is drawn from a player. Dragging from the player draws a straight line in one motion; clicking the player and then clicking places bends one at a time, and a double-click or Enter finishes the line.
 The kind is distinguished by the end marker and the line style, not by color. Every kind can be drawn either as a straight line or as a curve that passes through all control points.
 Color can be set per line and reset to the default. Every line of a kind has the same width.
 

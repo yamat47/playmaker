@@ -9,6 +9,7 @@ export {
   type IEditorGestures,
   type IEditorScene,
   type IEditorUi,
+  isLineTool,
   isToolAvailable,
   type SceneData,
 } from "./editing/editor.js";

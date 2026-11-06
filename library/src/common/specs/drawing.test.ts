@@ -102,6 +102,46 @@ describe("Starting a drawing", () => {
   });
 });
 
+describe("Drawing with a drag", () => {
+  it("adds a straight line ending where the drag from a player is released", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("block");
+
+    play.drag(yd(10, 0), yd(14, 8));
+
+    expect(addedLine(play)).toMatchObject({
+      kind: "block",
+      startPlayerId: "a",
+      waypoints: [],
+      end: yd(14, 8),
+    });
+    expect(play.editor.getViewState()).toMatchObject({
+      isDrawing: false,
+      selection: { kind: "line", id: "line-1" },
+    });
+  });
+
+  it("keeps drawing with clicks when the starting press is released on the start player", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("route");
+
+    play.drag(yd(10, 0), yd(10.5, 0.5));
+
+    expect(play.editor.getViewState().isDrawing).toBe(true);
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
+  it("places only a point, without finishing, when a later press is released elsewhere", () => {
+    const play = openDrawingFromA();
+    play.editor.pointerUp(yd(10, 0));
+
+    play.drag(yd(14, 4), yd(20, 10));
+
+    expect(play.editor.getViewState().isDrawing).toBe(true);
+    expect(play.editor.getFrame().scene.lines.at(-1)?.waypoints).toEqual([yd(14, 4)]);
+  });
+});
+
 describe("Placing points", () => {
   it("turns a point pressed while drawing into a waypoint of the drawn line", () => {
     const play = openDrawingFromA();

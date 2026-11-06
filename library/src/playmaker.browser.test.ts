@@ -120,6 +120,20 @@ describe("Pointer editing", () => {
     expect(playmaker.getPlayData().lines).toHaveLength(1);
   });
 
+  it("adds one line when Route is dragged from a player", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+    const canvas = canvasIn(container);
+
+    await button("Route").click();
+    await userEvent.dragAndDrop(canvas, canvas, {
+      sourcePosition: SPOT,
+      targetPosition: OTHER_SPOT,
+    });
+
+    expect(playmaker.getPlayData().lines).toHaveLength(1);
+  });
+
   it("adds no player on a canvas click after switching to view mode", async () => {
     const { container, playmaker } = mount();
     await button("Add player").click();

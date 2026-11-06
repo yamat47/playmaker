@@ -19,7 +19,7 @@ import {
 import { type Formation, instantiateFormation } from "../formations/formation.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { snapToGrid } from "../geometry/grid.js";
-import { hitLineHandle, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
+import { hitLineHandle, hitTestLine, hitTestPlayer, pointDistance } from "../geometry/hit-test.js";
 import type { IIdFactory } from "../model/id-factory.js";
 import { type Line, type LineKind, MAX_LINES } from "../model/line.js";
 import type { FieldZone } from "../model/play-data.js";
@@ -28,6 +28,7 @@ import {
   DEFAULT_PLAYER_SHAPE,
   type FieldPosition,
   MAX_PLAYERS,
+  PLAYER_RADIUS_YARDS,
   type Player,
 } from "../model/player.js";
 import {
@@ -175,7 +176,10 @@ export class EditorController extends Disposable implements IEditorController {
 
   pointerUp(pos: FieldPosition): void {
     const interaction = this.interaction;
-    // Drawing places points on click (pointerDown), so up does nothing.
+    if (interaction?.type === "draw-line") {
+      this.releaseDrawing(interaction, pos);
+      return;
+    }
     if (interaction?.type !== "drag") {
       return;
     }
@@ -410,10 +414,31 @@ export class EditorController extends Disposable implements IEditorController {
     return startDrag(target, hit.point, pos);
   }
 
+  /**
+   * Clicks place points on press, so a release matters only for the press that started the
+   * drawing: away from the start player it ends a straight line drawn in one drag.
+   */
+  private releaseDrawing(draw: DrawInteraction, pos: FieldPosition): void {
+    if (!draw.pressing) {
+      return;
+    }
+    this.notifier.batch(() => {
+      const released = { ...draw, pressing: false };
+      if (pointDistance(pos, draw.start) <= PLAYER_RADIUS_YARDS) {
+        this.setInteraction(released);
+        return;
+      }
+      this.setInteraction(addDraftPoint(released, this.clampToField(pos)));
+      this.commitLine();
+    });
+  }
+
   private drawLinePointerDown(pos: FieldPosition, kind: LineKind): void {
     const interaction = this.interaction;
     if (interaction?.type === "draw-line") {
-      this.setInteraction(addDraftPoint(interaction, this.clampToField(pos)));
+      // A new press means the one that started the drawing has ended, even if its release was lost.
+      const next = { ...interaction, pressing: false };
+      this.setInteraction(addDraftPoint(next, this.clampToField(pos)));
       return;
     }
     if (!isToolAvailable(kind, this.getViewState())) {

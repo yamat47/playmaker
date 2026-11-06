@@ -29,6 +29,8 @@ export interface Messages {
   readonly selectionHint: string;
   /** Shown in the panel while a line is drawn, in place of the selection hint. */
   readonly drawingHint: string;
+  /** Shown in the panel when a line tool is chosen and nothing is selected. */
+  readonly lineToolHint: string;
   readonly player: string;
   readonly line: string;
   readonly label: string;
@@ -65,6 +67,8 @@ export const en: Messages = {
   selectionHint: "Select a player or a line to edit its properties",
   drawingHint:
     "Click to place a bend. Double-click or press Enter to finish the line, or press Esc to cancel it.",
+  lineToolHint:
+    "Drag from a player to draw a straight line, or click a player and then click to place bends.",
   player: "Player",
   line: "Line",
   label: "Label",

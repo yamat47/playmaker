@@ -74,6 +74,51 @@ describe("Adding a player", () => {
     expect(play.editor.getViewState().tool).toBe("add-player");
   });
 
+  it("gives a new player the shape, color, and fill last chosen in the panel", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(10, 0));
+    play.editor.updateSelectedPlayer({ shape: "square", color: "#d32f2f", fill: "solid" });
+    play.editor.setTool("add-player");
+
+    play.click(yd(30, -5));
+
+    expect(play.editor.getSelectedPlayer()).toMatchObject({
+      shape: "square",
+      color: "#d32f2f",
+      fill: "solid",
+    });
+  });
+
+  it("gives a new player the default color and fill again once the panel resets them", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(10, 0));
+    play.editor.updateSelectedPlayer({ shape: "square", color: "#d32f2f", fill: "solid" });
+    play.editor.updateSelectedPlayer({ color: null, fill: null });
+    play.editor.setTool("add-player");
+
+    play.click(yd(30, -5));
+
+    expect(play.editor.getSelectedPlayer()).toEqual({
+      id: "player-1",
+      position: yd(30, -5),
+      shape: "square",
+      label: "",
+    });
+  });
+
+  it("keeps the remembered style when only a label is edited afterward", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(10, 0));
+    play.editor.updateSelectedPlayer({ fill: "solid" });
+    play.click(yd(20, 0));
+    play.editor.updateSelectedPlayer({ label: "QB" });
+    play.editor.setTool("add-player");
+
+    play.click(yd(30, -5));
+
+    expect(play.editor.getSelectedPlayer()?.fill).toBe("solid");
+  });
+
   it("assigns the added player an id that does not collide with existing players", () => {
     const play = openPlay(playData([player("player-1", 10, 0)]));
     play.editor.setTool("add-player");

@@ -2,12 +2,7 @@ import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerMove } from "../commands/player-commands.js";
 import { GRID_STEP_YARDS } from "../geometry/grid.js";
 import { pointDistance } from "../geometry/hit-test.js";
-import {
-  DEFAULT_LINE_INTERPOLATION,
-  type Line,
-  type LineKind,
-  MAX_WAYPOINTS_PER_LINE,
-} from "../model/line.js";
+import { type Line, type LineKind, MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import { type FieldPosition, PLAYER_RADIUS_YARDS, type Player } from "../model/player.js";
 
 /**
@@ -54,10 +49,17 @@ export interface DragInteraction {
   readonly alone: boolean;
 }
 
+/** The parts of a player a new player takes over from the last one styled in the panel. */
+export type PlayerStyle = Pick<Player, "shape" | "color" | "fill">;
+
+/** The parts of a line a new line takes over from the last one styled in the panel. */
+export type LineStyle = Pick<Line, "interpolation" | "color">;
+
 export interface DrawInteraction {
   readonly type: "draw-line";
   /** The kind of the line tool the drawing started with. */
   readonly kind: LineKind;
+  readonly style: LineStyle;
   readonly startPlayerId: string;
   /**
    * The starting player's position when drawing began. Used to keep the first placed point off
@@ -167,11 +169,13 @@ export function splitDraftPoints(
 export function startDrawing(
   player: Player,
   kind: LineKind,
+  style: LineStyle,
   pressedAt: FieldPosition,
 ): DrawInteraction {
   return {
     type: "draw-line",
     kind,
+    style,
     startPlayerId: player.id,
     start: player.position,
     pressedAt,
@@ -208,18 +212,18 @@ export function addDraftPoint(
   return { ...draw, points: accepts ? [...draw.points, point] : draw.points, cursor: point };
 }
 
-/** Builds a line from the drawing. The preview and the commit use the same defaults. */
+/** Builds a line from the drawing. The preview and the commit build it the same way. */
 export function draftToLine(
   draw: DrawInteraction,
   id: string,
   shape: { readonly waypoints: readonly FieldPosition[]; readonly end: FieldPosition },
 ): Line {
   return {
+    ...draw.style,
     id,
     kind: draw.kind,
     startPlayerId: draw.startPlayerId,
     waypoints: shape.waypoints,
     end: shape.end,
-    interpolation: DEFAULT_LINE_INTERPOLATION,
   };
 }

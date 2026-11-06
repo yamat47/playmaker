@@ -28,7 +28,7 @@ import {
   pointDistance,
 } from "../geometry/hit-test.js";
 import type { IIdFactory } from "../model/id-factory.js";
-import { type Line, type LineKind, MAX_LINES } from "../model/line.js";
+import { DEFAULT_LINE_INTERPOLATION, type Line, type LineKind, MAX_LINES } from "../model/line.js";
 import type { FieldZone } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
 import {
@@ -61,6 +61,8 @@ import {
   dragPosition,
   type Interaction,
   isSamePosition,
+  type LineStyle,
+  type PlayerStyle,
   splitDraftPoints,
   startDrag,
   startDrawing,
@@ -124,6 +126,10 @@ export class EditorController extends Disposable implements IEditorController {
   // that must not remove the bend the drag just moved.
   private pressOrigin: FieldPosition | undefined;
   private lastPressDragged = false;
+  // The style of the player and of the line last styled in the panel, given to the next player
+  // placed and the next line drawn, so a run of defenders or of curved routes is styled once.
+  private playerStyle: PlayerStyle = { shape: DEFAULT_PLAYER_SHAPE };
+  private lineStyle: LineStyle = { interpolation: DEFAULT_LINE_INTERPOLATION };
 
   constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
     super();
@@ -343,6 +349,14 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.notifier.batch(() => this.commands.execute(new UpdatePlayerCommand(player.id, patch)));
+    if ("shape" in patch || "color" in patch || "fill" in patch) {
+      const { shape, color, fill } = this.model.getPlayer(player.id);
+      this.playerStyle = {
+        shape,
+        ...(color === undefined ? {} : { color }),
+        ...(fill === undefined ? {} : { fill }),
+      };
+    }
   }
 
   updateSelectedLine(patch: LinePatch): void {
@@ -351,6 +365,10 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.notifier.batch(() => this.commands.execute(new UpdateLineCommand(line.id, patch)));
+    if ("interpolation" in patch || "color" in patch) {
+      const { interpolation, color } = this.model.getLine(line.id);
+      this.lineStyle = { interpolation, ...(color === undefined ? {} : { color }) };
+    }
   }
 
   setFieldZone(zone: FieldZone): void {
@@ -564,7 +582,7 @@ export class EditorController extends Disposable implements IEditorController {
     // Left selected, the panel and the handles would keep pointing at another element while the
     // new line is drawn, and a panel edit would change that element instead of the new line.
     this.setSelection(NO_SELECTION);
-    this.setInteraction(startDrawing(player, kind, pos));
+    this.setInteraction(startDrawing(player, kind, this.lineStyle, pos));
   }
 
   /**
@@ -597,9 +615,9 @@ export class EditorController extends Disposable implements IEditorController {
     const id = this.ids.next("player", new Set(players.map((p) => p.id)));
     this.commands.execute(
       new AddPlayerCommand({
+        ...this.playerStyle,
         id,
         position: this.clampToField(pos),
-        shape: DEFAULT_PLAYER_SHAPE,
         label: "",
       }),
     );

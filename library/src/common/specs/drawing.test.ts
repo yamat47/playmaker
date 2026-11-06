@@ -344,6 +344,37 @@ describe("Committing a line", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "line-1" });
   });
 
+  it("gives a new line the curve and color last chosen in the panel", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(25, 5));
+    play.editor.updateSelectedLine({ interpolation: "bezier", color: "#1976d2" });
+    play.startLine(yd(20, 0), "block");
+    play.editor.pointerDown(yd(30, 8));
+
+    play.editor.commitLine();
+
+    expect(addedLine(play)).toMatchObject({
+      kind: "block",
+      interpolation: "bezier",
+      color: "#1976d2",
+    });
+  });
+
+  it("gives a new line no color once the panel resets the color", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(25, 5));
+    play.editor.updateSelectedLine({ interpolation: "bezier", color: "#1976d2" });
+    play.editor.updateSelectedLine({ color: null });
+    play.startLine(yd(20, 0));
+    play.editor.pointerDown(yd(30, 8));
+
+    play.editor.commitLine();
+
+    const added = addedLine(play);
+    expect(added?.interpolation).toBe("bezier");
+    expect(added !== undefined && "color" in added).toBe(false);
+  });
+
   it("keeps the line tool on commit, ready for the next line", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(18, 10));

@@ -97,7 +97,7 @@ The MVP provides the following feature set. API signatures, type definitions, an
   This keeps rows and columns aligned without an operation for aligning elements to each other. One diagram holds up to 64 players (a typical diagram has about 22)
 - Each player is displayed with a shape (circle or square) and a label. Typing with a player selected edits its label, and so does a double-click on a player; the label shows on the diagram while it is typed
 - Dragging a player moves the lines that start at it along with it, keeping their shape. Holding Option (Alt) moves the player alone
-- Color and fill (outline or solid) can be set per player and reset to the default. A new player takes the shape, color, and fill of the player last styled in the panel, and a new line takes the curve and color of the line last styled, so a run of similar elements is styled once. The color is chosen from 4 colors in the panel
+- Color and fill (outline or solid) can be set per player and reset to the default. A new player takes the shape, color, and fill of the player last styled in the panel, and a new line takes the curve and color of the line last styled, so a run of similar elements is styled once. The color is chosen in the panel from the theme's default color and 3 more
 
 ### 5.3 Line drawing
 

@@ -26,8 +26,7 @@ export const ja: Messages = {
   fills: { outline: "枠線", solid: "塗りつぶし" },
   kinds: { route: "ルート", block: "ブロック", motion: "モーション" },
   interpolations: { straight: "直線", bezier: "曲線" },
-  colors: { swatch1: "黒", swatch2: "赤", swatch3: "青", swatch4: "緑" },
+  colors: { swatch2: "赤", swatch3: "青", swatch4: "緑" },
+  defaultColor: "既定",
   swatch: (color, fill) => `${color}の${fill}`,
-  reset: "既定",
-  resetField: (field) => `${field}を既定に戻す`,
 };

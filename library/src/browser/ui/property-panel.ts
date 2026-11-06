@@ -14,30 +14,66 @@ import {
 } from "../../common/index.js";
 import type { Messages } from "../i18n/index.js";
 import { normalizeCssColor } from "../theme/css-color.js";
-import { SWATCH_TOKENS } from "../theme/palette.js";
+import { LINE_COLOR_TOKENS, SWATCH_TOKENS } from "../theme/palette.js";
 import { createThemeReader } from "../theme/theme-reader.js";
+import type { ThemeReader } from "../theme/tokens.js";
 import { createButton, replaceKeepingFocus } from "./focus.js";
 
-/** One round color button. An outline swatch colors only its rim; a solid one fills the inside. */
-interface SwatchChoice {
+/** A color offered in the panel, with the name it is shown under. */
+interface ColorOption {
   readonly name: string;
-  readonly color: string;
+  /** The color it sets, or undefined for the theme's default color, which sets no color. */
+  readonly value: string | undefined;
+}
+
+/**
+ * One round color button. An outline swatch colors only its rim; a solid one fills the inside.
+ * A swatch with a value is painted in it; the default swatch is painted by paintDefault, because
+ * the default color can depend on the selected item.
+ */
+interface SwatchChoice extends ColorOption {
   readonly fill: PlayerFill;
 }
 
-function createSwatch({ name, color, fill }: SwatchChoice): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "playmaker-panel__swatch";
-  btn.title = name;
-  btn.setAttribute("aria-label", name);
+/**
+ * Whether a swatch shows the saved color: the default swatch an absent color, any other swatch the
+ * same color once normalized like the theme colors. A saved color that cannot be read, which can
+ * come from outside, matches no swatch.
+ */
+function showsColor(choice: ColorOption, color: string | undefined): boolean {
+  if (choice.value === undefined) {
+    return color === undefined;
+  }
+  return color !== undefined && normalizeCssColor(color) === choice.value;
+}
+
+function paintSwatch(btn: HTMLButtonElement, fill: PlayerFill, color: string): void {
   if (fill === "outline") {
-    btn.classList.add("playmaker-panel__swatch--outline");
     btn.style.borderColor = color;
   } else {
     btn.style.backgroundColor = color;
   }
+}
+
+function createSwatch({ name, fill, value }: SwatchChoice, onClick: () => void): HTMLButtonElement {
+  const btn = createButton("playmaker-panel__swatch", "", onClick);
+  btn.title = name;
+  btn.setAttribute("aria-label", name);
+  if (fill === "outline") {
+    btn.classList.add("playmaker-panel__swatch--outline");
+  }
+  if (value !== undefined) {
+    paintSwatch(btn, fill, value);
+  }
   return btn;
+}
+
+/** A row of swatches, with what changes after it is built. */
+interface SwatchRow<T extends SwatchChoice> {
+  /** Marks as pressed the swatches whose choice isPressed accepts. */
+  press(isPressed: (choice: T) => boolean): void;
+  /** Repaints the swatches of the theme's default color, which can depend on the selected item. */
+  paintDefault(color: string): void;
 }
 
 /** The selected item. Selection is single, so the type never has a player and a line at once. */
@@ -45,16 +81,6 @@ type SelectedItem =
   | { readonly kind: "player"; readonly player: Player }
   | { readonly kind: "line"; readonly line: Line }
   | { readonly kind: "none" };
-
-/**
- * The values passed to an input and the function called when the value changes. Passing onReset
- * adds a button that restores the default.
- */
-interface InputOptions<T> {
-  readonly label: string;
-  readonly onChange: (value: T) => void;
-  readonly onReset?: () => void;
-}
 
 /** The inputs on display, and the function that writes the selected item's values into them. */
 type ShownFields =
@@ -180,28 +206,31 @@ export class PropertyPanel extends Disposable {
     const setShape = this.addChoices(messages.shape, PLAYER_SHAPE_VALUES, messages.shapes, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
-    // Eight swatches, outline and solid for each of the four colors. The top row is outline, the
-    // bottom row solid. Instead of a separate "solid or outline" choice, both are picked at once.
+    // Eight swatches, outline and solid for the default color and each of the three colors. The
+    // top row is outline, the bottom row solid. Instead of a separate "solid or outline" choice,
+    // both are picked at once. The default swatches leave the color to the theme, so a player
+    // keeps following the host's --playmaker-player-color.
     const read = createThemeReader(this.element);
+    const colors = this.colorOptions(read);
     const choices = PLAYER_FILL_VALUES.flatMap((fill) =>
-      SWATCH_TOKENS.map((token) => ({
-        name: messages.swatch(messages.colors[token], messages.fills[fill]),
-        color: read(token),
+      colors.map(({ name, value }) => ({
+        name: messages.swatch(name, messages.fills[fill]),
         fill,
+        value,
       })),
     );
-    const setPressed = this.addSwatches(messages.color, choices, {
-      onChange: ({ color, fill }) => controller.updateSelectedPlayer({ color, fill }),
-      onReset: () => controller.updateSelectedPlayer({ color: null, fill: null }),
-    });
-    // A player with no color shows the outline swatch of the theme's default color as pressed.
-    const defaultColor = read("playerColor");
+    const swatches = this.addSwatches(messages.color, choices, ({ value, fill }) =>
+      controller.updateSelectedPlayer({
+        color: value ?? null,
+        fill: fill === DEFAULT_PLAYER_FILL ? null : fill,
+      }),
+    );
+    swatches.paintDefault(read("playerColor"));
     return (player) => {
       setLabel(player.label);
       setShape(player.shape);
-      const color = player.color === undefined ? defaultColor : normalizeCssColor(player.color);
       const fill = player.fill ?? DEFAULT_PLAYER_FILL;
-      setPressed((choice) => choice.color === color && choice.fill === fill);
+      swatches.press((choice) => showsColor(choice, player.color) && choice.fill === fill);
     };
   }
 
@@ -218,23 +247,26 @@ export class PropertyPanel extends Disposable {
       (v) => controller.updateSelectedLine({ interpolation: v }),
     );
     const read = createThemeReader(this.element);
-    const choices = SWATCH_TOKENS.map((token) => ({
-      name: messages.colors[token],
-      color: read(token),
-      fill: "solid" as const,
-    }));
-    const setPressed = this.addSwatches(messages.color, choices, {
-      onChange: ({ color }) => controller.updateSelectedLine({ color }),
-      onReset: () => controller.updateSelectedLine({ color: null }),
-    });
+    const choices = this.colorOptions(read).map((color) => ({ ...color, fill: "solid" as const }));
+    const swatches = this.addSwatches(messages.color, choices, ({ value }) =>
+      controller.updateSelectedLine({ color: value ?? null }),
+    );
     this.addHint(messages.bendHint);
     return (line) => {
       setKind(line.kind);
       setInterpolation(line.interpolation);
-      // A saved color may come from outside, so it is normalized like the theme colors to compare.
-      const color = line.color === undefined ? undefined : normalizeCssColor(line.color);
-      setPressed((choice) => choice.color === color);
+      // The theme's default color differs by kind, so the default swatch follows the kind.
+      swatches.paintDefault(read(LINE_COLOR_TOKENS[line.kind]));
+      swatches.press((choice) => showsColor(choice, line.color));
     };
+  }
+
+  /** The theme's default color, then the palette colors read from the theme. */
+  private colorOptions(read: ThemeReader): ColorOption[] {
+    return [
+      { name: this.messages.defaultColor, value: undefined },
+      ...SWATCH_TOKENS.map((token) => ({ name: this.messages.colors[token], value: read(token) })),
+    ];
   }
 
   private addHint(text: string): void {
@@ -251,25 +283,21 @@ export class PropertyPanel extends Disposable {
     this.element.appendChild(h);
   }
 
-  private addRow(labelText: string, control: HTMLElement, onReset?: () => void): void {
+  private addRow(labelText: string, control: HTMLElement): void {
     const label = document.createElement("label");
     label.className = "playmaker-panel__label";
     label.append(this.createRowText(labelText), control);
-    this.appendRow(labelText, [label], onReset);
+    this.appendRow([label]);
   }
 
   /**
    * A row of buttons. Wrapping it in a label would press the first button when the text is clicked,
    * so the group of buttons is named instead.
    */
-  private addGroupRow(
-    labelText: string,
-    group: HTMLElement,
-    onReset: (() => void) | undefined,
-  ): HTMLElement {
+  private addGroupRow(labelText: string, group: HTMLElement): HTMLElement {
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", labelText);
-    return this.appendRow(labelText, [this.createRowText(labelText), group], onReset);
+    return this.appendRow([this.createRowText(labelText), group]);
   }
 
   private createRowText(text: string): HTMLElement {
@@ -279,27 +307,10 @@ export class PropertyPanel extends Disposable {
     return span;
   }
 
-  /**
-   * With onReset, a button that clears the value back to the theme default ends the row.
-   * It stays enabled even at the default; disabling it right after a press drops the focus to body.
-   */
-  private appendRow(
-    labelText: string,
-    children: readonly HTMLElement[],
-    onReset: (() => void) | undefined,
-  ): HTMLElement {
+  private appendRow(children: readonly HTMLElement[]): HTMLElement {
     const row = document.createElement("div");
     row.className = "playmaker-panel__row";
     row.append(...children);
-    if (onReset !== undefined) {
-      const reset = document.createElement("button");
-      reset.type = "button";
-      reset.className = "playmaker-panel__reset";
-      reset.textContent = this.messages.reset;
-      reset.setAttribute("aria-label", this.messages.resetField(labelText));
-      reset.addEventListener("click", onReset);
-      row.appendChild(reset);
-    }
     this.element.appendChild(row);
     return row;
   }
@@ -345,31 +356,36 @@ export class PropertyPanel extends Disposable {
     };
   }
 
-  /**
-   * A row of color swatches. The chosen choice is passed to onChange.
-   * The returned function takes a predicate for the pressed choice, to match the selected item.
-   */
+  /** A row of color swatches. The chosen choice is passed to onChange. */
   private addSwatches<T extends SwatchChoice>(
     label: string,
     choices: readonly T[],
-    { onChange, onReset }: Omit<InputOptions<T>, "label">,
-  ): (isPressed: (choice: T) => boolean) => void {
+    onChange: (choice: T) => void,
+  ): SwatchRow<T> {
     const group = document.createElement("div");
     group.className = "playmaker-panel__swatches";
     if (choices.some((choice) => choice.fill === "outline")) {
       group.classList.add("playmaker-panel__swatches--rows");
     }
     const swatches = choices.map((choice) => {
-      const btn = createSwatch(choice);
-      btn.addEventListener("click", () => onChange(choice));
+      const btn = createSwatch(choice, () => onChange(choice));
       group.appendChild(btn);
       return { btn, choice };
     });
-    this.addGroupRow(label, group, onReset);
-    return (isPressed) => {
-      for (const { btn, choice } of swatches) {
-        btn.setAttribute("aria-pressed", String(isPressed(choice)));
-      }
+    this.addGroupRow(label, group);
+    return {
+      press: (isPressed) => {
+        for (const { btn, choice } of swatches) {
+          btn.setAttribute("aria-pressed", String(isPressed(choice)));
+        }
+      },
+      paintDefault: (color) => {
+        for (const { btn, choice } of swatches) {
+          if (choice.value === undefined) {
+            paintSwatch(btn, choice.fill, color);
+          }
+        }
+      },
     };
   }
 
@@ -393,7 +409,7 @@ export class PropertyPanel extends Disposable {
       return { btn, option };
     });
     // The buttons take the full width under their name, which a 220px panel needs for three.
-    this.addGroupRow(labelText, group, undefined).classList.add("playmaker-panel__row--stacked");
+    this.addGroupRow(labelText, group).classList.add("playmaker-panel__row--stacked");
     return (value) => {
       for (const { btn, option } of buttons) {
         btn.setAttribute("aria-pressed", String(option === value));

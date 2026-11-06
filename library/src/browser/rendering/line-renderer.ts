@@ -7,14 +7,8 @@ import {
   type LineKind,
   trimForArrowHead,
 } from "../../common/index.js";
-import type { ThemeTokenName } from "../theme/tokens.js";
+import { LINE_COLOR_TOKENS } from "../theme/palette.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
-
-const LINE_COLOR_TOKENS = {
-  route: "lineRoute",
-  block: "lineBlock",
-  motion: "lineMotion",
-} as const satisfies Record<LineKind, ThemeTokenName>;
 
 export class LineRenderer implements ILayerRenderer {
   /** A line whose origin player cannot be found is not drawn. */

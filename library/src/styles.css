@@ -86,8 +86,7 @@
 
 /* Outlined button. The toolbar actions and the panel's buttons share the same shape. */
 .playmaker-toolbar__button,
-.playmaker-panel__choice,
-.playmaker-panel__reset {
+.playmaker-panel__choice {
   font: inherit;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -107,8 +106,7 @@
  * background behind the white text of a pressed button.
  */
 .playmaker-toolbar__button:hover:where(:not([aria-disabled="true"])),
-.playmaker-panel__choice:hover,
-.playmaker-panel__reset:hover {
+.playmaker-panel__choice:hover {
   border-color: var(--_playmaker-ui-accent);
   background: var(--_playmaker-ui-accent-faint);
 }
@@ -232,7 +230,7 @@
   gap: 6px;
 }
 
-/* Player colors. Outlines in the top row and fills in the bottom row, with the same color stacked vertically. The number of columns is the number of palette colors (palette.ts). */
+/* Player colors. Outlines in the top row and fills in the bottom row, with the same color stacked vertically. The 4 columns are the default color and the 3 palette colors (palette.ts). */
 .playmaker-panel__swatches--rows {
   display: grid;
   grid-template-columns: repeat(4, auto);
@@ -255,10 +253,4 @@
 .playmaker-panel__swatch[aria-pressed="true"] {
   outline: 2px solid var(--_playmaker-ui-accent);
   outline-offset: 2px;
-}
-
-.playmaker-panel__reset {
-  flex: 0 0 auto;
-  font-size: 0.93em;
-  padding: 2px 8px;
 }

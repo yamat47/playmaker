@@ -257,21 +257,15 @@ describe("Property panel", () => {
     expect(playmaker.getPlayData().players[0]).toMatchObject({ color: "#d32f2f", fill: "solid" });
   });
 
-  it("marks the outline swatch of the player color set on an ancestor as pressed after refresh", async () => {
+  it("sets the swatch color set on an ancestor after refresh", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
-
-    container.style.setProperty("--playmaker-player-color", "#d32f2f");
+    container.style.setProperty("--playmaker-swatch-2", "#b71c1c");
     playmaker.refresh();
 
-    expect(page.getByRole("button", { name: "Red outline" }).element()).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(page.getByRole("button", { name: "Black outline" }).element()).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    await page.getByRole("button", { name: "Red solid" }).click();
+
+    expect(playmaker.getPlayData().players[0]).toMatchObject({ color: "#b71c1c", fill: "solid" });
   });
 });
 

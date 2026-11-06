@@ -46,11 +46,10 @@ export interface Messages {
   readonly kinds: Readonly<Record<LineKind, string>>;
   readonly interpolations: Readonly<Record<LineInterpolation, string>>;
   readonly colors: Readonly<Record<SwatchToken, string>>;
+  /** Name of the swatch that leaves the color to the theme. */
+  readonly defaultColor: string;
   /** Name of a player swatch, from the color name and the fill name. */
   readonly swatch: (color: string, fill: string) => string;
-  readonly reset: string;
-  /** Name of the button that clears a field back to the theme default. */
-  readonly resetField: (field: string) => string;
 }
 
 export const en: Messages = {
@@ -79,8 +78,7 @@ export const en: Messages = {
   fills: { outline: "Outline", solid: "Solid" },
   kinds: { route: "Route", block: "Block", motion: "Motion" },
   interpolations: { straight: "Straight", bezier: "Curved" },
-  colors: { swatch1: "Black", swatch2: "Red", swatch3: "Blue", swatch4: "Green" },
+  colors: { swatch2: "Red", swatch3: "Blue", swatch4: "Green" },
+  defaultColor: "Default",
   swatch: (color, fill) => `${color} ${fill.toLowerCase()}`,
-  reset: "Default",
-  resetField: (field) => `Reset ${field.toLowerCase()} to default`,
 };

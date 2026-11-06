@@ -157,7 +157,7 @@ Variables take the form `--playmaker-<part>-<component>`. The following are avai
 - Field: `field-grass`, `field-oob`, `field-endzone`, `field-line`, `field-number`, `field-goal-line`, `field-pylon`, `field-goalpost`, and `field-grid` for the grid dots laid out in edit mode
 - Players: `player-color` for players with no color set, and `player-label` for the labels of solid players. The inside of an outline player is filled with `field-grass`
 - Lines: `line-route`, `line-block`, `line-motion`
-- The 4 colors selectable for players and lines in the panel: `swatch-1` through `swatch-4`
+- The 3 colors the panel offers for players and lines besides the default color: `swatch-2` through `swatch-4`
 - Selection: `selection`, and `selection-outline` for the outline of the handles
 - Toolbar and panel: `ui-font`, `ui-surface`, `ui-border`, `ui-text`, `ui-accent`, and `ui-accent-text` for the text color of pressed buttons
 

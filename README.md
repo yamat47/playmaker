@@ -125,6 +125,7 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
   On a selected line, drag the small hollow circle halfway along a segment to add a bend there,
   and double-click a bend to remove it.
   Type with a player selected, or double-click it, to edit its label.
+  With nothing selected, the panel flips the play left to right.
   The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
   The diagram is drawn at a size that fits the container area left after excluding them
 - `view`: read-only. No editing UI is shown

@@ -10,6 +10,7 @@ import {
   RemoveLineCommand,
   UpdateLineCommand,
 } from "../commands/line-commands.js";
+import { FlipPlayCommand } from "../commands/play-commands.js";
 import {
   AddPlayerCommand,
   MovePlayerCommand,
@@ -465,6 +466,10 @@ export class EditorController extends Disposable implements IEditorController {
 
   setFieldZone(zone: FieldZone): void {
     this.notifier.batch(() => this.execute(new SetFieldZoneCommand(zone)));
+  }
+
+  flip(): void {
+    this.notifier.batch(() => this.execute(new FlipPlayCommand()));
   }
 
   /**

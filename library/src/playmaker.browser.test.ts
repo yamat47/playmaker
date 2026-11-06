@@ -208,6 +208,17 @@ describe("Toolbar", () => {
 });
 
 describe("Property panel", () => {
+  it("mirrors the play when Flip left and right is pressed with nothing selected", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+    await userEvent.keyboard("{Escape}");
+    const before = must(playmaker.getPlayData().players[0]).position.lateralYard;
+
+    await button("Flip left and right").click();
+
+    expect(must(playmaker.getPlayData().players[0]).position.lateralYard).toBe(53 - before);
+  });
+
   it("takes the typed label right after a player is placed, and Enter applies it", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
@@ -226,16 +237,6 @@ describe("Property panel", () => {
     await button("Square").click();
 
     expect(playmaker.getPlayData().players[0]).toMatchObject({ label: "QB", shape: "square" });
-  });
-
-  it("changes the label of the selected player when the label is rewritten", async () => {
-    const { container, playmaker } = mount();
-    await addPlayerAtSpot(container);
-
-    await page.getByRole("textbox", { name: "Label" }).fill("QB");
-    await userEvent.tab();
-
-    expect(must(playmaker.getPlayData().players[0]).label).toBe("QB");
   });
 
   it("keeps focus on the next input when the label is committed with Tab", async () => {

@@ -187,6 +187,8 @@ export interface IEditorActions {
   requestLabelEdit(): void;
   updateSelectedLine(patch: LinePatch): void;
   setFieldZone(zone: FieldZone): void;
+  /** Mirrors the whole diagram left to right as one edit. The selection stays. */
+  flip(): void;
   /** While drawing, removes the last placed point and leaves the history untouched. */
   undo(): void;
   redo(): void;

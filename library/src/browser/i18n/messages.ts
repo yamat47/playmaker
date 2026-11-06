@@ -34,6 +34,10 @@ export interface Messages {
   readonly lineToolHint: string;
   /** Shown under the properties of a selected line. */
   readonly bendHint: string;
+  /** The panel button that mirrors the whole play, shown when nothing is selected. */
+  readonly flip: string;
+  /** Gestures the toolbar does not show, listed in the panel when nothing is selected. */
+  readonly tips: readonly string[];
   readonly player: string;
   readonly line: string;
   readonly label: string;
@@ -67,6 +71,12 @@ export const en: Messages = {
     "Drag from a player to draw a straight line, or click a player and then click to place bends.",
   bendHint:
     "Drag a small hollow circle halfway along a segment to add a bend there. Double-click a square bend, or click it and press Delete, to remove it.",
+  flip: "Flip left and right",
+  tips: [
+    "Drag a player to move it with its lines. Hold Option (Alt) to move it alone.",
+    "Type with a player selected, or double-click it, to edit its label.",
+    "Delete removes the selection. Esc cancels the line being drawn or clears the selection.",
+  ],
   player: "Player",
   line: "Line",
   label: "Label",

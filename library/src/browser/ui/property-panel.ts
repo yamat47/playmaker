@@ -195,6 +195,15 @@ export class PropertyPanel extends Disposable {
       }
       case "none":
         this.addHint(hint);
+        // With nothing selected, the panel offers what acts on the whole play, and a short
+        // reference for the gestures that the toolbar does not show. The tips describe the
+        // select tool, so with a line tool, whose hint says how to draw, they are left out.
+        if (!this.controller.getViewState().isDrawing) {
+          this.addAction(this.messages.flip, () => this.controller.flip());
+          if (!isLineTool(this.controller.getViewState().tool)) {
+            this.addTips(this.messages.tips);
+          }
+        }
         return { kind: "hint", text: hint };
     }
   }
@@ -274,6 +283,21 @@ export class PropertyPanel extends Disposable {
     paragraph.className = "playmaker-panel__hint";
     paragraph.textContent = text;
     this.element.appendChild(paragraph);
+  }
+
+  private addAction(text: string, onClick: () => void): void {
+    this.element.appendChild(createButton("playmaker-panel__action", text, onClick));
+  }
+
+  private addTips(tips: readonly string[]): void {
+    const list = document.createElement("ul");
+    list.className = "playmaker-panel__tips";
+    for (const tip of tips) {
+      const item = document.createElement("li");
+      item.textContent = tip;
+      list.appendChild(item);
+    }
+    this.element.appendChild(list);
   }
 
   private addTitle(text: string): void {

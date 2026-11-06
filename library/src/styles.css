@@ -86,7 +86,8 @@
 
 /* Outlined button. The toolbar actions and the panel's buttons share the same shape. */
 .playmaker-toolbar__button,
-.playmaker-panel__choice {
+.playmaker-panel__choice,
+.playmaker-panel__action {
   font: inherit;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -106,12 +107,14 @@
  * background behind the white text of a pressed button.
  */
 .playmaker-toolbar__button:hover:where(:not([aria-disabled="true"])),
-.playmaker-panel__choice:hover {
+.playmaker-panel__choice:hover,
+.playmaker-panel__action:hover {
   border-color: var(--_playmaker-ui-accent);
   background: var(--_playmaker-ui-accent-faint);
 }
 
-.playmaker-toolbar__button {
+.playmaker-toolbar__button,
+.playmaker-panel__action {
   padding: 5px 12px;
 }
 
@@ -163,6 +166,21 @@
 .playmaker-panel__hint {
   margin: 0;
   font-size: 1em;
+  line-height: 1.5;
+  color: var(--_playmaker-ui-text-dim);
+}
+
+.playmaker-panel__action {
+  align-self: flex-start;
+}
+
+.playmaker-panel__tips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 0.93em;
   line-height: 1.5;
   color: var(--_playmaker-ui-text-dim);
 }

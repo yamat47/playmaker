@@ -517,7 +517,7 @@ export class EditorController extends Disposable implements IEditorController {
           from: line.waypoints.at(-1) ?? this.model.getPlayer(line.startPlayerId).position,
         };
       case "waypoint":
-      case "bend":
+      case "insert":
         return { kind: hit.kind, lineId: line.id, index: hit.index, waypoints: line.waypoints };
     }
   }

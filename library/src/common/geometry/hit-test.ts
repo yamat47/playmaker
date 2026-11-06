@@ -100,20 +100,23 @@ export function pointDistance(a: FieldPosition, b: FieldPosition): number {
 export interface LineHandles {
   readonly waypointHandles: readonly FieldPosition[];
   readonly endpointHandle: FieldPosition;
-  /** Halfway along each segment; dragging one adds a bend there. Empty at the waypoint limit. */
-  readonly bendHandles: readonly FieldPosition[];
+  /**
+   * Halfway along each segment; dragging one inserts a waypoint there, which bends the line.
+   * Empty at the waypoint limit.
+   */
+  readonly insertHandles: readonly FieldPosition[];
 }
 
 /** The grabbed handle and its position when a line handle is hit. */
 export type LineHandleHit =
   | { readonly kind: "endpoint"; readonly point: FieldPosition }
   | { readonly kind: "waypoint"; readonly index: number; readonly point: FieldPosition }
-  | { readonly kind: "bend"; readonly index: number; readonly point: FieldPosition };
+  | { readonly kind: "insert"; readonly index: number; readonly point: FieldPosition };
 
 /**
  * Returns the line handle hit by target. The end point is tested before the waypoints so that
  * an attempt to move the tip is not stolen by the last waypoint. Later waypoints are drawn in
- * front, so the search runs from the end. Bend handles come last: on a short segment they sit
+ * front, so the search runs from the end. Insert handles come last: on a short segment they sit
  * close to the points that bound it, and moving an existing point is the likelier intent.
  */
 export function hitLineHandle(
@@ -130,9 +133,9 @@ export function hitLineHandle(
       return { kind: "waypoint", index, point };
     }
   }
-  for (const [index, point] of handles.bendHandles.entries()) {
+  for (const [index, point] of handles.insertHandles.entries()) {
     if (within(point)) {
-      return { kind: "bend", index, point };
+      return { kind: "insert", index, point };
     }
   }
   return undefined;

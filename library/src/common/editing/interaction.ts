@@ -28,7 +28,7 @@ export type DragTarget =
     }
   | {
       /** A new waypoint being pulled out of the middle of a segment, inserted at index. */
-      readonly kind: "bend";
+      readonly kind: "insert";
       readonly lineId: string;
       readonly index: number;
       readonly waypoints: readonly FieldPosition[];
@@ -134,7 +134,7 @@ export function dragPatch(target: DragTarget, to: FieldPosition, alone: boolean)
         lineId: target.lineId,
         patch: { waypoints: target.waypoints.map((w, i) => (i === target.index ? to : w)) },
       };
-    case "bend": {
+    case "insert": {
       const { waypoints, index } = target;
       return {
         kind: "line",

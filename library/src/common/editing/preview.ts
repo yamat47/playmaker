@@ -91,14 +91,15 @@ export function computeOverlay(
 
 /**
  * The handles of a line. The model keeps no line without its start player, so the anchors are
- * always found; the check only narrows the type. A line at the waypoint limit takes no more bends.
+ * always found; the check only narrows the type. A line at the waypoint limit takes no more
+ * waypoints, so it has no insert handles.
  */
 export function lineHandles(scene: SceneData, line: Line): LineHandles {
   const anchors = lineAnchorPoints(line, indexPlayersById(scene.players));
   return {
     waypointHandles: line.waypoints,
     endpointHandle: line.end,
-    bendHandles:
+    insertHandles:
       anchors === undefined || line.waypoints.length >= MAX_WAYPOINTS_PER_LINE
         ? []
         : segmentMidpoints(anchors, line.interpolation),

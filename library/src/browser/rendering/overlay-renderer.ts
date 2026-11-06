@@ -65,10 +65,10 @@ function drawLineHandles(
     ctx.strokeStyle = outline;
     ctx.stroke();
   };
-  // Bend handles are hollow circles, smaller than the points, so a place to add a bend never
+  // Insert handles are hollow circles, smaller than the points, so a place to add a bend never
   // reads as a point already on the line.
-  for (const bend of handles.bendHandles) {
-    const { x, y } = geometry.toCanvas(bend);
+  for (const insert of handles.insertHandles) {
+    const { x, y } = geometry.toCanvas(insert);
     ctx.beginPath();
     ctx.arc(x, y, handleHalf * 0.8, 0, Math.PI * 2);
     ctx.fillStyle = outline;

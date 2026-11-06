@@ -297,7 +297,7 @@ describe("Adding a bend", () => {
 
     play.click(yd(40, 10));
 
-    expect(play.editor.getFrame().overlay).toMatchObject({ kind: "line", bendHandles: [] });
+    expect(play.editor.getFrame().overlay).toMatchObject({ kind: "line", insertHandles: [] });
   });
 });
 

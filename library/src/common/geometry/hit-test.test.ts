@@ -210,7 +210,7 @@ describe("hitLineHandle", () => {
       { lateralYard: 10.5, downfieldYard: 0 },
     ],
     endpointHandle: { lateralYard: 20, downfieldYard: 5 },
-    bendHandles: [{ lateralYard: 15, downfieldYard: 2.5 }],
+    insertHandles: [{ lateralYard: 15, downfieldYard: 2.5 }],
   };
 
   it("returns the position and index of a waypoint inside the radius", () => {
@@ -242,16 +242,16 @@ describe("hitLineHandle", () => {
     );
   });
 
-  it("returns the index of a bend handle inside the radius", () => {
+  it("returns the index of an insert handle inside the radius", () => {
     expect(hitLineHandle(line, { lateralYard: 15.5, downfieldYard: 2.5 })).toEqual({
-      kind: "bend",
+      kind: "insert",
       index: 0,
       point: { lateralYard: 15, downfieldYard: 2.5 },
     });
   });
 
-  it("returns the waypoint rather than a bend handle that overlaps it", () => {
-    const crowded = { ...line, bendHandles: [{ lateralYard: 10.25, downfieldYard: 0 }] };
+  it("returns the waypoint rather than an insert handle that overlaps it", () => {
+    const crowded = { ...line, insertHandles: [{ lateralYard: 10.25, downfieldYard: 0 }] };
 
     expect(hitLineHandle(crowded, { lateralYard: 10.25, downfieldYard: 0 })?.kind).toBe("waypoint");
   });

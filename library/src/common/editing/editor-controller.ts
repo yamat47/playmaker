@@ -200,6 +200,18 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.batch(() => this.setInteraction(undefined));
   }
 
+  stepBack(): void {
+    this.notifier.batch(() => {
+      if (this.interaction !== undefined) {
+        this.setInteraction(undefined);
+      } else if (this.getSelectedPlayer() !== undefined || this.getSelectedLine() !== undefined) {
+        this.setSelection(NO_SELECTION);
+      } else {
+        this.setTool("select");
+      }
+    });
+  }
+
   commitLine(): void {
     const interaction = this.interaction;
     if (interaction?.type !== "draw-line") {

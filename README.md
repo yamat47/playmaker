@@ -117,7 +117,8 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
 ### Modes
 
 - `edit`: edit with the toolbar, the properties panel, and pointer operations. Undo = `Cmd/Ctrl+Z`,
-  Redo = `Cmd/Ctrl+Shift+Z` or `Cmd/Ctrl+Y`. The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
+  Redo = `Cmd/Ctrl+Shift+Z` or `Cmd/Ctrl+Y`, Delete or Backspace deletes the selection, and Esc steps back
+  (cancels the drag or drawing in progress, then clears the selection, then returns to the select tool). The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
   The diagram is drawn at a size that fits the container area left after excluding them
 - `view`: read-only. No editing UI is shown
 - Switching with `setMode` only attaches or detaches the editing UI and input. The diagram and the Undo history remain

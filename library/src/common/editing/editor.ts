@@ -110,6 +110,11 @@ export interface IEditorActions {
   setTool(tool: EditorTool): void;
   commitLine(): void;
   cancelInteraction(): void;
+  /**
+   * Backs out one level at a time: cancels a drag or drawing in progress, otherwise clears the
+   * selection, otherwise returns to the select tool.
+   */
+  stepBack(): void;
   deleteSelection(): void;
   updateSelectedPlayer(patch: PlayerPatch): void;
   updateSelectedLine(patch: LinePatch): void;

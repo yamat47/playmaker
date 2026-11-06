@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { twoPlayersWithRoute } from "../../test-support/fixtures.js";
+import { positionOf, twoPlayersWithRoute } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
 
 describe("Tool switching", () => {
@@ -36,5 +36,57 @@ describe("Tool switching", () => {
     play.editor.setTool("select");
 
     expect(play.notified.mock.calls).toEqual([["scene"], ["view"]]);
+  });
+});
+
+describe("Stepping back", () => {
+  it("cancels a drawing in progress and keeps the tool", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.startLine(yd(10, 0));
+
+    play.editor.stepBack();
+
+    expect(play.editor.getViewState()).toMatchObject({ isDrawing: false, tool: "draw-line" });
+  });
+
+  it("cancels a drag in progress and leaves the player where it was grabbed", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.pointerDown(yd(10, 0));
+    play.editor.pointerMove(yd(14, 3));
+
+    play.editor.stepBack();
+    play.editor.pointerUp(yd(14, 3));
+
+    expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(10, 0));
+  });
+
+  it("clears the selection and keeps the tool when nothing is in progress", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("add-player");
+    play.click(yd(30, -5));
+
+    play.editor.stepBack();
+
+    expect(play.editor.getViewState()).toMatchObject({
+      selection: { kind: "none" },
+      tool: "add-player",
+    });
+  });
+
+  it("returns to the select tool when nothing is selected", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("add-player");
+
+    play.editor.stepBack();
+
+    expect(play.editor.getViewState().tool).toBe("select");
+  });
+
+  it("does not notify when there is nothing to step back from", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.editor.stepBack();
+
+    expect(play.notified).not.toHaveBeenCalled();
   });
 });

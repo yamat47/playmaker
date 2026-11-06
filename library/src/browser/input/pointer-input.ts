@@ -87,14 +87,17 @@ export class PointerInput extends Disposable {
         return;
       }
       switch (resolveKeyAction(e)) {
-        case "cancel-interaction":
-          controller.cancelInteraction();
+        case "step-back":
+          controller.stepBack();
           return;
         case "commit-line":
           // Enter on a button presses that button, so it does not also commit the line.
           if (!(e.target instanceof HTMLButtonElement)) {
             controller.commitLine();
           }
+          return;
+        case "delete-selection":
+          controller.deleteSelection();
           return;
         case "undo":
           e.preventDefault();

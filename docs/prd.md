@@ -202,7 +202,7 @@ The following are deliberately left out of scope.
 - Operations that align elements to each other (features like PowerPoint's alignment. This needs bulk movement, so it is not built. Restricting positions to grid points replaces it)
 - Zoom / pan
 - Copy & paste
-- Keyboard shortcuts other than Undo / Redo and committing or canceling a line drawing
+- Keyboard shortcuts other than Undo / Redo, Delete, Esc, and committing a line drawing
 - Minimum and maximum constraints on the container size (the consumer's responsibility)
 
 ### 8.2 Responsibilities of the commercial software

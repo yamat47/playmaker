@@ -141,6 +141,15 @@ describe("Keyboard", () => {
     expect(playmaker.getPlayData().players).toEqual([]);
   });
 
+  it("deletes the selected player when Delete is pressed after a click on the canvas", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+
+    await userEvent.keyboard("{Delete}");
+
+    expect(playmaker.getPlayData().players).toEqual([]);
+  });
+
   it("undoes the last edit with Ctrl+Z right after a toolbar button is pressed", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);

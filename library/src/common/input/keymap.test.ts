@@ -6,12 +6,17 @@ function stroke(key: string, modifiers: Partial<Omit<KeyStroke, "key">> = {}): K
 }
 
 describe("resolveKeyAction", () => {
-  it("Escape cancels drawing or dragging", () => {
-    expect(resolveKeyAction(stroke("Escape"))).toBe("cancel-interaction");
+  it("Escape steps back", () => {
+    expect(resolveKeyAction(stroke("Escape"))).toBe("step-back");
   });
 
   it("Enter commits the line being drawn", () => {
     expect(resolveKeyAction(stroke("Enter"))).toBe("commit-line");
+  });
+
+  it("Delete and Backspace delete the selection", () => {
+    expect(resolveKeyAction(stroke("Delete"))).toBe("delete-selection");
+    expect(resolveKeyAction(stroke("Backspace"))).toBe("delete-selection");
   });
 
   it("Cmd+Z and Ctrl+Z undo", () => {

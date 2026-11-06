@@ -111,6 +111,11 @@ export class PointerInput extends Disposable {
         case "delete-selection":
           controller.deleteSelection();
           return;
+        case "type-label":
+          // Not prevented: the panel focuses the label input during this keydown, and the
+          // character then goes into it.
+          controller.requestLabelEdit();
+          return;
         case "undo":
           e.preventDefault();
           controller.undo();

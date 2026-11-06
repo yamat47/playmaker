@@ -61,9 +61,27 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
   }
 }
 
+/** A label typed in the panel and not committed yet. */
+export interface LabelDraft {
+  readonly playerId: string;
+  readonly label: string;
+}
+
+/** Shows the typed label on its player. Does not modify data. */
+export function applyLabelDraft(data: SceneData, draft: LabelDraft | undefined): SceneData {
+  if (draft === undefined) {
+    return data;
+  }
+  return {
+    ...data,
+    players: data.players.map((p) => (p.id === draft.playerId ? { ...p, label: draft.label } : p)),
+  };
+}
+
 /**
- * The selection highlight and handle positions. Pass as scene the result of composePreview, with
- * the in-progress state overlaid. That way a handle being dragged is drawn at the drag destination.
+ * The selection highlight and handle positions. Pass as scene the diagram with the in-progress
+ * state overlaid, as getFrame builds it. That way a handle being dragged is drawn at the drag
+ * destination.
  */
 export function computeOverlay(
   scene: SceneData,

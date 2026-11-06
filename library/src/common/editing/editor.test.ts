@@ -8,6 +8,7 @@ const state: EditorViewState = {
   canRedo: false,
   fieldZone: "middle",
   isDrawing: false,
+  isTypingLabel: false,
   remainingPlayerSlots: 2,
   canStartLine: true,
 };

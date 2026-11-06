@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   line,
   manyPlayers,
@@ -517,5 +517,222 @@ describe("Editing player values", () => {
     play.editor.updateSelectedPlayer({ label: "RB" });
 
     expect(play.notified.mock.calls).toEqual([["scene"], ["view"]]);
+  });
+});
+
+describe("Editing a label", () => {
+  it("shows the typed label on the selected player before it is committed", () => {
+    const play = openWithASelected();
+
+    play.editor.previewLabel("QB");
+
+    expect(play.editor.getFrame().scene.players[0]?.label).toBe("QB");
+    expect(play.session.getPlayData().players[0]?.label).toBe("a");
+  });
+
+  it("commits a label typed in several steps as one edit that one Undo takes back", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("Q");
+    play.editor.previewLabel("QB");
+    play.editor.updateSelectedPlayer({ label: "QB" });
+
+    play.editor.undo();
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
+  it("drops the typed label when the typing is discarded", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+
+    play.editor.discardLabelDraft();
+
+    expect(play.editor.getFrame().scene.players[0]?.label).toBe("a");
+    expect(play.editor.getViewState().canUndo).toBe(false);
+  });
+
+  it("does not notify when nothing typed is discarded", () => {
+    const play = openWithASelected();
+    play.notified.mockClear();
+
+    play.editor.discardLabelDraft();
+
+    expect(play.notified).not.toHaveBeenCalled();
+  });
+
+  it("keeps the typed label when a panel button changes the player before the label is committed", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+
+    play.editor.updateSelectedPlayer({ shape: "square" });
+
+    expect(play.session.getPlayData().players[0]).toMatchObject({ label: "QB", shape: "square" });
+  });
+
+  it("commits the typed label before another player is pressed", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+
+    play.click(yd(20, 0));
+
+    expect(play.session.getPlayData().players[0]?.label).toBe("QB");
+  });
+
+  it("commits the typed label before the tool changes", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+
+    play.editor.setTool("route");
+
+    expect(play.session.getPlayData().players[0]?.label).toBe("QB");
+  });
+
+  it("commits the typed label before what is in progress is canceled", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+
+    play.editor.cancelInteraction();
+
+    expect(play.session.getPlayData().players[0]?.label).toBe("QB");
+  });
+
+  it("commits the typed label before Esc clears the selection", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+
+    play.editor.stepBack();
+
+    expect(play.session.getPlayData().players[0]?.label).toBe("QB");
+  });
+
+  it("offers Undo for the typing while a label is typed, even with nothing committed before", () => {
+    const play = openWithASelected();
+
+    play.editor.previewLabel("QB");
+
+    expect(play.editor.getViewState()).toMatchObject({ canUndo: true, isTypingLabel: true });
+  });
+
+  it("offers no Redo while a label is typed, since committing it ends what can be redone", () => {
+    const play = openWithASelected();
+    play.editor.updateSelectedPlayer({ shape: "square" });
+    play.editor.undo();
+
+    play.editor.previewLabel("QB");
+
+    expect(play.editor.getViewState().canRedo).toBe(false);
+  });
+
+  it("takes back the typed label with Undo and brings it back with Redo", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+    play.editor.undo();
+
+    play.editor.redo();
+
+    expect(play.session.getPlayData().players[0]?.label).toBe("QB");
+  });
+
+  it("keeps showing the typed label while the pointer moves over the field", () => {
+    const play = openWithASelected();
+    play.editor.previewLabel("QB");
+
+    play.editor.pointerMove(yd(30, 5));
+
+    expect(play.editor.getFrame().scene.players[0]?.label).toBe("QB");
+  });
+
+  it("ignores a typed label when no player is selected", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.editor.previewLabel("QB");
+
+    expect(play.notified).not.toHaveBeenCalled();
+  });
+
+  it("asks for the label when typing starts with a player selected", () => {
+    const play = openWithASelected();
+    const requested = vi.fn();
+    play.editor.onDidRequestLabelEdit(requested);
+
+    play.editor.requestLabelEdit();
+
+    expect(requested).toHaveBeenCalledOnce();
+  });
+
+  it("leaves typing alone when no player is selected", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    const requested = vi.fn();
+    play.editor.onDidRequestLabelEdit(requested);
+
+    play.editor.requestLabelEdit();
+
+    expect(requested).not.toHaveBeenCalled();
+  });
+
+  it("selects a double-clicked player and asks for its label", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    const requested = vi.fn();
+    play.editor.onDidRequestLabelEdit(requested);
+
+    play.editor.doubleClick(yd(20, 0));
+
+    expect(requested).toHaveBeenCalledOnce();
+    expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "b" });
+  });
+
+  it("asks for the label after the view state shows the player double-clicked with a line tool", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("route");
+    play.click(yd(20, 0));
+    play.click(yd(20, 0));
+    play.notified.mockClear();
+    const notifiedSoFar = vi.fn();
+    play.editor.onDidRequestLabelEdit(() => notifiedSoFar([...play.notified.mock.calls]));
+
+    play.editor.doubleClick(yd(20, 0));
+
+    expect(notifiedSoFar).toHaveBeenCalledExactlyOnceWith([["scene"], ["view"]]);
+  });
+
+  it("asks for the label of a player double-clicked with a line tool instead of drawing", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    const requested = vi.fn();
+    play.editor.onDidRequestLabelEdit(requested);
+    play.editor.setTool("route");
+    play.click(yd(20, 0));
+    play.click(yd(20, 0));
+
+    play.editor.doubleClick(yd(20, 0));
+
+    expect(requested).toHaveBeenCalledOnce();
+    expect(play.editor.getViewState()).toMatchObject({
+      isDrawing: false,
+      selection: { kind: "player", id: "b" },
+    });
+  });
+
+  it("asks for the label of a player double-clicked near the edge of its marker with a line tool", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    const requested = vi.fn();
+    play.editor.onDidRequestLabelEdit(requested);
+    play.editor.setTool("route");
+    play.click(yd(20.8, 0));
+    play.click(yd(20.8, 0));
+
+    play.editor.doubleClick(yd(20.8, 0));
+
+    expect(requested).toHaveBeenCalledOnce();
+    expect(play.session.getPlayData().lines).toEqual(twoPlayersWithRoute().lines);
+  });
+
+  it("does not ask for a label when empty space is double-clicked", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    const requested = vi.fn();
+    play.editor.onDidRequestLabelEdit(requested);
+
+    play.editor.doubleClick(yd(40, -10));
+
+    expect(requested).not.toHaveBeenCalled();
   });
 });

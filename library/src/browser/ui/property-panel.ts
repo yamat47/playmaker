@@ -71,6 +71,8 @@ export class PropertyPanel extends Disposable {
   // While the selected item stays the same, the inputs are kept and only their values are written.
   // Rebuilding them would remove the input Tab just moved to after a commit, and drop the focus.
   private shown: ShownFields | undefined;
+  // The label input of the player on display, focused when the editor asks for a label.
+  private labelInput: HTMLInputElement | undefined;
 
   /**
    * @param focusFallback Where the focus goes when a selection change rebuilds the inputs and
@@ -92,6 +94,7 @@ export class PropertyPanel extends Disposable {
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
     this._register(controller.onDidChangeViewState(() => this.sync()));
+    this._register(controller.onDidRequestLabelEdit(() => this.focusLabel()));
     this.sync();
   }
 
@@ -146,8 +149,14 @@ export class PropertyPanel extends Disposable {
     return { kind: "none" };
   }
 
+  private focusLabel(): void {
+    this.labelInput?.focus({ preventScroll: true });
+    this.labelInput?.select();
+  }
+
   private rebuild(selected: SelectedItem, hint: string): ShownFields {
     this.element.replaceChildren();
+    this.labelInput = undefined;
     switch (selected.kind) {
       case "player": {
         const update = this.addPlayerFields();
@@ -168,10 +177,7 @@ export class PropertyPanel extends Disposable {
   private addPlayerFields(): (player: Player) => void {
     const { controller, messages } = this;
     this.addTitle(messages.player);
-    const setLabel = this.addText({
-      label: messages.label,
-      onChange: (v) => controller.updateSelectedPlayer({ label: v }),
-    });
+    const setLabel = this.addLabel(messages.label);
     const setShape = this.addSelect(messages.shape, PLAYER_SHAPE_VALUES, messages.shapes, (v) =>
       controller.updateSelectedPlayer({ shape: v }),
     );
@@ -298,12 +304,43 @@ export class PropertyPanel extends Disposable {
     this.element.appendChild(row);
   }
 
-  private addText({ label, onChange, onReset }: InputOptions<string>): (value: string) => void {
+  /**
+   * The label input. Typing shows the label on the diagram at once; leaving the input commits it
+   * as one edit. Enter commits and hands the keys back to the canvas, so placing the next player
+   * needs no click on the canvas first, and Esc drops what was typed. Keys that confirm or cancel
+   * an IME conversion are left to the IME.
+   */
+  private addLabel(label: string): (value: string) => void {
+    const { controller } = this;
     const input = document.createElement("input");
     input.type = "text";
-    input.addEventListener("change", () => onChange(input.value));
-    this.addRow(label, input, onReset);
+    let committed = "";
+    input.addEventListener("input", () => controller.previewLabel(input.value));
+    input.addEventListener("change", () => controller.updateSelectedPlayer({ label: input.value }));
+    input.addEventListener("keydown", (e) => {
+      // Safari reports the key that ends an IME conversion with isComposing false, and only
+      // keyCode 229 tells it apart.
+      if (e.isComposing || e.keyCode === 229) {
+        return;
+      }
+      if (e.key === "Escape") {
+        input.value = committed;
+        controller.discardLabelDraft();
+      }
+      if (e.key === "Enter" || e.key === "Escape") {
+        // Moving the focus away fires change, which commits a typed label.
+        this.focusFallback.focus({ preventScroll: true });
+      }
+    });
+    this.labelInput = input;
+    this.addRow(label, input);
+    // While a label is typed, the input holds the typing, and the player's committed label must
+    // not overwrite it. Any edit commits the typing before the panel is told about it.
     return (value) => {
+      if (controller.getViewState().isTypingLabel) {
+        return;
+      }
+      committed = value;
       input.value = value;
     };
   }

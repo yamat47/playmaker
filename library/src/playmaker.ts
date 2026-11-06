@@ -157,8 +157,8 @@ export class Playmaker implements IDisposable {
 
   /**
    * Switches the mode. The diagram and Undo history stay; only the editing UI and the pointer and
-   * key input are attached or detached. View cancels a drag or drawing in progress and draws no
-   * selection highlight.
+   * key input are attached or detached. View commits a label being typed in the panel, as an edit,
+   * cancels a drag or drawing in progress, and draws no selection highlight.
    */
   setMode(mode: PlaymakerMode): void {
     if (this.store.isDisposed) {

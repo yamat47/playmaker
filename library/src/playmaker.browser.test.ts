@@ -197,6 +197,16 @@ describe("Toolbar", () => {
 });
 
 describe("Property panel", () => {
+  it("takes the typed label right after a player is placed, and Enter applies it", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+
+    await userEvent.keyboard("QB{Enter}");
+
+    expect(must(playmaker.getPlayData().players[0]).label).toBe("QB");
+    expect(document.activeElement).toBe(canvasIn(container));
+  });
+
   it("changes the label of the selected player when the label is rewritten", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);

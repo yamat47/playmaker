@@ -124,10 +124,12 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
   Dragging a player moves its lines along with it; hold Option (Alt) to move the player alone.
   On a selected line, drag the small hollow circle halfway along a segment to add a bend there,
   and double-click a bend to remove it.
+  Type with a player selected, or double-click it, to edit its label.
   The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
   The diagram is drawn at a size that fits the container area left after excluding them
 - `view`: read-only. No editing UI is shown
 - Switching with `setMode` only attaches or detaches the editing UI and input. The diagram and the Undo history remain
+  (a label being typed in the panel is committed first, as an edit)
 
 ### Style customization
 

@@ -18,7 +18,7 @@ Verify editing behavior with specification tests that use `PlaySession` and `IEd
   use `click`, `drag`, and `startLine` for clicks, drags, and starting a drawing. Call `editor` directly for tool switching, Undo, and edits from the panel
 - Observe only session reads (`getPlayData()`, `getSnapshot()`, `fieldZone`) and the return value of `loadFormation`,
   view state (`editor.getViewState()`, `editor.getFrame()`, `editor.getSelectedPlayer()`, `editor.getSelectedLine()`),
-  and notifications (`onChange`, `notified`, `session.onDidChange`, `session.onDidReset`)
+  and notifications (`onChange`, `notified`, `session.onDidChange`, `session.onDidReset`, `editor.onDidRequestLabelEdit`)
 - Create a `PlaySession` directly without `openPlay` only when verifying the unsubscribed state
 - Do not import internal modules such as commands, interaction, preview, or PlayModel.
   Types used to build a diagram and public constants such as `MAX_PLAYERS` are fine

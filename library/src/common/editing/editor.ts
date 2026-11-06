@@ -63,12 +63,18 @@ export type EditorOverlay =
 export interface EditorViewState {
   readonly tool: EditorTool;
   readonly selection: EditorSelection;
-  /** Also true while drawing, where Undo takes back the drawing rather than a committed edit. */
+  /**
+   * Also true while drawing or typing a label, where Undo takes back the drawing or the typing
+   * rather than a committed edit.
+   */
   readonly canUndo: boolean;
+  /** False while a label is typed: committing it is a new edit, after which nothing can be redone. */
   readonly canRedo: boolean;
   readonly fieldZone: FieldZone;
   /** Whether a line is being drawn (waiting for commit or cancel). */
   readonly isDrawing: boolean;
+  /** Whether a label typed in the panel is waiting to be committed. */
+  readonly isTypingLabel: boolean;
   /** How many more players can be placed. An operation placing more than this does nothing. */
   readonly remainingPlayerSlots: number;
   /** Whether the line count is below the limit, so that a new line can be started. */
@@ -77,7 +83,10 @@ export interface EditorViewState {
 
 /** The overlay is computed from the same in-progress state as the scene. */
 export interface EditorFrame {
-  /** The committed play diagram with the in-progress drag or drawing overlaid on it. */
+  /**
+   * The committed play diagram with the in-progress drag or drawing, and a label being typed,
+   * overlaid on it.
+   */
   readonly scene: SceneData;
   readonly overlay: EditorOverlay;
 }
@@ -91,6 +100,12 @@ export interface IEditorScene {
    * Does not fire for operations that change only the diagram, such as moving during a drag.
    */
   readonly onDidChangeViewState: Event<void>;
+  /**
+   * Fires when the keys are to go into the selected player's label: when a player is
+   * double-clicked, and when typing starts with a player selected. It fires after the view state
+   * notification, so the panel already shows the player.
+   */
+  readonly onDidRequestLabelEdit: Event<void>;
   getViewState(): EditorViewState;
   /** Undefined when no player is selected or the target has disappeared. */
   getSelectedPlayer(): Player | undefined;
@@ -117,8 +132,9 @@ export interface IEditorGestures {
   pointerMove(pos: FieldPosition, modifiers?: PointerModifiers): void;
   pointerUp(pos: FieldPosition): void;
   /**
-   * Finishes the line being drawn, or removes the waypoint of the selected line under pos.
-   * The two presses of the double-click have already arrived as pointerDown and pointerUp.
+   * Finishes the line being drawn, removes the waypoint of the selected line under pos, or asks
+   * for the label of the player under pos. The two presses of the double-click have already
+   * arrived as pointerDown and pointerUp.
    */
   doubleClick(pos: FieldPosition): void;
 }
@@ -136,6 +152,16 @@ export interface IEditorActions {
   /** Removes the picked waypoint of the selected line if there is one, else the selection. */
   deleteSelection(): void;
   updateSelectedPlayer(patch: PlayerPatch): void;
+  /**
+   * Shows the selected player with this label without committing it. The label is committed as
+   * one edit, however many previews came before, by updateSelectedPlayer, and before any other
+   * edit, Undo, Redo, press, tool switch, or cancelInteraction.
+   */
+  previewLabel(label: string): void;
+  /** Drops the label shown by previewLabel. */
+  discardLabelDraft(): void;
+  /** Asks for the selected player's label to be typed. Asks nothing when no player is selected. */
+  requestLabelEdit(): void;
   updateSelectedLine(patch: LinePatch): void;
   setFieldZone(zone: FieldZone): void;
   /** While drawing, removes the last placed point and leaves the history untouched. */

@@ -95,7 +95,7 @@ The MVP provides the following feature set. API signatures, type definitions, an
 
 - Players can be placed on the field. Available positions are grid points at 0.5-yard steps, and both dragging and loading data snap to the grid.
   This keeps rows and columns aligned without an operation for aligning elements to each other. One diagram holds up to 64 players (a typical diagram has about 22)
-- Each player is displayed with a shape (circle or square) and a label
+- Each player is displayed with a shape (circle or square) and a label. Typing with a player selected edits its label, and so does a double-click on a player; the label shows on the diagram while it is typed
 - Dragging a player moves the lines that start at it along with it, keeping their shape. Holding Option (Alt) moves the player alone
 - Color and fill (outline or solid) can be set per player and reset to the default. A new player takes the shape, color, and fill of the player last styled in the panel, and a new line takes the curve and color of the line last styled, so a run of similar elements is styled once. The color is chosen from 4 colors in the panel
 
@@ -206,7 +206,7 @@ The following are deliberately left out of scope.
 - Operations that align elements to each other (features like PowerPoint's alignment. This needs bulk movement, so it is not built. Restricting positions to grid points replaces it)
 - Zoom / pan
 - Copy & paste
-- Keyboard shortcuts other than Undo / Redo, Delete, Esc, and committing a line drawing
+- Keyboard shortcuts other than Undo / Redo, Delete, Esc, committing a line drawing, and typing a label
 - Minimum and maximum constraints on the container size (the consumer's responsibility)
 
 ### 8.2 Responsibilities of the commercial software

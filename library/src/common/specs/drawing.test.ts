@@ -14,10 +14,18 @@ function openDrawingFromA(): PlayDriver {
   return startDrawingFromA(openPlay(twoPlayersWithRoute()));
 }
 
-/** A diagram where player a was selected, then drawing started from a with the draw-line tool. */
-function openDrawingFromSelectedA(): PlayDriver {
+/** A diagram where player b was selected, then drawing started from a with the draw-line tool. */
+function openDrawingWithBSelected(): PlayDriver {
+  const play = openPlay(twoPlayersWithRoute());
+  play.click(yd(20, 0));
+  return startDrawingFromA(play);
+}
+
+/** A diagram where player a was labeled QB from the panel, then drawing started from a. */
+function openDrawingAfterLabelingA(): PlayDriver {
   const play = openPlay(twoPlayersWithRoute());
   play.click(yd(10, 0));
+  play.editor.updateSelectedPlayer({ label: "QB" });
   return startDrawingFromA(play);
 }
 
@@ -47,6 +55,22 @@ describe("Starting a drawing", () => {
   it("starts drawing when a player is pressed with the draw-line tool", () => {
     const play = openDrawingFromA();
 
+    expect(play.editor.getViewState().isDrawing).toBe(true);
+  });
+
+  it("clears the selection when a drawing starts", () => {
+    const play = openDrawingWithBSelected();
+
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
+    expect(play.editor.getFrame().overlay).toEqual({ kind: "none" });
+  });
+
+  it("does not delete the player selected before the drawing when Delete runs while drawing", () => {
+    const play = openDrawingWithBSelected();
+
+    play.editor.deleteSelection();
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
     expect(play.editor.getViewState().isDrawing).toBe(true);
   });
 
@@ -233,26 +257,6 @@ describe("Committing a line", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
-  it("does not add a near-zero line when the start player moved onto the placed point", () => {
-    const play = openDrawingFromSelectedA();
-    play.editor.pointerDown(yd(14, 0));
-    play.editor.updateSelectedPlayer({ position: yd(14, 0) });
-
-    play.editor.commitLine();
-
-    expect(play.session.getPlayData().lines).toEqual(twoPlayersWithRoute().lines);
-  });
-
-  it("does not add a line on commit when the start player was deleted while drawing", () => {
-    const play = openDrawingFromSelectedA();
-    play.editor.pointerDown(yd(14, 8));
-    play.editor.deleteSelection();
-
-    play.editor.commitLine();
-
-    expect(play.session.getPlayData().lines).toEqual([]);
-  });
-
   it("neither changes the diagram nor notifies when committed while not drawing", () => {
     const play = openPlay(twoPlayersWithRoute());
 
@@ -276,8 +280,7 @@ describe("Canceling a drawing", () => {
   });
 
   it("does not revert committed edits when Undo runs while drawing", () => {
-    const play = openDrawingFromSelectedA();
-    play.editor.updateSelectedPlayer({ label: "QB" });
+    const play = openDrawingAfterLabelingA();
     play.editor.pointerDown(yd(14, 0));
 
     play.editor.undo();
@@ -294,8 +297,7 @@ describe("Canceling a drawing", () => {
   });
 
   it("does not revert committed edits when Undo runs before any point is placed", () => {
-    const play = openDrawingFromSelectedA();
-    play.editor.updateSelectedPlayer({ label: "QB" });
+    const play = openDrawingAfterLabelingA();
 
     play.editor.undo();
 

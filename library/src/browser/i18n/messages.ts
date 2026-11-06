@@ -34,6 +34,8 @@ export interface Messages {
   readonly playerLimit: (maxPlayers: number) => string;
   readonly lineLimit: (maxLines: number) => string;
   readonly selectionHint: string;
+  /** Shown in the panel while a line is drawn, in place of the selection hint. */
+  readonly drawingHint: string;
   readonly player: string;
   readonly line: string;
   readonly label: string;
@@ -70,6 +72,8 @@ export const en: Messages = {
   playerLimit: (maxPlayers) => `Up to ${maxPlayers} players`,
   lineLimit: (maxLines) => `Up to ${maxLines} lines`,
   selectionHint: "Select a player or a line to edit its properties",
+  drawingHint:
+    "Click to place a bend. Double-click or press Enter to finish the line, or press Esc to cancel it.",
   player: "Player",
   line: "Line",
   label: "Label",

@@ -141,27 +141,13 @@ export function startDrawing(player: Player): DrawInteraction {
  * player if there are no points yet), or the point limit has been reached, only the cursor advances
  * and no point is placed. Same positions are rejected because committing with a double-click
  * delivers pointerdown twice, which would place another point right on top of the previous one.
+ * Rejecting the starting player's position also keeps a committed line from having zero length,
+ * which would be invisible and impossible to select.
  */
 export function addDraftPoint(draw: DrawInteraction, point: FieldPosition): DrawInteraction {
   const last = draw.points.at(-1) ?? draw.start;
   const accepts = !isSamePosition(last, point) && draw.points.length < MAX_DRAFT_POINTS;
   return { ...draw, points: accepts ? [...draw.points, point] : draw.points, cursor: point };
-}
-
-/**
- * The waypoints and end point of the line to commit. anchor is the current position of the starting
- * player. Undefined when there are no points, or when every placed point equals anchor and the
- * length is 0. A zero-length line is invisible and cannot be selected.
- */
-export function committableDraft(
-  draw: DrawInteraction,
-  anchor: FieldPosition,
-): { readonly waypoints: readonly FieldPosition[]; readonly end: FieldPosition } | undefined {
-  const split = splitDraftPoints(draw.points);
-  if (split === undefined) {
-    return undefined;
-  }
-  return draw.points.every((p) => isSamePosition(p, anchor)) ? undefined : split;
 }
 
 /** Builds a line from the drawing. The preview and the commit use the same defaults. */

@@ -15,6 +15,8 @@ export const ja: Messages = {
   playerLimit: (maxPlayers) => `選手は ${maxPlayers} 人までです`,
   lineLimit: (maxLines) => `線は ${maxLines} 本までです`,
   selectionHint: "対象を選択するとプロパティを編集できます",
+  drawingHint:
+    "クリックで折れ点を置きます。ダブルクリックか Enter で線を確定し、Esc で取り消します。",
   player: "選手",
   line: "線",
   label: "ラベル",

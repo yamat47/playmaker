@@ -62,7 +62,7 @@ interface InputOptions<T> {
 type ShownFields =
   | { readonly kind: "player"; readonly id: string; readonly update: (player: Player) => void }
   | { readonly kind: "line"; readonly id: string; readonly update: (line: Line) => void }
-  | { readonly kind: "hint" };
+  | { readonly kind: "hint"; readonly text: string };
 
 export class PropertyPanel extends Disposable {
   readonly element: HTMLElement;
@@ -116,12 +116,21 @@ export class PropertyPanel extends Disposable {
       shown.update(selected.line);
       return;
     }
-    if (selected.kind === "none" && shown?.kind === "hint") {
+    const hint = this.hintText();
+    if (selected.kind === "none" && shown?.kind === "hint" && shown.text === hint) {
       return;
     }
     replaceKeepingFocus(this.element, this.focusFallback, () => {
-      this.shown = this.rebuild(selected);
+      this.shown = this.rebuild(selected, hint);
     });
+  }
+
+  // Starting a drawing clears the selection, so while a line is drawn the panel always shows a
+  // hint, and it says how to finish the line.
+  private hintText(): string {
+    return this.controller.getViewState().isDrawing
+      ? this.messages.drawingHint
+      : this.messages.selectionHint;
   }
 
   private selectedItem(): SelectedItem {
@@ -136,7 +145,7 @@ export class PropertyPanel extends Disposable {
     return { kind: "none" };
   }
 
-  private rebuild(selected: SelectedItem): ShownFields {
+  private rebuild(selected: SelectedItem, hint: string): ShownFields {
     this.element.replaceChildren();
     switch (selected.kind) {
       case "player": {
@@ -150,11 +159,11 @@ export class PropertyPanel extends Disposable {
         return { kind: "line", id: selected.line.id, update };
       }
       case "none": {
-        const hint = document.createElement("p");
-        hint.className = "playmaker-panel__hint";
-        hint.textContent = this.messages.selectionHint;
-        this.element.appendChild(hint);
-        return { kind: "hint" };
+        const paragraph = document.createElement("p");
+        paragraph.className = "playmaker-panel__hint";
+        paragraph.textContent = hint;
+        this.element.appendChild(paragraph);
+        return { kind: "hint", text: hint };
       }
     }
   }

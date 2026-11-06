@@ -44,7 +44,6 @@ import {
 import { EditorNotifier } from "./editor-notifier.js";
 import {
   addDraftPoint,
-  committableDraft,
   type DragInteraction,
   type DragTarget,
   type DrawInteraction,
@@ -53,6 +52,7 @@ import {
   dragPosition,
   type Interaction,
   isSamePosition,
+  splitDraftPoints,
   startDrag,
   startDrawing,
 } from "./interaction.js";
@@ -348,10 +348,8 @@ export class EditorController extends Disposable implements IEditorController {
       : new UpdateLineCommand(drop.lineId, drop.patch);
   }
 
-  // Does not commit if the starting player has disappeared.
   private lineFromDraft(draw: DrawInteraction): Line | undefined {
-    const start = this.model.findPlayer(draw.startPlayerId);
-    const split = start === undefined ? undefined : committableDraft(draw, start.position);
+    const split = splitDraftPoints(draw.points);
     if (split === undefined) {
       return undefined;
     }
@@ -427,6 +425,9 @@ export class EditorController extends Disposable implements IEditorController {
     if (player === undefined) {
       return;
     }
+    // Left selected, the panel and the handles would keep pointing at another element while the
+    // new line is drawn, and a panel edit would change that element instead of the new line.
+    this.setSelection(NO_SELECTION);
     this.setInteraction(startDrawing(player));
   }
 

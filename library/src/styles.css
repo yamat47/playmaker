@@ -100,7 +100,12 @@
     border-color 0.15s;
 }
 
-.playmaker-toolbar__button:hover:not([aria-disabled="true"]),
+/*
+ * The disabled exclusion sits inside :where() so this rule stays at the specificity of the pressed and disabled rules
+ * below it, which then win by source order. Outside :where(), the :not() would outrank them and paint the faint hover
+ * background behind the white text of a pressed button.
+ */
+.playmaker-toolbar__button:hover:where(:not([aria-disabled="true"])),
 .playmaker-panel__reset:hover {
   border-color: var(--_playmaker-ui-accent);
   background: var(--_playmaker-ui-accent-faint);

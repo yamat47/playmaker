@@ -46,7 +46,7 @@ describe("Selection by click", () => {
     expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
   });
 
-  it("draws handles at the waypoints and the end when a line is selected", () => {
+  it("draws handles at the waypoints, the end, and halfway along each segment of a line", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.click(yd(25, 5));
@@ -55,6 +55,7 @@ describe("Selection by click", () => {
       kind: "line",
       waypointHandles: [yd(15, 2)],
       endpointHandle: yd(25, 5),
+      insertHandles: [yd(12.5, 1), yd(20, 3.5)],
     });
   });
 

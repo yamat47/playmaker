@@ -4,6 +4,7 @@ import { CommandService } from "../commands/command-service.js";
 import { UndoRedoService } from "../commands/undo-redo-service.js";
 import { type Formation, normalizeFormation } from "../formations/formation.js";
 import { IdFactory } from "../model/id-factory.js";
+import { migratePlayData } from "../model/migration.js";
 import type { FieldZone, PlayData } from "../model/play-data.js";
 import { PlayModel } from "../model/play-model.js";
 import type { IEditorController } from "./editor.js";
@@ -92,6 +93,14 @@ export class PlaySession extends Disposable {
   loadFormation(formation: Formation): boolean {
     const normalized = normalizeFormation(formation);
     return normalized !== null && this.document.controller.loadFormation(normalized);
+  }
+
+  /**
+   * Normalizes the data like setPlayData, then replaces the diagram as one edit: the history and
+   * the controller stay, Undo brings the previous diagram back, and onDidChange fires.
+   */
+  replacePlayData(data: unknown): void {
+    this.document.controller.replacePlay(migratePlayData(data));
   }
 
   setPlayData(data: unknown): void {

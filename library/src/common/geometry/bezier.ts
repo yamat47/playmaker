@@ -49,20 +49,46 @@ export function catmullRomBezierControls(
   ];
 }
 
+function isSamePoint(a: FieldPosition, b: FieldPosition): boolean {
+  return a.lateralYard === b.lateralYard && a.downfieldYard === b.downfieldYard;
+}
+
 /** Consecutive equal points give a zero direction and break the curve, so they fold into one. */
 function dedupeConsecutive(points: readonly FieldPosition[]): FieldPosition[] {
   const out: FieldPosition[] = [];
   for (const p of points) {
     const last = out[out.length - 1];
-    if (
-      last === undefined ||
-      last.lateralYard !== p.lateralYard ||
-      last.downfieldYard !== p.downfieldYard
-    ) {
+    if (last === undefined || !isSamePoint(last, p)) {
       out.push({ lateralYard: p.lateralYard, downfieldYard: p.downfieldYard });
     }
   }
   return out;
+}
+
+/** One cubic bezier of a curve: from p1 to p2, bent by c1 and c2. */
+type CurvePiece = readonly [
+  p1: FieldPosition,
+  c1: FieldPosition,
+  c2: FieldPosition,
+  p2: FieldPosition,
+];
+
+/**
+ * The pieces of the curve drawn through points, one per segment, or none when the points are
+ * joined as they are: with `straight`, or with 2 or fewer points. points must have no consecutive
+ * equal points.
+ */
+function curvePieces(
+  points: readonly FieldPosition[],
+  interpolation: LineInterpolation,
+): CurvePiece[] {
+  if (interpolation === "straight" || points.length < 3) {
+    return [];
+  }
+  return [...segments(points)].map(([p1, p2], i) => {
+    const [c1, c2] = catmullRomBezierControls(points[i - 1] ?? p1, p1, p2, points[i + 2] ?? p2);
+    return [p1, c1, c2, p2];
+  });
 }
 
 /**
@@ -76,20 +102,46 @@ export function sampleLinePath(
   samplesPerSegment: number = DEFAULT_BEZIER_SAMPLES_PER_SEGMENT,
 ): FieldPosition[] {
   const pts = dedupeConsecutive(points);
-  if (interpolation === "straight" || pts.length < 3) {
+  const pieces = curvePieces(pts, interpolation);
+  if (pieces.length === 0) {
     return pts;
   }
   const steps = Math.max(1, Math.floor(samplesPerSegment));
-
   const result: FieldPosition[] = pts.slice(0, 1);
-  for (const [i, [p1, p2]] of [...segments(pts)].entries()) {
-    const p0 = pts[i - 1] ?? p1;
-    const p3 = pts[i + 2] ?? p2;
-    const [c1, c2] = catmullRomBezierControls(p0, p1, p2, p3);
-    // The point at t=0 equals the previous segment's end point, so t is stepped to 1 excluding 0.
+  for (const [p1, c1, c2, p2] of pieces) {
+    // The point at t=0 equals the previous piece's end point, so t is stepped to 1 excluding 0.
     for (let s = 1; s <= steps; s++) {
       result.push(cubicBezierPoint(p1, c1, c2, p2, s / steps));
     }
   }
   return result;
+}
+
+/**
+ * The point halfway along each segment of the drawn path, one per pair of adjacent control points,
+ * in order. A waypoint inserted at index i goes between control points i and i + 1, so the i-th
+ * midpoint is where it starts. On a curve the point is taken at the middle of the segment's bezier,
+ * so it sits on the drawn curve rather than on the chord. A segment between two equal points is
+ * folded away in the drawn path, so its midpoint is that point.
+ */
+export function segmentMidpoints(
+  points: readonly FieldPosition[],
+  interpolation: LineInterpolation,
+): FieldPosition[] {
+  const pieces = curvePieces(dedupeConsecutive(points), interpolation);
+  // Each segment that is not folded away is the next piece of the drawn curve.
+  let next = 0;
+  return [...segments(points)].map(([p1, p2]) => {
+    if (isSamePoint(p1, p2)) {
+      return { lateralYard: p1.lateralYard, downfieldYard: p1.downfieldYard };
+    }
+    const piece = pieces[next];
+    next++;
+    return piece === undefined
+      ? {
+          lateralYard: (p1.lateralYard + p2.lateralYard) / 2,
+          downfieldYard: (p1.downfieldYard + p2.downfieldYard) / 2,
+        }
+      : cubicBezierPoint(...piece, 0.5);
+  });
 }

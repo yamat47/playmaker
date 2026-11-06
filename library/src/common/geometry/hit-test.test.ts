@@ -149,6 +149,12 @@ describe("hitTestLine", () => {
     expect(hitTestLine([back, front], players, { lateralYard: 5, downfieldYard: 55 })).toBe(front);
   });
 
+  it("misses the part of a line that runs under the marker it ends on", () => {
+    const l = line("r1", { end: { lateralYard: 26, downfieldYard: 48 } });
+
+    expect(hitTestLine([l], players, { lateralYard: 26, downfieldYard: 48 })).toBeUndefined();
+  });
+
   it("returns undefined for an empty array", () => {
     expect(hitTestLine([], players, { lateralYard: 0, downfieldYard: 0 })).toBeUndefined();
   });
@@ -205,11 +211,12 @@ describe("pointDistance", () => {
 
 describe("hitLineHandle", () => {
   const line = {
-    waypoints: [
+    waypointHandles: [
       { lateralYard: 10, downfieldYard: 0 },
       { lateralYard: 10.5, downfieldYard: 0 },
     ],
-    end: { lateralYard: 20, downfieldYard: 5 },
+    endpointHandle: { lateralYard: 20, downfieldYard: 5 },
+    insertHandles: [{ lateralYard: 15, downfieldYard: 2.5 }],
   };
 
   it("returns the position and index of a waypoint inside the radius", () => {
@@ -229,16 +236,45 @@ describe("hitLineHandle", () => {
   it("returns the endpoint when the point hits it", () => {
     expect(hitLineHandle(line, { lateralYard: 20.5, downfieldYard: 5 })).toEqual({
       kind: "endpoint",
-      point: line.end,
+      point: line.endpointHandle,
     });
   });
 
   it("returns the endpoint when it overlaps a waypoint", () => {
-    const overlapped = { ...line, end: { lateralYard: 10.5, downfieldYard: 0 } };
+    const overlapped = { ...line, endpointHandle: { lateralYard: 10.5, downfieldYard: 0 } };
 
     expect(hitLineHandle(overlapped, { lateralYard: 10.5, downfieldYard: 0 })?.kind).toBe(
       "endpoint",
     );
+  });
+
+  it("returns the index of an insert handle inside the radius", () => {
+    expect(hitLineHandle(line, { lateralYard: 15.5, downfieldYard: 2.5 })).toEqual({
+      kind: "insert",
+      index: 0,
+      point: { lateralYard: 15, downfieldYard: 2.5 },
+    });
+  });
+
+  it("returns the later insert handle, drawn on top, when insert handles overlap", () => {
+    const crowded = {
+      ...line,
+      insertHandles: [
+        { lateralYard: 30, downfieldYard: 5 },
+        { lateralYard: 30.5, downfieldYard: 5 },
+      ],
+    };
+
+    expect(hitLineHandle(crowded, { lateralYard: 30.5, downfieldYard: 5 })).toMatchObject({
+      kind: "insert",
+      index: 1,
+    });
+  });
+
+  it("returns the waypoint rather than an insert handle that overlaps it", () => {
+    const crowded = { ...line, insertHandles: [{ lateralYard: 10.25, downfieldYard: 0 }] };
+
+    expect(hitLineHandle(crowded, { lateralYard: 10.25, downfieldYard: 0 })?.kind).toBe("waypoint");
   });
 
   it("returns undefined when no handle is hit", () => {

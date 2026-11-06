@@ -1,4 +1,4 @@
-import type { Event } from "../base/event.js";
+import { Emitter, type Event } from "../base/event.js";
 import { Disposable } from "../base/lifecycle.js";
 import type { ICommand } from "../commands/command.js";
 import type { ICommandService } from "../commands/command-service.js";
@@ -10,8 +10,10 @@ import {
   RemoveLineCommand,
   UpdateLineCommand,
 } from "../commands/line-commands.js";
+import { FlipPlayCommand, ReplacePlayCommand } from "../commands/play-commands.js";
 import {
   AddPlayerCommand,
+  MovePlayerCommand,
   type PlayerPatch,
   RemovePlayerCommand,
   UpdatePlayerCommand,
@@ -19,10 +21,16 @@ import {
 import { type Formation, instantiateFormation } from "../formations/formation.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { snapToGrid } from "../geometry/grid.js";
-import { hitLineHandle, hitTestLine, hitTestPlayer } from "../geometry/hit-test.js";
+import {
+  hitLineHandle,
+  hitTestLine,
+  hitTestPlayer,
+  type LineHandleHit,
+  pointDistance,
+} from "../geometry/hit-test.js";
 import type { IIdFactory } from "../model/id-factory.js";
-import { type Line, MAX_LINES } from "../model/line.js";
-import type { FieldZone } from "../model/play-data.js";
+import { DEFAULT_LINE_INTERPOLATION, type Line, type LineKind, MAX_LINES } from "../model/line.js";
+import type { FieldZone, PlayData } from "../model/play-data.js";
 import type { IPlayModel } from "../model/play-model.js";
 import {
   DEFAULT_PLAYER_SHAPE,
@@ -31,20 +39,23 @@ import {
   type Player,
 } from "../model/player.js";
 import {
-  canLoadFormation,
+  type EditorCursor,
   type EditorFrame,
+  type EditorHover,
   type EditorSelection,
   type EditorTool,
   type EditorViewState,
   type IEditorController,
   isSameSelection,
   isToolAvailable,
+  NO_MODIFIERS,
   NO_SELECTION,
+  type PointerModifiers,
 } from "./editor.js";
 import { EditorNotifier } from "./editor-notifier.js";
 import {
   addDraftPoint,
-  committableDraft,
+  CLICK_SLOP_YARDS,
   type DragInteraction,
   type DragTarget,
   type DrawInteraction,
@@ -53,15 +64,71 @@ import {
   dragPosition,
   type Interaction,
   isSamePosition,
+  type LineStyle,
+  MAX_DRAFT_POINTS,
+  type PlayerStyle,
+  splitDraftPoints,
   startDrag,
   startDrawing,
 } from "./interaction.js";
-import { composePreview, computeOverlay } from "./preview.js";
+import {
+  applyLabelDraft,
+  composePreview,
+  computeOverlay,
+  type LabelDraft,
+  lineHandles,
+} from "./preview.js";
+
+/** A handle of the selected line, and the line. */
+interface SelectedLineHandle {
+  readonly line: Line;
+  readonly hit: LineHandleHit;
+}
+
+/** What a press acts on. */
+type PressTarget =
+  | ({ readonly kind: "handle" } & SelectedLineHandle)
+  | { readonly kind: "player"; readonly player: Player }
+  | { readonly kind: "line"; readonly line: Line }
+  | { readonly kind: "none" };
+
+const NO_PRESS_TARGET: PressTarget = { kind: "none" };
+
+/** What a press at the pointer would act on, and the cursor that says what the press would do. */
+type Hover = Pick<EditorFrame, "hover" | "cursor">;
+
+const NOTHING_UNDER_POINTER: Hover = { hover: NO_SELECTION, cursor: "default" };
+
+function isSameHover(a: Hover, b: Hover): boolean {
+  return a.cursor === b.cursor && isSameSelection(a.hover, b.hover);
+}
+
+function cursorOnly(cursor: EditorCursor): Hover {
+  return { hover: NO_SELECTION, cursor };
+}
+
+function handleTarget(line: Line, hit: LineHandleHit): DragTarget {
+  switch (hit.kind) {
+    case "endpoint":
+      return { kind: "endpoint", lineId: line.id };
+    case "waypoint":
+    case "insert":
+      return { kind: hit.kind, lineId: line.id, index: hit.index, waypoints: line.waypoints };
+  }
+}
+
+function dropCommand(drop: DragInteraction): ICommand {
+  const patch = dragPatch(drop);
+  return patch.kind === "player"
+    ? new MovePlayerCommand(patch.move)
+    : new UpdateLineCommand(patch.lineId, patch.patch);
+}
 
 /**
  * Takes the tool, the selection, and gestures, and issues commands. It never writes to the
- * Model directly. An in-progress drag or drawing is not put into the Model but is overlaid by
- * getFrame, so neither the Model's onDidChange nor the history moves until the edit is committed.
+ * Model directly. An in-progress drag or drawing, and a label being typed, are not put into the
+ * Model but are overlaid by getFrame, so neither the Model's onDidChange nor the history moves
+ * until the edit is committed.
  */
 export class EditorController extends Disposable implements IEditorController {
   private readonly model: IPlayModel;
@@ -71,10 +138,32 @@ export class EditorController extends Disposable implements IEditorController {
   private readonly notifier: EditorNotifier;
   readonly onDidChangeScene: Event<void>;
   readonly onDidChangeViewState: Event<void>;
+  private readonly _onDidRequestLabelEdit = this._register(new Emitter<void>());
+  readonly onDidRequestLabelEdit = this._onDidRequestLabelEdit.event;
 
   private tool: EditorTool = "select";
   private selection: EditorSelection = NO_SELECTION;
   private interaction: Interaction | undefined;
+  // An index into the waypoints of the selected line, set by pressing a waypoint so that Delete
+  // removes that waypoint instead of the whole line. Any other press lets go of it.
+  private pickedWaypoint: number | undefined;
+  // Where the current press went down, and whether the last press traveled CLICK_SLOP_YARDS before
+  // its release. A browser reports a double-click for a click followed by a quick drag too, and
+  // that must not remove the bend the drag just moved.
+  private pressOrigin: FieldPosition | undefined;
+  private lastPressDragged = false;
+  // A label being typed in the panel, shown on its player until it is committed. Unlike a drag or
+  // a drawing, which any change to the diagram ends, it is committed before anything else the
+  // editor does, so a typed label is never lost to another edit.
+  private labelDraft: LabelDraft | undefined;
+  // Where the pointer last was over the field, or undefined once it left. Only the position is
+  // kept: the frame works out what is under it when it is read, so the mark follows any change to
+  // the diagram, the selection, or the tool while the pointer rests.
+  private pointer: FieldPosition | undefined;
+  // The style of the player and of the line last styled in the panel, given to the next player
+  // placed and the next line drawn, so a run of defenders or of curved routes is styled once.
+  private playerStyle: PlayerStyle = { shape: DEFAULT_PLAYER_SHAPE };
+  private lineStyle: LineStyle = { interpolation: DEFAULT_LINE_INTERPOLATION };
 
   constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
     super();
@@ -90,21 +179,30 @@ export class EditorController extends Disposable implements IEditorController {
     );
     this.onDidChangeScene = this.notifier.onDidChangeScene;
     this.onDidChangeViewState = this.notifier.onDidChangeViewState;
-    this._register(this.model.onDidChange(() => this.notifier.markSceneChanged()));
+    // A drag or drawing clears itself before committing, so a change that arrives while one is in
+    // progress came from elsewhere (Undo, a zone switch, a load, a deletion by key). Ending it here
+    // means no drag or drawing ever sees its target change, and none needs to check for that.
+    this._register(
+      this.model.onDidChange(() => {
+        this.setInteraction(undefined);
+        this.notifier.markSceneChanged();
+      }),
+    );
   }
 
   getViewState(): EditorViewState {
     const { players, lines } = this.model.getSnapshot();
+    const isDrawing = this.interaction?.type === "draw-line";
+    const isTypingLabel = this.labelDraft !== undefined;
     return {
       tool: this.tool,
-      selection:
-        this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
-          ? NO_SELECTION
-          : this.selection,
-      canUndo: this.commands.canUndo,
-      canRedo: this.commands.canRedo,
+      selection: this.liveSelection(),
+      // Undo while drawing removes the last placed point, or stops drawing when there is none.
+      canUndo: this.commands.canUndo || isDrawing || isTypingLabel,
+      canRedo: this.commands.canRedo && !isTypingLabel,
       fieldZone: this.model.getFieldZone(),
-      isDrawing: this.interaction?.type === "draw-line",
+      isDrawing,
+      isTypingLabel,
       remainingPlayerSlots: MAX_PLAYERS - players.length,
       canStartLine: lines.length < MAX_LINES,
     };
@@ -121,8 +219,15 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   getFrame(): EditorFrame {
-    const scene = composePreview(this.model.getSnapshot(), this.interaction);
-    return { scene, overlay: computeOverlay(scene, this.selection) };
+    const scene = applyLabelDraft(
+      composePreview(this.model.getSnapshot(), this.interaction),
+      this.labelDraft,
+    );
+    return {
+      scene,
+      overlay: computeOverlay(scene, this.selection, this.livePickedWaypoint()),
+      ...this.frameHover(),
+    };
   }
 
   setTool(tool: EditorTool): void {
@@ -130,70 +235,166 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.notifier.batch(() => {
+      this.commitLabelDraft();
       this.tool = tool;
       this.setInteraction(undefined);
+      // The cursor over the field depends on the tool.
+      this.notifier.markSceneChanged();
     });
   }
 
   pointerDown(pos: FieldPosition): void {
+    this.pressOrigin = pos;
     this.notifier.batch(() => {
-      switch (this.tool) {
-        case "add-player":
-          this.addPlayerAt(pos);
+      this.movePointer(pos);
+      this.commitLabelDraft();
+      this.setPickedWaypoint(undefined);
+      const interaction = this.interaction;
+      if (interaction?.type === "draw-line") {
+        // A new press means the one that started the drawing has ended, even if its release was
+        // lost.
+        this.placePoint({ ...interaction, pressing: false }, pos);
+        return;
+      }
+      const target = this.pressTargetAt(pos);
+      switch (target.kind) {
+        case "handle":
+          this.grabHandle(target, pos);
           return;
-        case "draw-line":
-          this.drawLinePointerDown(pos);
+        case "player":
+          this.pressPlayer(target.player, pos);
           return;
-        case "select":
-          this.selectPointerDown(pos);
+        case "line":
+          this.setSelection({ kind: "line", id: target.line.id });
+          return;
+        case "none":
+          this.pressEmptySpace(pos);
           return;
       }
     });
   }
 
-  pointerMove(pos: FieldPosition): void {
+  pointerMove(pos: FieldPosition, modifiers: PointerModifiers = NO_MODIFIERS): void {
     const interaction = this.interaction;
     if (interaction === undefined) {
+      this.movePointer(pos);
       return;
     }
-    this.notifier.batch(() =>
-      this.setInteraction(
-        interaction.type === "draw-line"
-          ? { ...interaction, cursor: this.clampToField(pos) }
-          : { ...interaction, current: this.clampToField(dragPosition(interaction, pos)) },
-      ),
-    );
+    this.pointer = pos;
+    // A move that lands on the same grid point changes nothing on screen, so it is not redrawn.
+    this.notifier.batch(() => {
+      if (interaction.type === "draw-line") {
+        const cursor = this.clampToField(pos);
+        if (!isSamePosition(cursor, interaction.cursor)) {
+          this.setInteraction({ ...interaction, cursor });
+        }
+        return;
+      }
+      const current = this.placeDragged(interaction, pos);
+      const alone = modifiers.altKey;
+      if (!isSamePosition(current, interaction.current) || alone !== interaction.alone) {
+        this.setInteraction({ ...interaction, current, alone });
+      }
+    });
   }
 
   pointerUp(pos: FieldPosition): void {
+    this.lastPressDragged =
+      this.pressOrigin !== undefined && pointDistance(pos, this.pressOrigin) >= CLICK_SLOP_YARDS;
+    this.notifier.batch(() => {
+      this.movePointer(pos);
+      const interaction = this.interaction;
+      if (interaction?.type === "draw-line") {
+        this.releaseDrawing(interaction, pos);
+        return;
+      }
+      if (interaction === undefined) {
+        return;
+      }
+      this.setInteraction(undefined);
+      const dropped = { ...interaction, current: this.placeDragged(interaction, pos) };
+      // A drop where the target already is, after a click or a drag back to where it started,
+      // does not change the diagram, so it is put into neither the history nor a notification.
+      if (isSamePosition(dropped.current, interaction.origin)) {
+        return;
+      }
+      this.execute(dropCommand(dropped));
+    });
+  }
+
+  pointerLeave(): void {
+    this.movePointer(undefined);
+  }
+
+  cancelInteraction(): void {
+    this.notifier.batch(() => {
+      this.commitLabelDraft();
+      this.setInteraction(undefined);
+    });
+  }
+
+  doubleClick(pos: FieldPosition): void {
+    if (this.lastPressDragged) {
+      return;
+    }
+    const player = hitTestPlayer(this.model.getSnapshot().players, pos);
     const interaction = this.interaction;
-    // Drawing places points on click (pointerDown), so up does nothing.
-    if (interaction?.type !== "drag") {
+    if (interaction?.type === "draw-line") {
+      // With a line tool, the first click of a double-click on a player started a drawing that has
+      // no point yet. The double-click then opens the label, as it does with the other tools.
+      if (interaction.points.length > 0 || player?.id !== interaction.startPlayerId) {
+        this.commitLine();
+        return;
+      }
+    } else {
+      const handle = this.selectedLineHandleAt(pos);
+      const hit = handle?.hit;
+      if (handle !== undefined && hit?.kind === "waypoint") {
+        this.notifier.batch(() => this.removeWaypoint(handle.line, hit.index));
+        return;
+      }
+    }
+    if (player === undefined) {
       return;
     }
     this.notifier.batch(() => {
       this.setInteraction(undefined);
-      const moved = dragPosition(interaction, pos);
-      // Compare the position before snapping. Merely clicking a player that sits outside the window
-      // must not move it to the window's edge.
-      if (isSamePosition(moved, interaction.origin)) {
-        return;
-      }
-      const to = this.clampToField(moved);
-      // A move that lands on the same grid point does not change the diagram, so it is put into
-      // neither the history nor a notification.
-      if (isSamePosition(to, interaction.origin)) {
-        return;
-      }
-      const command = this.dropCommand(interaction, to);
-      if (command !== undefined) {
-        this.commands.execute(command);
-      }
+      this.setSelection({ kind: "player", id: player.id });
     });
+    this.requestLabelEdit();
   }
 
-  cancelInteraction(): void {
-    this.notifier.batch(() => this.setInteraction(undefined));
+  requestLabelEdit(): void {
+    if (this.getSelectedPlayer() !== undefined) {
+      this._onDidRequestLabelEdit.fire();
+    }
+  }
+
+  previewLabel(label: string): void {
+    const player = this.getSelectedPlayer();
+    if (player === undefined) {
+      return;
+    }
+    this.notifier.batch(() => this.setLabelDraft({ playerId: player.id, label }));
+  }
+
+  discardLabelDraft(): void {
+    this.notifier.batch(() => this.setLabelDraft(undefined));
+  }
+
+  stepBack(): void {
+    this.notifier.batch(() => {
+      this.commitLabelDraft();
+      if (this.interaction !== undefined) {
+        this.setInteraction(undefined);
+      } else if (this.livePickedWaypoint() !== undefined) {
+        this.setPickedWaypoint(undefined);
+      } else if (this.liveSelection().kind !== "none") {
+        this.setSelection(NO_SELECTION);
+      } else {
+        this.setTool("select");
+      }
+    });
   }
 
   commitLine(): void {
@@ -207,10 +408,9 @@ export class EditorController extends Disposable implements IEditorController {
       if (line === undefined) {
         return;
       }
-      this.commands.execute(new AddLineCommand(line));
-      // Right after drawing, switch back to the select tool and select the drawn line. Being able
-      // to edit it right away is preferred over drawing the next line in a row.
-      this.setTool("select");
+      this.execute(new AddLineCommand(line));
+      // The tool stays, because the lines of a play come in runs (all the blocks, all the routes),
+      // and the drawn line is selected so the panel can adjust it before the next one starts.
       this.setSelection({ kind: "line", id: line.id });
     });
   }
@@ -218,11 +418,17 @@ export class EditorController extends Disposable implements IEditorController {
   deleteSelection(): void {
     const player = this.getSelectedPlayer();
     const line = this.getSelectedLine();
+    const picked = this.livePickedWaypoint();
     this.notifier.batch(() => {
+      if (line !== undefined && picked !== undefined) {
+        // The line stays selected, so the next Delete takes the line itself.
+        this.removeWaypoint(line, picked);
+        return;
+      }
       if (player !== undefined) {
-        this.commands.execute(new RemovePlayerCommand(player.id));
+        this.execute(new RemovePlayerCommand(player.id));
       } else if (line !== undefined) {
-        this.commands.execute(new RemoveLineCommand(line.id));
+        this.execute(new RemoveLineCommand(line.id));
       } else {
         return;
       }
@@ -235,7 +441,15 @@ export class EditorController extends Disposable implements IEditorController {
     if (player === undefined) {
       return;
     }
-    this.notifier.batch(() => this.commands.execute(new UpdatePlayerCommand(player.id, patch)));
+    this.notifier.batch(() => this.execute(new UpdatePlayerCommand(player.id, patch)));
+    if ("shape" in patch || "color" in patch || "fill" in patch) {
+      const { shape, color, fill } = this.model.getPlayer(player.id);
+      this.playerStyle = {
+        shape,
+        ...(color === undefined ? {} : { color }),
+        ...(fill === undefined ? {} : { fill }),
+      };
+    }
   }
 
   updateSelectedLine(patch: LinePatch): void {
@@ -243,41 +457,52 @@ export class EditorController extends Disposable implements IEditorController {
     if (line === undefined) {
       return;
     }
-    this.notifier.batch(() => this.commands.execute(new UpdateLineCommand(line.id, patch)));
+    this.notifier.batch(() => this.execute(new UpdateLineCommand(line.id, patch)));
+    if ("interpolation" in patch || "color" in patch) {
+      const { interpolation, color } = this.model.getLine(line.id);
+      this.lineStyle = { interpolation, ...(color === undefined ? {} : { color }) };
+    }
   }
 
   setFieldZone(zone: FieldZone): void {
-    this.notifier.batch(() => {
-      // If the same zone was merely selected again, keep the in-progress drag or drawing.
-      if (this.commands.execute(new SetFieldZoneCommand(zone))) {
-        this.setInteraction(undefined);
-      }
-    });
+    this.notifier.batch(() => this.execute(new SetFieldZoneCommand(zone)));
   }
 
+  flip(): void {
+    this.notifier.batch(() => this.execute(new FlipPlayCommand()));
+  }
+
+  /** Replaces the whole diagram as one edit. */
+  replacePlay(data: PlayData): void {
+    this.notifier.batch(() => this.execute(new ReplacePlayCommand(data)));
+  }
+
+  /**
+   * Appends the players to the existing diagram and returns true. Returns false without placing
+   * anyone when they would exceed MAX_PLAYERS. PlaySession passes only normalized formations, and
+   * those always have a player.
+   */
   loadFormation(formation: Formation): boolean {
-    if (!canLoadFormation(formation, this.getViewState())) {
+    const { players } = this.model.getSnapshot();
+    if (formation.players.length > MAX_PLAYERS - players.length) {
       return false;
     }
-    const { players } = this.model.getSnapshot();
     const added = instantiateFormation(
       formation,
       this.ids,
       players.map((p) => p.id),
     );
-    return this.notifier.batch(() => {
-      const loaded = this.commands.execute(new LoadFormationCommand(added));
-      if (loaded) {
-        // After loading, the in-progress operation and old selection mean nothing, so clear them.
-        this.setInteraction(undefined);
-        this.setSelection(NO_SELECTION);
-      }
-      return loaded;
+    this.notifier.batch(() => {
+      this.execute(new LoadFormationCommand(added));
+      // After loading, the old selection means nothing, so clear it.
+      this.setSelection(NO_SELECTION);
     });
+    return true;
   }
 
   undo(): void {
     this.notifier.batch(() => {
+      this.commitLabelDraft();
       const interaction = this.interaction;
       if (interaction?.type === "draw-line") {
         this.setInteraction(
@@ -288,15 +513,62 @@ export class EditorController extends Disposable implements IEditorController {
         return;
       }
       this.setInteraction(undefined);
-      this.commands.undo();
+      // The waypoints may differ afterward, and the index would then point at another waypoint.
+      this.setPickedWaypoint(undefined);
+      this.dropSelectionAfter(this.commands.undo());
     });
   }
 
   redo(): void {
     this.notifier.batch(() => {
+      this.commitLabelDraft();
       this.setInteraction(undefined);
-      this.commands.redo();
+      this.setPickedWaypoint(undefined);
+      this.dropSelectionAfter(this.commands.redo());
     });
+  }
+
+  /** Runs an edit after committing the typed label, so the label is not lost to the edit. */
+  private execute(command: ICommand): void {
+    this.commitLabelDraft();
+    if (this.commands.execute(command)) {
+      this.dropSelectionAfter(command);
+    }
+  }
+
+  /**
+   * After an edit that reassigns ids, applied or undone or redone, the selection would name
+   * whatever element now has that id, so it is cleared.
+   */
+  private dropSelectionAfter(command: ICommand | undefined): void {
+    if (command?.reassignsIds === true) {
+      this.setSelection(NO_SELECTION);
+    }
+  }
+
+  private setLabelDraft(next: LabelDraft | undefined): void {
+    if (next === this.labelDraft) {
+      return;
+    }
+    this.labelDraft = next;
+    this.notifier.markSceneChanged();
+  }
+
+  /** Commits the label being typed, if any, as one edit. */
+  private commitLabelDraft(): void {
+    const draft = this.labelDraft;
+    if (draft === undefined) {
+      return;
+    }
+    this.setLabelDraft(undefined);
+    this.commands.execute(new UpdatePlayerCommand(draft.playerId, { label: draft.label }));
+  }
+
+  /** The selection, or none once its target has vanished. */
+  private liveSelection(): EditorSelection {
+    return this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
+      ? NO_SELECTION
+      : this.selection;
   }
 
   private setSelection(next: EditorSelection): void {
@@ -304,7 +576,29 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.selection = next;
+    this.setPickedWaypoint(undefined);
     this.notifier.markSceneChanged();
+  }
+
+  /** The picked waypoint, or undefined once it or the selected line is gone. */
+  private livePickedWaypoint(): number | undefined {
+    const count = this.getSelectedLine()?.waypoints.length ?? 0;
+    const picked = this.pickedWaypoint;
+    return picked !== undefined && picked < count ? picked : undefined;
+  }
+
+  private setPickedWaypoint(next: number | undefined): void {
+    if (next === this.pickedWaypoint) {
+      return;
+    }
+    this.pickedWaypoint = next;
+    this.notifier.markSceneChanged();
+  }
+
+  private removeWaypoint(line: Line, index: number): void {
+    const waypoints = line.waypoints.filter((_, i) => i !== index);
+    this.execute(new UpdateLineCommand(line.id, { waypoints }));
+    this.setPickedWaypoint(undefined);
   }
 
   private setInteraction(next: Interaction | undefined): void {
@@ -321,21 +615,22 @@ export class EditorController extends Disposable implements IEditorController {
     return snapToGrid(clampToZoneWindow(pos, this.model.getSnapshot().field));
   }
 
-  // Returns undefined and issues no command if the target disappeared during the drag.
-  private dropCommand(drag: DragInteraction, to: FieldPosition): ICommand | undefined {
-    const drop = dragPatch(this.model.getSnapshot(), drag.target, to);
-    if (drop === undefined) {
-      return undefined;
-    }
-    return drop.kind === "player"
-      ? new UpdatePlayerCommand(drop.playerId, drop.patch)
-      : new UpdateLineCommand(drop.lineId, drop.patch);
+  /**
+   * Where the dragged target goes for the pointer at pos: into the window and onto the grid, or
+   * nowhere until the pointer has traveled CLICK_SLOP_YARDS. A click on a target that sits off the
+   * grid or outside the window then leaves it where it is.
+   */
+  private placeDragged(drag: DragInteraction, pos: FieldPosition): FieldPosition {
+    const at = dragPosition(drag, pos);
+    return pointDistance(at, drag.origin) < CLICK_SLOP_YARDS ? drag.origin : this.clampToField(at);
   }
 
-  // Does not commit if the starting player has disappeared.
+  private placePoint(draw: DrawInteraction, pos: FieldPosition): void {
+    this.setInteraction(addDraftPoint(draw, pos, this.clampToField(pos)));
+  }
+
   private lineFromDraft(draw: DrawInteraction): Line | undefined {
-    const start = this.model.findPlayer(draw.startPlayerId);
-    const split = start === undefined ? undefined : committableDraft(draw, start.position);
+    const split = splitDraftPoints(draw.points);
     if (split === undefined) {
       return undefined;
     }
@@ -343,55 +638,178 @@ export class EditorController extends Disposable implements IEditorController {
     return draftToLine(draw, id, split);
   }
 
-  private selectPointerDown(pos: FieldPosition): void {
-    const data = this.model.getSnapshot();
-    // Grab a handle of the selected line before anything else, so it can be edited even when it
-    // overlaps a player or another line.
-    const handle = this.hitSelectedLineHandle(pos);
-    if (handle !== undefined) {
-      this.setInteraction(handle);
-      return;
+  /**
+   * Moves the pointer, and redraws only when what is marked under it, or the cursor, changes. An
+   * idle move within a player then costs no redraw and no view state check.
+   */
+  private movePointer(next: FieldPosition | undefined): void {
+    const before = this.hoverAt(this.pointer);
+    this.pointer = next;
+    if (!isSameHover(before, this.hoverAt(next))) {
+      this.notifier.markSceneChanged();
     }
-    // Selecting a player also starts a drag. Releasing without moving is just a selection.
-    const player = hitTestPlayer(data.players, pos);
-    if (player !== undefined) {
-      this.setSelection({ kind: "player", id: player.id });
-      this.setInteraction(startDrag({ kind: "player", playerId: player.id }, player.position, pos));
-      return;
-    }
-    const line = hitTestLine(data.lines, data.players, pos);
-    this.setSelection(line === undefined ? NO_SELECTION : { kind: "line", id: line.id });
   }
 
-  private hitSelectedLineHandle(pos: FieldPosition): DragInteraction | undefined {
-    const line = this.getSelectedLine();
-    const hit = line === undefined ? undefined : hitLineHandle(line, pos);
-    if (line === undefined || hit === undefined) {
-      return undefined;
-    }
-    const target: DragTarget =
-      hit.kind === "endpoint"
-        ? { kind: "endpoint", lineId: line.id }
-        : { kind: "waypoint", lineId: line.id, index: hit.index };
-    return startDrag(target, hit.point, pos);
-  }
-
-  private drawLinePointerDown(pos: FieldPosition): void {
+  /** The hover of the frame: what is under the pointer, unless a drag or drawing is in progress. */
+  private frameHover(): Hover {
     const interaction = this.interaction;
-    if (interaction?.type === "draw-line") {
-      this.setInteraction(addDraftPoint(interaction, this.clampToField(pos)));
+    if (interaction === undefined) {
+      return this.hoverAt(this.pointer);
+    }
+    if (interaction.type === "drag") {
+      return cursorOnly("grabbing");
+    }
+    // A press places a point until the line holds as many as it can take.
+    return cursorOnly(interaction.points.length < MAX_DRAFT_POINTS ? "crosshair" : "not-allowed");
+  }
+
+  /** What a press at pos would act on with the current tool, found as the press finds it. */
+  private hoverAt(pos: FieldPosition | undefined): Hover {
+    if (pos === undefined) {
+      return NOTHING_UNDER_POINTER;
+    }
+    const target = this.pressTargetAt(pos);
+    switch (target.kind) {
+      case "handle":
+        return cursorOnly("grab");
+      case "player":
+        return this.playerHover(target.player);
+      case "line":
+        return { hover: { kind: "line", id: target.line.id }, cursor: "pointer" };
+      case "none":
+        if (this.tool !== "add-player") {
+          return NOTHING_UNDER_POINTER;
+        }
+        return cursorOnly(this.canUseTool() ? "crosshair" : "not-allowed");
+    }
+  }
+
+  private playerHover(player: Player): Hover {
+    const hover: EditorHover = { kind: "player", id: player.id };
+    switch (this.tool) {
+      case "select":
+      case "add-player":
+        return { hover, cursor: "grab" };
+      case "route":
+      case "block":
+      case "motion":
+        // At the line limit a press on a player starts nothing, so nothing is marked.
+        return this.canUseTool() ? { hover, cursor: "crosshair" } : cursorOnly("not-allowed");
+    }
+  }
+
+  /** Whether the tool can place anything. Read only where it decides the cursor. */
+  private canUseTool(): boolean {
+    return isToolAvailable(this.tool, this.getViewState());
+  }
+
+  /**
+   * What a press at pos acts on with the current tool. The end and waypoint handles of the
+   * selected line come first, so they can be moved even where they overlap a player or another
+   * line. An insert handle gives way to a player, since it only offers a place for a new waypoint.
+   * The add-player tool takes neither handles nor lines, so a player can be placed on a line.
+   */
+  private pressTargetAt(pos: FieldPosition): PressTarget {
+    const { players, lines } = this.model.getSnapshot();
+    const placesPlayers = this.tool === "add-player";
+    const handle = placesPlayers ? undefined : this.selectedLineHandleAt(pos);
+    if (handle !== undefined && handle.hit.kind !== "insert") {
+      return { kind: "handle", ...handle };
+    }
+    const player = hitTestPlayer(players, pos);
+    if (player !== undefined) {
+      return { kind: "player", player };
+    }
+    if (handle !== undefined) {
+      return { kind: "handle", ...handle };
+    }
+    const line = placesPlayers ? undefined : hitTestLine(lines, players, pos);
+    return line === undefined ? NO_PRESS_TARGET : { kind: "line", line };
+  }
+
+  private selectedLineHandleAt(pos: FieldPosition): SelectedLineHandle | undefined {
+    const line = this.getSelectedLine();
+    const hit =
+      line === undefined
+        ? undefined
+        : hitLineHandle(lineHandles(this.model.getSnapshot(), line), pos);
+    return line === undefined || hit === undefined ? undefined : { line, hit };
+  }
+
+  private grabHandle({ line, hit }: SelectedLineHandle, pos: FieldPosition): void {
+    this.setInteraction(startDrag(handleTarget(line, hit), hit.point, pos));
+    if (hit.kind === "waypoint") {
+      this.setPickedWaypoint(hit.index);
+    }
+  }
+
+  /**
+   * The select and add-player tools select the player and start dragging it; releasing without
+   * moving is just a selection. A line tool starts a line from it.
+   */
+  private pressPlayer(player: Player, pos: FieldPosition): void {
+    const tool = this.tool;
+    switch (tool) {
+      case "select":
+      case "add-player":
+        this.setSelection({ kind: "player", id: player.id });
+        this.setInteraction(
+          startDrag({ kind: "player", playerId: player.id }, player.position, pos),
+        );
+        return;
+      case "route":
+      case "block":
+      case "motion":
+        this.startLine(player, tool, pos);
+        return;
+    }
+  }
+
+  /** The add-player tool places a player there; every other tool clears the selection. */
+  private pressEmptySpace(pos: FieldPosition): void {
+    switch (this.tool) {
+      case "add-player":
+        this.addPlayerAt(pos);
+        return;
+      case "select":
+      case "route":
+      case "block":
+      case "motion":
+        this.setSelection(NO_SELECTION);
+        return;
+    }
+  }
+
+  private startLine(player: Player, kind: LineKind, pos: FieldPosition): void {
+    if (!isToolAvailable(kind, this.getViewState())) {
       return;
     }
-    if (!isToolAvailable("draw-line", this.getViewState())) {
+    // Left selected, the panel and the handles would keep pointing at another element while the
+    // new line is drawn, and a panel edit would change that element instead of the new line.
+    this.setSelection(NO_SELECTION);
+    this.setInteraction(startDrawing(player, kind, this.lineStyle, pos));
+  }
+
+  /**
+   * Clicks place points on press, so a release matters only for the press that started the
+   * drawing: once the pointer has traveled CLICK_SLOP_YARDS, a release where a point can go ends a
+   * straight line drawn in one drag. A release on the start player, or after a mere tremble,
+   * leaves the drawing open for clicks.
+   */
+  private releaseDrawing(draw: DrawInteraction, pos: FieldPosition): void {
+    if (!draw.pressing) {
       return;
     }
-    const data = this.model.getSnapshot();
-    // Ignore an attempt to start anywhere other than on a player.
-    const player = hitTestPlayer(data.players, pos);
-    if (player === undefined) {
-      return;
-    }
-    this.setInteraction(startDrawing(player));
+    this.notifier.batch(() => {
+      const released = { ...draw, pressing: false };
+      const placed = addDraftPoint(released, pos, this.clampToField(pos));
+      if (pointDistance(pos, draw.pressedAt) < CLICK_SLOP_YARDS || placed.points.length === 0) {
+        this.setInteraction(released);
+        return;
+      }
+      this.setInteraction(placed);
+      this.commitLine();
+    });
   }
 
   private addPlayerAt(pos: FieldPosition): void {
@@ -400,11 +818,11 @@ export class EditorController extends Disposable implements IEditorController {
     }
     const { players } = this.model.getSnapshot();
     const id = this.ids.next("player", new Set(players.map((p) => p.id)));
-    this.commands.execute(
+    this.execute(
       new AddPlayerCommand({
+        ...this.playerStyle,
         id,
         position: this.clampToField(pos),
-        shape: DEFAULT_PLAYER_SHAPE,
         label: "",
       }),
     );

@@ -1,5 +1,6 @@
 import {
   CanvasSurface,
+  type EditorDecorations,
   type Messages,
   PLAYMAKER_LOCALE_VALUES,
   type PlaymakerLocale,
@@ -11,7 +12,7 @@ import {
 } from "./browser/index.js";
 import {
   DisposableStore,
-  type EditorOverlay,
+  type EditorFrame,
   type Event,
   type FieldZone,
   type Formation,
@@ -105,6 +106,7 @@ export class Playmaker implements IDisposable {
   /**
    * Fires once per committed edit command or Undo / Redo, with a deep copy of the latest diagram.
    * `version` is always the current one, so the received value can be persisted as is.
+   * `replacePlayData` is an edit and fires it too.
    * Does not fire at construction, on loads through `setPlayData` and `restorePlayData`, or on PNG
    * export (a load is not an edit).
    * The copy is made per listener, so mutating it affects neither this diagram nor other listeners.
@@ -142,8 +144,10 @@ export class Playmaker implements IDisposable {
     const stage = document.createElement("div");
     stage.className = "playmaker-stage";
     this.root.appendChild(stage);
-    const { scene, overlay } = this.session.controller.getFrame();
-    this.surface = this.store.add(new CanvasSurface(stage, scene, this.surfaceOverlay(overlay)));
+    const frame = this.session.controller.getFrame();
+    this.surface = this.store.add(
+      new CanvasSurface(stage, frame.scene, this.surfaceDecorations(frame)),
+    );
     // CanvasSurface draws the current diagram once its first size is known, so no draw here.
     this.ui = this.createUi();
     this.store.add(this.session.onDidChangeScene(() => this.draw()));
@@ -157,8 +161,8 @@ export class Playmaker implements IDisposable {
 
   /**
    * Switches the mode. The diagram and Undo history stay; only the editing UI and the pointer and
-   * key input are attached or detached. View cancels a drag or drawing in progress and draws no
-   * selection highlight.
+   * key input are attached or detached. View commits a label being typed in the panel, as an edit,
+   * cancels a drag or drawing in progress, and draws no selection highlight.
    */
   setMode(mode: PlaymakerMode): void {
     if (this.store.isDisposed) {
@@ -172,6 +176,9 @@ export class Playmaker implements IDisposable {
     this.root.dataset.mode = mode;
     if (mode === "view") {
       this.session.controller.cancelInteraction();
+      // The pointer input goes away with the editing UI and reports no leave, so the mark under
+      // the pointer would come back with edit mode.
+      this.session.controller.pointerLeave();
     }
     this.replaceUi();
     this.draw();
@@ -222,6 +229,23 @@ export class Playmaker implements IDisposable {
       return;
     }
     this.session.setPlayData(data);
+  }
+
+  /**
+   * Replaces the current diagram as one edit, for applying a template or a bundled play to the
+   * diagram being edited. Unlike `setPlayData`, the Undo history stays and gains this change, so
+   * Undo brings the previous diagram back, and onDidChange fires with the new diagram.
+   * The selection is cleared. The input is normalized as in `setPlayData`, and a diagram equal to
+   * the current one changes nothing. Callable in view mode as well.
+   * To open a different saved play, use `setPlayData` or `restorePlayData`: with this method, Undo
+   * would bring the contents of the previous play into the newly opened one.
+   */
+  replacePlayData(data: PlayDataInput): void {
+    if (this.store.isDisposed) {
+      this.warnIgnoredAfterDispose("replacePlayData");
+      return;
+    }
+    this.session.replacePlayData(data);
   }
 
   /**
@@ -314,12 +338,13 @@ export class Playmaker implements IDisposable {
   }
 
   private draw(): void {
-    const { scene, overlay } = this.session.controller.getFrame();
-    this.surface.setScene(scene, this.surfaceOverlay(overlay));
+    const frame = this.session.controller.getFrame();
+    this.surface.setScene(frame.scene, this.surfaceDecorations(frame));
+    this.surface.canvas.style.cursor = this.currentMode === "edit" ? frame.cursor : "";
   }
 
   /** Undefined in view mode, so edit-only layers (the grid, selection highlight) are not drawn. */
-  private surfaceOverlay(overlay: EditorOverlay): EditorOverlay | undefined {
-    return this.currentMode === "edit" ? overlay : undefined;
+  private surfaceDecorations({ overlay, hover }: EditorFrame): EditorDecorations | undefined {
+    return this.currentMode === "edit" ? { overlay, hover } : undefined;
   }
 }

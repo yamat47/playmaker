@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { FORMATION_PRESETS, type PlayData, Playmaker, type PlaymakerOptions } from "./playmaker.js";
+import { type PlayData, Playmaker, type PlaymakerOptions } from "./playmaker.js";
 import { must } from "./test-support/must.js";
 
 // Big enough to leave room for players on the canvas beside the 200px panel and the toolbar.
@@ -108,16 +108,27 @@ describe("Pointer editing", () => {
     expect(must(playmaker.getPlayData().players[0]).position.downfieldYard).toBeGreaterThan(before);
   });
 
-  it("adds one line when Draw line starts at a player and ends with a double-click", async () => {
+  it("adds one line when Route starts at a player and ends with a double-click", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
     const canvas = canvasIn(container);
 
-    await button("Draw line").click();
+    await button("Route").click();
     await userEvent.click(canvas, { position: SPOT });
     await userEvent.dblClick(canvas, { position: OTHER_SPOT });
 
     expect(playmaker.getPlayData().lines).toHaveLength(1);
+  });
+
+  it("shows on the canvas cursor that a player under the pointer can be grabbed", async () => {
+    const { container } = mount();
+    await addPlayerAtSpot(container);
+    const canvas = canvasIn(container);
+
+    await userEvent.hover(canvas, { position: OTHER_SPOT });
+    await userEvent.hover(canvas, { position: SPOT });
+
+    expect(canvas.style.cursor).toBe("grab");
   });
 
   it("adds no player on a canvas click after switching to view mode", async () => {
@@ -139,6 +150,31 @@ describe("Keyboard", () => {
     await userEvent.keyboard("{Control>}z{/Control}");
 
     expect(playmaker.getPlayData().players).toEqual([]);
+  });
+
+  it("deletes the selected player when Delete is pressed after a click on the canvas", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+
+    await userEvent.keyboard("{Delete}");
+
+    expect(playmaker.getPlayData().players).toEqual([]);
+  });
+
+  it("finishes the line with Enter after Undo is clicked mid-drawing", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+    const canvas = canvasIn(container);
+    await button("Route").click();
+    await userEvent.click(canvas, { position: SPOT });
+    await userEvent.click(canvas, { position: { x: 360, y: 200 } });
+    await userEvent.click(canvas, { position: OTHER_SPOT });
+
+    await button("Undo").click();
+    await userEvent.keyboard("{Enter}");
+
+    expect(playmaker.getPlayData().lines).toHaveLength(1);
+    expect(must(playmaker.getPlayData().lines[0]).waypoints).toEqual([]);
   });
 
   it("undoes the last edit with Ctrl+Z right after a toolbar button is pressed", async () => {
@@ -169,26 +205,38 @@ describe("Toolbar", () => {
 
     expect(playmaker.fieldZone).toBe("own-redzone");
   });
-
-  it("places the players of the formation when a formation is selected", async () => {
-    const { playmaker } = mount();
-    const formation = must(FORMATION_PRESETS[0]);
-
-    await userEvent.selectOptions(page.getByRole("combobox", { name: "Formation" }), formation.id);
-
-    expect(playmaker.getPlayData().players).toHaveLength(formation.players.length);
-  });
 });
 
 describe("Property panel", () => {
-  it("changes the label of the selected player when the label is rewritten", async () => {
+  it("mirrors the play when Flip left and right is pressed with nothing selected", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+    await userEvent.keyboard("{Escape}");
+    const before = must(playmaker.getPlayData().players[0]).position.lateralYard;
+
+    await button("Flip left and right").click();
+
+    expect(must(playmaker.getPlayData().players[0]).position.lateralYard).toBe(53 - before);
+  });
+
+  it("takes the typed label right after a player is placed, and Enter applies it", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
 
-    await page.getByRole("textbox", { name: "Label" }).fill("QB");
-    await userEvent.tab();
+    await userEvent.keyboard("QB{Enter}");
 
     expect(must(playmaker.getPlayData().players[0]).label).toBe("QB");
+    expect(document.activeElement).toBe(canvasIn(container));
+  });
+
+  it("keeps a label still being typed when Square is pressed", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+
+    await userEvent.keyboard("QB");
+    await button("Square").click();
+
+    expect(playmaker.getPlayData().players[0]).toMatchObject({ label: "QB", shape: "square" });
   });
 
   it("keeps focus on the next input when the label is committed with Tab", async () => {
@@ -198,7 +246,7 @@ describe("Property panel", () => {
     await page.getByRole("textbox", { name: "Label" }).fill("QB");
     await userEvent.tab();
 
-    expect(document.activeElement).toBe(page.getByRole("combobox", { name: "Shape" }).element());
+    expect(document.activeElement).toBe(button("Circle").element());
   });
 
   it("gives the selected player the theme color and fill when a swatch is pressed", async () => {
@@ -210,21 +258,15 @@ describe("Property panel", () => {
     expect(playmaker.getPlayData().players[0]).toMatchObject({ color: "#d32f2f", fill: "solid" });
   });
 
-  it("marks the outline swatch of the player color set on an ancestor as pressed after refresh", async () => {
+  it("sets the swatch color set on an ancestor after refresh", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
-
-    container.style.setProperty("--playmaker-player-color", "#d32f2f");
+    container.style.setProperty("--playmaker-swatch-2", "#b71c1c");
     playmaker.refresh();
 
-    expect(page.getByRole("button", { name: "Red outline" }).element()).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(page.getByRole("button", { name: "Black outline" }).element()).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    await page.getByRole("button", { name: "Red solid" }).click();
+
+    expect(playmaker.getPlayData().players[0]).toMatchObject({ color: "#b71c1c", fill: "solid" });
   });
 });
 
@@ -247,9 +289,9 @@ describe("Reload", () => {
     expect(playmaker.getPlayData().players).toHaveLength(1);
   });
 
-  it("moves focus to the canvas when a reload happens while the toolbar has focus", async () => {
+  it("moves focus to the canvas when a reload happens while the toolbar has focus", () => {
     const { container, playmaker } = mount();
-    await button("Select").click();
+    button("Select").element().focus();
 
     playmaker.setPlayData(playmaker.getPlayData());
 

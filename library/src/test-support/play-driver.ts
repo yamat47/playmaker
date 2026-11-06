@@ -1,6 +1,7 @@
 import { type Mock, vi } from "vitest";
-import type { IEditorController } from "../common/editing/editor.js";
+import type { IEditorController, PointerModifiers } from "../common/editing/editor.js";
 import { PlaySession } from "../common/editing/play-session.js";
+import type { LineKind } from "../common/model/line.js";
 import type { PlayData } from "../common/model/play-data.js";
 import type { FieldPosition } from "../common/model/player.js";
 
@@ -20,10 +21,10 @@ export interface PlayDriver {
   readonly notified: Mock<(kind: EditorNotification) => void>;
   /** Presses and releases at the same position. */
   click(at: FieldPosition): void;
-  /** Presses at `from`, moves to `to`, and releases. */
-  drag(from: FieldPosition, to: FieldPosition): void;
-  /** Switches to the draw-line tool and presses the player at `from` to start drawing. */
-  startLine(from: FieldPosition): void;
+  /** Presses at `from`, moves to `to`, and releases, holding `modifiers` while moving. */
+  drag(from: FieldPosition, to: FieldPosition, modifiers?: PointerModifiers): void;
+  /** Switches to the line tool of `kind` (route by default) and presses the player at `from`. */
+  startLine(from: FieldPosition, kind?: LineKind): void;
 }
 
 /**
@@ -49,13 +50,13 @@ export function openPlay(data: unknown): PlayDriver {
       session.controller.pointerDown(at);
       session.controller.pointerUp(at);
     },
-    drag(from, to) {
+    drag(from, to, modifiers) {
       session.controller.pointerDown(from);
-      session.controller.pointerMove(to);
+      session.controller.pointerMove(to, modifiers);
       session.controller.pointerUp(to);
     },
-    startLine(from) {
-      session.controller.setTool("draw-line");
+    startLine(from, kind = "route") {
+      session.controller.setTool(kind);
       session.controller.pointerDown(from);
     },
   };

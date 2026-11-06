@@ -1,7 +1,6 @@
 import {
   computeFieldMetrics,
   Disposable,
-  type EditorOverlay,
   FieldGeometry,
   type FieldPosition,
   type ImageExportOptions,
@@ -14,6 +13,7 @@ import { createThemeReader } from "../theme/theme-reader.js";
 import type { ThemeReader } from "../theme/tokens.js";
 import {
   createDefaultLayers,
+  type EditorDecorations,
   type EditorRenderFrame,
   type RenderFrame,
   renderLayers,
@@ -29,7 +29,7 @@ export class CanvasSurface extends Disposable {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly layers: SurfaceLayers;
   private scene: SceneData;
-  private overlay: EditorOverlay | undefined;
+  private decorations: EditorDecorations | undefined;
   private frameRequest: number | undefined;
   private dpr = 0;
   // Removes the DPR watchers all at once on dispose.
@@ -38,12 +38,12 @@ export class CanvasSurface extends Disposable {
   constructor(
     parent: HTMLElement,
     scene: SceneData,
-    overlay: EditorOverlay | undefined,
+    decorations: EditorDecorations | undefined,
     layers: SurfaceLayers = createDefaultLayers(),
   ) {
     super();
     this.scene = scene;
-    this.overlay = overlay;
+    this.decorations = decorations;
     this.layers = layers;
 
     this.canvas = document.createElement("canvas");
@@ -80,13 +80,14 @@ export class CanvasSurface extends Disposable {
   }
 
   /**
-   * Replaces the diagram and the overlay. Drawing happens on the next frame, so
+   * Replaces the diagram and the editing decorations. Drawing happens on the next frame, so
    * replacing them any number of times within the same frame draws only once.
-   * Omitting overlay skips editing-only layers like the grid and selection highlight (view mode).
+   * Omitting the decorations skips editing-only layers like the grid and selection highlight
+   * (view mode).
    */
-  setScene(scene: SceneData, overlay: EditorOverlay | undefined): void {
+  setScene(scene: SceneData, decorations: EditorDecorations | undefined): void {
     this.scene = scene;
-    this.overlay = overlay;
+    this.decorations = decorations;
     this.invalidate();
   }
 
@@ -193,20 +194,20 @@ export class CanvasSurface extends Disposable {
 
   private render(): void {
     const frame = this.frameFor(this.measure(), this.scene, createThemeReader(this.host));
-    this.paint(this.ctx, frame, this.overlay);
+    this.paint(this.ctx, frame, this.decorations);
   }
 
   /**
-   * Draws the layers in the order field, backdrop, play, editor. Without an overlay, editing-only
+   * Draws the layers in the order field, backdrop, play, editor. Without decorations, editing-only
    * layers (backdrop and editor) are skipped, so view mode and PNG export use only diagram layers.
    */
   private paint(
     ctx: CanvasRenderingContext2D,
     frame: RenderFrame,
-    overlay: EditorOverlay | undefined,
+    decorations: EditorDecorations | undefined,
   ): void {
     const editorFrame: EditorRenderFrame | undefined =
-      overlay === undefined ? undefined : { ...frame, overlay };
+      decorations === undefined ? undefined : { ...frame, ...decorations };
     renderLayers(ctx, frame, this.layers.field);
     if (editorFrame !== undefined) {
       renderLayers(ctx, editorFrame, this.layers.backdrop);

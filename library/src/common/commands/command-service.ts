@@ -14,10 +14,16 @@ export interface ICommandService {
    * When nothing changed, returns false without pushing. Also does not push when apply throws.
    */
   execute(command: ICommand): boolean;
-  /** If undo throws, the history stays as is. Does nothing when there is nothing to undo. */
-  undo(): void;
-  /** If redo throws, the history stays as is. Does nothing when there is nothing to redo. */
-  redo(): void;
+  /**
+   * Undoes the last edit and returns it. If undo throws, the history stays as is. Does nothing
+   * and returns undefined when there is nothing to undo.
+   */
+  undo(): ICommand | undefined;
+  /**
+   * Applies the last undone edit again and returns it. If redo throws, the history stays as is.
+   * Does nothing and returns undefined when there is nothing to redo.
+   */
+  redo(): ICommand | undefined;
 }
 
 export class CommandService implements ICommandService {
@@ -45,11 +51,21 @@ export class CommandService implements ICommandService {
     return changed;
   }
 
-  undo(): void {
-    this.history.undo((command) => command.undo(this.model));
+  undo(): ICommand | undefined {
+    let undone: ICommand | undefined;
+    this.history.undo((command) => {
+      command.undo(this.model);
+      undone = command;
+    });
+    return undone;
   }
 
-  redo(): void {
-    this.history.redo((command) => command.apply(this.model));
+  redo(): ICommand | undefined {
+    let redone: ICommand | undefined;
+    this.history.redo((command) => {
+      command.apply(this.model);
+      redone = command;
+    });
+    return redone;
   }
 }

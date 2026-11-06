@@ -1,13 +1,53 @@
+import { clampToZoneWindow } from "../geometry/field.js";
+import type { PlayData } from "../model/play-data.js";
 import type { IPlayModel, PlayerRemoval } from "../model/play-model.js";
-import type { Player } from "../model/player.js";
+import type { FieldPosition, Player } from "../model/player.js";
 import { type ICommand, requireApplied } from "./command.js";
 import { applyPatch, type Patch, patchChangesAnything } from "./patch.js";
 
 /** The id identifies a player, so a patch never changes it. */
 export type PlayerPatch = Patch<Omit<Player, "id">>;
 
-export function applyPlayerPatch(current: Player, patch: PlayerPatch): Player {
+function applyPlayerPatch(current: Player, patch: PlayerPatch): Player {
   return applyPatch<Player>(current, patch);
+}
+
+/** A player's move from where it stands to `to`, with the lines that start at it or alone. */
+export interface PlayerMove {
+  readonly playerId: string;
+  /** Where the player stands before the move. */
+  readonly from: FieldPosition;
+  readonly to: FieldPosition;
+  readonly withLines: boolean;
+}
+
+/**
+ * The diagram after the move. The lines that start at the player move by the same distance, so a
+ * route keeps its shape when a receiver's split changes, and each moved point is kept inside the
+ * zone window. Every position is on the grid and so is the distance, so the moved points are too.
+ */
+export function movePlayer<T extends Pick<PlayData, "field" | "players" | "lines">>(
+  data: T,
+  move: PlayerMove,
+): T {
+  const dx = move.to.lateralYard - move.from.lateralYard;
+  const dy = move.to.downfieldYard - move.from.downfieldYard;
+  const shift = (p: FieldPosition): FieldPosition =>
+    clampToZoneWindow(
+      { lateralYard: p.lateralYard + dx, downfieldYard: p.downfieldYard + dy },
+      data.field,
+    );
+  return {
+    ...data,
+    players: data.players.map((p) => (p.id === move.playerId ? { ...p, position: move.to } : p)),
+    lines: move.withLines
+      ? data.lines.map((l) =>
+          l.startPlayerId === move.playerId
+            ? { ...l, waypoints: l.waypoints.map(shift), end: shift(l.end) }
+            : l,
+        )
+      : data.lines,
+  };
 }
 
 export class AddPlayerCommand implements ICommand {
@@ -50,6 +90,28 @@ export class RemovePlayerCommand implements ICommand {
 
   undo(model: IPlayModel): void {
     model.restorePlayer(requireApplied(this.removal, this));
+  }
+}
+
+/** Moves a player and its lines as one edit. Undo puts back the diagram as it was. */
+export class MovePlayerCommand implements ICommand {
+  readonly label = "Move player";
+  private readonly move: PlayerMove;
+  private previous: PlayData | undefined;
+
+  constructor(move: PlayerMove) {
+    this.move = move;
+  }
+
+  apply(model: IPlayModel): boolean {
+    this.previous = model.replaceAll(movePlayer(model.getSnapshot(), this.move));
+    return true;
+  }
+
+  // Edits are undone in reverse order, so the diagram now is the one this move produced, and
+  // putting back the whole previous diagram undoes exactly this move.
+  undo(model: IPlayModel): void {
+    model.replaceAll(requireApplied(this.previous, this));
   }
 }
 

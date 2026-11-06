@@ -5,7 +5,6 @@ import {
   DEFAULT_LINE_INTERPOLATION,
   DEFAULT_LINE_KIND,
   indexPlayersById,
-  isLineThickness,
   type Line,
   lineAnchorPoints,
   MAX_LINES,
@@ -14,24 +13,6 @@ import {
 } from "./line.js";
 
 const PLAYER_IDS = new Set(["qb", "wr"]);
-
-describe("isLineThickness", () => {
-  it("accepts a positive finite number", () => {
-    expect(isLineThickness(0.25)).toBe(true);
-    expect(isLineThickness(3)).toBe(true);
-  });
-
-  it("rejects 0 and negative numbers", () => {
-    expect(isLineThickness(0)).toBe(false);
-    expect(isLineThickness(-1)).toBe(false);
-  });
-
-  it("rejects non-numbers and non-finite numbers", () => {
-    expect(isLineThickness("2")).toBe(false);
-    expect(isLineThickness(Number.NaN)).toBe(false);
-    expect(isLineThickness(Number.POSITIVE_INFINITY)).toBe(false);
-  });
-});
 
 describe("normalizeLines", () => {
   it("keeps a valid line as is and fills missing fields with defaults", () => {
@@ -71,29 +52,27 @@ describe("normalizeLines", () => {
     ]);
   });
 
-  it("keeps color only as a non-empty string and thickness only as a positive number", () => {
+  it("keeps color only as a non-empty string", () => {
     const [a, b] = normalizeLines(
       [
-        {
-          startPlayerId: "qb",
-          end: { lateralYard: 1, downfieldYard: 2 },
-          color: "#ff0000",
-          thickness: 4,
-        },
-        {
-          startPlayerId: "qb",
-          end: { lateralYard: 1, downfieldYard: 2 },
-          color: "  ",
-          thickness: -1,
-        },
+        { startPlayerId: "qb", end: { lateralYard: 1, downfieldYard: 2 }, color: "#ff0000" },
+        { startPlayerId: "qb", end: { lateralYard: 1, downfieldYard: 2 }, color: "  " },
       ],
       PLAYER_IDS,
     );
 
     expect(a?.color).toBe("#ff0000");
-    expect(a?.thickness).toBe(4);
     expect(b && "color" in b).toBe(false);
-    expect(b && "thickness" in b).toBe(false);
+  });
+
+  it("drops the thickness that earlier versions saved and keeps the line", () => {
+    const [restored] = normalizeLines(
+      [{ startPlayerId: "qb", end: { lateralYard: 1, downfieldYard: 2 }, thickness: 4 }],
+      PLAYER_IDS,
+    );
+
+    expect(restored).toBeDefined();
+    expect(restored && "thickness" in restored).toBe(false);
   });
 
   it("drops a line whose start player does not exist", () => {
@@ -232,7 +211,6 @@ describe("cloneLine", () => {
       end: { lateralYard: 3, downfieldYard: 4 },
       interpolation: "bezier",
       color: "#00f",
-      thickness: 3,
     };
 
     const copy = cloneLine(original);
@@ -244,7 +222,7 @@ describe("cloneLine", () => {
     expect(copy.end).not.toBe(original.end);
   });
 
-  it("leaves color and thickness out of the copy when the original has none", () => {
+  it("leaves color out of the copy when the original has none", () => {
     const copy = cloneLine({
       id: "x",
       kind: "route",
@@ -255,7 +233,6 @@ describe("cloneLine", () => {
     });
 
     expect("color" in copy).toBe(false);
-    expect("thickness" in copy).toBe(false);
   });
 });
 

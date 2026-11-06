@@ -40,8 +40,10 @@ export const THEME_TOKENS = {
   lineRoute: { property: "--playmaker-line-route", fallback: BLACK },
   lineBlock: { property: "--playmaker-line-block", fallback: BLACK },
   lineMotion: { property: "--playmaker-line-motion", fallback: BLACK },
-  /** The four colors the panel offers for players and lines. */
-  swatch1: { property: "--playmaker-swatch-1", fallback: BLACK },
+  /**
+   * The three colors the panel offers for players and lines besides the default color. The
+   * numbering starts at 2 because the first swatch is the theme's default color.
+   */
   swatch2: { property: "--playmaker-swatch-2", fallback: RED },
   swatch3: { property: "--playmaker-swatch-3", fallback: BLUE },
   swatch4: { property: "--playmaker-swatch-4", fallback: GREEN },

@@ -95,8 +95,9 @@ The MVP provides the following feature set. API signatures, type definitions, an
 
 - Players can be placed on the field. Available positions are grid points at 0.5-yard steps, and both dragging and loading data snap to the grid.
   This keeps rows and columns aligned without an operation for aligning elements to each other. One diagram holds up to 64 players (a typical diagram has about 22)
-- Each player is displayed with a shape (circle or square) and a label
-- Color and fill (outline or solid) can be set per player and reset to the default. The color is chosen from 4 colors in the panel
+- Each player is displayed with a shape (circle or square) and a label. Typing with a player selected edits its label, and so does a double-click on a player; the label shows on the diagram while it is typed
+- Dragging a player moves the lines that start at it along with it, keeping their shape. Holding Option (Alt) moves the player alone
+- Color and fill (outline or solid) can be set per player and reset to the default. A new player takes the shape, color, and fill of the player last styled in the panel, and a new line takes the curve and color of the line last styled, so a run of similar elements is styled once. The color is chosen in the panel from the theme's default color and 3 more
 
 ### 5.3 Line drawing
 
@@ -106,8 +107,11 @@ Three kinds of lines can be drawn.
 - **Block line (block)**: the block assignment of an OL and others. T-shaped bar at the end
 - **Motion line (motion)**: player movement before the snap. Dashed, with an arrowhead at the end
 
+Each kind has its own drawing tool. The kind is chosen before drawing, the tool stays chosen for the next line, and the kind can still be changed afterward.
+A line is drawn from a player. Dragging from the player draws a straight line in one motion; clicking the player and then clicking places bends one at a time, and a double-click or Enter finishes the line.
+A line that ends on another player stops just short of that player's marker, so the arrowhead or the block bar stays in view.
 The kind is distinguished by the end marker and the line style, not by color. Every kind can be drawn either as a straight line or as a curve that passes through all control points.
-Color and width can be set per line and reset to the default.
+Color can be set per line and reset to the default. Every line of a kind has the same width.
 
 Each line is defined by a start point (a player), an end point, and zero or more waypoints. One diagram holds up to 128 lines, and each line up to 32 waypoints.
 
@@ -116,10 +120,12 @@ Each line is defined by a start point (a player), an end point, and zero or more
 In edit mode the following editing operations are available:
 
 - Add / move / delete players and edit their properties (label, shape, color and fill)
-- Draw / delete lines, edit their properties (color, width, interpolation), and edit waypoints
+- Draw / delete lines, edit their properties (color, interpolation), and edit bends: drag the middle of a segment to add one, drag one to move it, and double-click it (or click it and press Delete) to remove it
 - Undo / Redo
-- Load formation templates
+- Load formation templates (the commercial software lists the formations and loads the chosen one through the API; the toolbar has no formation picker)
 - Switch the field zone
+- Flip the whole play left to right, so a play drawn to one side can be run to the other
+- See before pressing what a press would act on: the player or line under the pointer is marked, and the pointer shape says whether a press grabs, selects, places, or starts something
 
 The toolbar and property panel are placed around the Canvas.
 
@@ -142,6 +148,7 @@ The play diagram can be output as a PNG image. The export does not include the e
 - `PlayData` can be passed at initialization
 - On every editing operation, the latest `PlayData` is reported through `onChange`
 - `PlayData` persisted by the commercial software can be loaded again later
+- A whole diagram can also be applied as an edit, so that applying a template to the diagram being edited can be undone
 
 ## 6. Non-functional requirements
 
@@ -202,7 +209,7 @@ The following are deliberately left out of scope.
 - Operations that align elements to each other (features like PowerPoint's alignment. This needs bulk movement, so it is not built. Restricting positions to grid points replaces it)
 - Zoom / pan
 - Copy & paste
-- Keyboard shortcuts other than Undo / Redo and committing or canceling a line drawing
+- Keyboard shortcuts other than Undo / Redo, Delete, Esc, committing a line drawing, and typing a label
 - Minimum and maximum constraints on the container size (the consumer's responsibility)
 
 ### 8.2 Responsibilities of the commercial software

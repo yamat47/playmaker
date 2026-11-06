@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_LINES, MAX_WAYPOINTS_PER_LINE } from "./line.js";
-import { migrateV1ToV2, V1_DEFAULT_THICKNESS_PX } from "./migration-v2.js";
+import { migrateV1ToV2 } from "./migration-v2.js";
 import { MAX_PLAYERS } from "./player.js";
 
 describe("migrateV1ToV2", () => {
@@ -33,15 +33,6 @@ describe("migrateV1ToV2", () => {
     ]);
   });
 
-  it("converts a line thickness in px to a multiple of the v1 default thickness", () => {
-    const v2 = migrateV1ToV2({
-      field: { zone: "middle" },
-      lines: [{ thickness: V1_DEFAULT_THICKNESS_PX * 2 }],
-    });
-
-    expect(v2.lines).toEqual([expect.objectContaining({ thickness: 2 })]);
-  });
-
   it("uses the default zone's LOS when the zone cannot be read", () => {
     const v2 = migrateV1ToV2({
       field: "middle",
@@ -58,11 +49,11 @@ describe("migrateV1ToV2", () => {
     const v2 = migrateV1ToV2({
       field: { zone: "middle" },
       players: [null, { position: { lateralYard: 1, absoluteYard: "x" } }],
-      lines: [7, { waypoints: "none", end: null, thickness: "thick" }],
+      lines: [7, { waypoints: "none", end: null }],
     });
 
     expect(v2.players).toEqual([null, { position: { lateralYard: 1, absoluteYard: "x" } }]);
-    expect(v2.lines).toEqual([7, { waypoints: "none", end: null, thickness: "thick" }]);
+    expect(v2.lines).toEqual([7, { waypoints: "none", end: null }]);
   });
 
   it("leaves non-array players and lines as they are", () => {

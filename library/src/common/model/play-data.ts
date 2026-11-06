@@ -90,6 +90,15 @@ export function clonePlayData(data: PlayData): PlayData {
 }
 
 /**
+ * Whether two diagrams have the same contents. The copies list the keys of players and lines in
+ * one order and drop absent optional keys; positions and the field keep the order they were built
+ * in, which is the same everywhere a position or a field state is made.
+ */
+export function isSamePlayData(a: PlayData, b: PlayData): boolean {
+  return JSON.stringify(clonePlayData(a)) === JSON.stringify(clonePlayData(b));
+}
+
+/**
  * Normalizes a value shaped like the current version into a PlayData. It does not run the
  * version-based migration steps, so pass data of an older version to `migratePlayData`.
  * Missing fields are filled with defaults and unreadable entries are dropped. The return value

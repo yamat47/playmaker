@@ -1,7 +1,7 @@
-import { indexPlayersById, type Line, lineAnchorPoints } from "../model/line.js";
+import type { Line } from "../model/line.js";
 import type { FieldPosition, Player } from "../model/player.js";
 import { PLAYER_RADIUS_YARDS } from "../model/player.js";
-import { sampleLinePath } from "./bezier.js";
+import { drawnLinePath } from "./line-path.js";
 import { segments } from "./polyline.js";
 
 /**
@@ -63,8 +63,9 @@ function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]):
 
 /**
  * Returns the topmost drawn line overlapping target. The distance is measured to the same
- * polyline used for drawing, so curves are hit exactly as they appear. A line without its start
- * player is not drawn, so it is not hit either.
+ * polyline used for drawing (`drawnLinePath`), so curves are hit exactly as they appear, and the
+ * part of a line hidden under the marker it ends on is not hit. A line without its start player
+ * is not drawn, so it is not hit either.
  */
 export function hitTestLine(
   lines: readonly Line[],
@@ -75,14 +76,8 @@ export function hitTestLine(
   if (toleranceYards <= 0) {
     throw new Error("Playmaker: toleranceYards must be a positive number.");
   }
-  const byId = indexPlayersById(players);
   for (const line of [...lines].reverse()) {
-    const anchors = lineAnchorPoints(line, byId);
-    if (anchors === undefined) {
-      continue;
-    }
-    const polyline = sampleLinePath(anchors, line.interpolation);
-    if (distanceToPolyline(target, polyline) <= toleranceYards) {
+    if (distanceToPolyline(target, drawnLinePath(line, players)) <= toleranceYards) {
       return line;
     }
   }
@@ -96,28 +91,47 @@ export function pointDistance(a: FieldPosition, b: FieldPosition): number {
   return Math.hypot(a.lateralYard - b.lateralYard, a.downfieldYard - b.downfieldYard);
 }
 
+/** The handles shown on the selected line. */
+export interface LineHandles {
+  readonly waypointHandles: readonly FieldPosition[];
+  /** Where the line is drawn to, which is the end point unless the line stops at a marker. */
+  readonly endpointHandle: FieldPosition;
+  /**
+   * Halfway along each segment; dragging one inserts a waypoint there, which bends the line.
+   * Empty at the waypoint limit.
+   */
+  readonly insertHandles: readonly FieldPosition[];
+}
+
 /** The grabbed handle and its position when a line handle is hit. */
 export type LineHandleHit =
   | { readonly kind: "endpoint"; readonly point: FieldPosition }
-  | { readonly kind: "waypoint"; readonly index: number; readonly point: FieldPosition };
+  | { readonly kind: "waypoint"; readonly index: number; readonly point: FieldPosition }
+  | { readonly kind: "insert"; readonly index: number; readonly point: FieldPosition };
 
 /**
  * Returns the line handle hit by target. The end point is tested before the waypoints so that
  * an attempt to move the tip is not stolen by the last waypoint. Later waypoints are drawn in
- * front, so the search runs from the end.
+ * front, so the searches run from the end. Insert handles come last: on a short segment they sit
+ * close to the points that bound it, and moving an existing point is the likelier intent.
  */
 export function hitLineHandle(
-  line: Pick<Line, "waypoints" | "end">,
+  handles: LineHandles,
   target: FieldPosition,
 ): LineHandleHit | undefined {
   const within = (point: FieldPosition) =>
     pointDistance(target, point) <= WAYPOINT_HANDLE_RADIUS_YARDS;
-  if (within(line.end)) {
-    return { kind: "endpoint", point: line.end };
+  if (within(handles.endpointHandle)) {
+    return { kind: "endpoint", point: handles.endpointHandle };
   }
-  for (const [index, point] of [...line.waypoints.entries()].reverse()) {
+  for (const [index, point] of [...handles.waypointHandles.entries()].reverse()) {
     if (within(point)) {
       return { kind: "waypoint", index, point };
+    }
+  }
+  for (const [index, point] of [...handles.insertHandles.entries()].reverse()) {
+    if (within(point)) {
+      return { kind: "insert", index, point };
     }
   }
   return undefined;

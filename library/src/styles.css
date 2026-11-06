@@ -84,9 +84,10 @@
   box-shadow: var(--_playmaker-ui-shadow);
 }
 
-/* Outlined button. The toolbar actions and the panel's reset-to-default button share the same shape. */
+/* Outlined button. The toolbar actions and the panel's buttons share the same shape. */
 .playmaker-toolbar__button,
-.playmaker-panel__reset {
+.playmaker-panel__choice,
+.playmaker-panel__action {
   font: inherit;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -100,17 +101,25 @@
     border-color 0.15s;
 }
 
-.playmaker-toolbar__button:hover:not([aria-disabled="true"]),
-.playmaker-panel__reset:hover {
+/*
+ * The disabled exclusion sits inside :where() so this rule stays at the specificity of the pressed and disabled rules
+ * below it, which then win by source order. Outside :where(), the :not() would outrank them and paint the faint hover
+ * background behind the white text of a pressed button.
+ */
+.playmaker-toolbar__button:hover:where(:not([aria-disabled="true"])),
+.playmaker-panel__choice:hover,
+.playmaker-panel__action:hover {
   border-color: var(--_playmaker-ui-accent);
   background: var(--_playmaker-ui-accent-faint);
 }
 
-.playmaker-toolbar__button {
+.playmaker-toolbar__button,
+.playmaker-panel__action {
   padding: 5px 12px;
 }
 
-.playmaker-toolbar__button[aria-pressed="true"] {
+.playmaker-toolbar__button[aria-pressed="true"],
+.playmaker-panel__choice[aria-pressed="true"] {
   background: var(--_playmaker-ui-accent);
   border-color: var(--_playmaker-ui-accent);
   color: var(--_playmaker-ui-accent-text);
@@ -120,20 +129,6 @@
   border-color: var(--_playmaker-ui-divider);
   color: var(--_playmaker-ui-text-disabled);
   cursor: not-allowed;
-}
-
-.playmaker-toolbar__select {
-  font: inherit;
-  padding: 5px 8px;
-  border: 1px solid var(--_playmaker-ui-border);
-  border-radius: 4px;
-  background: var(--_playmaker-ui-surface);
-  color: var(--_playmaker-ui-text);
-  cursor: pointer;
-}
-
-.playmaker-toolbar__select:hover {
-  border-color: var(--_playmaker-ui-text);
 }
 
 .playmaker-toolbar__sep {
@@ -175,6 +170,21 @@
   color: var(--_playmaker-ui-text-dim);
 }
 
+.playmaker-panel__action {
+  align-self: flex-start;
+}
+
+.playmaker-panel__tips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 0.93em;
+  line-height: 1.5;
+  color: var(--_playmaker-ui-text-dim);
+}
+
 .playmaker-panel__row {
   display: flex;
   align-items: center;
@@ -186,14 +196,33 @@
   display: contents;
 }
 
+/* Buttons for a choice among a few options sit under their name and share the row's width. */
+.playmaker-panel__row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.playmaker-panel__choices {
+  display: flex;
+  gap: 4px;
+}
+
+/* A longer name, such as モーション, widens its button rather than wrapping inside it. */
+.playmaker-panel__choice {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  font-size: 0.86em;
+  padding: 3px 2px;
+}
+
 .playmaker-panel__row-text {
   margin-right: auto;
   white-space: nowrap;
   color: var(--_playmaker-ui-text-dim);
 }
 
-.playmaker-panel__row input,
-.playmaker-panel__row select {
+.playmaker-panel__row input {
   font: inherit;
   flex: 1 1 auto;
   min-width: 0;
@@ -204,12 +233,11 @@
   color: var(--_playmaker-ui-text);
 }
 
-.playmaker-panel__row input:hover,
-.playmaker-panel__row select:hover {
+.playmaker-panel__row input:hover {
   border-color: var(--_playmaker-ui-text);
 }
 
-.playmaker-root :is(button, input, select):focus-visible {
+.playmaker-root :is(button, input):focus-visible {
   outline: 2px solid var(--_playmaker-ui-accent);
   outline-offset: 1px;
 }
@@ -220,7 +248,7 @@
   gap: 6px;
 }
 
-/* Player colors. Outlines in the top row and fills in the bottom row, with the same color stacked vertically. The number of columns is the number of palette colors (palette.ts). */
+/* Player colors. Outlines in the top row and fills in the bottom row, with the same color stacked vertically. The 4 columns are the default color and the 3 palette colors (palette.ts). */
 .playmaker-panel__swatches--rows {
   display: grid;
   grid-template-columns: repeat(4, auto);
@@ -243,10 +271,4 @@
 .playmaker-panel__swatch[aria-pressed="true"] {
   outline: 2px solid var(--_playmaker-ui-accent);
   outline-offset: 2px;
-}
-
-.playmaker-panel__reset {
-  flex: 0 0 auto;
-  font-size: 0.93em;
-  padding: 2px 8px;
 }

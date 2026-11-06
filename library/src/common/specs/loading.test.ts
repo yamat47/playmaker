@@ -31,8 +31,6 @@ const pair: Formation = {
   ],
 };
 
-const empty: Formation = { ...formation, players: [] };
-
 /** A formation from untyped external JSON whose only player has no position. */
 function brokenFormation(): Formation {
   return JSON.parse('{ "players": [{ "shape": "circle" }] }');
@@ -228,22 +226,5 @@ describe("Loading a formation", () => {
     play.session.loadFormation(pair);
 
     expect(play.session.getPlayData().players).toHaveLength(MAX_PLAYERS);
-  });
-
-  it("returns false when the toolbar loads a formation with no players", () => {
-    const play = openPlay(initialData());
-
-    const loaded = play.editor.loadFormation(empty);
-
-    expect(loaded).toBe(false);
-  });
-
-  it("keeps the selection when the toolbar loads a formation with no players", () => {
-    const play = openPlay(initialData());
-    play.click(yd(10, 0));
-
-    play.editor.loadFormation(empty);
-
-    expect(play.editor.getViewState().selection).toEqual({ kind: "player", id: "a" });
   });
 });

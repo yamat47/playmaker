@@ -2,22 +2,13 @@ import {
   arrowHeadVertices,
   blockCapEndpoints,
   type CanvasPoint,
-  DEFAULT_LINE_THICKNESS,
+  drawnLinePath,
   type FieldMetrics,
-  indexPlayersById,
   type LineKind,
-  lineAnchorPoints,
-  sampleLinePath,
   trimForArrowHead,
 } from "../../common/index.js";
-import type { ThemeTokenName } from "../theme/tokens.js";
+import { LINE_COLOR_TOKENS } from "../theme/palette.js";
 import type { ILayerRenderer, RenderFrame } from "./layer.js";
-
-const LINE_COLOR_TOKENS = {
-  route: "lineRoute",
-  block: "lineBlock",
-  motion: "lineMotion",
-} as const satisfies Record<LineKind, ThemeTokenName>;
 
 export class LineRenderer implements ILayerRenderer {
   /** A line whose origin player cannot be found is not drawn. */
@@ -27,21 +18,14 @@ export class LineRenderer implements ILayerRenderer {
     if (geometry.scale <= 0 || lines.length === 0) {
       return;
     }
-    const byId = indexPlayersById(players);
-
     for (const line of lines) {
-      const anchors = lineAnchorPoints(line, byId);
-      if (anchors === undefined) {
-        continue;
-      }
-      const path = sampleLinePath(anchors, line.interpolation).map((p) => geometry.toCanvas(p));
+      const path = drawnLinePath(line, players).map((p) => geometry.toCanvas(p));
       if (path.length < 2) {
         continue;
       }
 
       const color = line.color ?? frame.theme(LINE_COLOR_TOKENS[line.kind]);
-      // thickness is a factor on the default width, so the look matches on screen and in the PNG.
-      const width = this.widthFor(line.kind, metrics) * (line.thickness ?? DEFAULT_LINE_THICKNESS);
+      const width = this.widthFor(line.kind, metrics);
       const isBlock = line.kind === "block";
 
       ctx.save();

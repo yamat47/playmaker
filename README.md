@@ -60,6 +60,7 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 | `getPlayData(): PlayData` | The canonical snapshot of the current play diagram (a deep copy; `version` is the current one) |
 | `restorePlayData(raw: unknown)` | Reloads a persisted value in full (resets the history; does not emit `onChange`) |
 | `setPlayData(data: PlayDataInput)` | Loads a whole diagram assembled with the typed API (`field.losYard` is optional) |
+| `replacePlayData(data: PlayDataInput)` | Replaces the whole diagram as an edit: Undo brings the previous diagram back and `onChange` fires (a diagram equal to the current one changes nothing). For applying a template to the diagram being edited; open a different saved play with `setPlayData` / `restorePlayData` instead. To apply a persisted value, pass it through `migratePlayData` first |
 | `loadFormation(formation): boolean` | Appends a formation to the existing diagram and returns whether it was placed (offense and defense presets can be layered in turn) |
 | `get mode` / `setMode(mode)` | Switches between `edit` / `view`. The diagram and the Undo history remain |
 | `get fieldZone` / `setFieldZone(zone)` | The field zone (`middle` / `redzone` / `own-redzone`) |
@@ -93,9 +94,13 @@ if (offense) playmaker.loadFormation(offense);
 ```ts
 import { PLAY_PRESETS } from "@yamat47/playmaker";
 
-// A play is a diagram with the lines drawn in. Loading its data replaces the current diagram.
+// A play is a diagram with the lines drawn in. Loading its data replaces the current diagram
+// and starts a fresh history, as opening another play should.
 const play = PLAY_PRESETS[0];
 if (play) playmaker.setPlayData(play.data);
+
+// Or apply it to the diagram being edited, as one edit that Undo takes back:
+// if (play) playmaker.replacePlayData(play.data);
 ```
 
 Both have `name` and `side` (`offense` / `defense`), so you can use them for list headings or to split offense and defense.
@@ -107,7 +112,8 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
 ### Data integration and versioning
 
 - `onChange` delivers a deep snapshot of the latest PlayData **once per committed edit command or Undo/Redo**.
-  It does not fire on construction, on `restorePlayData` / `setPlayData` reloads, or on PNG export
+  It does not fire on construction, on `restorePlayData` / `setPlayData` reloads, or on PNG export;
+  `replacePlayData` is an edit and fires it, unless the diagram it is given equals the current one
 - `getPlayData()` can be persisted as is. Passing it back to `restorePlayData` / `initialData`
   restores an equivalent play diagram (round-trip contract)
 - Even when given an old version, no version, a future version, or corrupted data, `migratePlayData` coerces it
@@ -117,10 +123,20 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
 ### Modes
 
 - `edit`: edit with the toolbar, the properties panel, and pointer operations. Undo = `Cmd/Ctrl+Z`,
-  Redo = `Cmd/Ctrl+Shift+Z` or `Cmd/Ctrl+Y`. The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
+  Redo = `Cmd/Ctrl+Shift+Z` or `Cmd/Ctrl+Y`, Delete or Backspace deletes the selection (or only the
+  clicked bend of a selected line), and Esc steps back (cancels the drag or drawing in progress, then
+  lets go of the clicked bend, then clears the selection, then returns to the select tool).
+  A double-click or Enter finishes the line being drawn.
+  Dragging a player moves its lines along with it; hold Option (Alt) to move the player alone.
+  On a selected line, drag the small hollow circle halfway along a segment to add a bend there,
+  and double-click a bend to remove it.
+  Type with a player selected, or double-click it, to edit its label.
+  With nothing selected, the panel flips the play left to right.
+  The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
   The diagram is drawn at a size that fits the container area left after excluding them
 - `view`: read-only. No editing UI is shown
 - Switching with `setMode` only attaches or detaches the editing UI and input. The diagram and the Undo history remain
+  (a label being typed in the panel is committed first, as an edit)
 
 ### Style customization
 
@@ -148,7 +164,7 @@ Variables take the form `--playmaker-<part>-<component>`. The following are avai
 - Field: `field-grass`, `field-oob`, `field-endzone`, `field-line`, `field-number`, `field-goal-line`, `field-pylon`, `field-goalpost`, and `field-grid` for the grid dots laid out in edit mode
 - Players: `player-color` for players with no color set, and `player-label` for the labels of solid players. The inside of an outline player is filled with `field-grass`
 - Lines: `line-route`, `line-block`, `line-motion`
-- The 4 colors selectable for players and lines in the panel: `swatch-1` through `swatch-4`
+- The 3 colors the panel offers for players and lines besides the default color: `swatch-2` through `swatch-4`
 - Selection: `selection`, and `selection-outline` for the outline of the handles
 - Toolbar and panel: `ui-font`, `ui-surface`, `ui-border`, `ui-text`, `ui-accent`, and `ui-accent-text` for the text color of pressed buttons
 

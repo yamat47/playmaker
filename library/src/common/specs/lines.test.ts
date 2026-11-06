@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { line, playData, player, twoPlayersWithRoute } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
+import { MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
+import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 
 function lineOf(data: Pick<PlayData, "lines">, id: string) {
   return data.lines.find((l) => l.id === id);
@@ -29,6 +31,18 @@ function openWithTwoLines() {
     ),
   );
   play.click(yd(22, 10));
+  return play;
+}
+
+/**
+ * Players a (10, 0) and b (20, 0), and line s from a straight to the center of b, selected. The
+ * line is drawn up to the circle the hit test uses around b, at (20 - PLAYER_RADIUS_YARDS, 0).
+ */
+function openWithLineEndingOnB() {
+  const play = openPlay(
+    playData([player("a", 10, 0), player("b", 20, 0)], [{ ...line("s"), end: yd(20, 0) }]),
+  );
+  play.click(yd(15, 0));
   return play;
 }
 
@@ -135,6 +149,50 @@ describe("Dragging a waypoint", () => {
 });
 
 describe("Dragging the end point", () => {
+  it("ends the line at the player it is dropped on", () => {
+    const play = openWithLineSelected();
+
+    play.drag(yd(25, 5), yd(20, 0));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.end).toEqual(yd(20, 0));
+  });
+
+  it("puts the end handle where the line meets the marker of the player it ends on", () => {
+    const play = openWithLineEndingOnB();
+
+    expect(play.editor.getFrame().overlay).toMatchObject({
+      endpointHandle: { lateralYard: expect.closeTo(20 - PLAYER_RADIUS_YARDS), downfieldYard: 0 },
+    });
+  });
+
+  it("grabs the end, not the player, where the line meets the marker it ends on", () => {
+    const play = openWithLineEndingOnB();
+
+    play.drag(yd(19.2, 0), yd(19.2, 5));
+
+    const data = play.session.getPlayData();
+    expect(lineOf(data, "s")?.end).toEqual(yd(19, 5));
+    expect(data.players[1]?.position).toEqual(yd(20, 0));
+  });
+
+  it("neither records history nor notifies when the end is dragged back onto its player", () => {
+    const play = openWithLineEndingOnB();
+
+    play.drag(yd(19.07, 0), yd(20, 0));
+
+    expect(play.editor.getViewState().canUndo).toBe(false);
+    expect(play.onChange).not.toHaveBeenCalled();
+  });
+
+  it("keeps the end on the player when its handle is pressed and released after a slight drift", () => {
+    const play = openWithLineEndingOnB();
+
+    play.drag(yd(19.1, 0), yd(19.2, 0.1));
+
+    expect(play.session.getPlayData().lines[0]?.end).toEqual(yd(20, 0));
+    expect(play.editor.getViewState().canUndo).toBe(false);
+  });
+
   it("moves only the end when the end of the selected line is dragged", () => {
     const play = openWithLineSelected();
 
@@ -239,6 +297,173 @@ describe("Dragging the end point", () => {
   });
 });
 
+describe("Adding a bend", () => {
+  it("adds a bend where the middle of a segment is dragged to", () => {
+    const play = openWithLineSelected();
+
+    play.drag(yd(20, 3.5), yd(20, 7));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([yd(15, 2), yd(20, 7)]);
+  });
+
+  it("draws the new bend under the pointer while the middle of a segment is dragged", () => {
+    const play = openWithLineSelected();
+
+    play.editor.pointerDown(yd(12.5, 1));
+    play.editor.pointerMove(yd(12, 4));
+
+    expect(lineOf(play.editor.getFrame().scene, "l")?.waypoints).toEqual([yd(12, 4), yd(15, 2)]);
+  });
+
+  it("leaves the line as it is when the middle of a segment is only clicked", () => {
+    const play = openWithLineSelected();
+
+    play.click(yd(20, 3.5));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+    expect(play.editor.getViewState().canUndo).toBe(false);
+  });
+
+  it("draws the line unchanged while the middle of a segment is pressed and not yet dragged", () => {
+    const play = openWithLineSelected();
+
+    play.editor.pointerDown(yd(20, 3.5));
+
+    expect(lineOf(play.editor.getFrame().scene, "l")?.waypoints).toEqual([yd(15, 2)]);
+  });
+
+  it("leaves the line as it is when the middle of a segment is clicked with a slight drift", () => {
+    const play = openWithLineSelected();
+
+    play.drag(yd(20, 3.5), yd(20.1, 3.6));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
+  it("grabs a player rather than the middle of a segment that lies on it", () => {
+    const play = openPlay(
+      playData(
+        [player("a", 10, 0), player("b", 20, 0)],
+        [{ ...line("l"), waypoints: [], end: yd(30, 0) }],
+      ),
+    );
+    play.click(yd(30, 0));
+
+    play.drag(yd(20, 0), yd(20, 4));
+
+    const data = play.session.getPlayData();
+    expect(data.players[1]?.position).toEqual(yd(20, 4));
+    expect(lineOf(data, "l")?.waypoints).toEqual([]);
+  });
+
+  it("offers no place for a bend once a line has MAX_WAYPOINTS_PER_LINE waypoints", () => {
+    const full = Array.from({ length: MAX_WAYPOINTS_PER_LINE }, (_, i) => yd(11 + i * 0.5, 1));
+    const play = openPlay(
+      playData([player("a", 10, 0)], [{ ...line("l"), waypoints: full, end: yd(40, 10) }]),
+    );
+
+    play.click(yd(40, 10));
+
+    expect(play.editor.getFrame().overlay).toMatchObject({ kind: "line", insertHandles: [] });
+  });
+});
+
+describe("Removing a bend", () => {
+  it("removes a bend that is double-clicked", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+    play.click(yd(15, 2));
+
+    play.editor.doubleClick(yd(15, 2));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([]);
+  });
+
+  it("keeps a bend dragged right after a click when the browser reports a double-click", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+    play.drag(yd(15, 2), yd(18, 6));
+
+    play.editor.doubleClick(yd(18, 6));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([yd(18, 6)]);
+  });
+
+  it("marks a pressed bend as picked", () => {
+    const play = openWithLineSelected();
+
+    play.click(yd(15, 2));
+
+    expect(play.editor.getFrame().overlay).toMatchObject({ kind: "line", pickedWaypoint: 0 });
+  });
+
+  it("removes the picked bend with Delete and keeps the line selected", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+
+    play.editor.deleteSelection();
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([]);
+    expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
+  });
+
+  it("lets go of the picked bend when another part of the line is pressed", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+
+    play.click(yd(25, 5));
+    play.editor.deleteSelection();
+
+    expect(lineOf(play.session.getPlayData(), "l")).toBeUndefined();
+  });
+
+  it("lets go of the picked bend on Undo, which may change the bends", () => {
+    const play = openWithLineSelected();
+    play.drag(yd(12.5, 1), yd(12, 4));
+    play.click(yd(12, 4));
+
+    play.editor.undo();
+
+    expect(play.editor.getFrame().overlay).toMatchObject({
+      kind: "line",
+      waypointHandles: [yd(15, 2)],
+      pickedWaypoint: undefined,
+    });
+  });
+
+  it("lets go of the picked bend with Esc before clearing the selection", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+
+    play.editor.stepBack();
+
+    expect(play.editor.getFrame().overlay).toMatchObject({
+      kind: "line",
+      pickedWaypoint: undefined,
+    });
+    expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
+  });
+
+  it("neither changes the diagram nor notifies on a double-click with nothing selected", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.editor.doubleClick(yd(15, 2));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+    expect(play.notified).not.toHaveBeenCalled();
+  });
+
+  it("neither changes the diagram nor notifies on a double-click away from the bends", () => {
+    const play = openWithLineSelected();
+    play.notified.mockClear();
+
+    play.editor.doubleClick(yd(40, -10));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+    expect(play.notified).not.toHaveBeenCalled();
+  });
+});
+
 describe("Deleting a line", () => {
   it("removes only that line when the selected line is deleted", () => {
     const play = openWithLineSelected();
@@ -280,30 +505,24 @@ describe("Deleting a line", () => {
 });
 
 describe("Editing line values", () => {
-  it("changes the kind, interpolation, thickness, and color of the selected line", () => {
+  it("changes the kind, interpolation, and color of the selected line", () => {
     const play = openWithLineSelected();
 
-    play.editor.updateSelectedLine({
-      kind: "motion",
-      interpolation: "bezier",
-      thickness: 2,
-      color: "#ff0000",
-    });
+    play.editor.updateSelectedLine({ kind: "motion", interpolation: "bezier", color: "#ff0000" });
 
     expect(lineOf(play.session.getPlayData(), "l")).toEqual({
       ...twoPlayersWithRoute().lines[0],
       kind: "motion",
       interpolation: "bezier",
-      thickness: 2,
       color: "#ff0000",
     });
   });
 
-  it("returns to a default line without color or thickness when both receive null", () => {
+  it("returns to a default line without color when the color receives null", () => {
     const play = openWithLineSelected();
-    play.editor.updateSelectedLine({ color: "#ff0000", thickness: 2 });
+    play.editor.updateSelectedLine({ color: "#ff0000" });
 
-    play.editor.updateSelectedLine({ color: null, thickness: null });
+    play.editor.updateSelectedLine({ color: null });
 
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
@@ -358,7 +577,7 @@ describe("Editing line values", () => {
     const play = openWithLineSelected();
     play.notified.mockClear();
 
-    play.editor.updateSelectedLine({ kind: "route", interpolation: "straight", thickness: null });
+    play.editor.updateSelectedLine({ kind: "route", interpolation: "straight", color: null });
 
     expect(play.editor.getViewState().canUndo).toBe(false);
     expect(play.notified).not.toHaveBeenCalled();

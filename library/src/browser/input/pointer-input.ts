@@ -16,11 +16,7 @@ export interface IPointerSurface {
 
 // Keys that reach a form control are left to the control's default behavior (text undo and so on).
 function isFormControl(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLSelectElement ||
-    target instanceof HTMLTextAreaElement
-  );
+  return target instanceof HTMLInputElement;
 }
 
 export class PointerInput extends Disposable {
@@ -38,9 +34,11 @@ export class PointerInput extends Disposable {
     // The canvas takes no focus by default, so Esc, Enter, undo, and redo keys would not reach it.
     canvas.tabIndex = 0;
 
-    const toYard = (e: PointerEvent) => surface.clientToYard(e.clientX, e.clientY);
+    const toYard = (e: MouseEvent) => surface.clientToYard(e.clientX, e.clientY);
     // The pressed pointer. Up and cancel from any other (second finger, right button) are ignored.
     let activePointerId: number | null = null;
+    // Where the primary pointer last was, to replay it when a modifier key changes mid-press.
+    let lastPointer: FieldPosition | undefined;
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 || !e.isPrimary) {
@@ -50,12 +48,21 @@ export class PointerInput extends Disposable {
       // If focusing scrolls the page, the canvas shifts away from the pressed position.
       canvas.focus({ preventScroll: true });
       canvas.setPointerCapture(e.pointerId);
-      controller.pointerDown(toYard(e));
+      lastPointer = toYard(e);
+      controller.pointerDown(lastPointer);
     };
     // The line being drawn follows the pointer without a button held, so every move is passed on.
     const onPointerMove = (e: PointerEvent) => {
       if (e.isPrimary) {
-        controller.pointerMove(toYard(e));
+        lastPointer = toYard(e);
+        controller.pointerMove(lastPointer, { altKey: e.altKey });
+      }
+    };
+    // Pressing or releasing Option (Alt) without moving changes what a drop does, so the drag is
+    // brought up to date at once rather than on the next move.
+    const onModifierChange = (e: KeyboardEvent) => {
+      if (e.key === "Alt" && activePointerId !== null && lastPointer !== undefined) {
+        controller.pointerMove(lastPointer, { altKey: e.altKey });
       }
     };
     // Clears the record and returns true when this ends the pressed pointer. Right after up, the
@@ -81,20 +88,30 @@ export class PointerInput extends Disposable {
         controller.cancelInteraction();
       }
     };
-    const onDoubleClick = () => controller.commitLine();
+    const onPointerLeave = () => controller.pointerLeave();
+    const onDoubleClick = (e: MouseEvent) => controller.doubleClick(toYard(e));
     const onKeyDown = (e: KeyboardEvent) => {
+      onModifierChange(e);
       if (isFormControl(e.target)) {
         return;
       }
       switch (resolveKeyAction(e)) {
-        case "cancel-interaction":
-          controller.cancelInteraction();
+        case "step-back":
+          controller.stepBack();
           return;
         case "commit-line":
           // Enter on a button presses that button, so it does not also commit the line.
           if (!(e.target instanceof HTMLButtonElement)) {
             controller.commitLine();
           }
+          return;
+        case "delete-selection":
+          controller.deleteSelection();
+          return;
+        case "type-label":
+          // Not prevented: the panel focuses the label input during this keydown, and the
+          // character then goes into it.
+          controller.requestLabelEdit();
           return;
         case "undo":
           e.preventDefault();
@@ -116,8 +133,10 @@ export class PointerInput extends Disposable {
     canvas.addEventListener("pointerup", onPointerUp, { signal });
     canvas.addEventListener("pointercancel", onPointerAbort, { signal });
     canvas.addEventListener("lostpointercapture", onPointerAbort, { signal });
+    canvas.addEventListener("pointerleave", onPointerLeave, { signal });
     canvas.addEventListener("dblclick", onDoubleClick, { signal });
     root.addEventListener("keydown", onKeyDown, { signal });
+    root.addEventListener("keyup", onModifierChange, { signal });
     this._register(
       toDisposable(() => {
         listeners.abort();

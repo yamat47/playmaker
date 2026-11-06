@@ -25,6 +25,7 @@ const VIEW_STATE_EQUALS: {
   canRedo: Object.is,
   fieldZone: Object.is,
   isDrawing: Object.is,
+  isTypingLabel: Object.is,
   remainingPlayerSlots: Object.is,
   canStartLine: Object.is,
 };

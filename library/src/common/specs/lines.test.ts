@@ -3,6 +3,7 @@ import { line, playData, player, twoPlayersWithRoute } from "../../test-support/
 import { openPlay, yd } from "../../test-support/play-driver.js";
 import { MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
+import { PLAYER_RADIUS_YARDS } from "../model/player.js";
 
 function lineOf(data: Pick<PlayData, "lines">, id: string) {
   return data.lines.find((l) => l.id === id);
@@ -30,6 +31,18 @@ function openWithTwoLines() {
     ),
   );
   play.click(yd(22, 10));
+  return play;
+}
+
+/**
+ * Players a (10, 0) and b (20, 0), and line s from a straight to the center of b, selected. The
+ * line is drawn up to the edge of b's marker, at (20 - PLAYER_RADIUS_YARDS, 0).
+ */
+function openWithLineEndingOnB() {
+  const play = openPlay(
+    playData([player("a", 10, 0), player("b", 20, 0)], [{ ...line("s"), end: yd(20, 0) }]),
+  );
+  play.click(yd(15, 0));
   return play;
 }
 
@@ -136,26 +149,39 @@ describe("Dragging a waypoint", () => {
 });
 
 describe("Dragging the end point", () => {
-  it("stops the end just outside a player it is dropped on, on the side the line comes from", () => {
+  it("ends the line at the player it is dropped on", () => {
     const play = openWithLineSelected();
 
     play.drag(yd(25, 5), yd(20, 0));
 
-    expect(lineOf(play.session.getPlayData(), "l")?.end).toEqual(yd(19, 0.5));
+    expect(lineOf(play.session.getPlayData(), "l")?.end).toEqual(yd(20, 0));
   });
 
-  it("stops the end of a line without bends on the side of its start player", () => {
-    const play = openPlay(
-      playData(
-        [player("a", 10, 0), player("b", 20, 0)],
-        [{ ...line("s"), waypoints: [], end: yd(14, 4) }],
-      ),
-    );
-    play.click(yd(14, 4));
+  it("puts the end handle where the line meets the marker of the player it ends on", () => {
+    const play = openWithLineEndingOnB();
 
-    play.drag(yd(14, 4), yd(20, 0));
+    expect(play.editor.getFrame().overlay).toMatchObject({
+      endpointHandle: { lateralYard: expect.closeTo(20 - PLAYER_RADIUS_YARDS), downfieldYard: 0 },
+    });
+  });
 
-    expect(lineOf(play.session.getPlayData(), "s")?.end).toEqual(yd(19, 0));
+  it("grabs the end, not the player, where the line meets the marker it ends on", () => {
+    const play = openWithLineEndingOnB();
+
+    play.drag(yd(19.2, 0), yd(19.2, 5));
+
+    const data = play.session.getPlayData();
+    expect(lineOf(data, "s")?.end).toEqual(yd(19, 5));
+    expect(data.players[1]?.position).toEqual(yd(20, 0));
+  });
+
+  it("keeps the end on the player when its handle is pressed and released after a slight drift", () => {
+    const play = openWithLineEndingOnB();
+
+    play.drag(yd(19.1, 0), yd(19.2, 0.1));
+
+    expect(play.session.getPlayData().lines[0]?.end).toEqual(yd(20, 0));
+    expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
   it("moves only the end when the end of the selected line is dragged", () => {
@@ -289,6 +315,30 @@ describe("Adding a bend", () => {
     expect(play.editor.getViewState().canUndo).toBe(false);
   });
 
+  it("leaves the line as it is when the middle of a segment is clicked with a slight drift", () => {
+    const play = openWithLineSelected();
+
+    play.drag(yd(20, 3.5), yd(20.1, 3.6));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
+  it("grabs a player rather than the middle of a segment that lies on it", () => {
+    const play = openPlay(
+      playData(
+        [player("a", 10, 0), player("b", 20, 0)],
+        [{ ...line("l"), waypoints: [], end: yd(30, 0) }],
+      ),
+    );
+    play.click(yd(30, 0));
+
+    play.drag(yd(20, 0), yd(20, 4));
+
+    const data = play.session.getPlayData();
+    expect(data.players[1]?.position).toEqual(yd(20, 4));
+    expect(lineOf(data, "l")?.waypoints).toEqual([]);
+  });
+
   it("offers no place for a bend once a line has MAX_WAYPOINTS_PER_LINE waypoints", () => {
     const full = Array.from({ length: MAX_WAYPOINTS_PER_LINE }, (_, i) => yd(11 + i * 0.5, 1));
     const play = openPlay(
@@ -338,6 +388,20 @@ describe("Removing a bend", () => {
     play.editor.deleteSelection();
 
     expect(lineOf(play.session.getPlayData(), "l")).toBeUndefined();
+  });
+
+  it("lets go of the picked bend on Undo, which may change the bends", () => {
+    const play = openWithLineSelected();
+    play.drag(yd(12.5, 1), yd(12, 4));
+    play.click(yd(12, 4));
+
+    play.editor.undo();
+
+    expect(play.editor.getFrame().overlay).toMatchObject({
+      kind: "line",
+      waypointHandles: [yd(15, 2)],
+      pickedWaypoint: undefined,
+    });
   });
 
   it("lets go of the picked bend with Esc before clearing the selection", () => {

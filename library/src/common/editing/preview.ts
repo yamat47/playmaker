@@ -2,6 +2,7 @@ import { applyLinePatch } from "../commands/line-commands.js";
 import { movePlayer } from "../commands/player-commands.js";
 import { segmentMidpoints } from "../geometry/bezier.js";
 import type { LineHandles } from "../geometry/hit-test.js";
+import { drawnLineEnd } from "../geometry/line-path.js";
 import {
   indexPlayersById,
   type Line,
@@ -83,7 +84,7 @@ export function lineHandles(scene: SceneData, line: Line): LineHandles {
   const anchors = lineAnchorPoints(line, indexPlayersById(scene.players));
   return {
     waypointHandles: line.waypoints,
-    endpointHandle: line.end,
+    endpointHandle: drawnLineEnd(line, scene.players),
     insertHandles:
       anchors === undefined || line.waypoints.length >= MAX_WAYPOINTS_PER_LINE
         ? []

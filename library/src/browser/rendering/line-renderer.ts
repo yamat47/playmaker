@@ -2,11 +2,9 @@ import {
   arrowHeadVertices,
   blockCapEndpoints,
   type CanvasPoint,
+  drawnLinePath,
   type FieldMetrics,
-  indexPlayersById,
   type LineKind,
-  lineAnchorPoints,
-  sampleLinePath,
   trimForArrowHead,
 } from "../../common/index.js";
 import type { ThemeTokenName } from "../theme/tokens.js";
@@ -26,14 +24,8 @@ export class LineRenderer implements ILayerRenderer {
     if (geometry.scale <= 0 || lines.length === 0) {
       return;
     }
-    const byId = indexPlayersById(players);
-
     for (const line of lines) {
-      const anchors = lineAnchorPoints(line, byId);
-      if (anchors === undefined) {
-        continue;
-      }
-      const path = sampleLinePath(anchors, line.interpolation).map((p) => geometry.toCanvas(p));
+      const path = drawnLinePath(line, players).map((p) => geometry.toCanvas(p));
       if (path.length < 2) {
         continue;
       }

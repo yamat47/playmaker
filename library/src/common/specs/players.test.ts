@@ -175,22 +175,54 @@ describe("Dragging a player", () => {
     expect(play.editor.getFrame().scene.lines[0]?.end).toEqual(yd(27, 6));
   });
 
+  it("passes the moved diagram exactly once when a player and its lines are dragged", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.drag(yd(10, 0), yd(12, 1));
+
+    expect(play.onChange).toHaveBeenCalledExactlyOnceWith(play.session.getPlayData());
+  });
+
   it("draws the player moving alone while Option or Alt is held", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.editor.pointerDown(yd(10, 0));
     play.editor.pointerMove(yd(12, 1), { altKey: true });
 
-    expect(play.editor.getFrame().scene.lines).toEqual(twoPlayersWithRoute().lines);
+    const { scene } = play.editor.getFrame();
+    expect(positionOf(scene, "a")).toEqual(yd(12, 1));
+    expect(scene.lines).toEqual(twoPlayersWithRoute().lines);
   });
 
-  it("moves the player alone when Option or Alt is held on release", () => {
+  it("moves the player alone when Option or Alt is held during the drag", () => {
     const play = openPlay(twoPlayersWithRoute());
 
     play.drag(yd(10, 0), yd(12, 1), { altKey: true });
 
     expect(positionOf(play.session.getPlayData(), "a")).toEqual(yd(12, 1));
     expect(play.session.getPlayData().lines).toEqual(twoPlayersWithRoute().lines);
+  });
+
+  it("takes the lines along when Option or Alt is let go before the release", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.pointerDown(yd(10, 0));
+    play.editor.pointerMove(yd(12, 1), { altKey: true });
+    play.editor.pointerMove(yd(12, 1), { altKey: false });
+
+    play.editor.pointerUp(yd(12, 1));
+
+    expect(play.session.getPlayData().lines[0]?.end).toEqual(yd(27, 6));
+  });
+
+  it("does not redraw while a dragged player stays on the same grid point", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.pointerDown(yd(10, 0));
+    play.editor.pointerMove(yd(12, 1));
+    play.notified.mockClear();
+
+    play.editor.pointerMove(yd(12.1, 1.1));
+
+    expect(play.notified).not.toHaveBeenCalled();
   });
 
   it("keeps each moved line point inside the zone window", () => {

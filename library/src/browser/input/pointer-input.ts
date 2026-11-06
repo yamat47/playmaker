@@ -38,9 +38,11 @@ export class PointerInput extends Disposable {
     // The canvas takes no focus by default, so Esc, Enter, undo, and redo keys would not reach it.
     canvas.tabIndex = 0;
 
-    const toYard = (e: PointerEvent) => surface.clientToYard(e.clientX, e.clientY);
+    const toYard = (e: MouseEvent) => surface.clientToYard(e.clientX, e.clientY);
     // The pressed pointer. Up and cancel from any other (second finger, right button) are ignored.
     let activePointerId: number | null = null;
+    // Where the primary pointer last was, to replay it when a modifier key changes mid-press.
+    let lastPointer: FieldPosition | undefined;
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 || !e.isPrimary) {
@@ -50,12 +52,21 @@ export class PointerInput extends Disposable {
       // If focusing scrolls the page, the canvas shifts away from the pressed position.
       canvas.focus({ preventScroll: true });
       canvas.setPointerCapture(e.pointerId);
-      controller.pointerDown(toYard(e));
+      lastPointer = toYard(e);
+      controller.pointerDown(lastPointer);
     };
     // The line being drawn follows the pointer without a button held, so every move is passed on.
     const onPointerMove = (e: PointerEvent) => {
       if (e.isPrimary) {
-        controller.pointerMove(toYard(e), { altKey: e.altKey });
+        lastPointer = toYard(e);
+        controller.pointerMove(lastPointer, { altKey: e.altKey });
+      }
+    };
+    // Pressing or releasing Option (Alt) without moving changes what a drop does, so the drag is
+    // brought up to date at once rather than on the next move.
+    const onModifierChange = (e: KeyboardEvent) => {
+      if (e.key === "Alt" && activePointerId !== null && lastPointer !== undefined) {
+        controller.pointerMove(lastPointer, { altKey: e.altKey });
       }
     };
     // Clears the record and returns true when this ends the pressed pointer. Right after up, the
@@ -70,7 +81,7 @@ export class PointerInput extends Disposable {
     };
     const onPointerUp = (e: PointerEvent) => {
       if (endPress(e)) {
-        controller.pointerUp(toYard(e), { altKey: e.altKey });
+        controller.pointerUp(toYard(e));
       }
     };
     // A press that ended without an up, because a touch scroll started or the window changed.
@@ -81,9 +92,9 @@ export class PointerInput extends Disposable {
         controller.cancelInteraction();
       }
     };
-    const onDoubleClick = (e: MouseEvent) =>
-      controller.doubleClick(surface.clientToYard(e.clientX, e.clientY));
+    const onDoubleClick = (e: MouseEvent) => controller.doubleClick(toYard(e));
     const onKeyDown = (e: KeyboardEvent) => {
+      onModifierChange(e);
       if (isFormControl(e.target)) {
         return;
       }
@@ -122,6 +133,7 @@ export class PointerInput extends Disposable {
     canvas.addEventListener("lostpointercapture", onPointerAbort, { signal });
     canvas.addEventListener("dblclick", onDoubleClick, { signal });
     root.addEventListener("keydown", onKeyDown, { signal });
+    root.addEventListener("keyup", onModifierChange, { signal });
     this._register(
       toDisposable(() => {
         listeners.abort();

@@ -117,11 +117,13 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
 ### Modes
 
 - `edit`: edit with the toolbar, the properties panel, and pointer operations. Undo = `Cmd/Ctrl+Z`,
-  Redo = `Cmd/Ctrl+Shift+Z` or `Cmd/Ctrl+Y`, Delete or Backspace deletes the selection, and Esc steps back
-  (cancels the drag or drawing in progress, then clears the selection, then returns to the select tool).
+  Redo = `Cmd/Ctrl+Shift+Z` or `Cmd/Ctrl+Y`, Delete or Backspace deletes the selection (or only the
+  clicked bend of a selected line), and Esc steps back (cancels the drag or drawing in progress, then
+  lets go of the clicked bend, then clears the selection, then returns to the select tool).
   A double-click or Enter finishes the line being drawn.
   Dragging a player moves its lines along with it; hold Option (Alt) to move the player alone.
-  On a selected line, drag a round handle to add a bend, and double-click a bend to remove it.
+  On a selected line, drag the small hollow circle halfway along a segment to add a bend there,
+  and double-click a bend to remove it.
   The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
   The diagram is drawn at a size that fits the container area left after excluding them
 - `view`: read-only. No editing UI is shown

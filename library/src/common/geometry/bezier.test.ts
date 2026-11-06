@@ -140,17 +140,20 @@ describe("sampleLinePath", () => {
 });
 
 describe("segmentMidpoints", () => {
-  it("returns the middle of each straight segment in order", () => {
-    expect(segmentMidpoints([at(0, 0), at(4, 2), at(4, 10)], "straight")).toEqual([
-      at(2, 1),
-      at(4, 6),
-    ]);
-  });
-
   it("puts each midpoint of a curve on the drawn curve", () => {
     const points = [at(0, 0), at(5, 5), at(10, 0)];
     const sampled = sampleLinePath(points, "bezier", 2);
 
     expect(segmentMidpoints(points, "bezier")).toEqual([sampled[1], sampled[3]]);
+  });
+
+  it("keeps the midpoints on the drawn curve when two adjacent points are equal", () => {
+    const sampled = sampleLinePath([at(0, 0), at(5, 5), at(10, 0)], "bezier", 2);
+
+    expect(segmentMidpoints([at(0, 0), at(5, 5), at(5, 5), at(10, 0)], "bezier")).toEqual([
+      sampled[1],
+      at(5, 5),
+      sampled[3],
+    ]);
   });
 });

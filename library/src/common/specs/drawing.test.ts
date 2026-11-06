@@ -153,21 +153,15 @@ describe("Drawing with a drag", () => {
     });
   });
 
-  it("ends a line dragged onto another player just outside that player's marker", () => {
-    const play = openPlay(twoPlayersWithRoute());
+  it("ends a block dragged onto a defender right in front of the blocker at the defender", () => {
+    const play = openPlay(playData([player("ol", 10, 0), player("dl", 10, 2)]));
     play.editor.setTool("block");
 
-    play.drag(yd(10, 0), yd(20, 0));
+    play.drag(yd(10, 0), yd(10, 2));
 
-    expect(addedLine(play)?.end).toEqual(yd(19, 0));
-  });
-
-  it("draws the end of the line being drawn just outside a player under the pointer", () => {
-    const play = openDrawingFromA();
-
-    play.editor.pointerMove(yd(20.5, 0.5));
-
-    expect(play.editor.getFrame().scene.lines.at(-1)?.end).toEqual(yd(19, 0));
+    expect(play.session.getPlayData().lines).toMatchObject([
+      { kind: "block", startPlayerId: "ol", waypoints: [], end: yd(10, 2) },
+    ]);
   });
 
   it("keeps drawing with clicks when the starting press is released on the start player", () => {
@@ -175,6 +169,16 @@ describe("Drawing with a drag", () => {
     play.editor.setTool("route");
 
     play.drag(yd(10, 0), yd(10.5, 0.5));
+
+    expect(play.editor.getViewState().isDrawing).toBe(true);
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+  });
+
+  it("keeps drawing with clicks when the starting press drifts slightly off the start player", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("route");
+
+    play.drag(yd(10.8, 0), yd(11, 0));
 
     expect(play.editor.getViewState().isDrawing).toBe(true);
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
@@ -206,6 +210,27 @@ describe("Placing points", () => {
     play.editor.pointerUp(yd(10, 0));
 
     expect(play.editor.getViewState().isDrawing).toBe(true);
+  });
+
+  it("does not place the first point on the start player's marker", () => {
+    const play = openDrawingFromA();
+    play.editor.pointerUp(yd(10, 0));
+    play.editor.pointerDown(yd(10.5, 0.5));
+    play.editor.pointerDown(yd(14, 4));
+
+    play.editor.commitLine();
+
+    expect(addedLine(play)).toMatchObject({ waypoints: [], end: yd(14, 4) });
+  });
+
+  it("does not redraw while the cursor stays on the same grid point", () => {
+    const play = openDrawingFromA();
+    play.editor.pointerMove(yd(14, 4));
+    play.notified.mockClear();
+
+    play.editor.pointerMove(yd(14.1, 4.1));
+
+    expect(play.notified).not.toHaveBeenCalled();
   });
 
   it("does not place a point when the same grid point as the last one is pressed", () => {

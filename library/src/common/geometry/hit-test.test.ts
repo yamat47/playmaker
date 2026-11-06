@@ -149,6 +149,12 @@ describe("hitTestLine", () => {
     expect(hitTestLine([back, front], players, { lateralYard: 5, downfieldYard: 55 })).toBe(front);
   });
 
+  it("misses the part of a line that runs under the marker it ends on", () => {
+    const l = line("r1", { end: { lateralYard: 26, downfieldYard: 48 } });
+
+    expect(hitTestLine([l], players, { lateralYard: 26, downfieldYard: 48 })).toBeUndefined();
+  });
+
   it("returns undefined for an empty array", () => {
     expect(hitTestLine([], players, { lateralYard: 0, downfieldYard: 0 })).toBeUndefined();
   });

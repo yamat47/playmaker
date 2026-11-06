@@ -17,7 +17,6 @@ export { PlaySession } from "./editing/play-session.js";
 export { type ImageExportOptions, resolveImageExportSize } from "./export/image-export.js";
 export type { Formation, FormationPlayer } from "./formations/formation.js";
 export { FORMATION_PRESETS, getFormationPreset } from "./formations/presets.js";
-export { sampleLinePath } from "./geometry/bezier.js";
 export {
   type CanvasPoint,
   DEFAULT_FIELD_LEAGUE,
@@ -35,17 +34,16 @@ export {
   blockCapEndpoints,
   trimForArrowHead,
 } from "./geometry/line-decoration.js";
+export { drawnLinePath } from "./geometry/line-path.js";
 export { playerMarkerOutline } from "./geometry/player-marker.js";
 export { resolveKeyAction } from "./input/keymap.js";
 export { isOneOf } from "./model/guards.js";
 export {
-  indexPlayersById,
   LINE_INTERPOLATION_VALUES,
   LINE_KIND_VALUES,
   type Line,
   type LineInterpolation,
   type LineKind,
-  lineAnchorPoints,
   MAX_LINES,
 } from "./model/line.js";
 export { migratePlayData } from "./model/migration.js";

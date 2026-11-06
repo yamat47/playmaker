@@ -1,12 +1,21 @@
 import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerMove } from "../commands/player-commands.js";
+import { GRID_STEP_YARDS } from "../geometry/grid.js";
+import { pointDistance } from "../geometry/hit-test.js";
 import {
   DEFAULT_LINE_INTERPOLATION,
   type Line,
   type LineKind,
   MAX_WAYPOINTS_PER_LINE,
 } from "../model/line.js";
-import type { FieldPosition, Player } from "../model/player.js";
+import { type FieldPosition, PLAYER_RADIUS_YARDS, type Player } from "../model/player.js";
+
+/**
+ * How far the pointer may travel during a press and still count as a click. A press that trembles
+ * a little must not move a handle that sits off the grid, such as an insert handle, to the nearest
+ * grid point.
+ */
+export const CLICK_SLOP_YARDS = GRID_STEP_YARDS / 2;
 
 /**
  * The target moved by a drag. A waypoint drag keeps the line's waypoints as they were when grabbed.
@@ -20,13 +29,7 @@ export type DragTarget =
       readonly index: number;
       readonly waypoints: readonly FieldPosition[];
     }
-  | {
-      readonly kind: "endpoint";
-      readonly lineId: string;
-      readonly startPlayerId: string;
-      /** The point the line comes from on its way to the end: its last waypoint or its start. */
-      readonly from: FieldPosition;
-    }
+  | { readonly kind: "endpoint"; readonly lineId: string }
   | {
       /** A new waypoint being pulled out of the middle of a segment, inserted at index. */
       readonly kind: "insert";
@@ -42,7 +45,10 @@ export interface DragInteraction {
   readonly origin: FieldPosition;
   /** The target position minus the pointer. Kept until release so the grabbed point stays put. */
   readonly grabOffset: FieldPosition;
-  /** The current position of the target, after being clamped into the window. */
+  /**
+   * The current position of the target, after being clamped into the window. Stays at origin
+   * until the pointer has traveled CLICK_SLOP_YARDS.
+   */
   readonly current: FieldPosition;
   /** Whether a dragged player leaves its lines where they are (Option or Alt held). */
   readonly alone: boolean;
@@ -54,17 +60,19 @@ export interface DrawInteraction {
   readonly kind: LineKind;
   readonly startPlayerId: string;
   /**
-   * The starting player's position when drawing began. Used to check whether the first placed
-   * point is at the same position.
+   * The starting player's position when drawing began. Used to keep the first placed point off
+   * the starting player's marker.
    */
   readonly start: FieldPosition;
+  /** Where the press that started the drawing went down, somewhere on the starting player. */
+  readonly pressedAt: FieldPosition;
   /** The placed points. The last one becomes the end point and the rest become waypoints. */
   readonly points: readonly FieldPosition[];
   readonly cursor: FieldPosition;
   /**
-   * Whether the press that started the drawing is still held. Releasing it away from the start
-   * player finishes a straight line in one drag; releasing it on the player leaves the drawing
-   * open for clicks.
+   * Whether the press that started the drawing is still held. Releasing it off the start player,
+   * after the pointer has traveled CLICK_SLOP_YARDS, finishes a straight line in one drag;
+   * releasing it on the player, or after a mere tremble, leaves the drawing open for clicks.
    */
   readonly pressing: boolean;
 }
@@ -155,13 +163,18 @@ export function splitDraftPoints(
   return end === undefined ? undefined : { waypoints: points.slice(0, -1), end };
 }
 
-/** A line always starts at a player, so drawing begins from a player. */
-export function startDrawing(player: Player, kind: LineKind): DrawInteraction {
+/** A line always starts at a player, so drawing begins from a press on a player. */
+export function startDrawing(
+  player: Player,
+  kind: LineKind,
+  pressedAt: FieldPosition,
+): DrawInteraction {
   return {
     type: "draw-line",
     kind,
     startPlayerId: player.id,
     start: player.position,
+    pressedAt,
     points: [],
     cursor: player.position,
     pressing: true,
@@ -169,16 +182,20 @@ export function startDrawing(player: Player, kind: LineKind): DrawInteraction {
 }
 
 /**
- * Places a point at point. When it is at the same position as the previous point (or the starting
- * player if there are no points yet), or the point limit has been reached, only the cursor advances
- * and no point is placed. Same positions are rejected because committing with a double-click
- * delivers pointerdown twice, which would place another point right on top of the previous one.
- * Rejecting the starting player's position also keeps a committed line from having zero length,
- * which would be invisible and impossible to select.
+ * Places a point at point. When it is at the same position as the previous point, when it is the
+ * first point and lies on the starting player's marker, or when the point limit has been reached,
+ * only the cursor advances and no point is placed. Same positions are rejected because committing
+ * with a double-click delivers pointerdown twice, which would place another point right on top of
+ * the previous one. A first point on the marker would begin the line hidden under it, and a line
+ * ending there would be invisible and impossible to select.
  */
 export function addDraftPoint(draw: DrawInteraction, point: FieldPosition): DrawInteraction {
-  const last = draw.points.at(-1) ?? draw.start;
-  const accepts = !isSamePosition(last, point) && draw.points.length < MAX_DRAFT_POINTS;
+  const last = draw.points.at(-1);
+  const clear =
+    last === undefined
+      ? pointDistance(point, draw.start) > PLAYER_RADIUS_YARDS
+      : !isSamePosition(last, point);
+  const accepts = clear && draw.points.length < MAX_DRAFT_POINTS;
   return { ...draw, points: accepts ? [...draw.points, point] : draw.points, cursor: point };
 }
 

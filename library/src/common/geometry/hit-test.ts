@@ -1,7 +1,7 @@
-import { indexPlayersById, type Line, lineAnchorPoints } from "../model/line.js";
+import type { Line } from "../model/line.js";
 import type { FieldPosition, Player } from "../model/player.js";
 import { PLAYER_RADIUS_YARDS } from "../model/player.js";
-import { sampleLinePath } from "./bezier.js";
+import { drawnLinePath } from "./line-path.js";
 import { segments } from "./polyline.js";
 
 /**
@@ -63,8 +63,9 @@ function distanceToPolyline(p: FieldPosition, points: readonly FieldPosition[]):
 
 /**
  * Returns the topmost drawn line overlapping target. The distance is measured to the same
- * polyline used for drawing, so curves are hit exactly as they appear. A line without its start
- * player is not drawn, so it is not hit either.
+ * polyline used for drawing (`drawnLinePath`), so curves are hit exactly as they appear, and the
+ * part of a line hidden under the marker it ends on is not hit. A line without its start player
+ * is not drawn, so it is not hit either.
  */
 export function hitTestLine(
   lines: readonly Line[],
@@ -75,14 +76,8 @@ export function hitTestLine(
   if (toleranceYards <= 0) {
     throw new Error("Playmaker: toleranceYards must be a positive number.");
   }
-  const byId = indexPlayersById(players);
   for (const line of [...lines].reverse()) {
-    const anchors = lineAnchorPoints(line, byId);
-    if (anchors === undefined) {
-      continue;
-    }
-    const polyline = sampleLinePath(anchors, line.interpolation);
-    if (distanceToPolyline(target, polyline) <= toleranceYards) {
+    if (distanceToPolyline(target, drawnLinePath(line, players)) <= toleranceYards) {
       return line;
     }
   }
@@ -99,6 +94,7 @@ export function pointDistance(a: FieldPosition, b: FieldPosition): number {
 /** The handles shown on the selected line. */
 export interface LineHandles {
   readonly waypointHandles: readonly FieldPosition[];
+  /** Where the line is drawn to, which is the end point unless the line stops at a marker. */
   readonly endpointHandle: FieldPosition;
   /**
    * Halfway along each segment; dragging one inserts a waypoint there, which bends the line.

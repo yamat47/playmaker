@@ -110,8 +110,12 @@ export const NO_MODIFIERS: PointerModifiers = { altKey: false };
 /** Pointer operations (in yard space). */
 export interface IEditorGestures {
   pointerDown(pos: FieldPosition): void;
+  /**
+   * Also called at the last position when a modifier key changes during a press, so a drop
+   * follows the keys held when it was last drawn.
+   */
   pointerMove(pos: FieldPosition, modifiers?: PointerModifiers): void;
-  pointerUp(pos: FieldPosition, modifiers?: PointerModifiers): void;
+  pointerUp(pos: FieldPosition): void;
   /**
    * Finishes the line being drawn, or removes the waypoint of the selected line under pos.
    * The two presses of the double-click have already arrived as pointerDown and pointerUp.

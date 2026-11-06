@@ -53,7 +53,7 @@ export function openPlay(data: unknown): PlayDriver {
     drag(from, to, modifiers) {
       session.controller.pointerDown(from);
       session.controller.pointerMove(to, modifiers);
-      session.controller.pointerUp(to, modifiers);
+      session.controller.pointerUp(to);
     },
     startLine(from, kind = "route") {
       session.controller.setTool(kind);

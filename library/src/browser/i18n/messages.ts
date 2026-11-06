@@ -67,7 +67,7 @@ export const en: Messages = {
   lineToolHint:
     "Drag from a player to draw a straight line, or click a player and then click to place bends.",
   bendHint:
-    "Drag a round handle on the line to add a bend. Double-click a square bend, or click it and press Delete, to remove it.",
+    "Drag a small hollow circle halfway along a segment to add a bend there. Double-click a square bend, or click it and press Delete, to remove it.",
   player: "Player",
   line: "Line",
   label: "Label",

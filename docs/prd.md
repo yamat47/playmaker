@@ -109,7 +109,7 @@ Three kinds of lines can be drawn.
 
 Each kind has its own drawing tool. The kind is chosen before drawing, the tool stays chosen for the next line, and the kind can still be changed afterward.
 A line is drawn from a player. Dragging from the player draws a straight line in one motion; clicking the player and then clicking places bends one at a time, and a double-click or Enter finishes the line.
-A point of a line placed on another player stops just outside that player's marker, so the arrowhead or the block bar stays in view.
+A line that ends on another player is drawn up to the edge of that player's marker, so the arrowhead or the block bar stays in view.
 The kind is distinguished by the end marker and the line style, not by color. Every kind can be drawn either as a straight line or as a curve that passes through all control points.
 Color can be set per line and reset to the default. Every line of a kind has the same width.
 

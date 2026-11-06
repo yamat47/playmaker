@@ -268,6 +268,12 @@ describe("Committing a line", () => {
 });
 
 describe("Canceling a drawing", () => {
+  it("allows Undo while drawing even before any edit is committed", () => {
+    const play = openDrawingFromA();
+
+    expect(play.editor.getViewState().canUndo).toBe(true);
+  });
+
   it("cancels only the last placed point when Undo runs while drawing", () => {
     const play = openDrawingFromA();
     play.editor.pointerDown(yd(14, 0));

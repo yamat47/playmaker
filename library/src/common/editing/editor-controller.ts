@@ -101,7 +101,8 @@ export class EditorController extends Disposable implements IEditorController {
         this.getSelectedPlayer() === undefined && this.getSelectedLine() === undefined
           ? NO_SELECTION
           : this.selection,
-      canUndo: this.commands.canUndo,
+      // Undo while drawing removes the last placed point, or stops drawing when there is none.
+      canUndo: this.commands.canUndo || this.interaction?.type === "draw-line",
       canRedo: this.commands.canRedo,
       fieldZone: this.model.getFieldZone(),
       isDrawing: this.interaction?.type === "draw-line",

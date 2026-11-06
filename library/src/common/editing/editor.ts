@@ -63,6 +63,7 @@ export type EditorOverlay =
 export interface EditorViewState {
   readonly tool: EditorTool;
   readonly selection: EditorSelection;
+  /** Also true while drawing, where Undo takes back the drawing rather than a committed edit. */
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly fieldZone: FieldZone;

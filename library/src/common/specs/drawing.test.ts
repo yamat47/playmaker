@@ -121,6 +121,23 @@ describe("Drawing with a drag", () => {
     });
   });
 
+  it("ends a line dragged onto another player just outside that player's marker", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("block");
+
+    play.drag(yd(10, 0), yd(20, 0));
+
+    expect(addedLine(play)?.end).toEqual(yd(19, 0));
+  });
+
+  it("draws the end of the line being drawn just outside a player under the pointer", () => {
+    const play = openDrawingFromA();
+
+    play.editor.pointerMove(yd(20.5, 0.5));
+
+    expect(play.editor.getFrame().scene.lines.at(-1)?.end).toEqual(yd(19, 0));
+  });
+
   it("keeps drawing with clicks when the starting press is released on the start player", () => {
     const play = openPlay(twoPlayersWithRoute());
     play.editor.setTool("route");

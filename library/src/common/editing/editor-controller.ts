@@ -20,6 +20,7 @@ import { type Formation, instantiateFormation } from "../formations/formation.js
 import { clampToZoneWindow } from "../geometry/field.js";
 import { snapToGrid } from "../geometry/grid.js";
 import { hitLineHandle, hitTestLine, hitTestPlayer, pointDistance } from "../geometry/hit-test.js";
+import { stopShortOfPlayer } from "../geometry/line-end.js";
 import type { IIdFactory } from "../model/id-factory.js";
 import { type Line, type LineKind, MAX_LINES } from "../model/line.js";
 import type { FieldZone } from "../model/play-data.js";
@@ -168,8 +169,8 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.batch(() =>
       this.setInteraction(
         interaction.type === "draw-line"
-          ? { ...interaction, cursor: this.clampToField(pos) }
-          : { ...interaction, current: this.clampToField(dragPosition(interaction, pos)) },
+          ? { ...interaction, cursor: this.placeDraftPoint(interaction, pos) }
+          : { ...interaction, current: this.placeDragged(interaction, pos) },
       ),
     );
   }
@@ -191,7 +192,7 @@ export class EditorController extends Disposable implements IEditorController {
       if (isSamePosition(moved, interaction.origin)) {
         return;
       }
-      const to = this.clampToField(moved);
+      const to = this.placeDragged(interaction, pos);
       // A move that lands on the same grid point does not change the diagram, so it is put into
       // neither the history nor a notification.
       if (isSamePosition(to, interaction.origin)) {
@@ -345,6 +346,34 @@ export class EditorController extends Disposable implements IEditorController {
     return snapToGrid(clampToZoneWindow(pos, this.model.getSnapshot().field));
   }
 
+  /**
+   * Where a point of the line being drawn goes. A point on another player stops just outside that
+   * player's marker, whether it ends up a waypoint or the end.
+   */
+  private placeDraftPoint(draw: DrawInteraction, pos: FieldPosition): FieldPosition {
+    return this.stopShort(
+      this.clampToField(pos),
+      draw.points.at(-1) ?? draw.start,
+      draw.startPlayerId,
+    );
+  }
+
+  /** Where the dragged target goes. A dragged end stops short of a player like a drawn one. */
+  private placeDragged(drag: DragInteraction, pos: FieldPosition): FieldPosition {
+    const at = this.clampToField(dragPosition(drag, pos));
+    const { target } = drag;
+    return target.kind === "endpoint" ? this.stopShort(at, target.from, target.startPlayerId) : at;
+  }
+
+  private stopShort(
+    point: FieldPosition,
+    from: FieldPosition,
+    startPlayerId: string,
+  ): FieldPosition {
+    const others = this.model.getSnapshot().players.filter((p) => p.id !== startPlayerId);
+    return stopShortOfPlayer(point, from, others);
+  }
+
   private dropCommand(drag: DragInteraction, to: FieldPosition): ICommand {
     const drop = dragPatch(drag.target, to);
     return drop.kind === "player"
@@ -409,7 +438,12 @@ export class EditorController extends Disposable implements IEditorController {
     }
     const target: DragTarget =
       hit.kind === "endpoint"
-        ? { kind: "endpoint", lineId: line.id }
+        ? {
+            kind: "endpoint",
+            lineId: line.id,
+            startPlayerId: line.startPlayerId,
+            from: line.waypoints.at(-1) ?? this.model.getPlayer(line.startPlayerId).position,
+          }
         : { kind: "waypoint", lineId: line.id, index: hit.index, waypoints: line.waypoints };
     return startDrag(target, hit.point, pos);
   }
@@ -428,7 +462,7 @@ export class EditorController extends Disposable implements IEditorController {
         this.setInteraction(released);
         return;
       }
-      this.setInteraction(addDraftPoint(released, this.clampToField(pos)));
+      this.setInteraction(addDraftPoint(released, this.placeDraftPoint(released, pos)));
       this.commitLine();
     });
   }
@@ -438,7 +472,7 @@ export class EditorController extends Disposable implements IEditorController {
     if (interaction?.type === "draw-line") {
       // A new press means the one that started the drawing has ended, even if its release was lost.
       const next = { ...interaction, pressing: false };
-      this.setInteraction(addDraftPoint(next, this.clampToField(pos)));
+      this.setInteraction(addDraftPoint(next, this.placeDraftPoint(next, pos)));
       return;
     }
     if (!isToolAvailable(kind, this.getViewState())) {

@@ -20,7 +20,13 @@ export type DragTarget =
       readonly index: number;
       readonly waypoints: readonly FieldPosition[];
     }
-  | { readonly kind: "endpoint"; readonly lineId: string };
+  | {
+      readonly kind: "endpoint";
+      readonly lineId: string;
+      readonly startPlayerId: string;
+      /** The point the line comes from on its way to the end: its last waypoint or its start. */
+      readonly from: FieldPosition;
+    };
 
 export interface DragInteraction {
   readonly type: "drag";

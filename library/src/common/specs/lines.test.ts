@@ -135,6 +135,28 @@ describe("Dragging a waypoint", () => {
 });
 
 describe("Dragging the end point", () => {
+  it("stops the end just outside a player it is dropped on, on the side the line comes from", () => {
+    const play = openWithLineSelected();
+
+    play.drag(yd(25, 5), yd(20, 0));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.end).toEqual(yd(19, 0.5));
+  });
+
+  it("stops the end of a line without bends on the side of its start player", () => {
+    const play = openPlay(
+      playData(
+        [player("a", 10, 0), player("b", 20, 0)],
+        [{ ...line("s"), waypoints: [], end: yd(14, 4) }],
+      ),
+    );
+    play.click(yd(14, 4));
+
+    play.drag(yd(14, 4), yd(20, 0));
+
+    expect(lineOf(play.session.getPlayData(), "s")?.end).toEqual(yd(19, 0));
+  });
+
   it("moves only the end when the end of the selected line is dragged", () => {
     const play = openWithLineSelected();
 

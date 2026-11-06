@@ -102,6 +102,38 @@ describe("Starting a drawing", () => {
   });
 });
 
+describe("Adjusting lines with a line tool", () => {
+  it("drags the end of the line just drawn without leaving the line tool", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("route");
+    play.drag(yd(10, 0), yd(14, 8));
+
+    play.drag(yd(14, 8), yd(16, 10));
+
+    expect(addedLine(play)?.end).toEqual(yd(16, 10));
+    expect(play.editor.getViewState().tool).toBe("route");
+  });
+
+  it("selects a line pressed with a line tool", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.editor.setTool("block");
+
+    play.click(yd(25, 5));
+
+    expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
+  });
+
+  it("clears the selection when a line tool presses empty space", () => {
+    const play = openPlay(twoPlayersWithRoute());
+    play.click(yd(25, 5));
+    play.editor.setTool("route");
+
+    play.click(yd(40, -10));
+
+    expect(play.editor.getViewState().selection).toEqual({ kind: "none" });
+  });
+});
+
 describe("Drawing with a drag", () => {
   it("adds a straight line ending where the drag from a player is released", () => {
     const play = openPlay(twoPlayersWithRoute());

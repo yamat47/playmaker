@@ -466,8 +466,8 @@ export class EditorController extends Disposable implements IEditorController {
 
   /**
    * Starts dragging the handle of the selected line under pos and returns true, or returns false
-   * when there is none. The select tool tries this before anything else, so a handle can be
-   * edited even when it overlaps a player or another line.
+   * when there is none. The select and line tools try this before anything else, so a handle can
+   * be edited even when it overlaps a player or another line.
    */
   private grabHandle(pos: FieldPosition): boolean {
     const handle = this.hitSelectedLineHandle(pos);
@@ -549,13 +549,17 @@ export class EditorController extends Disposable implements IEditorController {
       this.setInteraction(addDraftPoint(next, this.placeDraftPoint(next, pos)));
       return;
     }
-    if (!isToolAvailable(kind, this.getViewState())) {
+    // A press on a player starts a line. Anywhere else a line tool works like the select tool, so
+    // the line just drawn can be adjusted without leaving the tool.
+    if (this.grabHandle(pos)) {
       return;
     }
-    const data = this.model.getSnapshot();
-    // Ignore an attempt to start anywhere other than on a player.
-    const player = hitTestPlayer(data.players, pos);
+    const player = hitTestPlayer(this.model.getSnapshot().players, pos);
     if (player === undefined) {
+      this.selectLineAt(pos);
+      return;
+    }
+    if (!isToolAvailable(kind, this.getViewState())) {
       return;
     }
     // Left selected, the panel and the handles would keep pointing at another element while the

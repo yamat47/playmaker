@@ -150,6 +150,22 @@ describe("Keyboard", () => {
     expect(playmaker.getPlayData().players).toEqual([]);
   });
 
+  it("finishes the line with Enter after Undo is clicked mid-drawing", async () => {
+    const { container, playmaker } = mount();
+    await addPlayerAtSpot(container);
+    const canvas = canvasIn(container);
+    await button("Draw line").click();
+    await userEvent.click(canvas, { position: SPOT });
+    await userEvent.click(canvas, { position: { x: 360, y: 200 } });
+    await userEvent.click(canvas, { position: OTHER_SPOT });
+
+    await button("Undo").click();
+    await userEvent.keyboard("{Enter}");
+
+    expect(playmaker.getPlayData().lines).toHaveLength(1);
+    expect(must(playmaker.getPlayData().lines[0]).waypoints).toEqual([]);
+  });
+
   it("undoes the last edit with Ctrl+Z right after a toolbar button is pressed", async () => {
     const { container, playmaker } = mount();
     await addPlayerAtSpot(container);
@@ -247,9 +263,9 @@ describe("Reload", () => {
     expect(playmaker.getPlayData().players).toHaveLength(1);
   });
 
-  it("moves focus to the canvas when a reload happens while the toolbar has focus", async () => {
+  it("moves focus to the canvas when a reload happens while the toolbar has focus", () => {
     const { container, playmaker } = mount();
-    await button("Select").click();
+    button("Select").element().focus();
 
     playmaker.setPlayData(playmaker.getPlayData());
 

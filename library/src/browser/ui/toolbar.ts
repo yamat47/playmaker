@@ -70,6 +70,10 @@ export class Toolbar extends Disposable {
     button.type = "button";
     button.textContent = label;
     button.className = "playmaker-toolbar__button";
+    // A pointer press leaves the focus where it was, usually the canvas. Focused, the button would
+    // take Enter for itself, so Enter pressed to finish a line after clicking Undo mid-drawing
+    // would press Undo again. Tab still reaches the buttons.
+    button.addEventListener("mousedown", (e) => e.preventDefault());
     button.addEventListener("click", () => {
       if (button.getAttribute("aria-disabled") !== "true") {
         onClick();

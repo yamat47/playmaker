@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { FORMATION_PRESETS, type PlayData, Playmaker, type PlaymakerOptions } from "./playmaker.js";
+import { type PlayData, Playmaker, type PlaymakerOptions } from "./playmaker.js";
 import { must } from "./test-support/must.js";
 
 // Big enough to leave room for players on the canvas beside the 200px panel and the toolbar.
@@ -177,15 +177,6 @@ describe("Toolbar", () => {
     await button("Own red zone").click();
 
     expect(playmaker.fieldZone).toBe("own-redzone");
-  });
-
-  it("places the players of the formation when a formation is selected", async () => {
-    const { playmaker } = mount();
-    const formation = must(FORMATION_PRESETS[0]);
-
-    await userEvent.selectOptions(page.getByRole("combobox", { name: "Formation" }), formation.id);
-
-    expect(playmaker.getPlayData().players).toHaveLength(formation.players.length);
   });
 });
 

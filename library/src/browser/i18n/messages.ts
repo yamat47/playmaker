@@ -6,7 +6,6 @@ import {
   type LineKind,
   type PlayerFill,
   type PlayerShape,
-  type TeamSide,
 } from "../../common/index.js";
 import type { SwatchToken } from "../theme/palette.js";
 
@@ -25,10 +24,6 @@ export interface Messages {
   readonly redo: string;
   readonly delete: string;
   readonly zone: Readonly<Record<FieldZone, string>>;
-  readonly formation: string;
-  readonly loadFormation: string;
-  readonly side: Readonly<Record<TeamSide, string>>;
-  readonly formationLimit: (maxPlayers: number) => string;
   readonly playerLimit: (maxPlayers: number) => string;
   readonly lineLimit: (maxLines: number) => string;
   readonly selectionHint: string;
@@ -60,11 +55,6 @@ export const en: Messages = {
   redo: "Redo",
   delete: "Delete",
   zone: FIELD_ZONE_LABELS,
-  formation: "Formation",
-  loadFormation: "Load formation…",
-  side: { offense: "Offense", defense: "Defense" },
-  formationLimit: (maxPlayers) =>
-    `Formations that would put more than ${maxPlayers} players on the field cannot be loaded`,
   playerLimit: (maxPlayers) => `Up to ${maxPlayers} players`,
   lineLimit: (maxLines) => `Up to ${maxLines} lines`,
   selectionHint: "Select a player or a line to edit its properties",

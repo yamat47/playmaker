@@ -127,20 +127,6 @@
   cursor: not-allowed;
 }
 
-.playmaker-toolbar__select {
-  font: inherit;
-  padding: 5px 8px;
-  border: 1px solid var(--_playmaker-ui-border);
-  border-radius: 4px;
-  background: var(--_playmaker-ui-surface);
-  color: var(--_playmaker-ui-text);
-  cursor: pointer;
-}
-
-.playmaker-toolbar__select:hover {
-  border-color: var(--_playmaker-ui-text);
-}
-
 .playmaker-toolbar__sep {
   width: 1px;
   align-self: stretch;

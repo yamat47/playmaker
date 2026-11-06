@@ -2,11 +2,9 @@ export type { Event } from "./base/event.js";
 export { Disposable, DisposableStore, type IDisposable, toDisposable } from "./base/lifecycle.js";
 export { computeFieldMetrics, type FieldMetrics } from "./design/metrics.js";
 export {
-  canLoadFormation,
   EDITOR_TOOL_VALUES,
   type EditorOverlay,
   type EditorTool,
-  type EditorViewState,
   type IEditorActions,
   type IEditorGestures,
   type IEditorScene,
@@ -74,4 +72,4 @@ export {
 } from "./model/player.js";
 export type { PlayCategory, PlayPreset } from "./plays/play-preset.js";
 export { getPlayPreset, PLAY_PRESETS } from "./plays/presets.js";
-export { TEAM_SIDE_VALUES, type TeamSide } from "./presets/shared.js";
+export type { TeamSide } from "./presets/shared.js";

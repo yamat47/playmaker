@@ -3,6 +3,9 @@
 // round-trip PlayData.
 import {
   CURRENT_PLAY_DATA_VERSION,
+  FORMATION_PRESETS,
+  getFormationPreset,
+  getPlayPreset,
   type Line,
   PLAY_PRESETS,
   PLAYMAKER_LOCALE_VALUES,
@@ -31,6 +34,7 @@ const jsonArea = need("json", HTMLTextAreaElement);
 const modeButton = need("mode-toggle", HTMLButtonElement);
 const localeSelect = need("locale", HTMLSelectElement);
 const playSelect = need("play", HTMLSelectElement);
+const formationSelect = need("formation", HTMLSelectElement);
 
 let changeCount = 0;
 let mode: PlaymakerMode = "edit";
@@ -129,24 +133,43 @@ need("export-png", HTMLButtonElement).addEventListener("click", () => {
   });
 });
 
-// Every bundled play, so a rendering change can be checked against each shape of diagram.
-const placeholder = document.createElement("option");
-placeholder.value = "";
-placeholder.textContent = "Load a play…";
-playSelect.appendChild(placeholder);
-for (const preset of PLAY_PRESETS) {
-  const option = document.createElement("option");
-  option.value = preset.id;
-  option.textContent = `${preset.name} (${preset.side})`;
-  playSelect.appendChild(option);
+function appendPresetOptions(
+  select: HTMLSelectElement,
+  placeholderText: string,
+  presets: readonly { readonly id: string; readonly name: string; readonly side: string }[],
+): void {
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = placeholderText;
+  select.appendChild(placeholder);
+  for (const preset of presets) {
+    const option = document.createElement("option");
+    option.value = preset.id;
+    option.textContent = `${preset.name} (${preset.side})`;
+    select.appendChild(option);
+  }
 }
+
+// Every bundled play, so a rendering change can be checked against each shape of diagram.
+appendPresetOptions(playSelect, "Load a play…", PLAY_PRESETS);
 playSelect.value = PLAY_PRESETS[0]?.id ?? "";
 playSelect.addEventListener("change", () => {
-  const preset = PLAY_PRESETS.find((p) => p.id === playSelect.value);
+  const preset = getPlayPreset(playSelect.value);
   if (preset !== undefined) {
     playmaker.setPlayData(preset.data);
     refreshJson();
   }
+});
+
+// The toolbar has no formation picker; a host lists formations itself and calls loadFormation.
+appendPresetOptions(formationSelect, "Load a formation…", FORMATION_PRESETS);
+formationSelect.addEventListener("change", () => {
+  const formation = getFormationPreset(formationSelect.value);
+  if (formation !== undefined && !playmaker.loadFormation(formation)) {
+    statusEl.textContent = `${formation.name} does not fit: it would exceed the player limit`;
+  }
+  // Back to the placeholder, so the same formation can be layered again.
+  formationSelect.value = "";
 });
 
 need("load-stress", HTMLButtonElement).addEventListener("click", () => {

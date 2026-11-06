@@ -1,18 +1,13 @@
 import {
-  canLoadFormation,
   Disposable,
   EDITOR_TOOL_VALUES,
   type EditorTool,
-  type EditorViewState,
   FIELD_ZONE_VALUES,
   type FieldZone,
-  FORMATION_PRESETS,
-  getFormationPreset,
   type IEditorUi,
   isToolAvailable,
   MAX_LINES,
   MAX_PLAYERS,
-  TEAM_SIDE_VALUES,
   toDisposable,
 } from "../../common/index.js";
 import type { Messages } from "../i18n/index.js";
@@ -24,32 +19,25 @@ import type { Messages } from "../i18n/index.js";
  */
 function setEnabled(button: HTMLButtonElement, enabled: boolean, reason?: string): void {
   button.setAttribute("aria-disabled", String(!enabled));
-  setTitle(button, enabled ? undefined : reason);
-}
-
-function setTitle(element: HTMLElement, title: string | undefined): void {
-  if (title === undefined) {
-    element.removeAttribute("title");
+  if (!enabled && reason !== undefined) {
+    button.title = reason;
   } else {
-    element.title = title;
+    button.removeAttribute("title");
   }
 }
 
 export class Toolbar extends Disposable {
   readonly element: HTMLElement;
-  private readonly messages: Messages;
   private readonly toolButtons = new Map<EditorTool, HTMLButtonElement>();
   private readonly zoneButtons = new Map<FieldZone, HTMLButtonElement>();
   private readonly undoButton: HTMLButtonElement;
   private readonly redoButton: HTMLButtonElement;
   private readonly deleteButton: HTMLButtonElement;
-  private readonly formationPicker: HTMLSelectElement;
   // Text shown as the reason on parts that cannot be pressed because a count limit is reached.
   private readonly toolUnavailableReasons: Readonly<Partial<Record<EditorTool, string>>>;
 
   constructor(parent: HTMLElement, controller: IEditorUi, messages: Messages) {
     super();
-    this.messages = messages;
     this.toolUnavailableReasons = {
       "add-player": messages.playerLimit(MAX_PLAYERS),
       "draw-line": messages.lineLimit(MAX_LINES),
@@ -70,8 +58,6 @@ export class Toolbar extends Disposable {
       const btn = this.addButton(messages.zone[zone], () => controller.setFieldZone(zone));
       this.zoneButtons.set(zone, btn);
     }
-    this.addSeparator();
-    this.formationPicker = this.addFormationPicker(controller);
 
     parent.appendChild(this.element);
     this._register(toDisposable(() => this.element.remove()));
@@ -100,44 +86,6 @@ export class Toolbar extends Disposable {
     this.element.appendChild(sep);
   }
 
-  /**
-   * Returns to the placeholder after a choice. If the chosen formation stayed displayed,
-   * choosing the same formation again would not fire change, so it could not be layered again.
-   */
-  private addFormationPicker(controller: IEditorUi): HTMLSelectElement {
-    const select = document.createElement("select");
-    select.className = "playmaker-toolbar__select";
-    select.setAttribute("aria-label", this.messages.formation);
-
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = this.messages.loadFormation;
-    select.appendChild(placeholder);
-
-    for (const side of TEAM_SIDE_VALUES) {
-      const group = document.createElement("optgroup");
-      group.label = this.messages.side[side];
-      for (const formation of FORMATION_PRESETS.filter((f) => f.side === side)) {
-        const option = document.createElement("option");
-        option.value = formation.id;
-        option.textContent = formation.name;
-        group.appendChild(option);
-      }
-      select.appendChild(group);
-    }
-
-    select.addEventListener("change", () => {
-      const preset = getFormationPreset(select.value);
-      if (preset !== undefined) {
-        controller.loadFormation(preset);
-      }
-      select.value = "";
-    });
-
-    this.element.appendChild(select);
-    return select;
-  }
-
   private sync(controller: IEditorUi): void {
     const state = controller.getViewState();
     for (const [tool, btn] of this.toolButtons) {
@@ -150,19 +98,5 @@ export class Toolbar extends Disposable {
     setEnabled(this.undoButton, state.canUndo);
     setEnabled(this.redoButton, state.canRedo);
     setEnabled(this.deleteButton, state.selection.kind !== "none");
-    this.syncFormationPicker(state);
-  }
-
-  private syncFormationPicker(state: EditorViewState): void {
-    let isAnyUnavailable = false;
-    for (const option of this.formationPicker.options) {
-      const formation = getFormationPreset(option.value);
-      option.disabled = formation !== undefined && !canLoadFormation(formation, state);
-      isAnyUnavailable ||= option.disabled;
-    }
-    setTitle(
-      this.formationPicker,
-      isAnyUnavailable ? this.messages.formationLimit(MAX_PLAYERS) : undefined,
-    );
   }
 }

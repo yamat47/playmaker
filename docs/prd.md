@@ -118,7 +118,7 @@ In edit mode the following editing operations are available:
 - Add / move / delete players and edit their properties (label, shape, color and fill)
 - Draw / delete lines, edit their properties (color, width, interpolation), and edit waypoints
 - Undo / Redo
-- Load formation templates
+- Load formation templates (the commercial software lists the formations and loads the chosen one through the API; the toolbar has no formation picker)
 - Switch the field zone
 
 The toolbar and property panel are placed around the Canvas.

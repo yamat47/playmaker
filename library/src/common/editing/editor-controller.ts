@@ -31,7 +31,6 @@ import {
   type Player,
 } from "../model/player.js";
 import {
-  canLoadFormation,
   type EditorFrame,
   type EditorSelection,
   type EditorTool,
@@ -270,25 +269,28 @@ export class EditorController extends Disposable implements IEditorController {
     });
   }
 
+  /**
+   * Appends the players to the existing diagram and returns true. Returns false without placing
+   * anyone when they would exceed MAX_PLAYERS. PlaySession passes only normalized formations, and
+   * those always have a player.
+   */
   loadFormation(formation: Formation): boolean {
-    if (!canLoadFormation(formation, this.getViewState())) {
+    const { players } = this.model.getSnapshot();
+    if (formation.players.length > MAX_PLAYERS - players.length) {
       return false;
     }
-    const { players } = this.model.getSnapshot();
     const added = instantiateFormation(
       formation,
       this.ids,
       players.map((p) => p.id),
     );
-    return this.notifier.batch(() => {
-      const loaded = this.commands.execute(new LoadFormationCommand(added));
-      if (loaded) {
-        // After loading, the in-progress operation and old selection mean nothing, so clear them.
-        this.setInteraction(undefined);
-        this.setSelection(NO_SELECTION);
-      }
-      return loaded;
+    this.notifier.batch(() => {
+      this.commands.execute(new LoadFormationCommand(added));
+      // After loading, the in-progress operation and old selection mean nothing, so clear them.
+      this.setInteraction(undefined);
+      this.setSelection(NO_SELECTION);
     });
+    return true;
   }
 
   undo(): void {

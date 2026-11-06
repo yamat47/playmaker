@@ -1,7 +1,6 @@
 import type { Event } from "../base/event.js";
 import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerPatch } from "../commands/player-commands.js";
-import type { Formation } from "../formations/formation.js";
 import type { Line } from "../model/line.js";
 import type { FieldZone, PlayData } from "../model/play-data.js";
 import type { FieldPosition, Player } from "../model/player.js";
@@ -38,13 +37,6 @@ export function isToolAvailable(tool: EditorTool, state: EditorViewState): boole
     case "select":
       return true;
   }
-}
-
-/**
- * False for a formation that would exceed the player limit, since none of its players are placed.
- */
-export function canLoadFormation(formation: Formation, state: EditorViewState): boolean {
-  return formation.players.length <= state.remainingPlayerSlots;
 }
 
 /** The play diagram to draw. The version is needed only when saving, so it is left out. */
@@ -120,11 +112,6 @@ export interface IEditorActions {
   updateSelectedPlayer(patch: PlayerPatch): void;
   updateSelectedLine(patch: LinePatch): void;
   setFieldZone(zone: FieldZone): void;
-  /**
-   * Appends the players to the existing diagram and returns true once they are placed.
-   * Does nothing and returns false when no player can be placed or the limit would be exceeded.
-   */
-  loadFormation(formation: Formation): boolean;
   /** While drawing, removes the last placed point and leaves the history untouched. */
   undo(): void;
   redo(): void;

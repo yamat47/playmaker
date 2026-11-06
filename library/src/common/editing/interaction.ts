@@ -7,12 +7,19 @@ import {
   MAX_WAYPOINTS_PER_LINE,
 } from "../model/line.js";
 import type { FieldPosition, Player } from "../model/player.js";
-import type { SceneData } from "./editor.js";
 
-/** The target moved by a drag. */
+/**
+ * The target moved by a drag. A waypoint drag keeps the line's waypoints as they were when grabbed.
+ * Any change to the diagram ends the drag, so they still match the line when it is dropped.
+ */
 export type DragTarget =
   | { readonly kind: "player"; readonly playerId: string }
-  | { readonly kind: "waypoint"; readonly lineId: string; readonly index: number }
+  | {
+      readonly kind: "waypoint";
+      readonly lineId: string;
+      readonly index: number;
+      readonly waypoints: readonly FieldPosition[];
+    }
   | { readonly kind: "endpoint"; readonly lineId: string };
 
 export interface DragInteraction {
@@ -86,31 +93,19 @@ export type DragPatch =
   | { readonly kind: "player"; readonly playerId: string; readonly patch: PlayerPatch }
   | { readonly kind: "line"; readonly lineId: string; readonly patch: LinePatch };
 
-/** The change that puts the target at to. Undefined if the target is not in the scene. */
-export function dragPatch(
-  scene: SceneData,
-  target: DragTarget,
-  to: FieldPosition,
-): DragPatch | undefined {
+/** The change that puts the target at to. */
+export function dragPatch(target: DragTarget, to: FieldPosition): DragPatch {
   switch (target.kind) {
     case "player":
-      return scene.players.some((p) => p.id === target.playerId)
-        ? { kind: "player", playerId: target.playerId, patch: { position: to } }
-        : undefined;
+      return { kind: "player", playerId: target.playerId, patch: { position: to } };
     case "endpoint":
-      return scene.lines.some((l) => l.id === target.lineId)
-        ? { kind: "line", lineId: target.lineId, patch: { end: to } }
-        : undefined;
-    case "waypoint": {
-      const line = scene.lines.find((l) => l.id === target.lineId);
-      return line === undefined
-        ? undefined
-        : {
-            kind: "line",
-            lineId: line.id,
-            patch: { waypoints: line.waypoints.map((w, i) => (i === target.index ? to : w)) },
-          };
-    }
+      return { kind: "line", lineId: target.lineId, patch: { end: to } };
+    case "waypoint":
+      return {
+        kind: "line",
+        lineId: target.lineId,
+        patch: { waypoints: target.waypoints.map((w, i) => (i === target.index ? to : w)) },
+      };
   }
 }
 

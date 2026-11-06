@@ -89,7 +89,15 @@ export class EditorController extends Disposable implements IEditorController {
     );
     this.onDidChangeScene = this.notifier.onDidChangeScene;
     this.onDidChangeViewState = this.notifier.onDidChangeViewState;
-    this._register(this.model.onDidChange(() => this.notifier.markSceneChanged()));
+    // A drag or drawing clears itself before committing, so a change that arrives while one is in
+    // progress came from elsewhere (Undo, a zone switch, a load, a deletion by key). Ending it here
+    // means no drag or drawing ever sees its target change, and none needs to check for that.
+    this._register(
+      this.model.onDidChange(() => {
+        this.setInteraction(undefined);
+        this.notifier.markSceneChanged();
+      }),
+    );
   }
 
   getViewState(): EditorViewState {
@@ -187,10 +195,7 @@ export class EditorController extends Disposable implements IEditorController {
       if (isSamePosition(to, interaction.origin)) {
         return;
       }
-      const command = this.dropCommand(interaction, to);
-      if (command !== undefined) {
-        this.commands.execute(command);
-      }
+      this.commands.execute(this.dropCommand(interaction, to));
     });
   }
 
@@ -261,12 +266,7 @@ export class EditorController extends Disposable implements IEditorController {
   }
 
   setFieldZone(zone: FieldZone): void {
-    this.notifier.batch(() => {
-      // If the same zone was merely selected again, keep the in-progress drag or drawing.
-      if (this.commands.execute(new SetFieldZoneCommand(zone))) {
-        this.setInteraction(undefined);
-      }
-    });
+    this.notifier.batch(() => this.commands.execute(new SetFieldZoneCommand(zone)));
   }
 
   /**
@@ -286,8 +286,7 @@ export class EditorController extends Disposable implements IEditorController {
     );
     this.notifier.batch(() => {
       this.commands.execute(new LoadFormationCommand(added));
-      // After loading, the in-progress operation and old selection mean nothing, so clear them.
-      this.setInteraction(undefined);
+      // After loading, the old selection means nothing, so clear it.
       this.setSelection(NO_SELECTION);
     });
     return true;
@@ -345,12 +344,8 @@ export class EditorController extends Disposable implements IEditorController {
     return snapToGrid(clampToZoneWindow(pos, this.model.getSnapshot().field));
   }
 
-  // Returns undefined and issues no command if the target disappeared during the drag.
-  private dropCommand(drag: DragInteraction, to: FieldPosition): ICommand | undefined {
-    const drop = dragPatch(this.model.getSnapshot(), drag.target, to);
-    if (drop === undefined) {
-      return undefined;
-    }
+  private dropCommand(drag: DragInteraction, to: FieldPosition): ICommand {
+    const drop = dragPatch(drag.target, to);
     return drop.kind === "player"
       ? new UpdatePlayerCommand(drop.playerId, drop.patch)
       : new UpdateLineCommand(drop.lineId, drop.patch);
@@ -414,7 +409,7 @@ export class EditorController extends Disposable implements IEditorController {
     const target: DragTarget =
       hit.kind === "endpoint"
         ? { kind: "endpoint", lineId: line.id }
-        : { kind: "waypoint", lineId: line.id, index: hit.index };
+        : { kind: "waypoint", lineId: line.id, index: hit.index, waypoints: line.waypoints };
     return startDrag(target, hit.point, pos);
   }
 

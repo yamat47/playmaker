@@ -46,10 +46,8 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
     return data;
   }
   switch (interaction.type) {
-    case "drag": {
-      const drop = dragPatch(data, interaction.target, interaction.current);
-      return drop === undefined ? data : applyDragPatch(data, drop);
-    }
+    case "drag":
+      return applyDragPatch(data, dragPatch(interaction.target, interaction.current));
     case "draw-line":
       return { ...data, lines: [...data.lines, draftLine(interaction)] };
   }

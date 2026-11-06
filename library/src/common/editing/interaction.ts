@@ -25,6 +25,13 @@ export type DragTarget =
       readonly startPlayerId: string;
       /** The point the line comes from on its way to the end: its last waypoint or its start. */
       readonly from: FieldPosition;
+    }
+  | {
+      /** A new waypoint being pulled out of the middle of a segment, inserted at index. */
+      readonly kind: "bend";
+      readonly lineId: string;
+      readonly index: number;
+      readonly waypoints: readonly FieldPosition[];
     };
 
 export interface DragInteraction {
@@ -127,6 +134,14 @@ export function dragPatch(target: DragTarget, to: FieldPosition, alone: boolean)
         lineId: target.lineId,
         patch: { waypoints: target.waypoints.map((w, i) => (i === target.index ? to : w)) },
       };
+    case "bend": {
+      const { waypoints, index } = target;
+      return {
+        kind: "line",
+        lineId: target.lineId,
+        patch: { waypoints: [...waypoints.slice(0, index), to, ...waypoints.slice(index)] },
+      };
+    }
   }
 }
 

@@ -1,6 +1,7 @@
 import type { Event } from "../base/event.js";
 import type { LinePatch } from "../commands/line-commands.js";
 import type { PlayerPatch } from "../commands/player-commands.js";
+import type { LineHandles } from "../geometry/hit-test.js";
 import { isOneOf } from "../model/guards.js";
 import { LINE_KIND_VALUES, type Line, type LineKind } from "../model/line.js";
 import type { FieldZone, PlayData } from "../model/play-data.js";
@@ -53,11 +54,11 @@ export type SceneData = Omit<PlayData, "version">;
 export type EditorOverlay =
   | { readonly kind: "none" }
   | { readonly kind: "player"; readonly playerId: string }
-  | {
+  | ({
       readonly kind: "line";
-      readonly waypointHandles: readonly FieldPosition[];
-      readonly endpointHandle: FieldPosition;
-    };
+      /** The waypoint last pressed, which Delete removes. Undefined when none is picked. */
+      readonly pickedWaypoint: number | undefined;
+    } & LineHandles);
 
 export interface EditorViewState {
   readonly tool: EditorTool;
@@ -111,6 +112,11 @@ export interface IEditorGestures {
   pointerDown(pos: FieldPosition): void;
   pointerMove(pos: FieldPosition, modifiers?: PointerModifiers): void;
   pointerUp(pos: FieldPosition, modifiers?: PointerModifiers): void;
+  /**
+   * Finishes the line being drawn, or removes the waypoint of the selected line under pos.
+   * The two presses of the double-click have already arrived as pointerDown and pointerUp.
+   */
+  doubleClick(pos: FieldPosition): void;
 }
 
 /** Edits invoked from the toolbar, the panels, and keyboard input. */
@@ -119,10 +125,11 @@ export interface IEditorActions {
   commitLine(): void;
   cancelInteraction(): void;
   /**
-   * Backs out one level at a time: cancels a drag or drawing in progress, otherwise clears the
-   * selection, otherwise returns to the select tool.
+   * Backs out one level at a time: cancels a drag or drawing in progress, otherwise lets go of the
+   * picked waypoint, otherwise clears the selection, otherwise returns to the select tool.
    */
   stepBack(): void;
+  /** Removes the picked waypoint of the selected line if there is one, else the selection. */
   deleteSelection(): void;
   updateSelectedPlayer(patch: PlayerPatch): void;
   updateSelectedLine(patch: LinePatch): void;

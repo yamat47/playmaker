@@ -65,11 +65,31 @@ function drawLineHandles(
     ctx.strokeStyle = outline;
     ctx.stroke();
   };
-  for (const waypoint of handles.waypointHandles) {
+  // Bend handles are hollow circles, smaller than the points, so a place to add a bend never
+  // reads as a point already on the line.
+  for (const bend of handles.bendHandles) {
+    const { x, y } = geometry.toCanvas(bend);
+    ctx.beginPath();
+    ctx.arc(x, y, handleHalf * 0.8, 0, Math.PI * 2);
+    ctx.fillStyle = outline;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = fill;
+    ctx.stroke();
+  }
+  for (const [index, waypoint] of handles.waypointHandles.entries()) {
     const { x, y } = geometry.toCanvas(waypoint);
     ctx.beginPath();
     ctx.rect(x - handleHalf, y - handleHalf, handleHalf * 2, handleHalf * 2);
     paintHandle();
+    // The picked waypoint, the one Delete removes, gets a ring around its square.
+    if (index === handles.pickedWaypoint) {
+      ctx.beginPath();
+      ctx.arc(x, y, handleHalf * 2.2, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = fill;
+      ctx.stroke();
+    }
   }
   // The endpoint handle is a circle so it can be told apart from the waypoint squares.
   const { x, y } = geometry.toCanvas(handles.endpointHandle);

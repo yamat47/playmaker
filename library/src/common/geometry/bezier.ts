@@ -93,3 +93,25 @@ export function sampleLinePath(
   }
   return result;
 }
+
+/**
+ * The point halfway along each segment of the drawn path, one per pair of adjacent control points,
+ * in order. A bend added at index i of the waypoints goes between control points i and i + 1, so
+ * the i-th midpoint is where it starts. On a curve the point is taken at the middle of the segment's
+ * bezier, so it sits on the drawn curve rather than on the chord.
+ */
+export function segmentMidpoints(
+  points: readonly FieldPosition[],
+  interpolation: LineInterpolation,
+): FieldPosition[] {
+  return [...segments(points)].map(([p1, p2], i) => {
+    if (interpolation === "straight") {
+      return {
+        lateralYard: (p1.lateralYard + p2.lateralYard) / 2,
+        downfieldYard: (p1.downfieldYard + p2.downfieldYard) / 2,
+      };
+    }
+    const [c1, c2] = catmullRomBezierControls(points[i - 1] ?? p1, p1, p2, points[i + 2] ?? p2);
+    return cubicBezierPoint(p1, c1, c2, p2, 0.5);
+  });
+}

@@ -205,11 +205,12 @@ describe("pointDistance", () => {
 
 describe("hitLineHandle", () => {
   const line = {
-    waypoints: [
+    waypointHandles: [
       { lateralYard: 10, downfieldYard: 0 },
       { lateralYard: 10.5, downfieldYard: 0 },
     ],
-    end: { lateralYard: 20, downfieldYard: 5 },
+    endpointHandle: { lateralYard: 20, downfieldYard: 5 },
+    bendHandles: [{ lateralYard: 15, downfieldYard: 2.5 }],
   };
 
   it("returns the position and index of a waypoint inside the radius", () => {
@@ -229,16 +230,30 @@ describe("hitLineHandle", () => {
   it("returns the endpoint when the point hits it", () => {
     expect(hitLineHandle(line, { lateralYard: 20.5, downfieldYard: 5 })).toEqual({
       kind: "endpoint",
-      point: line.end,
+      point: line.endpointHandle,
     });
   });
 
   it("returns the endpoint when it overlaps a waypoint", () => {
-    const overlapped = { ...line, end: { lateralYard: 10.5, downfieldYard: 0 } };
+    const overlapped = { ...line, endpointHandle: { lateralYard: 10.5, downfieldYard: 0 } };
 
     expect(hitLineHandle(overlapped, { lateralYard: 10.5, downfieldYard: 0 })?.kind).toBe(
       "endpoint",
     );
+  });
+
+  it("returns the index of a bend handle inside the radius", () => {
+    expect(hitLineHandle(line, { lateralYard: 15.5, downfieldYard: 2.5 })).toEqual({
+      kind: "bend",
+      index: 0,
+      point: { lateralYard: 15, downfieldYard: 2.5 },
+    });
+  });
+
+  it("returns the waypoint rather than a bend handle that overlaps it", () => {
+    const crowded = { ...line, bendHandles: [{ lateralYard: 10.25, downfieldYard: 0 }] };
+
+    expect(hitLineHandle(crowded, { lateralYard: 10.25, downfieldYard: 0 })?.kind).toBe("waypoint");
   });
 
   it("returns undefined when no handle is hit", () => {

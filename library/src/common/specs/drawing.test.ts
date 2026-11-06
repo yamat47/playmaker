@@ -318,6 +318,15 @@ describe("Committing a line", () => {
     expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
   });
 
+  it("adds the line on a double-click while drawing", () => {
+    const play = openDrawingFromA();
+    play.editor.pointerDown(yd(18, 10));
+
+    play.editor.doubleClick(yd(18, 10));
+
+    expect(addedLine(play)).toMatchObject({ waypoints: [], end: yd(18, 10) });
+  });
+
   it("stops drawing without adding a line when committed before any point is placed", () => {
     const play = openDrawingFromA();
 

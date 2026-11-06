@@ -20,7 +20,13 @@ import {
 import { type Formation, instantiateFormation } from "../formations/formation.js";
 import { clampToZoneWindow } from "../geometry/field.js";
 import { snapToGrid } from "../geometry/grid.js";
-import { hitLineHandle, hitTestLine, hitTestPlayer, pointDistance } from "../geometry/hit-test.js";
+import {
+  hitLineHandle,
+  hitTestLine,
+  hitTestPlayer,
+  type LineHandleHit,
+  pointDistance,
+} from "../geometry/hit-test.js";
 import { stopShortOfPlayer } from "../geometry/line-end.js";
 import type { IIdFactory } from "../model/id-factory.js";
 import { type Line, type LineKind, MAX_LINES } from "../model/line.js";
@@ -61,7 +67,7 @@ import {
   startDrag,
   startDrawing,
 } from "./interaction.js";
-import { composePreview, computeOverlay } from "./preview.js";
+import { composePreview, computeOverlay, lineHandles } from "./preview.js";
 
 /**
  * Takes the tool, the selection, and gestures, and issues commands. It never writes to the
@@ -80,6 +86,9 @@ export class EditorController extends Disposable implements IEditorController {
   private tool: EditorTool = "select";
   private selection: EditorSelection = NO_SELECTION;
   private interaction: Interaction | undefined;
+  // An index into the waypoints of the selected line, set by pressing a waypoint so that Delete
+  // removes that waypoint instead of the whole line. Any other press lets go of it.
+  private pickedWaypoint: number | undefined;
 
   constructor(model: IPlayModel, commands: ICommandService, ids: IIdFactory) {
     super();
@@ -134,7 +143,7 @@ export class EditorController extends Disposable implements IEditorController {
 
   getFrame(): EditorFrame {
     const scene = composePreview(this.model.getSnapshot(), this.interaction);
-    return { scene, overlay: computeOverlay(scene, this.selection) };
+    return { scene, overlay: computeOverlay(scene, this.selection, this.livePickedWaypoint()) };
   }
 
   setTool(tool: EditorTool): void {
@@ -149,6 +158,7 @@ export class EditorController extends Disposable implements IEditorController {
 
   pointerDown(pos: FieldPosition): void {
     this.notifier.batch(() => {
+      this.setPickedWaypoint(undefined);
       const tool = this.tool;
       if (isLineTool(tool)) {
         this.drawLinePointerDown(pos, tool);
@@ -213,10 +223,27 @@ export class EditorController extends Disposable implements IEditorController {
     this.notifier.batch(() => this.setInteraction(undefined));
   }
 
+  doubleClick(pos: FieldPosition): void {
+    if (this.interaction?.type === "draw-line") {
+      this.commitLine();
+      return;
+    }
+    const line = this.getSelectedLine();
+    const hit =
+      line === undefined
+        ? undefined
+        : hitLineHandle(lineHandles(this.model.getSnapshot(), line), pos);
+    if (line !== undefined && hit?.kind === "waypoint") {
+      this.notifier.batch(() => this.removeWaypoint(line, hit.index));
+    }
+  }
+
   stepBack(): void {
     this.notifier.batch(() => {
       if (this.interaction !== undefined) {
         this.setInteraction(undefined);
+      } else if (this.livePickedWaypoint() !== undefined) {
+        this.setPickedWaypoint(undefined);
       } else if (this.liveSelection().kind !== "none") {
         this.setSelection(NO_SELECTION);
       } else {
@@ -246,7 +273,13 @@ export class EditorController extends Disposable implements IEditorController {
   deleteSelection(): void {
     const player = this.getSelectedPlayer();
     const line = this.getSelectedLine();
+    const picked = this.livePickedWaypoint();
     this.notifier.batch(() => {
+      if (line !== undefined && picked !== undefined) {
+        // The line stays selected, so the next Delete takes the line itself.
+        this.removeWaypoint(line, picked);
+        return;
+      }
       if (player !== undefined) {
         this.commands.execute(new RemovePlayerCommand(player.id));
       } else if (line !== undefined) {
@@ -336,7 +369,29 @@ export class EditorController extends Disposable implements IEditorController {
       return;
     }
     this.selection = next;
+    this.setPickedWaypoint(undefined);
     this.notifier.markSceneChanged();
+  }
+
+  /** The picked waypoint, or undefined once it or the selected line is gone. */
+  private livePickedWaypoint(): number | undefined {
+    const count = this.getSelectedLine()?.waypoints.length ?? 0;
+    const picked = this.pickedWaypoint;
+    return picked !== undefined && picked < count ? picked : undefined;
+  }
+
+  private setPickedWaypoint(next: number | undefined): void {
+    if (next === this.pickedWaypoint) {
+      return;
+    }
+    this.pickedWaypoint = next;
+    this.notifier.markSceneChanged();
+  }
+
+  private removeWaypoint(line: Line, index: number): void {
+    const waypoints = line.waypoints.filter((_, i) => i !== index);
+    this.commands.execute(new UpdateLineCommand(line.id, { waypoints }));
+    this.setPickedWaypoint(undefined);
   }
 
   private setInteraction(next: Interaction | undefined): void {
@@ -420,6 +475,9 @@ export class EditorController extends Disposable implements IEditorController {
       return false;
     }
     this.setInteraction(handle);
+    if (handle.target.kind === "waypoint") {
+      this.setPickedWaypoint(handle.target.index);
+    }
     return true;
   }
 
@@ -439,20 +497,29 @@ export class EditorController extends Disposable implements IEditorController {
 
   private hitSelectedLineHandle(pos: FieldPosition): DragInteraction | undefined {
     const line = this.getSelectedLine();
-    const hit = line === undefined ? undefined : hitLineHandle(line, pos);
+    const hit =
+      line === undefined
+        ? undefined
+        : hitLineHandle(lineHandles(this.model.getSnapshot(), line), pos);
     if (line === undefined || hit === undefined) {
       return undefined;
     }
-    const target: DragTarget =
-      hit.kind === "endpoint"
-        ? {
-            kind: "endpoint",
-            lineId: line.id,
-            startPlayerId: line.startPlayerId,
-            from: line.waypoints.at(-1) ?? this.model.getPlayer(line.startPlayerId).position,
-          }
-        : { kind: "waypoint", lineId: line.id, index: hit.index, waypoints: line.waypoints };
-    return startDrag(target, hit.point, pos);
+    return startDrag(this.handleTarget(line, hit), hit.point, pos);
+  }
+
+  private handleTarget(line: Line, hit: LineHandleHit): DragTarget {
+    switch (hit.kind) {
+      case "endpoint":
+        return {
+          kind: "endpoint",
+          lineId: line.id,
+          startPlayerId: line.startPlayerId,
+          from: line.waypoints.at(-1) ?? this.model.getPlayer(line.startPlayerId).position,
+        };
+      case "waypoint":
+      case "bend":
+        return { kind: hit.kind, lineId: line.id, index: hit.index, waypoints: line.waypoints };
+    }
   }
 
   /**

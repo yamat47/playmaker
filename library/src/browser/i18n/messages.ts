@@ -31,6 +31,8 @@ export interface Messages {
   readonly drawingHint: string;
   /** Shown in the panel when a line tool is chosen and nothing is selected. */
   readonly lineToolHint: string;
+  /** Shown under the properties of a selected line. */
+  readonly bendHint: string;
   readonly player: string;
   readonly line: string;
   readonly label: string;
@@ -69,6 +71,8 @@ export const en: Messages = {
     "Click to place a bend. Double-click or press Enter to finish the line, or press Esc to cancel it.",
   lineToolHint:
     "Drag from a player to draw a straight line, or click a player and then click to place bends.",
+  bendHint:
+    "Drag a round handle on the line to add a bend. Double-click a square bend, or click it and press Delete, to remove it.",
   player: "Player",
   line: "Line",
   label: "Label",

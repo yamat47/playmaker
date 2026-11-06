@@ -159,13 +159,9 @@ export class PropertyPanel extends Disposable {
         update(selected.line);
         return { kind: "line", id: selected.line.id, update };
       }
-      case "none": {
-        const paragraph = document.createElement("p");
-        paragraph.className = "playmaker-panel__hint";
-        paragraph.textContent = hint;
-        this.element.appendChild(paragraph);
+      case "none":
+        this.addHint(hint);
         return { kind: "hint", text: hint };
-      }
     }
   }
 
@@ -226,6 +222,7 @@ export class PropertyPanel extends Disposable {
       onChange: ({ color }) => controller.updateSelectedLine({ color }),
       onReset: () => controller.updateSelectedLine({ color: null }),
     });
+    this.addHint(messages.bendHint);
     return (line) => {
       setKind(line.kind);
       setInterpolation(line.interpolation);
@@ -233,6 +230,13 @@ export class PropertyPanel extends Disposable {
       const color = line.color === undefined ? undefined : normalizeCssColor(line.color);
       setPressed((choice) => choice.color === color);
     };
+  }
+
+  private addHint(text: string): void {
+    const paragraph = document.createElement("p");
+    paragraph.className = "playmaker-panel__hint";
+    paragraph.textContent = text;
+    this.element.appendChild(paragraph);
   }
 
   private addTitle(text: string): void {

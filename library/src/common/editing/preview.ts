@@ -1,6 +1,13 @@
 import { applyLinePatch } from "../commands/line-commands.js";
 import { movePlayerWithLines } from "../commands/player-commands.js";
-import type { Line } from "../model/line.js";
+import { segmentMidpoints } from "../geometry/bezier.js";
+import type { LineHandles } from "../geometry/hit-test.js";
+import {
+  indexPlayersById,
+  type Line,
+  lineAnchorPoints,
+  MAX_WAYPOINTS_PER_LINE,
+} from "../model/line.js";
 import type { EditorOverlay, EditorSelection, SceneData } from "./editor.js";
 import {
   type DragPatch,
@@ -66,7 +73,11 @@ export function composePreview(data: SceneData, interaction: Interaction | undef
  * The selection highlight and handle positions. Pass as scene the result of composePreview, with
  * the in-progress state overlaid. That way a handle being dragged is drawn at the drag destination.
  */
-export function computeOverlay(scene: SceneData, selection: EditorSelection): EditorOverlay {
+export function computeOverlay(
+  scene: SceneData,
+  selection: EditorSelection,
+  pickedWaypoint: number | undefined,
+): EditorOverlay {
   if (selection.kind === "player") {
     return { kind: "player", playerId: selection.id };
   }
@@ -75,5 +86,21 @@ export function computeOverlay(scene: SceneData, selection: EditorSelection): Ed
   if (line === undefined) {
     return { kind: "none" };
   }
-  return { kind: "line", waypointHandles: line.waypoints, endpointHandle: line.end };
+  return { kind: "line", pickedWaypoint, ...lineHandles(scene, line) };
+}
+
+/**
+ * The handles of a line. The model keeps no line without its start player, so the anchors are
+ * always found; the check only narrows the type. A line at the waypoint limit takes no more bends.
+ */
+export function lineHandles(scene: SceneData, line: Line): LineHandles {
+  const anchors = lineAnchorPoints(line, indexPlayersById(scene.players));
+  return {
+    waypointHandles: line.waypoints,
+    endpointHandle: line.end,
+    bendHandles:
+      anchors === undefined || line.waypoints.length >= MAX_WAYPOINTS_PER_LINE
+        ? []
+        : segmentMidpoints(anchors, line.interpolation),
+  };
 }

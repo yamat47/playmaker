@@ -5,6 +5,7 @@ import {
   cubicBezierPoint,
   DEFAULT_BEZIER_SAMPLES_PER_SEGMENT,
   sampleLinePath,
+  segmentMidpoints,
 } from "./bezier.js";
 
 const at = (lateralYard: number, downfieldYard: number): FieldPosition => ({
@@ -135,5 +136,21 @@ describe("sampleLinePath", () => {
     const out = sampleLinePath([at(0, 0), at(5, 5), at(10, 0)], "bezier");
 
     expect(out).toHaveLength(1 + DEFAULT_BEZIER_SAMPLES_PER_SEGMENT * 2);
+  });
+});
+
+describe("segmentMidpoints", () => {
+  it("returns the middle of each straight segment in order", () => {
+    expect(segmentMidpoints([at(0, 0), at(4, 2), at(4, 10)], "straight")).toEqual([
+      at(2, 1),
+      at(4, 6),
+    ]);
+  });
+
+  it("puts each midpoint of a curve on the drawn curve", () => {
+    const points = [at(0, 0), at(5, 5), at(10, 0)];
+    const sampled = sampleLinePath(points, "bezier", 2);
+
+    expect(segmentMidpoints(points, "bezier")).toEqual([sampled[1], sampled[3]]);
   });
 });

@@ -96,28 +96,43 @@ export function pointDistance(a: FieldPosition, b: FieldPosition): number {
   return Math.hypot(a.lateralYard - b.lateralYard, a.downfieldYard - b.downfieldYard);
 }
 
+/** The handles shown on the selected line. */
+export interface LineHandles {
+  readonly waypointHandles: readonly FieldPosition[];
+  readonly endpointHandle: FieldPosition;
+  /** Halfway along each segment; dragging one adds a bend there. Empty at the waypoint limit. */
+  readonly bendHandles: readonly FieldPosition[];
+}
+
 /** The grabbed handle and its position when a line handle is hit. */
 export type LineHandleHit =
   | { readonly kind: "endpoint"; readonly point: FieldPosition }
-  | { readonly kind: "waypoint"; readonly index: number; readonly point: FieldPosition };
+  | { readonly kind: "waypoint"; readonly index: number; readonly point: FieldPosition }
+  | { readonly kind: "bend"; readonly index: number; readonly point: FieldPosition };
 
 /**
  * Returns the line handle hit by target. The end point is tested before the waypoints so that
  * an attempt to move the tip is not stolen by the last waypoint. Later waypoints are drawn in
- * front, so the search runs from the end.
+ * front, so the search runs from the end. Bend handles come last: on a short segment they sit
+ * close to the points that bound it, and moving an existing point is the likelier intent.
  */
 export function hitLineHandle(
-  line: Pick<Line, "waypoints" | "end">,
+  handles: LineHandles,
   target: FieldPosition,
 ): LineHandleHit | undefined {
   const within = (point: FieldPosition) =>
     pointDistance(target, point) <= WAYPOINT_HANDLE_RADIUS_YARDS;
-  if (within(line.end)) {
-    return { kind: "endpoint", point: line.end };
+  if (within(handles.endpointHandle)) {
+    return { kind: "endpoint", point: handles.endpointHandle };
   }
-  for (const [index, point] of [...line.waypoints.entries()].reverse()) {
+  for (const [index, point] of [...handles.waypointHandles.entries()].reverse()) {
     if (within(point)) {
       return { kind: "waypoint", index, point };
+    }
+  }
+  for (const [index, point] of handles.bendHandles.entries()) {
+    if (within(point)) {
+      return { kind: "bend", index, point };
     }
   }
   return undefined;

@@ -121,6 +121,7 @@ Horizontally, the range runs from the sideline to `FIELD_WIDTH_YARDS` (53). Vert
   (cancels the drag or drawing in progress, then clears the selection, then returns to the select tool).
   A double-click or Enter finishes the line being drawn.
   Dragging a player moves its lines along with it; hold Option (Alt) to move the player alone.
+  On a selected line, drag a round handle to add a bend, and double-click a bend to remove it.
   The toolbar sits above the diagram and the panel sits to its right. Neither overlaps the diagram.
   The diagram is drawn at a size that fits the container area left after excluding them
 - `view`: read-only. No editing UI is shown

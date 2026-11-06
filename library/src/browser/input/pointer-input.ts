@@ -81,7 +81,8 @@ export class PointerInput extends Disposable {
         controller.cancelInteraction();
       }
     };
-    const onDoubleClick = () => controller.commitLine();
+    const onDoubleClick = (e: MouseEvent) =>
+      controller.doubleClick(surface.clientToYard(e.clientX, e.clientY));
     const onKeyDown = (e: KeyboardEvent) => {
       if (isFormControl(e.target)) {
         return;

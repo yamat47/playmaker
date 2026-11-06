@@ -120,7 +120,7 @@ Each line is defined by a start point (a player), an end point, and zero or more
 In edit mode the following editing operations are available:
 
 - Add / move / delete players and edit their properties (label, shape, color and fill)
-- Draw / delete lines, edit their properties (color, interpolation), and edit waypoints
+- Draw / delete lines, edit their properties (color, interpolation), and edit bends: drag the middle of a segment to add one, drag one to move it, and double-click it (or click it and press Delete) to remove it
 - Undo / Redo
 - Load formation templates (the commercial software lists the formations and loads the chosen one through the API; the toolbar has no formation picker)
 - Switch the field zone

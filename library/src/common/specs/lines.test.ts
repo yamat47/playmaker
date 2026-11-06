@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { line, playData, player, twoPlayersWithRoute } from "../../test-support/fixtures.js";
 import { openPlay, yd } from "../../test-support/play-driver.js";
+import { MAX_WAYPOINTS_PER_LINE } from "../model/line.js";
 import type { PlayData } from "../model/play-data.js";
 
 function lineOf(data: Pick<PlayData, "lines">, id: string) {
@@ -258,6 +259,117 @@ describe("Dragging the end point", () => {
       waypoints: [yd(20, 10)],
       end: yd(30, 15),
     });
+  });
+});
+
+describe("Adding a bend", () => {
+  it("adds a bend where the middle of a segment is dragged to", () => {
+    const play = openWithLineSelected();
+
+    play.drag(yd(20, 3.5), yd(20, 7));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([yd(15, 2), yd(20, 7)]);
+  });
+
+  it("draws the new bend under the pointer while the middle of a segment is dragged", () => {
+    const play = openWithLineSelected();
+
+    play.editor.pointerDown(yd(12.5, 1));
+    play.editor.pointerMove(yd(12, 4));
+
+    expect(lineOf(play.editor.getFrame().scene, "l")?.waypoints).toEqual([yd(12, 4), yd(15, 2)]);
+  });
+
+  it("leaves the line as it is when the middle of a segment is only clicked", () => {
+    const play = openWithLineSelected();
+
+    play.click(yd(20, 3.5));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+    expect(play.editor.getViewState().canUndo).toBe(false);
+  });
+
+  it("offers no place for a bend once a line has MAX_WAYPOINTS_PER_LINE waypoints", () => {
+    const full = Array.from({ length: MAX_WAYPOINTS_PER_LINE }, (_, i) => yd(11 + i * 0.5, 1));
+    const play = openPlay(
+      playData([player("a", 10, 0)], [{ ...line("l"), waypoints: full, end: yd(40, 10) }]),
+    );
+
+    play.click(yd(40, 10));
+
+    expect(play.editor.getFrame().overlay).toMatchObject({ kind: "line", bendHandles: [] });
+  });
+});
+
+describe("Removing a bend", () => {
+  it("removes a bend that is double-clicked", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+    play.click(yd(15, 2));
+
+    play.editor.doubleClick(yd(15, 2));
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([]);
+  });
+
+  it("marks a pressed bend as picked", () => {
+    const play = openWithLineSelected();
+
+    play.click(yd(15, 2));
+
+    expect(play.editor.getFrame().overlay).toMatchObject({ kind: "line", pickedWaypoint: 0 });
+  });
+
+  it("removes the picked bend with Delete and keeps the line selected", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+
+    play.editor.deleteSelection();
+
+    expect(lineOf(play.session.getPlayData(), "l")?.waypoints).toEqual([]);
+    expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
+  });
+
+  it("lets go of the picked bend when another part of the line is pressed", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+
+    play.click(yd(25, 5));
+    play.editor.deleteSelection();
+
+    expect(lineOf(play.session.getPlayData(), "l")).toBeUndefined();
+  });
+
+  it("lets go of the picked bend with Esc before clearing the selection", () => {
+    const play = openWithLineSelected();
+    play.click(yd(15, 2));
+
+    play.editor.stepBack();
+
+    expect(play.editor.getFrame().overlay).toMatchObject({
+      kind: "line",
+      pickedWaypoint: undefined,
+    });
+    expect(play.editor.getViewState().selection).toEqual({ kind: "line", id: "l" });
+  });
+
+  it("neither changes the diagram nor notifies on a double-click with nothing selected", () => {
+    const play = openPlay(twoPlayersWithRoute());
+
+    play.editor.doubleClick(yd(15, 2));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+    expect(play.notified).not.toHaveBeenCalled();
+  });
+
+  it("neither changes the diagram nor notifies on a double-click away from the bends", () => {
+    const play = openWithLineSelected();
+    play.notified.mockClear();
+
+    play.editor.doubleClick(yd(40, -10));
+
+    expect(play.session.getPlayData()).toEqual(twoPlayersWithRoute());
+    expect(play.notified).not.toHaveBeenCalled();
   });
 });
 

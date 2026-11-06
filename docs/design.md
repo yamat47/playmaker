@@ -144,6 +144,7 @@ All edits are expressed as `ICommand` (`apply` / `undo`). There are commands for
 - A drag or a drawing in progress is held as state in `interaction.ts` without emitting commands. `preview.ts` builds the diagram with the in-progress state layered over the committed diagram, plus the overlay, and rendering uses that. Neither the history nor `onChange` moves until the edit is committed
 - The line tools are named after the line kinds (`route`, `block`, `motion`). The tool stays after a line is committed, because the lines of a play are drawn in runs, and the committed line is selected so the panel can adjust it before the next press starts another line
 - The press that starts a drawing finishes a straight line when it is released away from the start player. Released on the start player, it leaves the drawing open, and later presses place points on press (their releases do nothing)
+- The selected line shows a handle halfway along each segment of its drawn path (`segmentMidpoints`, on the curve for a curved line), and dragging one inserts a waypoint there. A line at the waypoint limit shows none. Pressing a waypoint picks it, and Delete then removes that waypoint rather than the whole line; a double-click on a waypoint removes it directly. Any other press lets go of the picked waypoint
 - Starting a drawing clears the selection. Left selected, the panel and the handles would keep pointing at another element while the line is drawn, and the panel shows how to finish the line instead
 - A change to the diagram that a drag or drawing did not commit itself (Undo, a zone switch, a load, a deletion by key) ends that drag or drawing. Their own commits clear them before running, so a drag or drawing never sees its target change, and neither the drop nor the commit checks for a vanished or moved target
 - Adding a player, starting a drawing, placing a point, and loading a formation do nothing when the limit is reached. The tool checks are gathered in `isToolAvailable` in `editor.ts` and shared with the check that disables the toolbar buttons. A formation that does not fit places no player at all, and `loadFormation` returns false so the host can tell
@@ -272,6 +273,5 @@ Locations, writing style, and the coverage gate are in `.claude/rules/testing.md
 As stated in PRD 4.1, ease of embedding comes first and richness of expression is narrowed. The following are deliberately not included.
 
 - Visual refinement that matches tactical notation (wavy motion lines, arrowheads per route type). Final visual adjustments resume after trying the library in the commercial software
-- Operations that add or remove waypoints one at a time. Redrawing the line gives the same shape
 - UI frameworks, external drawing libraries, Shadow DOM, DI containers. Dependencies are limited to manual constructor injection
 - Drawing the LOS, zoom and pan, multi-select, copy and paste (PRD 8.1)

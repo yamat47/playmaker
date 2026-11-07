@@ -201,7 +201,9 @@ The yard numbers and player labels are fixed to the bundled font (`src/assets/`,
 
 ### PNG export
 
-Export and on-screen rendering draw the diagram layers with the same `renderLayers`. Export does not go through the editing-only layers, so the grid, selection highlights, handles, and in-progress drawing shapes are not included. The toolbar and panel are elements outside the canvas, so they are never included in the first place.
+Export and on-screen rendering draw the diagram layers with the same `paintLayers`. Export does not go through the editing-only layers, so the grid, selection highlights, handles, and in-progress drawing shapes are not included. The toolbar and panel are elements outside the canvas, so they are never included in the first place.
+
+The whole export is one function, `renderSceneToPng` in `browser/rendering/export-png.ts`: it resolves the size, waits for the bundled font, draws the diagram layers on a canvas of its own, and turns that canvas into a Blob. It takes the diagram, a `ThemeReader`, and the layers, and touches no `CanvasSurface`, so it runs with nothing mounted. `CanvasSurface.exportToPngBlob` passes it the theme read from its host and its own layers, and reads the theme before the font is awaited, so the colors are those at call time even if the host changes a variable while the font loads.
 
 - When the width exceeds `MAX_EXPORT_WIDTH`, it is clamped rather than rejected. The limit is a value that fits within the canvas area limit of Safari on iOS for every zone
 - It rejects when a canvas cannot be allocated, when the image cannot be turned into a PNG, and after dispose. When the font cannot be loaded, it does not reject and draws with a fallback font

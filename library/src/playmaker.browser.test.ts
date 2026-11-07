@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { type PlayData, Playmaker, type PlaymakerOptions } from "./playmaker.js";
+import {
+  CURRENT_PLAY_DATA_VERSION,
+  type PlayData,
+  type PlayDataInput,
+  Playmaker,
+  type PlaymakerOptions,
+  renderPlayToPng,
+} from "./playmaker.js";
 import { must } from "./test-support/must.js";
 
 // Big enough to leave room for players on the canvas beside the 200px panel and the toolbar.
@@ -300,11 +307,32 @@ describe("Reload", () => {
 });
 
 describe("PNG export", () => {
-  it("returns a PNG Blob from exportToPng", async () => {
+  it("renders from renderPlayToPng alone the PNG that exportToPng renders at the same width", async () => {
+    const play: PlayDataInput = {
+      version: CURRENT_PLAY_DATA_VERSION,
+      field: { zone: "middle" },
+      players: [
+        {
+          id: "qb",
+          position: { lateralYard: 26.5, downfieldYard: -5 },
+          shape: "circle",
+          label: "QB",
+        },
+      ],
+      lines: [],
+    };
+
+    const alone = await renderPlayToPng(play, { width: 400 });
     const { playmaker } = mount();
+    playmaker.setPlayData(play);
+    const fromEditor = await playmaker.exportToPng({ width: 400 });
 
-    const blob = await playmaker.exportToPng();
-
-    expect(blob.type).toBe("image/png");
+    const image = await createImageBitmap(alone);
+    expect(alone.type).toBe("image/png");
+    // The middle zone window is 53 yards wide and 30 yards long, so the height follows that ratio.
+    expect([image.width, image.height]).toEqual([400, 226]);
+    expect(new Uint8Array(await alone.arrayBuffer())).toEqual(
+      new Uint8Array(await fromEditor.arrayBuffer()),
+    );
   });
 });

@@ -141,7 +141,7 @@ Typical plays with lines already drawn are also bundled and can be loaded as the
 
 ### 5.7 Export
 
-The play diagram can be output as a PNG image. The export does not include the editing UI.
+The play diagram can be output as a PNG image, from the editor and from a `PlayData` alone without an editor on the page. The export does not include the editing UI.
 
 ### 5.8 Data exchange with the commercial software
 

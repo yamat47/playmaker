@@ -11,7 +11,7 @@ The code uses a lightened version of VSCode's layer separation. Lower layers do 
 |---|---|---|
 | common | `src/common/` | Logic that does not touch the DOM. Data, coordinates, editing, commands, export dimensions, the shapes of line decorations |
 | browser | `src/browser/` | Canvas rendering, theme reading, pointer and key input, toolbar and panel |
-| Public entry | `src/playmaker.ts` | The `Playmaker` class that wires the two layers together, and re-exports of the types and values shown to the consumer |
+| Public entry | `src/playmaker.ts` | The `Playmaker` class that wires the two layers together, `renderPlayToPng`, which wires them for one image, and re-exports of the types and values shown to the consumer |
 
 For new logic, first consider whether it can go in common. The more decisions move into common, the thinner the browser shell can be.
 
@@ -89,6 +89,7 @@ All values from outside are received as `unknown` and normalized before they ent
 | `setPlayData(data)`, `replacePlayData(data)` | `PlayDataInput` | `migratePlayData` (even when the type matches, duplicate ids and count limits are normalized) |
 | `loadFormation(formation)` | `Formation` | `normalizeFormation` |
 | `exportToPng({ width })` | `ImageExportOptions` | `resolveImageExportSize` |
+| `renderPlayToPng(data, { width, themeFrom })` | `PlayDataInput`, `RenderPlayToPngOptions` | `migratePlayData` for the diagram, `resolveImageExportSize` for the width |
 
 Constructor options (`mode`, `locale`, `onChange`) are not normalized; their TypeScript types are the contract, and a value outside them is a caller bug.
 
@@ -203,7 +204,7 @@ The yard numbers and player labels are fixed to the bundled font (`src/assets/`,
 
 Export and on-screen rendering draw the diagram layers with the same `paintLayers`. Export does not go through the editing-only layers, so the grid, selection highlights, handles, and in-progress drawing shapes are not included. The toolbar and panel are elements outside the canvas, so they are never included in the first place.
 
-The whole export is one function, `renderSceneToPng` in `browser/rendering/export-png.ts`: it resolves the size, waits for the bundled font, draws the diagram layers on a canvas of its own, and turns that canvas into a Blob. It takes the diagram, a `ThemeReader`, and the layers, and touches no `CanvasSurface`, so it runs with nothing mounted. `CanvasSurface.exportToPngBlob` passes it the theme read from its host and its own layers, and reads the theme before the font is awaited, so the colors are those at call time even if the host changes a variable while the font loads.
+The whole export is one function, `renderSceneToPng` in `browser/rendering/export-png.ts`: it resolves the size, waits for the bundled font, draws the diagram layers on a canvas of its own, and turns that canvas into a Blob. It takes the diagram, a `ThemeReader`, and the layers, and touches no `CanvasSurface`, so it runs with nothing mounted. `CanvasSurface.exportToPngBlob` passes it the theme read from its host and its own layers, and `renderPlayToPng` passes the theme read from `options.themeFrom` and the default layers, so the two entry points draw the same image. Both callers read the theme before the font is awaited, so the colors are those at call time even if the host changes a variable while the font loads.
 
 - When the width exceeds `MAX_EXPORT_WIDTH`, it is clamped rather than rejected. The limit is a value that fits within the canvas area limit of Safari on iOS for every zone
 - It rejects when a canvas cannot be allocated, when the image cannot be turned into a PNG, and after dispose. When the font cannot be loaded, it does not reject and draws with a fallback font
@@ -221,11 +222,12 @@ The whole export is one function, `renderSceneToPng` in `browser/rendering/expor
 
 ## Public API
 
-The consumer touches only the `Playmaker` class and the types and values re-exported from `playmaker.ts`. The list of members is in the README.
+The consumer touches only the `Playmaker` class, the function `renderPlayToPng`, and the types and values re-exported from `playmaker.ts`. The list of members is in the README.
 
 - `setMode` keeps the `PlaySession`, which holds the diagram and history, and attaches or detaches only the bundle of editing UI, pointer input, and key input. Switching to view cancels the in-progress operation and does not draw the selection highlight. The selection itself is kept, so switching back to edit brings the highlight back
 - The input types are split in 2: `restorePlayData(raw: unknown)`, which restores a persisted value without checking its shape, and `setPlayData(data: PlayDataInput)`, which takes a diagram assembled with types. `PlayDataInput` can omit `field.losYard`. Both are loads, not edits, so they clear the history and do not emit `onDidChange`
 - `replacePlayData(data: PlayDataInput)` replaces the whole diagram as an edit (`ReplacePlayCommand`, through `PlayModel.replaceAll`): the session and its history stay, Undo brings the previous diagram back, and `onDidChange` fires. A diagram equal to the current one is not an edit, so applying the same template twice adds no step for Undo. It is for applying a template to the diagram being edited. Opening a different saved play stays a load, because with an edit, Undo would bring the previous play's contents into the newly opened one and `onChange` would save them under it
+- `renderPlayToPng(data: PlayDataInput, options?)` is a function beside the class, not a method, because it needs no instance: a host that publishes a playbook renders a snapshot of every changed play in one go, and constructing a `Playmaker` per play would place a container, a canvas, and a `ResizeObserver` on the page for each one only to export and dispose. The input goes through `migratePlayData` like `setPlayData`. With no root element of its own, the `--playmaker-*` variables are read from `options.themeFrom`, `document.documentElement` by default, which is where a host that themes the whole page declares them
 - Changes are subscribed to with `onDidChange: Event<PlayData>`, and disposing the returned `IDisposable` unsubscribes. `options.onChange` only registers with this at construction
 - Changes after dispose do nothing and do not throw. `getPlayData` and `fieldZone` return the diagram as of dispose, and `exportToPng` rejects because it cannot return a Blob. Only in development does it report this with `console.warn`. Whether it is development is decided by `process.env.NODE_ENV`, which the bundler replaces; when loaded without the replacement, it is treated as production
 - `Playmaker` does not extend `Disposable` and implements `IDisposable` instead. Extending would expose internal members such as `_register` in the type definitions

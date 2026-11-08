@@ -1,11 +1,14 @@
 import {
   CanvasSurface,
+  createDefaultLayers,
+  createThemeReader,
   type EditorDecorations,
   type Messages,
   PLAYMAKER_LOCALE_VALUES,
   type PlaymakerLocale,
   PointerInput,
   PropertyPanel,
+  renderSceneToPng,
   replaceKeepingFocus,
   resolveMessages,
   Toolbar,
@@ -18,6 +21,7 @@ import {
   type Formation,
   type IDisposable,
   type ImageExportOptions,
+  migratePlayData,
   type PlayData,
   type PlayDataInput,
   PlaySession,
@@ -73,6 +77,32 @@ function isDevelopment(): boolean {
   } catch {
     return false;
   }
+}
+
+export interface RenderPlayToPngOptions extends ImageExportOptions {
+  /**
+   * The element whose `--playmaker-*` CSS variables color the image, read as resolved on it.
+   * The default is `document.documentElement`.
+   */
+  themeFrom?: HTMLElement | undefined;
+}
+
+/**
+ * Draws a diagram as a PNG image (Blob) without a `Playmaker` on the page. The image is the one
+ * `exportToPng` returns for a `Playmaker` showing that diagram: the diagram alone, without the
+ * editing UI, drawn with the bundled font once it has loaded (with a fallback font if it fails to
+ * load), at the width of `options.width` (1600 by default, 4096 at most).
+ * The input is normalized as in `setPlayData`: `field.losYard` can be omitted, duplicate ids and
+ * entries past the count limits are normalized, and a value whose shape is off does not reject;
+ * only the elements that cannot be read are dropped.
+ * Rejects without throwing when a canvas cannot be obtained or the PNG conversion fails.
+ */
+export function renderPlayToPng(
+  data: PlayDataInput,
+  options: RenderPlayToPngOptions = {},
+): Promise<Blob> {
+  const theme = createThemeReader(options.themeFrom ?? document.documentElement);
+  return renderSceneToPng(migratePlayData(data), theme, createDefaultLayers(), options);
 }
 
 export interface PlaymakerOptions {

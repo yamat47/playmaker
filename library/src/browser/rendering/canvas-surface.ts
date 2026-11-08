@@ -1,22 +1,19 @@
 import {
-  computeFieldMetrics,
   Disposable,
   FieldGeometry,
   type FieldPosition,
   type ImageExportOptions,
-  resolveImageExportSize,
   type SceneData,
   toDisposable,
 } from "../../common/index.js";
 import { loadFieldFont } from "../theme/field-font-face.js";
 import { createThemeReader } from "../theme/theme-reader.js";
-import type { ThemeReader } from "../theme/tokens.js";
+import { renderSceneToPng } from "./export-png.js";
 import {
   createDefaultLayers,
   type EditorDecorations,
-  type EditorRenderFrame,
-  type RenderFrame,
-  renderLayers,
+  paintLayers,
+  renderFrameFor,
   type SurfaceLayers,
 } from "./layer.js";
 
@@ -98,34 +95,12 @@ export class CanvasSurface extends Disposable {
   }
 
   /**
-   * Exports the given play diagram as a PNG (Blob). Only the diagram layers are drawn, so the grid,
-   * selection highlight, and handles stay out. The colors come from the screen's theme variables.
-   * Drawing waits for the bundled font, so numbers and labels use it even right after construction.
+   * Exports the given play diagram as a PNG (Blob) with the colors of the screen's theme variables.
+   * The colors are fixed at call time: if the host reverts the variables while the font loads, or
+   * if it disposes and the canvas leaves the host, the exported colors do not change.
    */
-  async exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
-    const { width, height } = resolveImageExportSize(data.field.zone, options);
-    // Colors are fixed at call time. If the host reverts the variables while the font loads, or if
-    // it disposes and the canvas leaves the host, the exported colors do not change.
-    const theme = createThemeReader(this.host);
-    await loadFieldFont();
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("Playmaker: could not get a 2D canvas context for the export.");
-    }
-    const geometry = new FieldGeometry(width, height, data.field);
-    this.paint(ctx, this.frameFor(geometry, data, theme), undefined);
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error("Playmaker: could not convert the canvas to a PNG."));
-        }
-      }, "image/png");
-    });
+  exportToPngBlob(data: SceneData, options?: ImageExportOptions): Promise<Blob> {
+    return renderSceneToPng(data, createThemeReader(this.host), this.layers, options);
   }
 
   /**
@@ -193,38 +168,8 @@ export class CanvasSurface extends Disposable {
   }
 
   private render(): void {
-    const frame = this.frameFor(this.measure(), this.scene, createThemeReader(this.host));
-    this.paint(this.ctx, frame, this.decorations);
-  }
-
-  /**
-   * Draws the layers in the order field, backdrop, play, editor. Without decorations, editing-only
-   * layers (backdrop and editor) are skipped, so view mode and PNG export use only diagram layers.
-   */
-  private paint(
-    ctx: CanvasRenderingContext2D,
-    frame: RenderFrame,
-    decorations: EditorDecorations | undefined,
-  ): void {
-    const editorFrame: EditorRenderFrame | undefined =
-      decorations === undefined ? undefined : { ...frame, ...decorations };
-    renderLayers(ctx, frame, this.layers.field);
-    if (editorFrame !== undefined) {
-      renderLayers(ctx, editorFrame, this.layers.backdrop);
-    }
-    renderLayers(ctx, frame, this.layers.play);
-    if (editorFrame !== undefined) {
-      renderLayers(ctx, editorFrame, this.layers.editor);
-    }
-  }
-
-  private frameFor(geometry: FieldGeometry, scene: SceneData, theme: ThemeReader): RenderFrame {
-    return {
-      geometry,
-      metrics: computeFieldMetrics(geometry.fieldPixelWidth, geometry.scale),
-      scene,
-      theme,
-    };
+    const frame = renderFrameFor(this.measure(), this.scene, createThemeReader(this.host));
+    paintLayers(this.ctx, this.layers, frame, this.decorations);
   }
 
   private measure(): FieldGeometry {

@@ -68,14 +68,25 @@ const subscription = playmaker.onDidChange((data) => preview(data));
 | `refresh()` | Re-reads the colors of the diagram and the panel after you change the theme's CSS variables |
 | `dispose()` | Releases the DOM, subscriptions, and resources. Later changes do nothing and only warn during development |
 
+`renderPlayToPng(data, options?): Promise<Blob>` draws a diagram as the same PNG without constructing a `Playmaker`,
+for rendering many saved plays at once. `data` is a `PlayDataInput`, normalized as in `setPlayData`
+(pass a persisted value through `migratePlayData` first). `options.width` is as in `exportToPng`, and
+`options.themeFrom` is the element whose `--playmaker-*` variables color the image (`document.documentElement` by default).
+
+```ts
+import { renderPlayToPng } from "@yamat47/playmaker";
+
+const blob = await renderPlayToPng(play, { width: 1200, themeFrom: appRoot });
+```
+
 Re-exports:
 
 - Types: `PlaymakerOptions` `PlaymakerMode` `PlaymakerLocale`(`en`/`ja`) `PlayData` `PlayDataInput` `FieldState` `FieldZone`
   `FieldPosition` `Player` `PlayerShape`(`circle`/`square`) `PlayerFill`(`outline`/`solid`)
   `Line` `LineKind`(`route`/`block`/`motion`)
   `LineInterpolation`(`straight`/`bezier`) `Formation` `FormationPlayer` `PlayPreset` `PlayCategory`
-  `TeamSide` `ImageExportOptions` `Event` `IDisposable`
-- Values: `FORMATION_PRESETS` `getFormationPreset(id)` `PLAY_PRESETS` `getPlayPreset(id)`
+  `TeamSide` `ImageExportOptions` `RenderPlayToPngOptions` `Event` `IDisposable`
+- Values: `renderPlayToPng(data, options?)` `FORMATION_PRESETS` `getFormationPreset(id)` `PLAY_PRESETS` `getPlayPreset(id)`
   `FIELD_ZONE_VALUES` `FIELD_ZONE_LABELS` `PLAYMAKER_LOCALE_VALUES` `migratePlayData(raw)` `CURRENT_PLAY_DATA_VERSION`
 
 ### Presets

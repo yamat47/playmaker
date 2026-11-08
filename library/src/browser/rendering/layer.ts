@@ -1,9 +1,10 @@
-import type {
-  EditorHover,
-  EditorOverlay,
-  FieldGeometry,
-  FieldMetrics,
-  SceneData,
+import {
+  computeFieldMetrics,
+  type EditorHover,
+  type EditorOverlay,
+  type FieldGeometry,
+  type FieldMetrics,
+  type SceneData,
 } from "../../common/index.js";
 import type { ThemeReader } from "../theme/tokens.js";
 import { FieldRenderer } from "./field-renderer.js";
@@ -82,5 +83,40 @@ export function renderLayers<F extends RenderFrame>(
     ctx.save();
     layer.draw(ctx, frame);
     ctx.restore();
+  }
+}
+
+export function renderFrameFor(
+  geometry: FieldGeometry,
+  scene: SceneData,
+  theme: ThemeReader,
+): RenderFrame {
+  return {
+    geometry,
+    metrics: computeFieldMetrics(geometry.fieldPixelWidth, geometry.scale),
+    scene,
+    theme,
+  };
+}
+
+/**
+ * Draws the layers in the order field, backdrop, play, editor. Without decorations, editing-only
+ * layers (backdrop and editor) are skipped, so view mode and PNG export use only diagram layers.
+ */
+export function paintLayers(
+  ctx: CanvasRenderingContext2D,
+  layers: SurfaceLayers,
+  frame: RenderFrame,
+  decorations?: EditorDecorations,
+): void {
+  const editorFrame: EditorRenderFrame | undefined =
+    decorations === undefined ? undefined : { ...frame, ...decorations };
+  renderLayers(ctx, frame, layers.field);
+  if (editorFrame !== undefined) {
+    renderLayers(ctx, editorFrame, layers.backdrop);
+  }
+  renderLayers(ctx, frame, layers.play);
+  if (editorFrame !== undefined) {
+    renderLayers(ctx, editorFrame, layers.editor);
   }
 }
